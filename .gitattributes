@@ -1,0 +1,4 @@
+# The tests read files byte for byte (heredocs, the .po catalogue, capture
+# fixtures): a checkout with CRLF line endings fails three of them.
+* text=auto eol=lf
+*.pyc binary
