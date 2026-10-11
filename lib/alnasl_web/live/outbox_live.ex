@@ -165,7 +165,7 @@ defmodule AlnaslWeb.OutboxLive do
           </tr>
         </thead>
         <tbody>
-          <tr :for={entry <- @entries} id={"entry-#{entry.id}"}>
+          <tr :for={entry <- @entries} id={"#{@id}-#{entry.id}"}>
             <td>{entry.round}</td>
             <td>
               <.link navigate={~p"/round/#{entry.round}/board/#{entry.board_no}"}>{entry.board_no}</.link>

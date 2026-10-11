@@ -128,12 +128,15 @@ defmodule Alnasl.Outbox do
     base = Map.put(base, :pending, pending_count())
     if Settings.connection_configured?(), do: base, else: %{base | state: :unconfigured}
   catch
-    :exit, _reason -> %{state: :idle, last_ok: nil, last_error: nil, next_try_at: nil, pending: 0}
+    # The sender did not answer. What waits is still counted from the table:
+    # this number must never read 0 because somebody was busy.
+    :exit, _reason ->
+      %{state: :idle, last_ok: nil, last_error: nil, next_try_at: nil, pending: pending_count()}
   end
 
-  @doc "Removes sent and superseded rows older than `days`."
+  @doc "Removes sent and superseded rows older than `days`; all of them when `days` is 0."
   def prune(days \\ 7) do
-    cutoff = DateTime.add(DateTime.utc_now(:second), -days * 86_400)
+    cutoff = DateTime.add(DateTime.utc_now(:second), -days * 86_400 + 1)
 
     Entry
     |> where([e], e.state in ["sent", "superseded"] and e.inserted_at < ^cutoff)
@@ -202,8 +205,10 @@ defmodule Alnasl.Outbox do
         ],
         body: entry.body,
         retry: false,
-        receive_timeout: 10_000,
-        connect_options: [timeout: 5_000]
+        # No `connect_options` here: with them Req starts a connection pool
+        # of its own for every request, and a queue of a hundred moves takes
+        # minutes instead of a second.
+        receive_timeout: 10_000
       ]
       |> Keyword.merge(Tournament.req_options())
       |> Req.new()
@@ -351,7 +356,16 @@ defmodule Alnasl.Outbox do
     send(self(), :deliver)
 
     {:ok,
-     %{state: :idle, last_ok: nil, last_error: nil, backoff: 1_000, timer: nil, next_try_at: nil}}
+     %{
+       state: :idle,
+       last_ok: nil,
+       last_error: nil,
+       backoff: 1_000,
+       timer: nil,
+       next_try_at: nil,
+       task: nil,
+       again?: false
+     }}
   end
 
   @impl true
@@ -370,9 +384,27 @@ defmodule Alnasl.Outbox do
   # A wake-up while a retry is scheduled changes nothing: the pause stands.
   def handle_info(:deliver, %{timer: timer} = s) when timer != nil, do: {:noreply, s}
 
-  def handle_info(:deliver, s), do: {:noreply, run(s)}
+  # A wake-up while a batch is out: look again when it is back.
+  def handle_info(:deliver, %{task: task} = s) when task != nil,
+    do: {:noreply, %{s | again?: true}}
 
-  def handle_info(:retry, s), do: {:noreply, run(%{s | timer: nil, next_try_at: nil})}
+  def handle_info(:deliver, s), do: {:noreply, start_batch(s)}
+
+  def handle_info(:retry, %{task: nil} = s),
+    do: {:noreply, start_batch(%{s | timer: nil, next_try_at: nil})}
+
+  def handle_info(:retry, s), do: {:noreply, %{s | timer: nil, next_try_at: nil, again?: true}}
+
+  def handle_info({ref, {result, sent}}, %{task: ref} = s) do
+    Process.demonitor(ref, [:flush])
+    s = finish(%{s | task: nil}, result, sent)
+    if s.again? and s.timer == nil, do: send(self(), :deliver)
+    {:noreply, %{s | again?: false}}
+  end
+
+  def handle_info({:DOWN, ref, :process, _pid, reason}, %{task: ref} = s) do
+    {:noreply, finish(%{s | task: nil}, {:retry, {:crash, inspect(reason)}, nil}, 0)}
+  end
 
   def handle_info(_other, s), do: {:noreply, s}
 
@@ -383,15 +415,22 @@ defmodule Alnasl.Outbox do
     %{s | timer: nil, next_try_at: nil}
   end
 
-  # Sends a batch, then yields: a long queue must not make the status call wait.
-  defp run(s) do
-    {result, sent} =
-      try do
-        drain_counting(50)
-      rescue
-        error -> {{:retry, {:crash, Exception.message(error)}, nil}, 0}
-      end
+  # A batch is sent by a process of its own, so that this one can always
+  # answer how things stand - also while a request hangs on a dead line.
+  defp start_batch(s) do
+    task =
+      Task.Supervisor.async_nolink(Alnasl.TaskSupervisor, fn ->
+        try do
+          drain_counting(25)
+        rescue
+          error -> {{:retry, {:crash, Exception.message(error)}, nil}, 0}
+        end
+      end)
 
+    %{s | task: task.ref}
+  end
+
+  defp finish(s, result, sent) do
     s = if sent > 0, do: online(%{s | last_ok: DateTime.utc_now(:second)}), else: s
 
     case result do

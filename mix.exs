@@ -88,10 +88,13 @@ defmodule Alnasl.MixProject do
       "assets.setup": ["esbuild.install --if-missing"],
       "assets.build": ["compile", "esbuild alnasl"],
       "assets.deploy": [
+        "esbuild.install --if-missing",
         "esbuild alnasl --minify",
         "phx.digest"
       ],
-      precommit: ["compile --warnings-as-errors", "deps.unlock --unused", "format", "test"]
+      # No "deps.unlock --unused" here: on a machine that leaves the serial
+      # library out (see uart/0) it would drop it from the lock file.
+      precommit: ["compile --warnings-as-errors", "format", "test"]
     ]
   end
 end

@@ -23,6 +23,7 @@ defmodule Alnasl.Application do
         {Phoenix.PubSub, name: Alnasl.PubSub},
         {Registry, keys: :unique, name: Alnasl.BoardRegistry},
         {Registry, keys: :unique, name: Alnasl.BusRegistry},
+        {Task.Supervisor, name: Alnasl.TaskSupervisor},
         Alnasl.Recorder,
         {DynamicSupervisor, name: Alnasl.BusSupervisor, strategy: :one_for_one},
         {DynamicSupervisor,

@@ -112,13 +112,15 @@ defmodule Alnasl.Recorder do
   and no positions (a recording of a real board, or a log written by
   `tools/serial_proxy.py`) is decoded with the DGT protocol on the way.
   """
-  def read(path) do
+  def read(path, address \\ nil) do
     with {:ok, text} <- File.read(path) do
+      # A capture of a loop (`mix alnasl.dgt --bus`) marks each line with the
+      # address it belongs to (`"a"`); `address` picks one board out of it.
       lines =
         text
         |> String.split("\n", trim: true)
         |> Enum.map(&parse_line/1)
-        |> Enum.reject(&is_nil/1)
+        |> Enum.reject(&(is_nil(&1) or (address != nil and &1["a"] not in [nil, address])))
 
       case lines do
         [] ->
@@ -235,8 +237,8 @@ defmodule Alnasl.Recorder do
   `%{moves, plies, alarms: [{ms, why}], corrections, status, duration_ms,
   events, raw?, cfg}`.
   """
-  def dry_run(path, tracker_opts \\ nil) do
-    with {:ok, capture} <- read(path) do
+  def dry_run(path, tracker_opts \\ nil, address \\ nil) do
+    with {:ok, capture} <- read(path, address) do
       opts = tracker_opts || Settings.tracker_opts()
       opts = if fen = capture.cfg["start_fen"], do: Keyword.put(opts, :start_fen, fen), else: opts
       flipped? = capture.cfg["flipped"] == true

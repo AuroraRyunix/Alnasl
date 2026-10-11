@@ -30,7 +30,9 @@ defmodule AlnaslWeb.SiteCase do
     Alnasl.HallCase.eventually(
       fn ->
         html = Phoenix.LiveViewTest.render(view)
-        fun.(html) && html
+        # Rendered again: `fun` may have looked at the view itself, a moment
+        # after `html` was taken.
+        fun.(html) && Phoenix.LiveViewTest.render(view)
       end,
       timeout
     )

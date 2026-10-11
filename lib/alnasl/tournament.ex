@@ -19,7 +19,7 @@ defmodule Alnasl.Tournament do
   def req_options, do: Application.get_env(:alnasl, :req_options, [])
 
   defp request(opts) do
-    [retry: false, receive_timeout: 8_000, connect_options: [timeout: 5_000]]
+    [retry: false, receive_timeout: 8_000]
     |> Keyword.merge(opts)
     |> Keyword.merge(req_options())
     |> Req.new()
