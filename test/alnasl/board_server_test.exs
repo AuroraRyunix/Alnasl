@@ -14,6 +14,52 @@ defmodule Alnasl.BoardServerTest do
   @opera ~w(e4 e5 Nf3 d6 d4 Bg4 dxe5 Bxf3 Qxf3 dxe5 Bc4 Nf6 Qb3 Qe7 Nc3 c6 Bg5 b5 Nxb5 cxb5
             Bxb5+ Nbd7 O-O-O Rd8 Rxd7 Rxd7 Rd1 Qe6 Bxd7+ Nxd7 Qb8+ Nxb8 Rd8#)
 
+  describe "a real board is always recorded" do
+    test "its bytes both ways and what was read from them, round or no round, with nothing to switch on" do
+      # Not linked to any board of a round: plugged in, and that is all.
+      board = fake_dgt("FAKE1")
+      [after_e4] = boards_after(~w(e4))
+      eventually(fn -> Boards.snapshot(board.id).raw == Position.to_text(Position.start()) end)
+      set_pieces("FAKE1", after_e4)
+      eventually(fn -> Boards.snapshot(board.id).raw == Position.to_text(after_e4) end)
+
+      Recorder.flush()
+      assert [capture | _] = Enum.filter(Recorder.list(), &(&1.board_id == board.id))
+      # <data>/captures/board-<id>/<UTC start>.jsonl
+      assert Path.dirname(capture.path) ==
+               Path.join(Alnasl.Paths.captures(), "board-#{board.id}")
+
+      assert Path.basename(capture.path) =~ ~r/^\d{8}-\d{6}(-\d+)?\.jsonl$/
+
+      kinds =
+        capture.path
+        |> File.read!()
+        |> String.split("\n", trim: true)
+        |> Enum.map(&Jason.decode!(&1)["k"])
+
+      assert "rx" in kinds and "tx" in kinds
+      assert Enum.count(kinds, &(&1 == "pos")) >= 2
+
+      # And it replays: `mix alnasl.replay <that file>` is this.
+      assert {:ok, report} = Recorder.dry_run(capture.path, [])
+      assert report.moves == ["e4"]
+    end
+
+    test "a change of the tracker's settings reaches a game under way" do
+      board = fake_dgt("FAKE1", %{round: 1, board_no: 2})
+      eventually(fn -> Boards.snapshot(board.id).status == :waiting_start end)
+      # A move must stand for a minute: nothing is believed.
+      Settings.put("tracker", %{"settle_ms" => 60_000})
+      [after_e4] = boards_after(~w(e4))
+      set_pieces("FAKE1", after_e4)
+      eventually(fn -> Boards.snapshot(board.id).status == :settling end)
+      assert sans(board.id) == []
+
+      Settings.put("tracker", %{"settle_ms" => 20})
+      eventually(fn -> sans(board.id) == ~w(e4) end)
+    end
+  end
+
   describe "a simulated board, from the first move to the server" do
     test "the game arrives whole: database, PGN, capture and server agree" do
       {:ok, board} =
@@ -374,13 +420,21 @@ defmodule Alnasl.BoardServerTest do
       assert "board.moved" in Enum.map(Alnasl.Log.list(), & &1.kind)
     end
 
-    test "a late board is caught up when it is a few moves in" do
+    test "a late board is caught up when it is two moves in; further in, the arbiter asks" do
       late = fake_dgt("FAKE1")
       eventually(fn -> Boards.snapshot(late.id).connected? end)
-      set_pieces("FAKE1", List.last(boards_after(~w(e4 e5 Qh5))))
+      set_pieces("FAKE1", List.last(boards_after(~w(e4 e5))))
       {:ok, _} = Boards.link(late, 1, 2)
-      eventually(fn -> sans(late.id) == ~w(e4 e5 Qh5) end)
+      eventually(fn -> sans(late.id) == ~w(e4 e5) end)
       assert Enum.all?(Boards.snapshot(late.id).plies, &(:recovered in &1.flags))
+
+      # Three more went by unseen: more than the box works out by itself
+      # (search depth 2). "Resync from the board" searches deeper.
+      set_pieces("FAKE1", List.last(boards_after(~w(e4 e5 Nf3 Nc6 Nxe5))))
+      eventually(fn -> Boards.snapshot(late.id).status == :out_of_sync end)
+      assert sans(late.id) == ~w(e4 e5)
+      Boards.resync(late.id)
+      eventually(fn -> sans(late.id) == ~w(e4 e5 Nf3 Nc6 Nxe5) end)
     end
 
     test "boards are linked in order with one call, and move on to the next round together" do

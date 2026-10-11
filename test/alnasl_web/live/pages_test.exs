@@ -299,6 +299,28 @@ defmodule AlnaslWeb.PagesTest do
       view |> element("#reset-tracker") |> render_click()
       assert Settings.tracker_opts() == []
     end
+
+    test "\"Bullet / fast play\" moves the settings that belong together, and leaves the search depth alone",
+         %{conn: conn} do
+      assert Alnasl.Tracker.defaults().search_depth == 2
+      {:ok, view, _html} = live(conn, ~p"/setup")
+      refute has_element?(view, "#preset-bullet-on")
+      assert has_element?(view, "#tracker-depth-note")
+
+      view |> form("#tracker-form", tracker: %{search_depth: "3"}) |> render_submit()
+      view |> element("#preset-bullet") |> render_click()
+      assert has_element?(view, "#preset-bullet-on")
+
+      opts = Settings.tracker_opts()
+      assert opts[:settle_ms] == 150 and opts[:takeback] == false
+      assert opts[:search_depth] == 3
+      # The waits for a castle and a promotion are not part of it.
+      assert opts[:castle_hold_ms] == 150 and opts[:promotion_hold_ms] == 200
+
+      view |> element("#reset-tracker") |> render_click()
+      refute has_element?(view, "#preset-bullet-on")
+      assert Settings.tracker_opts() == []
+    end
   end
 
   describe "Outbox" do

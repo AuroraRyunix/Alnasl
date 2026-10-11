@@ -85,7 +85,7 @@ arbiter's laptop on the hall's network. English and Dutch, light and dark.
 | **PGN** | Read PGN files or pasted moves (checked for legality). Play a game on a simulator board; attach a game that was not captured to its board, after asking; compare a scoresheet with the captured game (the first difference). Export a game or the whole round |
 | **Recordings** | The raw captures per board. Replay one through the tracker as a dry run (what it makes of it, where it lost the thread); export it as a test fixture; download it |
 | **Log** | What happened, in sentences, with filters: board connected, moves recovered, out of sync, repaired by the arbiter, offline, back |
-| **Setup** | Results server, tournament (its short name, or paste the link), relay key (never shown again once saved), "Test connection" that really asks the server and explains failures; a Lichess broadcast round and its token, with a test of its own; the box's name, language, round; a PIN for other machines and the address they open; the tracker's timings |
+| **Setup** | Results server, tournament (its short name, or paste the link), relay key (never shown again once saved), "Test connection" that really asks the server and explains failures; a Lichess broadcast round and its token, with a test of its own; the box's name, language, round; a PIN for other machines and the address they open; the tracker's timings, with "Bullet / fast play" for games of a few minutes or less |
 | **Help** | The cycle on one page: before the round, during, after, and when something is wrong |
 
 A banner on every page says so when the results server cannot be reached.
@@ -230,7 +230,8 @@ mix phx.server        # http://localhost:4040, data in ./data
 ```
 
 `mix test` runs everything (about a minute). `mix alnasl.bench` prints the
-tracker's fault matrix.
+tracker's fault matrix. `mix alnasl.demo --faults bullet --speed 1` is a
+hall playing bullet.
 
 ### On the box (Raspberry Pi, Linux)
 
@@ -270,11 +271,26 @@ One directory (`ALNASL_DATA`):
 
 ```
 alnasl.db                      settings, boards, games, the outbox, the log (SQLite, WAL, fsync on commit)
-captures/board-<id>/*.jsonl    everything every board delivered, raw (rotated at 8 MB, capped in Setup)
+captures/board-<id>/*.jsonl    everything every board delivered, raw: always on, nothing to switch (rotated at 8 MB, capped in Setup)
 pgn/round-<r>/board-<n>.pgn    every game as PGN with clock times, rewritten on every move
 fixtures/*.jsonl               captures exported as test fixtures
 secret_key_base                prod only
 ```
+
+A real board is recorded from the moment it is connected, linked to a
+round or not: every byte in both directions (`rx`/`tx`), every position
+and clock reading made of them, with wall-clock milliseconds. The file is
+`<ALNASL_DATA>/captures/board-<id>/<UTC date>-<time>.jsonl` - `./data/...`
+from `mix phx.server`, `~/.alnasl/...` on the box. The Recordings page
+lists, replays and downloads them; at a desk it is
+
+```
+mix alnasl.replay data/captures/board-3/20261012-101500.jsonl --timeline
+mix alnasl.replay data/captures/board-3/20261012-101500.jsonl --settle 150 --depth 3
+```
+
+which plays the file through a fresh tracker (with other settings, if you
+want to know what they would have made of it) and saves nothing.
 
 ### Serial ports
 
@@ -335,7 +351,7 @@ page says so, and simulator boards are unaffected.
 
 ## What is proven, and how
 
-By `mix test` (211 tests), three tools, and one evening with a real board:
+By `mix test` (283 tests), three tools, and one evening with a real board:
 
 **The tracker**, against 69 games (59 classics before 1930, 7 constructed
 for underpromotion and en passant, 3 more; 4599 plies) played through the
@@ -345,12 +361,19 @@ simulator under each fault mix, three passes each (`mix alnasl.bench
 | fault mix | exact | stopped, asked | wrong but flagged | **wrong, silent** |
 |---|---|---|---|---|
 | clean; hover, lift, knock, swap, missing clock presses, pawn left for a queen, takebacks, slides - each alone at 20-30%, and all together | 207 of 207, every row; **no alarm ever raised** | 0 | 0 | **0** |
-| one ply at a time unseen (10%), alone and with the others | 201-204 | 3-6 | 0 | **0** |
+| one ply at a time unseen (10%), alone and with the others | 198-204 | 3-9 | 0 | **0** |
 | unplugged for 2 plies, twice | 204 | 3 | 0 | **0** |
-| up to 3 plies in a row unseen (25%) | 47 | 159 | 1 | **0** |
-| unplugged for 3 plies | 110 | 94 | 3 | **0** |
-| unplugged for 8 plies (beyond the search) | 3 (games that short) | 204 | 0 | **0** |
-| an illegal move at ply 12, played on | - | 196 | 11 | **0** |
+| up to 3 plies in a row unseen (25%) | 15 | 192 | 0 | **0** |
+| unplugged for 3 plies | 0 | 204 | 3 | **0** |
+| unplugged for 8 plies (beyond the search) | 0 | 207 | 0 | **0** |
+| an illegal move at ply 12, played on | - | 207 | 0 | **0** |
+| bullet speed (a move every 0.3-2 s, the clock a second late), no faults; defaults, and "Bullet / fast play" | 207 of 207, both | 0 | 0 | **0** |
+| bullet with slammed and knocked-over pieces, 6% of plies unseen, 10% of presses unreported; "Bullet / fast play" | 204 | 3 | 0 | **0** |
+
+The box works out up to **two** unseen plies by itself (`search_depth`, 2;
+Setup can raise it). That is why three unseen plies are now always an alarm
+and an illegal move always is: searching four plies deep, 11 of 207 illegal
+moves were "recovered" into games that were never played.
 
 "Stopped, asked" is the tracker raising the board to the arbiter with what it
 emitted until then correct - mostly a genuine ambiguity (a pawn that went one
@@ -363,7 +386,8 @@ assert the last column and the first row.
 
 The search for unseen moves is bounded: worst case over 400 scrambled
 positions at depth 4 is about 0.1 s on a desktop (mean 15 ms, 3259 nodes);
-inside the fault matrix the worst single search was 0.27 s.
+inside the fault matrix, at the default depth of 2, the worst single search
+was 6 ms.
 
 **The outbox**, against a server that speaks the real contract in tests:
 order across outages, a restart mid-queue, 500 / 503 / 429, duplicates,
@@ -452,8 +476,13 @@ and names on every page in both languages.
   with the pieces in the starting position. A clock swapped or re-set
   wrongly in the middle of a game is not looked for.
 - **Chess960** is not supported (neither is it by the server's checker).
-- **Three or more moves unseen in a row** can be reconstructed wrongly in
-  constructed cases (flagged, never silent) - see the table above.
+- **Three or more moves unseen in a row** are an alarm, not a guess, at the
+  default search depth of 2; raised in Setup they can be reconstructed
+  wrongly in constructed cases (flagged, never silent).
+- **Bullet on a real board has not been played.** The fast-play rules and
+  numbers come from the simulator (`docs/design.md`, "Fast play"). How a
+  real board's scan reads a slammed or toppled piece is not known; the
+  recording of the session will say.
 - **No visual check in a browser by a person** was part of this build; two
   screenshots were taken headless. Colour-blind safety rests on shapes and
   words, which the tests check exist and differ, not on anybody looking.

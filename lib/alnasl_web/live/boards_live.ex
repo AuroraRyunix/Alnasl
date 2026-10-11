@@ -124,6 +124,9 @@ defmodule AlnaslWeb.BoardsLive do
               "game" => int(params["game"], 1),
               "speed" => int(params["speed"], 20),
               "faults" => Map.get(@presets, params["faults"], %{}),
+              # Fast play is more than faults: it is also how quickly the
+              # hands move and how late the clock reports.
+              "profile" => if(params["faults"] == "bullet", do: "bullet"),
               "seed" => count + 1
             }
           }
@@ -807,7 +810,8 @@ defmodule AlnaslWeb.BoardsLive do
                   options={[
                     {gettext("Perfect"), "none"},
                     {gettext("Ordinary (lifts, slides, a takeback)"), "mild"},
-                    {gettext("Rough (knocks, swaps, missed moves)"), "rough"}
+                    {gettext("Rough (knocks, swaps, missed moves)"), "rough"},
+                    {gettext("Bullet (a move a second, slammed and knocked-over pieces)"), "bullet"}
                   ]}
                 />
               <% else %>

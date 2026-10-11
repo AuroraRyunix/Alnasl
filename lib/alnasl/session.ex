@@ -73,9 +73,22 @@ defmodule Alnasl.Session do
     session = %{session | clock: clock}
 
     {session, events} =
-      if pressed?,
-        do: session.tracker |> Tracker.press(t) |> wrap(session, t, true),
-        else: session |> check_missing([]) |> check_clock(false)
+      cond do
+        not pressed? ->
+          session |> check_missing([]) |> check_clock(false)
+
+        # A press confirms the move that stands on the board only when it
+        # is that move's press: the mover's clock stopped, the other side's
+        # runs. A clock tells what happened up to a second late, and in
+        # fast play the press of the move before arrives when the next
+        # piece is already down - on a square where a rook may only be
+        # resting on its way to castling.
+        clock.running in [:none, to_move(session.tracker)] ->
+          session.tracker |> Tracker.tick(t) |> wrap(session, t, true)
+
+        true ->
+          session.tracker |> Tracker.press(t) |> wrap(session, t, true)
+      end
 
     {session, [{:clock, Clock.read(clock, t)} | events]}
   end

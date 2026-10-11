@@ -40,7 +40,12 @@ defmodule AlnaslWeb.SetupLive do
         s["tracker"] || %{}
       )
 
+    preset = Tracker.preset(:bullet)
+
     assign(socket,
+      preset: preset,
+      defaults: Tracker.defaults(),
+      fast?: Enum.all?(preset, fn {key, value} -> tracker[Atom.to_string(key)] == value end),
       server_form:
         to_form(
           %{"server_url" => s["server_url"], "tournament" => s["slug"], "relay_key" => ""},
@@ -281,7 +286,26 @@ defmodule AlnaslWeb.SetupLive do
 
     {:noreply,
      socket
-     |> put_flash(:info, gettext("Saved. Boards use the new timings from their next connection."))
+     |> put_flash(
+       :info,
+       gettext("Saved. Every board uses the new settings from its next reading.")
+     )
+     |> load()}
+  end
+
+  # "Bullet / fast play": what `Alnasl.Tracker.preset(:bullet)` changes, on
+  # top of whatever else was set (the search depth is left as it is).
+  def handle_event("preset_tracker", %{"preset" => "bullet"}, socket) do
+    preset = Map.new(Tracker.preset(:bullet), fn {key, value} -> {Atom.to_string(key), value} end)
+    Settings.put("tracker", Map.merge(Settings.get("tracker") || %{}, preset))
+    Log.add(:info, "setup.saved", %{})
+
+    {:noreply,
+     socket
+     |> put_flash(
+       :info,
+       gettext("Set for fast play. Every board uses it from its next reading.")
+     )
      |> load()}
   end
 
@@ -641,9 +665,31 @@ defmodule AlnaslWeb.SetupLive do
         <.panel id="setup-tracker" title={gettext("How patient the tracker is")}>
           <p class="note">
             {gettext(
-              "Times are in milliseconds. The defaults suit classical play; leave them unless a hall teaches you otherwise."
+              "Times are in milliseconds. The defaults suit classical and rapid play, time scrambles included; leave them unless a hall teaches you otherwise."
             )}
           </p>
+          <div id="tracker-presets" class="callout">
+            <div class="row">
+              <.button
+                id="preset-bullet"
+                type="button"
+                phx-click="preset_tracker"
+                phx-value-preset="bullet"
+              >
+                {gettext("Bullet / fast play")}
+              </.button>
+              <.badge :if={@fast?} id="preset-bullet-on" tone="ok" icon="ok">
+                {gettext("Set for fast play")}
+              </.badge>
+            </div>
+            <p class="note">
+              {gettext(
+                "For games of a few minutes or less. It changes two things: a move must stand for %{settle} ms instead of %{settle_default}, and a board put back to the position before the last move is not read as a takeback - at that speed it is a piece going to and fro. Nothing else is touched, the number of unseen moves searched for included. \"Back to the defaults\" undoes it.",
+                settle: @preset.settle_ms,
+                settle_default: @defaults.settle_ms
+              )}
+            </p>
+          </div>
           <.form for={@tracker_form} id="tracker-form" phx-submit="save_tracker" class="stack">
             <div class="form-grid">
               <.input
@@ -696,6 +742,11 @@ defmodule AlnaslWeb.SetupLive do
                 max="6"
                 label={gettext("Unseen moves searched for (half-moves)")}
               />
+              <p id="tracker-depth-note" class="note">
+                {gettext(
+                  "2 by default: the box works out up to two moves it did not see, and raises the alarm beyond that. Higher finds more by itself, and is more often wrong when a move on the board was illegal. \"Resync\" on a board's page searches deeper whatever is set here."
+                )}
+              </p>
               <.input
                 field={@tracker_form[:promotion_default]}
                 id="tracker-default"

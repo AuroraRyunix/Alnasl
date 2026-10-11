@@ -7,13 +7,16 @@ defmodule Mix.Tasks.Alnasl.Demo do
       mix alnasl.demo
       mix alnasl.demo --boards 12 --speed 30 --port 4040
       mix alnasl.demo --faults rough
+      mix alnasl.demo --faults bullet --speed 1
 
   Starts the application on its own data directory (`data/demo`, emptied on
   every run unless `--keep`), makes up a tournament from the players of the
   bundled games, adds `--boards` (8) simulator boards that play those games
   `--speed` (12) times faster than life with the hands of `--faults`
-  (`none`, `mild` - the default - or `rough`), links them to boards 1..N of
-  round 1, and prints the address to open.
+  (`none`, `mild` - the default - `rough`, or `bullet`: fast play, a move
+  every 0.3-2 seconds with slammed and knocked-over pieces, best watched at
+  `--speed 1`), links them to boards 1..N of round 1, and prints the
+  address to open.
 
   One of the boards is made to go wrong on purpose (`--no-trouble` to leave
   that out): on the last board a player makes an illegal move at move 9 and
@@ -141,10 +144,16 @@ defmodule Mix.Tasks.Alnasl.Demo do
       Settings.put("snapshot", snapshot(games))
     end
 
-    faults = Map.get(@faults, opts[:faults] || "mild", @faults["mild"])
+    bullet? = opts[:faults] == "bullet"
+    faults = if bullet?, do: %{}, else: Map.get(@faults, opts[:faults] || "mild", @faults["mild"])
 
     boards =
-      Boards.add_simulators(count, 1, games: games, faults: faults, speed: opts[:speed] || 12)
+      Boards.add_simulators(count, 1,
+        games: games,
+        faults: faults,
+        profile: if(bullet?, do: "bullet"),
+        speed: opts[:speed] || 12
+      )
 
     # One board on which a player makes an illegal move and plays on.
     if Keyword.get(opts, :trouble, true) and boards != [] do

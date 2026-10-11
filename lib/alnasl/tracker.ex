@@ -13,7 +13,8 @@ defmodule Alnasl.Tracker do
     legal moves;
   - `phys`, what the sensors should read for that position (the position's
     own board, except where a pawn was left standing on its promotion square);
-  - `raw`, the last board reported, and since when it has read like that.
+  - `raw`, the last board reported, and since when it has read like that;
+    `before`, the board it read before that.
 
   ## What it does with a board
 
@@ -30,7 +31,11 @@ defmodule Alnasl.Tracker do
   5. it is two or more legal moves away - `Alnasl.Tracker.Search`. One answer
      is accepted and flagged `:recovered`; several are kept as candidates and
      narrowed by the boards that follow;
-  6. none of these - a hand, a knocked piece, half a capture. Nothing is
+  6. the reading before this one was one legal move, and now one or two
+     other pieces are in the air - the next hand is already on the board.
+     The move is accepted at once: in fast play nothing stands still for
+     `settle_ms`;
+  7. none of these - a hand, a knocked piece, half a capture. Nothing is
      emitted. Only when it stays unexplained for `transient_ms`
      (`lifted_ms` when it is just a piece or two in the air) does the status
      become `:out_of_sync`, and the tracker keeps watching: the moment the
@@ -57,14 +62,21 @@ defmodule Alnasl.Tracker do
   alias Alnasl.Tracker.Search
 
   @defaults %{
-    settle_ms: 400,
+    # Long enough for a knight that touches down on its way (the real
+    # board's capture has one resting 224 ms on d4), short enough for the
+    # last minute of a game: at 400 a time scramble went by half unseen.
+    settle_ms: 250,
     deep_settle_ms: 5_000,
     castle_hold_ms: 2_500,
     promotion_hold_ms: 4_000,
     takeback: true,
     takeback_plies: 2,
     takeback_settle_ms: 1_500,
-    search_depth: 4,
+    # How many unseen plies the box may work out by itself. Two: at four,
+    # 11 of 207 games with an illegal move played on were "recovered" into
+    # a game that was never played (at three, 9; at two, none). Setup can
+    # raise it; "Resync" on a board's page searches deeper when asked.
+    search_depth: 2,
     max_nodes: 200_000,
     max_candidates: 12,
     transient_ms: 8_000,
@@ -81,6 +93,9 @@ defmodule Alnasl.Tracker do
             history: [],
             raw: nil,
             raw_since: 0,
+            before: nil,
+            ready?: false,
+            begun?: false,
             at: 0,
             status: :waiting_start,
             detail: nil,
@@ -95,8 +110,30 @@ defmodule Alnasl.Tracker do
   @type t :: %__MODULE__{}
   @type event :: tuple()
 
+  # What fast play changes. A move stands for a blink, so less is asked of
+  # it; and nobody takes a move back with ten seconds on the clock - what
+  # looks like a takeback at that speed is a piece going to and fro, and is
+  # read as moves. The two belong together: over 690 simulated bullet games
+  # with slams, knocks and missed plies, either alone left 9 and 19 games
+  # in an alarm, both together 3 (and the defaults 25).
+  #
+  # Not in it, on purpose: the waits for a rook that may be castling and
+  # for a pawn's piece. Shortening them saved one game in 690 and showed a
+  # rook move that became a castle a moment later 57 times.
+  @bullet %{settle_ms: 150, takeback: false}
+
   @doc "The settings and their defaults."
   def defaults, do: @defaults
+
+  @doc """
+  A named set of settings, as the map of what it changes from the defaults:
+  `:bullet` is "Bullet / fast play" on the Setup page, anything else the
+  defaults (an empty map). The search depth is not part of it: how many
+  unseen moves the box may work out by itself is a matter of trust, not of
+  speed.
+  """
+  def preset(:bullet), do: @bullet
+  def preset(_classical), do: %{}
 
   @doc "A tracker for a game that starts from `:start_fen` (the standard position)."
   @spec new(keyword() | map()) :: t()
@@ -181,7 +218,7 @@ defmodule Alnasl.Tracker do
   @doc "The board reads `board` at time `t`."
   @spec observe(t(), integer(), tuple()) :: {t(), [event()]}
   def observe(%__MODULE__{} = tr, t, board) when is_tuple(board) do
-    tr = if board == tr.raw, do: tr, else: %{tr | raw: board, raw_since: t}
+    tr = if board == tr.raw, do: tr, else: %{tr | raw: board, raw_since: t, before: tr.raw}
     evaluate(tr, t, false)
   end
 
@@ -300,6 +337,16 @@ defmodule Alnasl.Tracker do
     tr = %{tr | at: t, held: nil}
     stable = t - tr.raw_since
 
+    # A clock pressed over a board that stood in the starting position, has
+    # left it, and of which no move was understood: the game has begun, and the box did
+    # not see how. From here an unexplained board is an alarm like any
+    # other, not pieces still being set up (`unexplained/3`).
+    tr =
+      if force and tr.ready? and tr.plies == [] and tr.raw != tr.phys and
+           not Position.in_hand?(tr.phys, tr.raw),
+         do: %{tr | begun?: true},
+         else: tr
+
     cond do
       tr.raw == tr.phys ->
         in_sync(tr)
@@ -321,7 +368,15 @@ defmodule Alnasl.Tracker do
   end
 
   defp in_sync(tr) do
-    tr = %{tr | candidates: [], candidates_since: nil, candidates_raw: nil, gesture: nil}
+    tr = %{
+      tr
+      | candidates: [],
+        candidates_since: nil,
+        candidates_raw: nil,
+        gesture: nil,
+        begun?: false,
+        ready?: tr.ready? or tr.plies == []
+    }
 
     if tr.plies == [],
       do: set_status(tr, :waiting_start, :ready),
@@ -347,6 +402,9 @@ defmodule Alnasl.Tracker do
 
       _none ->
         cond do
+          (step = move_under_hand(tr)) != nil ->
+            accept_under_hand(tr, t, step)
+
           stable < o.settle_ms ->
             set_status(tr, :settling, :moving)
 
@@ -373,7 +431,7 @@ defmodule Alnasl.Tracker do
   # piece that then went home, and believing those costs more than waiting.
   defp deeper(tr, t, stable) do
     cond do
-      Position.in_hand?(tr.phys, tr.raw) ->
+      Position.in_hand?(tr.phys, tr.raw) and not exchange?(tr, stable) ->
         unexplained(tr, stable, :unexplained)
 
       # The same hand, over the position of a move ago: a move being taken
@@ -388,6 +446,30 @@ defmodule Alnasl.Tracker do
 
       true ->
         deeper_search(tr, t, stable)
+    end
+  end
+
+  # Two pieces gone, one of each colour, and the one cannot take the other:
+  # not a capture half made. It is what a capture and its recapture by a
+  # piece of the same kind leave behind when neither was seen (hxg6 hxg6: a
+  # pawn stands on g6 as before, and both h-pawns are gone), and that is
+  # worth a search - a third move on top of it is out of reach of a search
+  # two plies deep.
+  defp exchange?(tr, stable) do
+    us = tr.pos.turn
+
+    with true <- stable >= tr.opts.settle_ms,
+         [a, b] <- Position.diff(tr.phys, tr.raw),
+         {colour_a, _} <- elem(tr.phys, a),
+         {colour_b, _} <- elem(tr.phys, b),
+         true <- colour_a != colour_b do
+      {mine, theirs} = if colour_a == us, do: {a, b}, else: {b, a}
+
+      not Enum.any?(Chess.legal_moves(tr.pos), fn move ->
+        move.from == mine and (move.to == theirs or move.kind == :ep)
+      end)
+    else
+      _no -> false
     end
   end
 
@@ -428,8 +510,13 @@ defmodule Alnasl.Tracker do
     gesture = if o.result_gesture and tr.plies != [], do: gesture(tr)
 
     cond do
-      tr.plies == [] ->
+      # Before the first move a board that is not the starting position is
+      # pieces being set up - unless the clock has been pressed since.
+      tr.plies == [] and not (tr.begun? and stable >= o.transient_ms) ->
         set_status(tr, :waiting_start, :not_start)
+
+      tr.plies == [] ->
+        set_status(tr, :out_of_sync, why)
 
       gesture != nil ->
         {tr, events} = set_status(tr, :settling, {:gesture, gesture})
@@ -597,6 +684,41 @@ defmodule Alnasl.Tracker do
           Chess.legal?(pos, move),
           do: {move, flags}
     end
+  end
+
+  # A legal move stood on the board, and in the very next reading somebody
+  # has picked up another piece: the next hand is on the board, so the move
+  # is made. In fast play this is the only notice a move gets - it never
+  # stands still for `settle_ms`, and the clock says so a second late.
+  #
+  # Believed at once, but only when it can be nothing else: the reading
+  # before this one was that move and nothing but that move (so pieces
+  # that were already off the board do not count as a hand); the piece it
+  # moved still stands where it landed (a piece lifted from its landing
+  # square is a rook on its way further, a move being taken back, or the
+  # recapture - all of which read the same and are waited for); the
+  # mover's king is not the piece in the air (castling, rook first); and
+  # nothing was assumed about a promotion.
+  defp move_under_hand(%{before: nil}), do: nil
+
+  defp move_under_hand(%{before: before} = tr) do
+    us = tr.pos.turn
+
+    with true <- Position.in_hand?(before, tr.raw),
+         [{move, []}] <- one_ply(tr.pos, tr.phys, before, tr.opts.promotion_default),
+         true <- elem(tr.raw, move.to) != nil,
+         true <- Enum.all?(Position.diff(before, tr.raw), &(elem(before, &1) != {us, :k})),
+         false <- half_castle?(tr.pos, move) do
+      {move, before}
+    else
+      _no -> nil
+    end
+  end
+
+  defp accept_under_hand(tr, t, {move, board}) do
+    {tr, plies} = push(tr, [{move, []}], [], t, board)
+    tr = %{tr | candidates: [], candidates_since: nil, candidates_raw: nil, memo: nil}
+    {tr, [{:moves, plies}] ++ suggestion(tr)} |> and_then(&evaluate(&1, t, false))
   end
 
   # How long a one-move board must stand before it is believed.

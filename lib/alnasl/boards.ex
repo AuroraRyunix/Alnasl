@@ -357,6 +357,7 @@ defmodule Alnasl.Boards do
   def add_simulators(count, round, opts \\ []) do
     games = Keyword.get(opts, :games)
     faults = Keyword.get(opts, :faults, %{})
+    profile = Keyword.get(opts, :profile)
     speed = Keyword.get(opts, :speed, 20)
     first = Keyword.get(opts, :first, 1)
     existing = length(list())
@@ -366,6 +367,7 @@ defmodule Alnasl.Boards do
         %{
           "speed" => speed,
           "faults" => faults,
+          "profile" => profile,
           "seed" => existing + i,
           "start_delay_ms" => 3_000 * i
         }

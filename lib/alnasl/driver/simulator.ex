@@ -11,6 +11,10 @@ defmodule Alnasl.Driver.Simulator do
   - `"start_fen"` - when the game does not begin from the start position;
   - `"speed"` - how much faster than life (default 20);
   - `"faults"` - `%{"lift" => 0.1, ...}`, see `Alnasl.Simulator.Script`;
+  - `"profile"` - `"bullet"` for fast play: a move every 0.3-2 seconds, a
+    minute each, slammed and knocked-over pieces, missed plies and a clock
+    that reports late (`Alnasl.Simulator.Script.profile/1`). `"faults"`,
+    when given and not empty, replace the profile's own;
   - `"seed"`, `"clock"` (default true), `"unplug"` (`[[ply, plies]]`),
     `"illegal_at"`, `"gesture"` (a result, to end with the kings in the centre);
   - `"start_delay_ms"` - how long the board stands in the start position
@@ -31,7 +35,9 @@ defmodule Alnasl.Driver.Simulator do
     "takeback" => :takeback,
     "slide" => :slide,
     "clock_miss" => :clock_miss,
-    "leave_pawn" => :leave_pawn
+    "leave_pawn" => :leave_pawn,
+    "slam" => :slam,
+    "topple" => :topple
   }
   @faults Map.keys(@fault_atoms)
 
@@ -72,7 +78,10 @@ defmodule Alnasl.Driver.Simulator do
         {Map.fetch!(@fault_atoms, name), rate}
       end
 
-    %{
+    profile = if options["profile"] == "bullet", do: Script.profile(:bullet), else: %{}
+    faults = if faults == %{}, do: Map.get(profile, :faults, %{}), else: faults
+
+    Map.merge(profile, %{
       seed: options["seed"] |> number(1) |> round(),
       faults: faults,
       clock: options["clock"] != false,
@@ -80,7 +89,7 @@ defmodule Alnasl.Driver.Simulator do
       gesture: options["gesture"],
       illegal_at: options["illegal_at"],
       unplug: for([ply, plies] <- options["unplug"] || [], do: {ply, plies})
-    }
+    })
   end
 
   defp number(value, _default) when is_number(value), do: value

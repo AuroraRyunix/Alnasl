@@ -9,7 +9,12 @@ defmodule Mix.Tasks.Alnasl.Bench do
 
   Every bundled game (`priv/games/*.pgn`) is played once per pass under each
   fault mix of `Alnasl.Bench.suites/0`. The columns are the verdicts of
-  `Alnasl.Bench`: `silent` is the one that must stay zero.
+  `Alnasl.Bench`: `silent` is the one that must stay zero. `alarms` counts
+  every time a board went out of sync, also when it found its way back.
+
+  The last rows are fast play: `Alnasl.Simulator.Script.profile(:bullet)`,
+  with the tracker's defaults and with the "Bullet / fast play" preset of
+  the Setup page.
   """
 
   use Mix.Task
@@ -27,17 +32,17 @@ defmodule Mix.Tasks.Alnasl.Bench do
     )
 
     header =
-      String.pad_trailing("fault mix", 40) <>
-        "  exact  ambig  alarm  flagged  silent  faults  recovered  corrections  worst search"
+      String.pad_trailing("fault mix", 46) <>
+        "  exact  ambig  alarm  flagged  silent  faults  recovered  corrections  alarms  worst search"
 
     Mix.shell().info(header)
 
-    for {name, _kind, sim} <- Alnasl.Bench.suites() do
-      m = Alnasl.Bench.matrix(games, sim, [], passes)
+    for {name, _kind, sim, tracker} <- Alnasl.Bench.suites() do
+      m = Alnasl.Bench.matrix(games, sim, tracker, passes)
       v = fn key -> m.verdicts |> Map.get(key, 0) |> Integer.to_string() end
 
       Mix.shell().info(
-        String.pad_trailing(name, 40) <>
+        String.pad_trailing(name, 46) <>
           String.pad_leading(v.(:exact), 7) <>
           String.pad_leading(v.(:ambiguous), 7) <>
           String.pad_leading(v.(:alarm), 7) <>
@@ -46,6 +51,7 @@ defmodule Mix.Tasks.Alnasl.Bench do
           String.pad_leading(Integer.to_string(m.faults), 8) <>
           String.pad_leading(Integer.to_string(m.recovered), 11) <>
           String.pad_leading(Integer.to_string(m.corrections), 13) <>
+          String.pad_leading(Integer.to_string(m.alarms), 8) <>
           String.pad_leading("#{Float.round(m.max_search_ms, 1)} ms", 14)
       )
 

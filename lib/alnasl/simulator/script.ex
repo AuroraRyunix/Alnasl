@@ -29,12 +29,24 @@ defmodule Alnasl.Simulator.Script do
   | `:slide` | a rook, bishop or queen resting on a square on its way |
   | `:clock_miss` | the move is seen, the clock press after it is not |
   | `:leave_pawn` | a pawn promoted to a queen but left standing as a pawn |
+  | `:slam` | the move in one reading: the piece was never seen in the air, and a capture never in two steps. A hand faster than the board scans |
+  | `:topple` | the move knocks a neighbour over: it is off its square when the clock is pressed and set back on the opponent's time |
 
   Besides those: `:unplug` (`[{ply, plies}]` - the board is gone from before
   `ply` for that many plies, then back), `:illegal_at` (a ply at which the
   player makes a move that is not legal, after which the game is played on as
   if nothing happened) and `:gesture` (the kings set in the centre for the
   result once the game is over).
+
+  ## Fast play
+
+  `profile(:bullet)` is a set of options for a game played against the
+  clock: a move every 0.3-2 seconds, a minute each and no increment, pieces
+  slammed down (`:slam`), knocked over (`:topple`, `:knock`), plies that go
+  by unseen (`:missed`), and a clock that says what happened up to a second
+  late (`:clock_lag_ms` - a real DGT clock reports about once a second, so
+  the press usually arrives after the next hand is already on the board,
+  and two presses inside one second are never seen at all: `:clock_miss`).
 
   The result also says what was done (`:log`, `[{ply, fault}]`) so a test can
   say what the tracker should have made of it.
@@ -64,7 +76,24 @@ defmodule Alnasl.Simulator.Script do
     long_think_ms: 12_000,
     step_ms: {80, 500},
     pause_ms: {200, 1_500},
-    fault_ms: {600, 3_500}
+    fault_ms: {600, 3_500},
+    # From the move to the hand on the lever.
+    press_ms: {150, 900},
+    # `{low, high}`: the clock's reading reaches the box that much after
+    # the press, whatever the hands do meanwhile. `nil`: at once.
+    clock_lag_ms: nil
+  }
+
+  @bullet %{
+    initial_ms: 60_000,
+    increment_ms: 0,
+    think_ms: {100, 1_500},
+    step_ms: {30, 160},
+    pause_ms: {40, 300},
+    fault_ms: {150, 900},
+    press_ms: {30, 250},
+    clock_lag_ms: {100, 900},
+    faults: %{slam: 0.3, missed: 0.06, topple: 0.05, knock: 0.05, hover: 0.05, clock_miss: 0.1}
   }
 
   @type result :: %{
@@ -75,6 +104,13 @@ defmodule Alnasl.Simulator.Script do
         }
 
   def defaults, do: @defaults
+
+  @doc """
+  A named set of options. `:bullet` is fast play (see the module's "Fast
+  play"); `:classical` is the defaults.
+  """
+  def profile(:bullet), do: @bullet
+  def profile(_classical), do: %{}
 
   @spec build([String.t()], keyword() | map()) :: result()
   def build(sans, opts \\ []) do
@@ -95,7 +131,8 @@ defmodule Alnasl.Simulator.Script do
       pressed_at: 0,
       derailed: false,
       unplug_left: 0,
-      streak: 0
+      streak: 0,
+      clock_at: 0
     }
 
     st = emit(st, {:position, st.b})
@@ -116,7 +153,11 @@ defmodule Alnasl.Simulator.Script do
     st = if o.clock, do: st |> wait(1_000) |> emit({:clock, reading(st, :none)}), else: st
     st = if o.gesture, do: gesture(st, o.gesture), else: st
 
-    %{events: Enum.reverse(st.ev), log: Enum.reverse(st.log), duration_ms: st.t, sans: sans}
+    # A lagging clock's readings were written ahead of their time: put
+    # everything in the order it arrives. Stable, so events of one
+    # millisecond keep the order they were made in.
+    events = st.ev |> Enum.reverse() |> Enum.sort_by(&elem(&1, 0))
+    %{events: events, log: Enum.reverse(st.log), duration_ms: st.t, sans: sans}
   end
 
   # --- one ply -----------------------------------------------------------------
@@ -174,9 +215,40 @@ defmodule Alnasl.Simulator.Script do
           %{st | streak: 0}
           |> disturbances(pos, number)
           |> maybe_takeback(pos, move, number)
-          |> play(pos, move, true, number)
-          |> maybe_press(pos, number)
+          |> played(pos, move, number)
         end
+    end
+  end
+
+  # The move as the hands of this ply make it: slammed or not, with or
+  # without a neighbour going over.
+  defp played(st, pos, move, number) do
+    {slam?, st} = chance(st, :slam)
+    {topple?, st} = chance(st, :topple)
+
+    st =
+      if slam? do
+        # Nothing of the move is seen but its end.
+        st = st |> note(number, :slam) |> Map.put(:mute, true) |> play(pos, move, true, number)
+        emit(%{st | mute: false}, {:position, st.b})
+      else
+        play(st, pos, move, true, number)
+      end
+
+    bystanders = for sq <- occupied(st.b), sq != move.to, do: sq
+
+    if topple? and bystanders != [] do
+      {square, st} = pick(st, bystanders)
+      piece = elem(st.b, square)
+
+      st
+      |> note(number, :topple)
+      |> steps([{:lift, square}], {20, 80})
+      |> maybe_press(pos, number)
+      |> pause(st.o.fault_ms)
+      |> steps([{:put, square, piece}])
+    else
+      maybe_press(st, pos, number)
     end
   end
 
@@ -449,9 +521,20 @@ defmodule Alnasl.Simulator.Script do
   end
 
   defp press(st, pos, _number) do
-    {delay, st} = between(st, {150, 900})
+    {delay, st} = between(st, st.o.press_ms)
     st = st |> wait(delay) |> silent_press(pos)
-    if st.o.clock, do: emit(st, {:clock, reading(st, other(pos.turn))}), else: st
+
+    cond do
+      not st.o.clock ->
+        st
+
+      st.o.clock_lag_ms == nil ->
+        emit(st, {:clock, reading(st, other(pos.turn))})
+
+      true ->
+        {lag, st} = between(st, st.o.clock_lag_ms)
+        emit_at(st, st.t + lag, {:clock, reading(st, other(pos.turn))})
+    end
   end
 
   # The clock is pressed whether or not anybody hears it.
@@ -501,6 +584,15 @@ defmodule Alnasl.Simulator.Script do
   defp emit(%{mute: true} = st, {:position, _board}), do: st
   defp emit(%{mute: true} = st, {:clock, _reading}), do: st
   defp emit(st, event), do: %{st | ev: [{st.t, event} | st.ev]}
+
+  # A reading that arrives later than it was made - but never before the
+  # one made before it: a clock does not report out of order.
+  defp emit_at(%{mute: true} = st, _t, _event), do: st
+
+  defp emit_at(st, t, event) do
+    t = max(t, st.clock_at + 1)
+    %{st | ev: [{t, event} | st.ev], clock_at: t}
+  end
 
   defp note(st, number, fault), do: %{st | log: [{number, fault} | st.log]}
 

@@ -76,6 +76,8 @@ defmodule Alnasl.BoardServer do
   @impl true
   def init(%Board{} = board) do
     Process.flag(:trap_exit, true)
+    # The tracker's patience is changed in Setup while boards are playing.
+    Settings.subscribe()
 
     state = %{
       board: board,
@@ -197,6 +199,13 @@ defmodule Alnasl.BoardServer do
 
     Process.send_after(self(), :restart_driver, 3_000)
     {:noreply, dirty(%{state | driver: nil, connected?: false})}
+  end
+
+  # Setup changed the tracker's settings ("Bullet / fast play", or a number
+  # by hand): the game under way goes on with them, from its next reading.
+  def handle_info({:setting, "tracker"}, %{session: %{tracker: tracker} = session} = state) do
+    opts = Map.merge(Tracker.defaults(), Map.new(Settings.tracker_opts()))
+    {:noreply, %{state | session: %{session | tracker: %{tracker | opts: opts}}}}
   end
 
   def handle_info(_other, state), do: {:noreply, state}

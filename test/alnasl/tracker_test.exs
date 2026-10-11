@@ -82,7 +82,7 @@ defmodule Alnasl.TrackerTest do
     assert Tracker.sans(tr) == ["e4"]
     assert tr.status == :live
 
-    assert [{1_700, {:moves, [%{san: "e4", flags: []}]}} | _] =
+    assert [{1_550, {:moves, [%{san: "e4", flags: []}]}} | _] =
              Enum.filter(out, &match?({_, {:moves, _}}, &1))
   end
 
@@ -287,11 +287,183 @@ defmodule Alnasl.TrackerTest do
     assert alarms(out) == []
   end
 
-  test "a board that starts late is caught up from the start position" do
-    {:ok, plies} = Chess.replay(Chess.start_fen(), ~w(e4 e5 Qh5))
+  test "a board that starts late is caught up from the start position when it is two moves in" do
+    {:ok, plies} = Chess.replay(Chess.start_fen(), ~w(e4 e5))
     {tr, _} = feed(Tracker.new(), [{0, board(List.last(plies).fen)}], 6_000)
+    assert Tracker.sans(tr) == ~w(e4 e5)
+    assert Enum.all?(tr.plies, &(:recovered in &1.flags))
+  end
+
+  test "three moves in is more than the box works out by itself, unless Setup says so or the arbiter asks" do
+    {:ok, plies} = Chess.replay(Chess.start_fen(), ~w(e4 e5 Qh5))
+    seen = board(List.last(plies).fen)
+    assert Tracker.defaults().search_depth == 2
+
+    {tr, out} = feed(Tracker.new(), [{0, seen}], 6_000)
+    assert Tracker.sans(tr) == []
+    assert alarms(out) == []
+
+    # "Resync from the board" on the board's page.
+    {tr, _events, :accepted} = Tracker.resync(tr, 7_000, 6)
+    assert Tracker.sans(tr) == ~w(e4 e5 Qh5)
+
+    {tr, _} = feed(Tracker.new(search_depth: 4), [{0, seen}], 6_000)
     assert Tracker.sans(tr) == ~w(e4 e5 Qh5)
     assert Enum.all?(tr.plies, &(:recovered in &1.flags and :long_gap in &1.flags))
+  end
+
+  # --- fast play ---------------------------------------------------------------
+
+  test "the next hand on the board makes the move: accepted at once, long before it has settled" do
+    b = Position.start()
+    e4 = move(b, "e2", "e4")
+
+    {tr, out} =
+      feed(
+        started(),
+        [
+          {1_000, lift(b, "e2")},
+          {1_080, e4},
+          # 60 ms later Black's hand has the e-pawn.
+          {1_140, lift(e4, "e7")},
+          {1_200, move(e4, "e7", "e5")},
+          # And White's knight is in the air 50 ms after that.
+          {1_250, e4 |> move("e7", "e5") |> lift("g1")}
+        ],
+        0
+      )
+
+    assert [{1_140, {:moves, [%{san: "e4", flags: []}]}}, {1_250, {:moves, [%{san: "e5"}]}}] =
+             Enum.filter(out, &match?({_, {:moves, _}}, &1))
+
+    assert Tracker.sans(tr) == ~w(e4 e5)
+    assert Enum.all?(tr.plies, &(&1.flags == []))
+    assert alarms(out) == []
+  end
+
+  test "the piece that moved, lifted again, is not the next hand" do
+    # A rook resting on d1 on its way to d5, a move being taken back, the
+    # recapture: all of them lift the piece from where it landed.
+    {tr, b, t} = after_moves(~w(e4 e5 Nf3 Nc6))
+    bb5 = move(b, "f1", "b5")
+    {tr, out} = feed(tr, [{t, lift(b, "f1")}, {t + 80, bb5}, {t + 160, lift(bb5, "b5")}], 0)
+    assert moves(out) == []
+    {tr, _out} = feed(tr, [{t + 240, move(b, "f1", "c4")}], 1_000)
+    assert Tracker.sans(tr) == ~w(e4 e5 Nf3 Nc6 Bc4)
+  end
+
+  test "a rook on its castling square and the king in the air is castling, not a rook move and a hand" do
+    {tr, b, t} = after_moves(~w(e4 e5 Nf3 Nc6 Bc4 Bc5))
+    rook = move(b, "h1", "f1")
+
+    {tr, out} =
+      feed(
+        tr,
+        [
+          {t, lift(b, "h1")},
+          {t + 60, rook},
+          {t + 120, lift(rook, "e1")},
+          {t + 200, move(rook, "e1", "g1")},
+          # Black's hand, at once.
+          {t + 260, rook |> move("e1", "g1") |> lift("g8")}
+        ],
+        0
+      )
+
+    assert moves(out) == ["O-O"]
+    assert Tracker.sans(tr) == ~w(e4 e5 Nf3 Nc6 Bc4 Bc5 O-O)
+  end
+
+  test "pieces that were off the board before the move are not a hand" do
+    # A capture and its recapture went by unseen (both h-pawns are gone,
+    # a pawn stands on g6 as before); then a move is made. The move is not
+    # believed by itself over a position that is not the board's.
+    {tr, _b, t} = after_moves(~w(h4 g6 h5 Nf6))
+    {:ok, plies} = Chess.replay(Chess.start_fen(), ~w(h4 g6 h5 Nf6 hxg6 hxg6))
+    exchanged = board(List.last(plies).fen)
+    {still, out} = feed(tr, [{t, exchanged}], 0)
+    assert moves(out) == [] and still.status == :settling
+
+    # Stood for a moment, it is searched and found: two moves, flagged.
+    {tr, out} = feed(tr, [{t, exchanged}], 1_000)
+    assert moves(out) == ~w(hxg6 hxg6)
+    assert [%{flags: [:recovered]}, %{flags: [:recovered]}] = Enum.take(tr.plies, -2)
+    assert alarms(out) == []
+  end
+
+  test "a capturer and its victim both in the air are a capture half made, and are waited for" do
+    {tr, b, t} = after_moves(~w(e4 d5))
+    both = b |> lift("e4") |> lift("d5")
+    {tr, out} = feed(tr, [{t, lift(b, "e4")}, {t + 100, both}], 5_000)
+    assert moves(out) == [] and alarms(out) == []
+    assert tr.status == :settling
+    {tr, _} = feed(tr, [{t + 5_200, put(both, "d5", {:w, :p})}], 1_000)
+    assert Tracker.sans(tr) == ~w(e4 d5 exd5)
+  end
+
+  test "a game that began unseen is an alarm once the clock is pressed, not pieces being set up" do
+    {:ok, plies} = Chess.replay(Chess.start_fen(), ~w(e4 e5 Nf3))
+    seen = board(List.last(plies).fen)
+
+    # Without a press: pieces not in the starting position. No alarm, ever.
+    {tr, out} = feed(started(), [{1_000, seen}], 60_000)
+    assert tr.status == :waiting_start and alarms(out) == []
+
+    # With one: the game is on, and the box did not see how.
+    {tr, out} = feed(started(), [{1_000, seen}, {1_500, :press}], 60_000)
+    assert tr.status == :out_of_sync and alarms(out) == [:unexplained]
+    assert Tracker.sans(tr) == []
+
+    # Set up again, it waits for the start as if nothing had happened.
+    {tr, _out} = feed(tr, [{80_000, Position.start()}], 1_000)
+    assert tr.status == :waiting_start and tr.detail == :ready
+
+    # A board that never stood in the starting position is still being set
+    # up, clock or no clock (the real board's first recording: one knight).
+    knight = nil |> Tuple.duplicate(64) |> put("d6", {:b, :n})
+    {tr, out} = feed(Tracker.new(), [{0, knight}, {500, :press}], 60_000)
+    assert tr.status == :waiting_start and alarms(out) == []
+  end
+
+  test "a press confirms the move on the board only when it is that move's press" do
+    alias Alnasl.Session
+    clock = fn running -> {:clock, %{white_ms: 60_000, black_ms: 60_000, running: running}} end
+    plies = fn session -> Tracker.sans(session.tracker) end
+    b = Position.start()
+    e4 = move(b, "e2", "e4")
+    e5 = move(e4, "e7", "e5")
+
+    session =
+      Enum.reduce(
+        [
+          {0, {:position, b}},
+          {0, clock.(:white)},
+          {1_000, {:position, lift(b, "e2")}},
+          {1_060, {:position, e4}},
+          {1_120, {:position, lift(e4, "e7")}},
+          {1_180, {:position, e5}}
+        ],
+        Session.new([]),
+        fn {t, event}, session -> session |> Session.handle(t, event) |> elem(0) end
+      )
+
+    assert plies.(session) == ~w(e4)
+
+    # White's press, told by the clock when Black's pawn is already down:
+    # it is not Black's press, and e5 has stood for 20 ms.
+    {session, _} = Session.handle(session, 1_200, clock.(:black))
+    assert plies.(session) == ~w(e4)
+
+    # Black's own.
+    {session, _} = Session.handle(session, 1_260, clock.(:white))
+    assert plies.(session) == ~w(e4 e5)
+  end
+
+  test "the fast-play preset is what Setup's button sets, and leaves the search depth alone" do
+    assert Tracker.preset(:bullet) == %{settle_ms: 150, takeback: false}
+
+    assert Tracker.preset(:classical) == %{}
+    assert Tracker.defaults().search_depth == 2 and Tracker.defaults().settle_ms == 250
   end
 
   test "when two sequences explain the board nothing is emitted, the alarm names it, and the arbiter picks" do

@@ -285,7 +285,13 @@ defmodule AlnaslWeb.HelpLive do
             <dt>{gettext("Moves appear late")}</dt>
             <dd>
               {gettext(
-                "A move is believed once the pieces have stood still for a moment; a clock press makes it immediate. Castling and promotion wait a little longer."
+                "A move is believed once the pieces have stood still for a moment, or as soon as the next player picks up a piece; the move's own clock press makes it immediate. Castling and promotion wait a little longer."
+              )}
+            </dd>
+            <dt>{gettext("Blitz and bullet")}</dt>
+            <dd>
+              {gettext(
+                "Setup has \"Bullet / fast play\" for games of a few minutes or less: a move has to stand for a shorter time, and a board put back is not read as a takeback. The box works out up to two moves it did not see; beyond that the board goes \"Out of sync\" and \"Resync from here\" searches deeper. Everything a real board says is recorded whatever is set (Recordings), so a game can be looked at again afterwards."
               )}
             </dd>
             <dt>{gettext("\"Move missing?\" on a tile")}</dt>

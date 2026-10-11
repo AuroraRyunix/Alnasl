@@ -67,8 +67,9 @@ defmodule Alnasl.RecorderTest do
     assert [{_, "knocked over on purpose"}] = capture.notes
     refute capture.raw?
 
+    # Times count from the first line; the clock may tick between two lines.
     assert [
-             {0, :connected},
+             {_, :connected},
              {_, {:position, start}},
              {_, {:clock, %{white_ms: 5_400_000, running: :white}}},
              {_, {:position, ^after_e4}},

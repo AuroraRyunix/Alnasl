@@ -44,34 +44,43 @@ It holds:
 - the **certain** position and move list - only what legal moves explain;
 - `phys`, what the sensors should read for that position (the same board,
   except where a pawn was left standing on its promotion square);
-- `raw`, the last board reported, and since when it has read like that.
+- `raw`, the last board reported, and since when it has read like that;
+  `before`, the board it read before that.
 
 For every board reported, the first of these that fits:
 
 | # | The board is... | Then |
 |---|---|---|
 | 1 | the certain one | in sync |
-| 2 | one legal move away | that move - once it has stood for `settle_ms` (400), or at once on a **clock press** |
+| 2 | one legal move away | that move - once it has stood for `settle_ms` (250), or at once on **its own clock press** (the press that stops the mover's clock; the press of the move before, told late by the clock, confirms nothing) |
 | 3 | an earlier certain position (1-2 plies back) | a **takeback**: a correction, after `takeback_settle_ms` (1500) |
 | 4 | one move away from the position *before* the last move | the last move is **replaced**: a rook that rested on a square on its way, a hand that let go and took hold again |
 | 5 | two or more legal moves away | the **recovery search** (§3) |
-| 6 | none of these | nothing. A hand, half a capture, a knocked piece. Status "Settling" |
+| 6 | what was one legal move in the reading before, with one or two *other* pieces now in the air | that move, at once: **the next hand is on the board** |
+| 7 | none of these | nothing. A hand, half a capture, a knocked piece. Status "Settling" |
 
-Only when 6 persists - `transient_ms` (8 s), or `lifted_ms` (60 s) when the
+Only when 7 persists - `transient_ms` (8 s), or `lifted_ms` (60 s) when the
 board is just the certain one with a piece or two missing - does the status
 become **out of sync**. The certain position is frozen, the arbiter is told,
 nothing more is sent for that board, and the tracker keeps watching: the
-moment a board arrives that 1-5 explain, it carries on by itself.
+moment a board arrives that 1-6 explain, it carries on by itself.
+
+Before the first move, 7 is "Waiting for the starting position" and never
+an alarm: pieces are being set up. One exception: a board that *stood* in
+the starting position, has left it by something that is not a move, and
+over which the clock is then pressed. The game has begun and the box did
+not see how; that is out of sync like any other.
 
 ### The cases that need more than one rule
 
 - **A capture in two steps**, in either order, passes through boards with a
-  piece or two missing. None is a legal move's result; rule 6 holds them.
+  piece or two missing. None is a legal move's result; rule 7 holds them.
 - **Castling as two piece moves.** King first: the king two squares from home
-  is not a legal move by itself; rule 6, then rule 2 when the rook lands.
+  is not a legal move by itself; rule 7, then rule 2 when the rook lands.
   Rook first is the awkward one, because the rook move *is* legal: a rook
   move that could be the first half of a legal castle is held for
-  `castle_hold_ms` (2.5 s) instead of 400 ms. If the king follows later
+  `castle_hold_ms` (2.5 s) instead of 250 ms, and rule 6 does not apply to
+  it while the king is the piece in the air. If the king follows later
   still, rule 4 replaces the rook move by the castle.
 - **En passant** in either order: the intermediate boards are not legal.
 - **Promotion.** The piece is read from the board: pawn off the seventh,
@@ -104,7 +113,8 @@ would put the undone move straight back.
 position into the board we see?
 
 Depth-first, iterative deepening: every sequence of 2 plies, then 3, up to
-`search_depth` (4). It stops at the first depth with an answer and returns
+`search_depth` (2 by default, up to 6 in Setup; see "What the search cannot
+see" for why it is not more). It stops at the first depth with an answer and returns
 every answer of that length - **the shortest explanation wins**.
 
 - exactly one → accepted, every ply flagged `recovered` (three or more at
@@ -116,7 +126,7 @@ every answer of that length - **the shortest explanation wins**.
   `transient_ms`, the status is out of sync with reason *ambiguous* - and
   the candidates go on following the game, so when the arbiter picks one,
   the moves since are already there;
-- none → rule 6.
+- none → rule 7.
 
 ### What keeps it bounded
 
@@ -133,7 +143,12 @@ still alive. A branch dies when:
 
 A board with only a piece or two missing is not searched at all: the only
 legal explanation is a capture by a piece that then went home, and believing
-that costs more than waiting for the hand to come back.
+that costs more than waiting for the hand to come back. One exception: two
+pieces gone, one of each colour, where the one cannot take the other. That
+is not a capture half made; it is what a capture and its recapture by a
+piece of the same kind leave behind when neither was seen (hxg6 hxg6: a
+pawn on g6 as before, both h-pawns gone). It is searched once it has stood
+for `settle_ms` - a third move on top of it would be out of reach.
 
 Measured: the worst case over 400 scrambled positions (nothing explains
 them, so every depth is exhausted) is about 0.1 s and 3259 nodes at depth 4
@@ -169,10 +184,53 @@ happened in 3-6.
 The same reasoning is why an **illegal move** is not always an alarm: a
 piece set down on a square it could have reached in two legal hops, with
 the opponent's knight imagined out and back, *is* explained by four legal
-moves. In the fault matrix 11 of 207 illegal moves were read that way
-(flagged `recovered`); the other 196 raised the alarm. Lower `search_depth`
-to 2 in Setup and this cannot happen - at the price of every 3-ply gap
-becoming an alarm.
+moves. In the fault matrix, searching 4 plies deep, 11 of 207 illegal moves
+were read that way (flagged `recovered`); at 3 plies, 9; at 2, none. That
+is why `search_depth` is **2** unless Setup says otherwise: the price is
+that every gap of three unseen plies is an alarm, to be repaired with
+"Resync from here" (which searches to depth 6 because somebody asked).
+
+## 3a. Fast play
+
+Blitz, bullet, and the last minute of any game. What changes is not the
+chess but the timing, and three things in the tracker exist because of it:
+
+- **Nothing stands still.** A move is on the board for a few hundred
+  milliseconds before the next hand arrives. Rule 6 takes that hand as
+  the notice the move is made; without it, a move that never stood for
+  `settle_ms` was only ever found afterwards by the search, two at a time,
+  flagged *recovered* - or not at all.
+- **The clock is late.** A DGT clock reports about once a second (the real
+  board's recording: gaps of 0.9-1.3 s), so a press reaches the box up to
+  a second after the lever went down - often with the next piece already
+  on its square. A press therefore confirms the move on the board only
+  when it is that move's own press.
+- **`settle_ms` is 250**, not the 400 it was: long enough for a piece that
+  touches down on its way (the real board's knight rested 224 ms on d4),
+  short enough for a time scramble.
+
+`Alnasl.Tracker.preset(:bullet)` - "Bullet / fast play" on the Setup page -
+sets `settle_ms` to 150 and switches takebacks off (at that speed a board
+that reads as it did two plies ago is a piece going to and fro). It
+applies at once, also to games under way, as does every change of the
+tracker's settings.
+
+`Alnasl.Simulator.Script.profile(:bullet)` is the test for it: a minute
+each and no increment, a move every 0.3-2 s, 30% of moves slammed (seen in
+one reading, never in the air, captures never in two steps), pieces knocked
+over and set back on the opponent's time, 6% of plies not seen at all, the
+clock's reading 0.1-0.9 s late and 10% of presses never reported. Over 690
+such games (69 games, ten passes): with the preset 680 whole, 6 stopped on
+a true ambiguity, 3 in an alarm, 1 wrong and flagged, **0 silent**; with
+the defaults 656 whole, 25 in an alarm, 2 flagged and 1 wrong without a
+flag at the place (four plies that read as one legal capture; the alarm
+came two moves later). At bullet speed with no faults at all, 690 of 690
+whole with either.
+
+What a simulator cannot say is how a real board's scan behaves under a
+slammed piece. Every real board is recorded, always, bytes and all
+(`<data>/captures/board-<id>/`), so that the answer can be replayed:
+`mix alnasl.replay <file> --timeline`.
 
 A chess clock helps, and is used: a press confirms a move at once, and
 **presses are counted against moves** - two presses more than moves seen

@@ -145,8 +145,28 @@ defmodule Alnasl.Bench do
     }
   end
 
-  @doc "The fault mixes the bench reports on, as `{name, kind, simulator options}`."
+  @doc """
+  The fault mixes the bench reports on, as `{name, kind, simulator options,
+  tracker options}`. The last three are fast play
+  (`Alnasl.Simulator.Script.profile(:bullet)`): at speed alone, with the
+  tracker as it comes and with the Setup page's "Bullet / fast play"; and
+  with the hands of a time scramble, with that preset.
+  """
   def suites do
+    bullet = Script.profile(:bullet)
+    fast = Map.to_list(Tracker.preset(:bullet))
+
+    for({name, kind, sim} <- classical(), do: {name, kind, sim, []}) ++
+      [
+        {"bullet speed, no faults, default settings", :fast_default,
+         Map.put(bullet, :faults, %{}), []},
+        {"bullet speed, no faults, fast-play preset", :fast_clean, Map.put(bullet, :faults, %{}),
+         fast},
+        {"bullet: slams, knocks, missed plies; preset", :bullet, bullet, fast}
+      ]
+  end
+
+  defp classical do
     benign = [:hover, :lift, :knock, :swap, :clock_miss, :leave_pawn]
 
     [{"clean, with a clock", :exact, %{}}, {"clean, no clock", :exact, %{clock: false}}] ++
