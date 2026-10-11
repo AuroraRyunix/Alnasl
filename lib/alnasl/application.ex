@@ -1,41 +1,44 @@
 defmodule Alnasl.Application do
-  # See https://elixir.hexdocs.pm/Application.html
-  # for more information on OTP Applications
   @moduledoc false
 
   use Application
 
   @impl true
   def start(_type, _args) do
-    children = [
-      AlnaslWeb.Telemetry,
-      Alnasl.Repo,
-      {Ecto.Migrator,
-       repos: Application.fetch_env!(:alnasl, :ecto_repos), skip: skip_migrations?()},
-      {DNSCluster, query: Application.get_env(:alnasl, :dns_cluster_query) || :ignore},
-      {Phoenix.PubSub, name: Alnasl.PubSub},
-      # Start a worker by calling: Alnasl.Worker.start_link(arg)
-      # {Alnasl.Worker, arg},
-      # Start to serve requests, typically the last entry
-      AlnaslWeb.Endpoint
-    ]
+    # The database lives in the data directory; make sure there is one.
+    case Application.get_env(:alnasl, Alnasl.Repo)[:database] do
+      path when is_binary(path) -> File.mkdir_p!(Path.dirname(path))
+      _memory -> :ok
+    end
 
-    # See https://elixir.hexdocs.pm/Supervisor.html
-    # for other strategies and supported options
+    autostart? = Application.get_env(:alnasl, :autostart, true)
+
+    children =
+      [
+        AlnaslWeb.Telemetry,
+        Alnasl.Repo,
+        # Always: the box is an appliance, not a deployment with a migration step.
+        {Ecto.Migrator, repos: Application.fetch_env!(:alnasl, :ecto_repos), skip: skip_migrations?()},
+        {Phoenix.PubSub, name: Alnasl.PubSub},
+        {Registry, keys: :unique, name: Alnasl.BoardRegistry},
+        {Registry, keys: :unique, name: Alnasl.BusRegistry},
+        Alnasl.Recorder,
+        {DynamicSupervisor, name: Alnasl.BusSupervisor, strategy: :one_for_one},
+        {DynamicSupervisor, name: Alnasl.BoardSupervisor, strategy: :one_for_one, max_restarts: 100, max_seconds: 60}
+      ] ++
+        if(autostart?, do: [Alnasl.Outbox, {Task, &Alnasl.Boards.start_all/0}], else: []) ++
+        [AlnaslWeb.Endpoint]
+
     opts = [strategy: :one_for_one, name: Alnasl.Supervisor]
     Supervisor.start_link(children, opts)
   end
 
-  # Tell Phoenix to update the endpoint configuration
-  # whenever the application is updated.
   @impl true
   def config_change(changed, _new, removed) do
     AlnaslWeb.Endpoint.config_change(changed, removed)
     :ok
   end
 
-  defp skip_migrations?() do
-    # By default, sqlite migrations are run when using a release
-    System.get_env("RELEASE_NAME") == nil
-  end
+  # Tests migrate through the `mix test` alias, under the sandbox.
+  defp skip_migrations?, do: Application.get_env(:alnasl, :skip_migrations, false)
 end

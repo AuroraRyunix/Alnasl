@@ -1,8 +1,10 @@
 import Config
 
+File.mkdir_p!(Path.expand("../data", __DIR__))
+
 # Configure your database
 config :alnasl, Alnasl.Repo,
-  database: Path.expand("../alnasl_dev.db", __DIR__),
+  database: Path.expand("../data/alnasl.db", __DIR__),
   pool_size: 5,
   stacktrace: true,
   show_sensitive_data_on_connection_error: true

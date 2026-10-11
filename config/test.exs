@@ -1,12 +1,14 @@
 import Config
 
+File.mkdir_p!(Path.expand("../tmp/test/data", __DIR__))
+
 # Configure your database
 #
 # The MIX_TEST_PARTITION environment variable can be used
 # to provide built-in test partitioning in CI environment.
 # Run `mix help test` for more information.
 config :alnasl, Alnasl.Repo,
-  database: Path.expand("../alnasl_test.db", __DIR__),
+  database: Path.expand("../tmp/test/alnasl_test.db", __DIR__),
   pool_size: 5,
   pool: Ecto.Adapters.SQL.Sandbox
 
@@ -18,6 +20,8 @@ config :alnasl, AlnaslWeb.Endpoint,
   server: false
 
 # Print only warnings and errors during test
+config :alnasl, data_dir: Path.expand("../tmp/test/data", __DIR__), autostart: false, skip_migrations: true
+
 config :logger, level: :warning
 
 # Initialize plugs at runtime for faster test compilation

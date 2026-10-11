@@ -11,6 +11,18 @@ config :alnasl,
   ecto_repos: [Alnasl.Repo],
   generators: [timestamp_type: :utc_datetime]
 
+# Where the box keeps what it must not lose: the database, the raw captures,
+# the PGN of every game. Overridden per environment and by ALNASL_DATA.
+config :alnasl, data_dir: Path.expand("../data", __DIR__)
+
+# Whether the outbox delivers by itself and the linked boards start with the
+# application. Off in tests, which drive both by hand.
+config :alnasl, autostart: true
+
+config :alnasl, AlnaslWeb.Gettext, default_locale: "en", locales: ~w(en nl)
+
+config :phoenix_live_view, :colocated_assets, disable_symlink_warning: true
+
 # Configure the endpoint
 config :alnasl, AlnaslWeb.Endpoint,
   url: [host: "localhost"],
@@ -32,7 +44,7 @@ config :esbuild,
   version: "0.25.4",
   alnasl: [
     args:
-      ~w(js/app.js --bundle --target=es2022 --outdir=../priv/static/assets/js --external:/fonts/* --external:/images/* --alias:@=.),
+      ~w(js/app.js css/app.css --bundle --target=es2022 --outbase=. --outdir=../priv/static/assets --external:/fonts/* --external:/images/* --external:/pieces/* --alias:@=.),
     cd: Path.expand("../assets", __DIR__),
     env: %{"NODE_PATH" => [Path.expand("../deps", __DIR__), Mix.Project.build_path()]}
   ]
