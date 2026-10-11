@@ -18,7 +18,20 @@ defmodule Alnasl.Tracker.Search do
     has plies left is a dead branch;
   - in the last two plies each side has one move left, and that move must
     start on a square that still differs from the target;
-  - a node budget, after which the search gives up and says so.
+  - a node budget and a time budget, after which the search gives up and
+    says so.
+
+  ## Guided by what was seen
+
+  With `:touch` (a list of squares) only moves that start AND end on one of
+  them are tried. The tracker passes every square that read differently at
+  any moment since the position it is sure of: a move that was made while
+  the board was being read changed both its squares in some reading, so
+  nothing that was seen is left out - and the walk becomes a handful of
+  moves a ply instead of thirty, which is what lets it go ten plies deep.
+  What it cannot find is a move that left no trace: a knight out and back
+  while the cable was out. The tracker asks again without `:touch`, less
+  deep, when the guided walk finds nothing.
 
   The board compared is the PHYSICAL one (`phys`): what the sensors should
   show, which differs from the position only where a pawn was left standing
@@ -36,6 +49,8 @@ defmodule Alnasl.Tracker.Search do
   there is none), or `{:budget, nodes}` when the node budget ran out first.
 
   Options: `:min_depth` (1), `:max_depth` (4), `:max_nodes` (200_000),
+  `:max_ms` (no limit), `:touch` (see above; `nil` for every move),
+  `:unseen` (squares whose piece the board does not show),
   `:promotion_default` (`:q`, the piece assumed when a pawn is left on its
   last rank; `nil` to never assume).
   """
@@ -50,7 +65,13 @@ defmodule Alnasl.Tracker.Search do
       max_nodes: Keyword.get(opts, :max_nodes, 200_000),
       default: Keyword.get(opts, :promotion_default, :q),
       # Squares on which the position has a piece the board does not show.
-      unseen: Keyword.get(opts, :unseen, [])
+      unseen: Keyword.get(opts, :unseen, []),
+      touch: touch(Keyword.get(opts, :touch)),
+      until:
+        case Keyword.get(opts, :max_ms) do
+          nil -> nil
+          ms -> System.monotonic_time(:millisecond) + ms
+        end
     }
 
     Process.put(:alnasl_search_nodes, 0)
@@ -119,6 +140,9 @@ defmodule Alnasl.Tracker.Search do
     end
   end
 
+  defp touch(nil), do: nil
+  defp touch(squares), do: squares |> Enum.uniq() |> Enum.sort() |> List.to_tuple()
+
   # --- the walk ----------------------------------------------------------------
 
   defp dfs(pos, phys, remaining, acc, ctx) do
@@ -129,9 +153,18 @@ defmodule Alnasl.Tracker.Search do
       if length(squares) > 4, do: [], else: last_ply(pos, phys, squares, acc, ctx)
     else
       moves =
-        if remaining == 2,
-          do: Chess.moves_from(pos, own(squares, phys, pos.turn) ++ unseen(pos, phys, ctx)),
-          else: Chess.pseudo_legal_moves(pos)
+        cond do
+          remaining == 2 ->
+            pos
+            |> Chess.moves_from(own(squares, phys, pos.turn) ++ unseen(pos, phys, ctx))
+            |> touching(ctx)
+
+          ctx.touch ->
+            pos |> Chess.moves_from(Tuple.to_list(ctx.touch)) |> touching(ctx)
+
+          true ->
+            Chess.pseudo_legal_moves(pos)
+        end
 
       them = if pos.turn == :w, do: :b, else: :w
 
@@ -159,7 +192,10 @@ defmodule Alnasl.Tracker.Search do
   end
 
   defp last_ply(pos, phys, squares, acc, ctx) do
-    for move <- Chess.moves_from(pos, own(squares, phys, pos.turn) ++ unseen(pos, phys, ctx)),
+    for move <-
+          pos
+          |> Chess.moves_from(own(squares, phys, pos.turn) ++ unseen(pos, phys, ctx))
+          |> touching(ctx),
         move.to in squares,
         {board, flags} <- outcomes(phys, move, pos.turn, ctx.default),
         board == ctx.target,
@@ -180,12 +216,22 @@ defmodule Alnasl.Tracker.Search do
   defp unseen(pos, phys, ctx),
     do: for(sq <- ctx.unseen, elem(phys, sq) == nil, elem(pos.board, sq) != nil, do: sq)
 
+  defp touching(moves, %{touch: nil}), do: moves
+
+  defp touching(moves, %{touch: touch}) do
+    squares = Tuple.to_list(touch)
+    Enum.filter(moves, &(&1.from in squares and &1.to in squares))
+  end
+
   defp differing(a, b), do: for(i <- 0..63, elem(a, i) != elem(b, i), do: i)
 
   defp count_node(ctx) do
     nodes = Process.get(:alnasl_search_nodes) + 1
     Process.put(:alnasl_search_nodes, nodes)
     if nodes > ctx.max_nodes, do: throw(:alnasl_search_budget)
+
+    if ctx.until && rem(nodes, 256) == 0 && System.monotonic_time(:millisecond) > ctx.until,
+      do: throw(:alnasl_search_budget)
   end
 
   # Can `remaining` plies still get from `phys` to `target`? Necessary

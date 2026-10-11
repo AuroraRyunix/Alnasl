@@ -70,7 +70,9 @@ defmodule Alnasl.Session do
          do: %{clock | presses: clock.presses - 1},
          else: clock
 
-    session = %{session | clock: clock}
+    # More presses than moves is how the reconstruction knows the board
+    # has run further ahead than the shortest explanation says.
+    session = %{session | clock: clock, tracker: Tracker.presses(session.tracker, clock.presses)}
 
     {session, events} =
       cond do

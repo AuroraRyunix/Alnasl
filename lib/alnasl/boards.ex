@@ -178,7 +178,6 @@ defmodule Alnasl.Boards do
       status: if(game && game.status == "finished", do: :finished, else: :no_signal),
       detail: nil,
       plies: if(game, do: Enum.map(Games.plies(game), &Map.take(&1, [:san, :flags])), else: []),
-      candidates: [],
       unseen: [],
       clock: nil,
       clock_check: nil,
@@ -283,7 +282,17 @@ defmodule Alnasl.Boards do
   def edit(id, number, san), do: call(id, {:repair, :edit, {number, san}})
   def set_fen(id, fen), do: call(id, {:repair, :set_fen, fen})
   def resync(id, depth \\ 6), do: call(id, {:repair, :resync, depth})
-  def choose(id, index), do: call(id, {:repair, :choose, index})
+
+  @doc "The other ways the reconstructed moves around ply `number` can have gone (`Alnasl.Tracker.alternatives/2`)."
+  def alternatives(id, number) do
+    case call(id, {:repair, :alternatives, number}) do
+      {:ok, found} -> found
+      _error -> nil
+    end
+  end
+
+  @doc "The arbiter picks one of them: the game is rewritten from there and sent again."
+  def choose(id, number, sans), do: call(id, {:repair, :choose, {number, sans}})
   def pause(id, paused?), do: call(id, {:repair, :pause, paused?})
   def reopen(id), do: call(id, {:repair, :reopen, nil})
 

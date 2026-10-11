@@ -10,23 +10,35 @@ defmodule Alnasl.Bench do
   For one game, comparing the moves the tracker ended with to the moves that
   were really played:
 
-  - `:exact` - the same moves, and the tracker ended in sync;
-  - `:ambiguous` - the tracker stopped at a point where several move
-    sequences explain the board, raised it, and the true continuation is one
-    of the candidates it kept following. Nothing wrong was emitted;
+  - `:exact` - the same moves, the tracker ended in sync, and it saw every
+    one of them;
+  - `:reconstructed_right` - the same moves, some of them worked out from
+    the position because they were not seen one by one, each time with one
+    path only (marked `:recovered`, shown orange);
+  - `:guessed_right` - the same moves, and somewhere there was more than
+    one path and the tracker took the right one (marked `:guessed`, red);
+  - `:reconstructed_wrong`, `:guessed_wrong` - the moves differ from the
+    game, and the place where they first differ is such a marked move;
+  - `:flagged` - the moves differ, and the place is marked otherwise: a
+    promotion piece assumed, a piece not seen, a takeback reported there;
   - `:alarm` - the tracker stopped, raised out-of-sync, and what it emitted
     until then is right;
-  - `:flagged` - the moves differ from the game, and the tracker said so at
-    the point of difference: the ply there is flagged `:recovered` or
-    `:assumed`, or it reported a takeback there;
-  - `:silent` - the moves differ and nothing was said, or moves are missing
-    with no alarm. **This is the one that must never happen.**
+  - `:silent` - the moves differ and nothing marks the place, or moves are
+    missing with no alarm. **This is the one that must never happen.**
   """
 
   alias Alnasl.{Pgn, Session, Tracker}
   alias Alnasl.Simulator.Script
 
-  @type verdict :: :exact | :ambiguous | :alarm | :flagged | :silent
+  @type verdict ::
+          :exact
+          | :reconstructed_right
+          | :reconstructed_wrong
+          | :guessed_right
+          | :guessed_wrong
+          | :flagged
+          | :alarm
+          | :silent
 
   @doc """
   Plays `sans` with the simulator options `sim` through a tracker with
@@ -49,28 +61,17 @@ defmodule Alnasl.Bench do
     mine = Tracker.sans(tr)
     difference = Pgn.first_difference(mine, truth)
 
+    marks = tr.plies |> Enum.flat_map(& &1.flags) |> Enum.uniq()
+
     verdict =
       cond do
-        difference == :same and tr.status in [:live, :waiting_start, :settling] ->
-          :exact
-
-        difference == :same ->
-          :alarm
-
-        prefix?(mine, truth) and tr.status == :out_of_sync and tr.candidates != [] ->
-          if Enum.any?(Tracker.candidates(tr), &prefix?(mine ++ &1, truth)),
-            do: :ambiguous,
-            else: :alarm
-
-        prefix?(mine, truth) and tr.status == :out_of_sync ->
-          :alarm
-
-        prefix?(mine, truth) ->
-          :silent
-
-        true ->
-          {ply, _mine, _truth} = difference
-          if said_so?(tr, out, ply), do: :flagged, else: :silent
+        difference == :same and tr.status == :out_of_sync -> :alarm
+        difference == :same and :guessed in marks -> :guessed_right
+        difference == :same and :recovered in marks -> :reconstructed_right
+        difference == :same -> :exact
+        prefix?(mine, truth) and tr.status == :out_of_sync -> :alarm
+        prefix?(mine, truth) -> :silent
+        true -> wrong(tr, out, elem(difference, 0))
       end
 
     %{
@@ -80,6 +81,7 @@ defmodule Alnasl.Bench do
       corrections: Enum.count(out, &match?({_t, {:correction, _, _, _}}, &1)),
       takebacks: Enum.count(out, &match?({_t, {:correction, _, _, :takeback}}, &1)),
       recovered: Enum.count(tr.plies, &(:recovered in &1.flags)),
+      guessed: Enum.count(tr.plies, &(:guessed in &1.flags)),
       assumed: Enum.count(tr.plies, &(:assumed in &1.flags)),
       warnings: Enum.count(out, &match?({_t, {:warning, _, _, _}}, &1)),
       stats: tr.stats
@@ -89,14 +91,15 @@ defmodule Alnasl.Bench do
   defp prefix?(short, long),
     do: Pgn.first_difference(short, Enum.take(long, length(short))) == :same
 
-  # Did the tracker mark the place where its game leaves the real one? Either
-  # the ply there (or one before it, when a whole recovered run is off) is
-  # flagged, or a takeback was reported that cut the game at or before it.
-  defp said_so?(tr, out, ply) do
-    flagged? =
+  # The tracker's game leaves the real one at `ply`. How is that place
+  # marked? The ply there, or one of the few before it when a whole
+  # reconstructed run is off; or a takeback reported that cut the game at
+  # or before it.
+  defp wrong(tr, out, ply) do
+    flags =
       tr.plies
       |> Enum.slice(max(ply - 4, 0)..(ply - 1)//1)
-      |> Enum.any?(&(&1.flags -- [:long_gap] != []))
+      |> Enum.flat_map(& &1.flags)
 
     cut? =
       Enum.any?(out, fn
@@ -104,7 +107,13 @@ defmodule Alnasl.Bench do
         _other -> false
       end)
 
-    flagged? or cut?
+    cond do
+      :guessed in flags -> :guessed_wrong
+      :recovered in flags -> :reconstructed_wrong
+      flags -- [:long_gap] != [] or cut? -> :flagged
+      tr.status == :out_of_sync -> :alarm
+      true -> :silent
+    end
   end
 
   @doc """
@@ -135,6 +144,7 @@ defmodule Alnasl.Bench do
       alarms: results |> Enum.map(& &1.alarms) |> Enum.sum(),
       corrections: results |> Enum.map(& &1.corrections) |> Enum.sum(),
       recovered: results |> Enum.map(& &1.recovered) |> Enum.sum(),
+      guessed: results |> Enum.map(& &1.guessed) |> Enum.sum(),
       faults: results |> Enum.map(&length(&1.log)) |> Enum.sum(),
       searches: results |> Enum.map(& &1.stats.searches) |> Enum.sum(),
       max_nodes: results |> Enum.map(& &1.stats.max_nodes) |> Enum.max(fn -> 0 end),

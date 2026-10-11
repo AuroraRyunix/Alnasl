@@ -436,6 +436,9 @@ defmodule Alnasl.BoardServer do
     sans = Enum.map(plies, & &1.san)
 
     cond do
+      :guessed in flags ->
+        Log.add(:warn, "move.guessed", %{moves: sans}, ref(state))
+
       :recovered in flags ->
         Log.add(:warn, "move.recovered", %{moves: sans, long: :long_gap in flags}, ref(state))
 
@@ -631,18 +634,41 @@ defmodule Alnasl.BoardServer do
   defp repair(state, :resync, depth, t) do
     {tracker, events, outcome} = Tracker.resync(state.session.tracker, t, depth)
 
+    {word, moves} =
+      case outcome do
+        {:accepted, sans} -> {"accepted", sans}
+        {:guessed, sans, _others} -> {"guessed", sans}
+        other -> {to_string(other), []}
+      end
+
     {_reply, state} =
       tracked(state, t, fn _tr -> {tracker, events} end, "repair.resync", %{
-        outcome: inspect(outcome)
+        outcome: word,
+        moves: moves
       })
 
     {{:ok, outcome}, state}
   end
 
-  defp repair(state, :choose, index, t) do
-    chosen = state.session.tracker |> Tracker.candidates() |> Enum.at(index)
-    tracked(state, t, &Tracker.choose(&1, t, index), "repair.choose", %{moves: chosen})
+  defp repair(state, :choose, {number, sans}, t) do
+    case Tracker.choose(state.session.tracker, t, number, sans) do
+      {:ok, result, dropped} ->
+        {_reply, state} =
+          tracked(state, t, fn _tr -> result end, "repair.choose", %{
+            ply: number,
+            moves: sans,
+            dropped: dropped
+          })
+
+        {{:ok, dropped}, state}
+
+      {:error, message} ->
+        {{:error, message}, state}
+    end
   end
+
+  defp repair(state, :alternatives, number, _t),
+    do: {{:ok, Tracker.alternatives(state.session.tracker, number)}, state}
 
   defp repair(state, :result, result, t) do
     if result in Alnasl.Games.Game.results() do
@@ -755,7 +781,6 @@ defmodule Alnasl.BoardServer do
         start_fen: tracker.start_fen,
         last_move: last && {last.from, last.to},
         plies: Enum.map(tracker.plies, &Map.take(&1, [:san, :flags])),
-        candidates: Tracker.candidates(tracker),
         unseen: for(%{square: sq, piece: piece} <- Tracker.unseen(tracker), do: {sq, piece}),
         clock: Clock.read(state.session.clock, t),
         clock_check: Session.clock_check(state.session),
@@ -778,7 +803,6 @@ defmodule Alnasl.BoardServer do
         status: if(state.connected?, do: :unlinked, else: :no_signal),
         detail: nil,
         plies: [],
-        candidates: [],
         unseen: [],
         clock: nil,
         clock_check: Clock.start_check(state.clock),
@@ -795,7 +819,6 @@ defmodule Alnasl.BoardServer do
       not state.connected? -> :no_signal
       tracker.status == :out_of_sync -> :out_of_sync
       state.session.clock_alarm != nil -> :clock_alarm
-      tracker.status == :ambiguous -> :settling
       tracker.status == :live and recovered?(tracker) -> :recovered
       true -> tracker.status
     end
@@ -803,7 +826,7 @@ defmodule Alnasl.BoardServer do
 
   defp recovered?(%{plies: plies}) do
     case List.last(plies) do
-      %{flags: flags} -> :recovered in flags
+      %{flags: flags} -> :recovered in flags or :guessed in flags
       nil -> false
     end
   end

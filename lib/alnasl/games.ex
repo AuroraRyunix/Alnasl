@@ -16,6 +16,7 @@ defmodule Alnasl.Games do
 
   @flags %{
     "recovered" => :recovered,
+    "guessed" => :guessed,
     "long_gap" => :long_gap,
     "assumed" => :assumed,
     "unseen" => :unseen,
