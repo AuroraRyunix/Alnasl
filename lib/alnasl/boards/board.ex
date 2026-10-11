@@ -22,6 +22,7 @@ defmodule Alnasl.Boards.Board do
     field :enabled, :boolean, default: true
     field :round, :integer
     field :board_no, :integer
+    field :table_no, :integer
     field :serial, :string
     field :firmware, :string
     timestamps(type: :utc_datetime)
@@ -41,6 +42,7 @@ defmodule Alnasl.Boards.Board do
       :enabled,
       :round,
       :board_no,
+      :table_no,
       :serial,
       :firmware
     ])
@@ -49,6 +51,7 @@ defmodule Alnasl.Boards.Board do
     |> validate_number(:address, greater_than_or_equal_to: 0, less_than: 16_384)
     |> validate_number(:round, greater_than: 0, less_than: 1000)
     |> validate_number(:board_no, greater_than: 0, less_than: 10_000)
+    |> validate_number(:table_no, greater_than: 0, less_than: 10_000)
   end
 
   @doc "The driver options as a map with string keys."

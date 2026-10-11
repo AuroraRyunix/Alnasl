@@ -27,6 +27,7 @@ defmodule AlnaslWeb.Router do
     get "/files/round/:round", FileController, :round
     get "/files/round/:round/board/:board", FileController, :game
     get "/files/capture/:board/:name", FileController, :capture
+    get "/files/labels", LabelsController, :index
 
     # Every page of the site. One session, so moving between them keeps the
     # socket; the hook puts the language, the box's name and the connection
@@ -36,6 +37,8 @@ defmodule AlnaslWeb.Router do
       live "/round/:round", RoundLive, :index
       live "/round/:round/board/:board", GameLive, :show
       live "/boards", BoardsLive, :index
+      live "/boards/number", WalkLive, :number
+      live "/boards/find", WalkLive, :find
       live "/outbox", OutboxLive, :index
       live "/pgn", PgnLive, :index
       live "/recordings", RecordingsLive, :index

@@ -54,7 +54,9 @@ defmodule Alnasl.MixProject do
       {:gettext, "~> 1.0"},
       {:jason, "~> 1.2"},
       {:bandit, "~> 1.5"},
-      {:req, "~> 0.5"}
+      {:req, "~> 0.5"},
+      # The QR code of the box's address, for a phone to scan. Pure Elixir, MIT.
+      {:eqrcode, "~> 0.2.1"}
     ] ++ uart()
   end
 

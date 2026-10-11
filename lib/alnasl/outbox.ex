@@ -34,13 +34,18 @@ defmodule Alnasl.Outbox do
   | 401, 403, 404 | the key or the tournament is wrong - nothing a retry of this row fixes, and nothing to throw moves away for: the queue **waits**, says why, and tries again every 30 s and when the settings change |
   | 429, 5xx, no answer | the same row again, after a pause that doubles up to a minute (`Retry-After` is obeyed) |
 
+  ## One destination among several
+
+  The results server is one of the places games go (`Alnasl.Destination`);
+  this queue is its place in line and nobody else's. Another destination
+  being offline, refused or switched off changes nothing here, and the
+  other way round.
+
   One economy: a pending row is skipped (`superseded`) when the next pending
   row of the same game has the same number of plies - a clock refresh that a
   newer clock refresh makes pointless. Rows that add a ply are never skipped,
   so the server hears every move with the clock that belonged to it.
   """
-
-  use GenServer
 
   import Ecto.Query
 
@@ -49,8 +54,6 @@ defmodule Alnasl.Outbox do
   alias Alnasl.Outbox.Entry
 
   @topic "outbox"
-  @max_backoff 60_000
-  @blocked_retry 30_000
 
   # --- queueing (any process) --------------------------------------------------
 
@@ -90,11 +93,8 @@ defmodule Alnasl.Outbox do
     game
   end
 
-  @doc "Wakes the sender, if one is running."
-  def kick do
-    if pid = Process.whereis(__MODULE__), do: send(pid, :deliver)
-    :ok
-  end
+  @doc "Wakes the senders that are running - every destination's, not only the results server's."
+  def kick, do: Alnasl.Destination.kick()
 
   # --- reading -----------------------------------------------------------------
 
@@ -120,18 +120,20 @@ defmodule Alnasl.Outbox do
   """
   def status do
     base =
-      case Process.whereis(__MODULE__) do
-        nil -> %{state: :idle, last_ok: nil, last_error: nil, next_try_at: nil}
-        pid -> GenServer.call(pid, :status)
-      end
+      __MODULE__
+      |> Alnasl.Destination.Sender.status()
+      |> Map.put(:pending, pending_count())
 
-    base = Map.put(base, :pending, pending_count())
-    if Settings.connection_configured?(), do: base, else: %{base | state: :unconfigured}
-  catch
-    # The sender did not answer. What waits is still counted from the table:
-    # this number must never read 0 because somebody was busy.
-    :exit, _reason ->
-      %{state: :idle, last_ok: nil, last_error: nil, next_try_at: nil, pending: pending_count()}
+    cond do
+      not Settings.connection_configured?() ->
+        %{base | state: :unconfigured}
+
+      not Alnasl.Destination.enabled?(Alnasl.Destination.OpenResults) ->
+        %{base | state: :disabled}
+
+      true ->
+        base
+    end
   end
 
   @doc "Removes sent and superseded rows older than `days`; all of them when `days` is 0."
@@ -328,7 +330,9 @@ defmodule Alnasl.Outbox do
   @doc "Delivers until the queue is empty or the server stops taking. For tests and `Send now`."
   def drain(limit \\ 10_000), do: limit |> drain_counting() |> elem(0)
 
-  # `{last result, how many rows were sent}`.
+  @doc "One batch for the sender: `{last result, how many rows were sent}`."
+  def deliver_batch(limit), do: drain_counting(limit)
+
   defp drain_counting(limit) do
     Enum.reduce_while(1..limit, {:empty, 0}, fn _i, {_last, sent} ->
       case step() do
@@ -341,155 +345,21 @@ defmodule Alnasl.Outbox do
 
   # --- the sender --------------------------------------------------------------
 
-  def start_link(opts \\ []),
-    do: GenServer.start_link(__MODULE__, opts, name: Keyword.get(opts, :name, __MODULE__))
+  # The sender is `Alnasl.Destination.Sender`, the same process every
+  # destination has; the results server's is registered under this module's
+  # name, as it always was.
+
+  def child_spec(opts) do
+    %{id: __MODULE__, start: {__MODULE__, :start_link, [opts]}}
+  end
+
+  def start_link(opts \\ []) do
+    Alnasl.Destination.Sender.start_link(
+      destination: Alnasl.Destination.OpenResults,
+      name: Keyword.get(opts, :name, __MODULE__)
+    )
+  end
 
   @doc "\"Send now\": forget the pause and try at once."
-  def send_now do
-    if pid = Process.whereis(__MODULE__), do: send(pid, :send_now)
-    :ok
-  end
-
-  @impl true
-  def init(_opts) do
-    Settings.subscribe()
-    send(self(), :deliver)
-
-    {:ok,
-     %{
-       state: :idle,
-       last_ok: nil,
-       last_error: nil,
-       backoff: 1_000,
-       timer: nil,
-       next_try_at: nil,
-       task: nil,
-       again?: false
-     }}
-  end
-
-  @impl true
-  def handle_call(:status, _from, s) do
-    {:reply, Map.take(s, [:state, :last_ok, :last_error, :next_try_at]), s}
-  end
-
-  @impl true
-  def handle_info(:send_now, s), do: handle_info(:deliver, cancel(s))
-
-  def handle_info({:setting, key}, s) when key in ~w(server_url slug relay_key),
-    do: handle_info(:deliver, cancel(s))
-
-  def handle_info({:setting, _other}, s), do: {:noreply, s}
-
-  # A wake-up while a retry is scheduled changes nothing: the pause stands.
-  def handle_info(:deliver, %{timer: timer} = s) when timer != nil, do: {:noreply, s}
-
-  # A wake-up while a batch is out: look again when it is back.
-  def handle_info(:deliver, %{task: task} = s) when task != nil,
-    do: {:noreply, %{s | again?: true}}
-
-  def handle_info(:deliver, s), do: {:noreply, start_batch(s)}
-
-  def handle_info(:retry, %{task: nil} = s),
-    do: {:noreply, start_batch(%{s | timer: nil, next_try_at: nil})}
-
-  def handle_info(:retry, s), do: {:noreply, %{s | timer: nil, next_try_at: nil, again?: true}}
-
-  def handle_info({ref, {result, sent}}, %{task: ref} = s) do
-    Process.demonitor(ref, [:flush])
-    s = finish(%{s | task: nil}, result, sent)
-    if s.again? and s.timer == nil, do: send(self(), :deliver)
-    {:noreply, %{s | again?: false}}
-  end
-
-  def handle_info({:DOWN, ref, :process, _pid, reason}, %{task: ref} = s) do
-    {:noreply, finish(%{s | task: nil}, {:retry, {:crash, inspect(reason)}, nil}, 0)}
-  end
-
-  def handle_info(_other, s), do: {:noreply, s}
-
-  defp cancel(%{timer: nil} = s), do: s
-
-  defp cancel(%{timer: timer} = s) do
-    Process.cancel_timer(timer)
-    %{s | timer: nil, next_try_at: nil}
-  end
-
-  # A batch is sent by a process of its own, so that this one can always
-  # answer how things stand - also while a request hangs on a dead line.
-  defp start_batch(s) do
-    task =
-      Task.Supervisor.async_nolink(Alnasl.TaskSupervisor, fn ->
-        try do
-          drain_counting(25)
-        rescue
-          error -> {{:retry, {:crash, Exception.message(error)}, nil}, 0}
-        end
-      end)
-
-    %{s | task: task.ref}
-  end
-
-  defp finish(s, result, sent) do
-    s = if sent > 0, do: online(%{s | last_ok: DateTime.utc_now(:second)}), else: s
-
-    case result do
-      :empty ->
-        s
-
-      :unconfigured ->
-        change(s, :idle, nil)
-
-      {:retry, reason, wait} ->
-        wait = wait || s.backoff
-        s = change(s, :offline, reason)
-        schedule(%{s | backoff: min(s.backoff * 2, @max_backoff)}, wait)
-
-      {:blocked, reason} ->
-        s |> change(:blocked, reason) |> schedule(@blocked_retry)
-
-      {_done, _entry} ->
-        # The batch limit was reached mid-queue: go on after a breath.
-        send(self(), :deliver)
-        s
-    end
-  end
-
-  defp online(s) do
-    s = %{s | backoff: 1_000}
-
-    if s.state == :connected do
-      s
-    else
-      if s.state in [:offline, :blocked], do: Log.add(:info, "outbox.online", %{})
-      broadcast(%{s | state: :connected, last_error: nil})
-    end
-  end
-
-  defp change(s, state, reason) do
-    if s.state != state do
-      case state do
-        :offline -> Log.add(:warn, "outbox.offline", %{reason: inspect(reason)})
-        :blocked -> Log.add(:error, "outbox.blocked", %{reason: inspect(reason)})
-        _other -> :ok
-      end
-    end
-
-    broadcast(%{s | state: state, last_error: reason})
-  end
-
-  defp schedule(s, wait) do
-    timer = Process.send_after(self(), :retry, wait)
-
-    broadcast(%{
-      s
-      | timer: timer,
-        next_try_at: DateTime.add(DateTime.utc_now(), wait, :millisecond)
-    })
-  end
-
-  defp broadcast(s) do
-    Phoenix.PubSub.broadcast(Alnasl.PubSub, @topic, :outbox_changed)
-    s
-  end
+  def send_now, do: Alnasl.Destination.send_now(Alnasl.Destination.OpenResults)
 end

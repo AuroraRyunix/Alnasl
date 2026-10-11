@@ -168,6 +168,8 @@ defmodule AlnaslWeb.Layouts do
         <.badge tone="bad" icon="out_of_sync">{gettext("Refused")}</.badge>
       <% :unconfigured -> %>
         <.badge icon="waiting">{gettext("Not set up")}</.badge>
+      <% :disabled -> %>
+        <.badge icon="waiting">{gettext("Switched off")}</.badge>
       <% _idle -> %>
         <.badge icon="waiting">
           <%= if @link.pending > 0 do %>

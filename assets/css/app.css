@@ -1359,6 +1359,482 @@ td .mini {
   width: min(24rem, 100%);
 }
 
+/* --- which board is which --------------------------------------------------- */
+
+/* A line across the page that says what the page is waiting for. */
+.callout {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.9rem;
+  padding: 0.65rem 0.95rem;
+  margin-bottom: 1.1rem;
+  border: 1px solid var(--accent);
+  border-left-width: 4px;
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+
+/* The row of the board somebody just touched: a frame as well as a tint. */
+tr.found td {
+  background: var(--ok-bg);
+  animation: found-pulse 900ms ease-out 1;
+}
+
+tr.found td:first-child {
+  box-shadow: inset 4px 0 0 var(--ok);
+}
+
+tr.sought td:first-child {
+  box-shadow: inset 4px 0 0 var(--accent);
+}
+
+@keyframes found-pulse {
+  from {
+    background: var(--warn-bg);
+  }
+
+  to {
+    background: var(--ok-bg);
+  }
+}
+
+.input.table-no {
+  width: 4.6rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.checks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.checks li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: var(--radius);
+  background: var(--idle-bg);
+  color: var(--idle);
+}
+
+.checks li.warn {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+
+.checks li.bad {
+  background: var(--bad-bg);
+  color: var(--bad);
+  font-weight: 600;
+}
+
+.checks li svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  flex: none;
+  margin-top: 0.15rem;
+}
+
+/* The big number on a tile is the board of the round; the physical board
+   that feeds it is the small print. */
+.tile-no {
+  font-size: 1.6rem;
+}
+
+.tile-foot .right {
+  font-size: 0.6875rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60%;
+}
+
+/* --- the address for a phone ---------------------------------------------- */
+
+.phone-access {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.phone-access .stack {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+/* Always dark on white: a camera has no dark theme. */
+.qr {
+  flex: none;
+  width: 10.5rem;
+  padding: 0.35rem;
+  background: #ffffff;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  line-height: 0;
+}
+
+.qr svg {
+  width: 100%;
+  height: auto;
+}
+
+.addresses {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 1.05rem;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+/* --- destinations ---------------------------------------------------------- */
+
+.dests {
+  list-style: none;
+  margin: 0.8rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+}
+
+.dest {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
+.dest-line {
+  margin: 0;
+}
+
+/* --- walking the hall with a phone ----------------------------------------- */
+
+/* One column, thumb-sized targets, the number readable from a metre. Built
+   for 375 px first; a wide screen just gets air around it. */
+.walk {
+  max-width: 34rem;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding-bottom: 5.5rem;
+}
+
+.walk-tabs {
+  align-self: stretch;
+  display: flex;
+}
+
+.walk-tabs a,
+.walk-tabs button {
+  flex: 1;
+  min-height: 2.75rem;
+  justify-content: center;
+}
+
+.walk-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.6rem;
+  padding: 1.1rem 0.9rem;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.walk-stage p {
+  margin: 0;
+}
+
+.walk-ask {
+  font-size: 1.1rem;
+  font-weight: 650;
+}
+
+.walk-label {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--quiet);
+}
+
+.walk-number {
+  font-size: clamp(6rem, 42vw, 11rem);
+  font-weight: 800;
+  line-height: 0.95;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+
+.walk-number.small {
+  font-size: 5rem;
+  color: var(--quiet);
+}
+
+.walk-flash {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  min-height: 4.25rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius);
+  background: var(--idle-bg);
+  color: var(--idle);
+  text-align: left;
+}
+
+.walk-flash.quiet {
+  text-align: center;
+}
+
+.walk-flash.ok {
+  background: var(--ok-bg);
+  color: var(--ok);
+  box-shadow: 0 0 0 2px var(--ok);
+  animation: walk-pop 450ms ease-out 1;
+}
+
+.walk-flash svg {
+  width: 2rem;
+  height: 2rem;
+  flex: none;
+}
+
+.walk-flash b {
+  display: block;
+  font-size: 1.5rem;
+  line-height: 1.15;
+}
+
+.walk-flash span {
+  overflow-wrap: anywhere;
+}
+
+@keyframes walk-pop {
+  from {
+    transform: scale(0.92);
+    box-shadow: 0 0 0 10px var(--ok);
+  }
+
+  to {
+    transform: none;
+    box-shadow: 0 0 0 2px var(--ok);
+  }
+}
+
+.walk-found {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.8rem;
+  border-radius: var(--radius);
+  border: 2px solid transparent;
+}
+
+.walk-found.fresh {
+  background: var(--ok-bg);
+  border-color: var(--ok);
+  animation: walk-pop 450ms ease-out 1;
+}
+
+.walk-found.fresh .walk-number {
+  color: var(--ok);
+}
+
+.walk-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+
+.walk-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  padding: 0.55rem 0.8rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.walk-list li:last-child {
+  border-bottom: 0;
+}
+
+.walk-list b {
+  min-width: 2.2rem;
+  font-size: 1.15rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.walk-list .note {
+  margin-left: auto;
+}
+
+/* Under the thumb, whatever the page has scrolled to. */
+.walk-keys {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.6rem;
+  padding: 0.7rem max(0.9rem, env(safe-area-inset-left)) calc(0.7rem + env(safe-area-inset-bottom));
+  background: var(--panel);
+  border-top: 1px solid var(--rule);
+  box-shadow: 0 -4px 14px rgba(20, 24, 29, 0.08);
+}
+
+.walk-keys .btn,
+.walk-go {
+  min-height: 3.5rem;
+  font-size: 1.1rem;
+  justify-content: center;
+}
+
+/* "Ongedaan maken" is longer than "Undo": let it take two lines. */
+.walk-keys .btn {
+  white-space: normal;
+  line-height: 1.15;
+  padding: 0.3rem 0.4rem;
+  text-align: center;
+}
+
+.walk-start-form {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  text-align: left;
+}
+
+.input.walk-first {
+  min-height: 3.5rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+@media (min-width: 861px) {
+  .walk-keys {
+    position: static;
+    padding: 0;
+    background: none;
+    border: 0;
+    box-shadow: none;
+  }
+
+  .walk {
+    padding-bottom: 0;
+  }
+}
+
+/* --- the sheet of labels --------------------------------------------------- */
+
+.labels {
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 1.2rem;
+}
+
+.labels-head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
+  margin-bottom: 1.2rem;
+}
+
+.labels-sheet {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 0;
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.8rem 0.5rem;
+  border: 1px dashed var(--quiet);
+  margin: -1px 0 0 -1px;
+  text-align: center;
+  break-inside: avoid;
+}
+
+.label-word {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.label-number {
+  font-size: 4rem;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.label-id {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.label-box {
+  font-size: 0.6875rem;
+  color: var(--quiet);
+}
+
+@media print {
+  .labels-head {
+    display: none;
+  }
+
+  .labels {
+    padding: 0;
+    max-width: none;
+  }
+
+  .label {
+    border-color: #000000;
+    color: #000000;
+  }
+
+  .label-box {
+    color: #000000;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     animation: none !important;

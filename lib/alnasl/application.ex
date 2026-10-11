@@ -29,7 +29,11 @@ defmodule Alnasl.Application do
         {DynamicSupervisor,
          name: Alnasl.BoardSupervisor, strategy: :one_for_one, max_restarts: 100, max_seconds: 60}
       ] ++
-        if(autostart?, do: [Alnasl.Outbox, {Task, &Alnasl.Boards.start_all/0}], else: []) ++
+        [Alnasl.Finder] ++
+        if(autostart?,
+          do: Alnasl.Destination.child_specs() ++ [{Task, &Alnasl.Boards.start_all/0}],
+          else: []
+        ) ++
         [AlnaslWeb.Endpoint]
 
     opts = [strategy: :one_for_one, name: Alnasl.Supervisor]

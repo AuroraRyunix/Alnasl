@@ -72,6 +72,35 @@ defmodule Alnasl.Tournament do
 
   def board(round, board_no), do: Enum.find(boards(round), &(&1.board == board_no))
 
+  @doc """
+  The two players of a board as the snapshot describes them:
+  `%{white: player | nil, black: player | nil}`, each player a map with
+  `:name`, `:title`, `:rating`, `:fide_id` and `:federation` (any of them
+  `nil`). For destinations that want more than a name.
+  """
+  def players(round, board_no) do
+    with %{"rounds" => rounds} = snapshot <- snapshot(),
+         %{"boards" => boards} <- Enum.find(rounds, &(&1["number"] == round)),
+         %{} = board <- Enum.find(boards, &(&1["board"] == board_no)) do
+      by_no = Map.new(snapshot["players"] || [], &{&1["no"], &1})
+      %{white: player(by_no[board["white"]]), black: player(by_no[board["black"]])}
+    else
+      _none -> %{white: nil, black: nil}
+    end
+  end
+
+  defp player(%{"name" => name} = p) do
+    %{
+      name: name,
+      title: if(p["title"] in [nil, ""], do: nil, else: p["title"]),
+      rating: if(is_integer(p["rating"]) and p["rating"] > 0, do: p["rating"]),
+      fide_id: if(is_integer(p["fide_id"]) and p["fide_id"] > 0, do: p["fide_id"]),
+      federation: if(p["federation"] in [nil, ""], do: nil, else: p["federation"])
+    }
+  end
+
+  defp player(_none), do: nil
+
   defp player_name(%{"name" => name} = player) do
     case player["title"] do
       title when is_binary(title) and title != "" -> "#{title} #{name}"

@@ -2,8 +2,9 @@
 
 Five parts, in the order a move passes through them: a **driver** reads a
 board, the **recorder** writes down what it read, the **tracker** works out
-the moves, the **outbox** gets them to the server, and the **round model**
-says which board is which game. This document is about the reasoning; the
+the moves, the **outbox** gets them to the server (and the other
+**destinations** get them elsewhere), and the **round model** says which
+board is which game. This document is about the reasoning; the
 moduledocs have the details.
 
 ```
@@ -232,6 +233,47 @@ What the arbiter sees is what is true: connected or not, the last success,
 how many rows wait (counted from the table, not remembered), the last error
 as a sentence.
 
+### More than one destination
+
+`Alnasl.Destination` is a behaviour: `configured?/0`, `pending_count/0`,
+`deliver/0`, the settings that should wake it, how long to gather before
+sending. Each destination has a sender of its own
+(`Alnasl.Destination.Sender`, the process that used to be the outbox's):
+its own pause that doubles up to a minute, its own thirty seconds when a
+credential is refused, its own last success and last error. One task at a
+time per destination, so a destination is never sent to twice at once.
+
+What "its place in the queue" is, depends on what the destination takes:
+
+| Destination | It takes | So its place is |
+|---|---|---|
+| `OpenResults` | every change, as a message of its own | the `outbox` row it has got to - section 4 above, unchanged |
+| `LichessBroadcast` | the game as it is now, as PGN | per game, `games.seq` at the last push Lichess answered for (`destination_cursors.acked_seq`) |
+
+`games.seq` goes up by one for every change queued, in the same transaction
+as the outbox row. So "the game is ahead of what this destination has
+acknowledged" is a fact in the database before anything is sent, for every
+destination at once - and it stays a fact through a restart, an outage, or
+the destination being switched off for an afternoon.
+
+For Lichess the order within a game cannot go wrong, because nothing old is
+ever sent: the PGN is made at the moment of sending, and the count that is
+acknowledged is the one read just before. A move that arrives while the
+request is out leaves the game ahead again, and it goes with the next push.
+
+A push carries every changed game of the round. The sender waits two
+seconds after being woken before it sends, so a recovery of four moves, or
+six boards moving in the same second, is one request; and a change that
+leaves the PGN as it was (the clock refresh between moves) is recognised by
+a hash of what was last sent and not sent at all. A correction is not a
+special case: the PGN says something else from some move on.
+
+`Alnasl.Destination.LichessApi` holds every address, header and expected
+answer of Lichess's API, with what is documented and what is assumed.
+
+Pull mode needs nothing here: OpenResults serves a round as one PGN
+(`/t/:slug/live/:round/pgn`) and Lichess can follow that address.
+
 ## 5. The capture format
 
 `Alnasl.Recorder`. Everything every driver delivers, as delivered, one JSON
@@ -276,8 +318,31 @@ still comes out whole.
 
 - The pairings are read from the server's public snapshot and kept on the
   box, so it knows them offline.
-- The arbiter **links** a physical board to "board N of round R". The game
-  is `(R, N)`, whichever physical board feeds it.
+- A physical board has an **identity**: the serial number it reports. The
+  row of the `boards` table is that board, wherever it is plugged in
+  (`Alnasl.Tables`). A board added on a port that then reports a serial the
+  box knows - on a row with a number, not connected just now - is the same
+  board elsewhere: the known row takes the port, the new row goes. Two
+  connected boards with one serial are not merged; they are reported.
+- A row that has a serial **keeps it**. When the board on its port reports
+  another one, the board's process does not rename the row; it tells
+  `Alnasl.Finder`, and `Tables.recognise/4` moves rows to where their boards
+  are: two known boards exchange ports (a whole hall does, when the ports
+  enumerate in another order after a restart); an unknown board on a known
+  row's port gets a row of its own, unless a game is under way there - a
+  serial misread on a noisy line must not take a board out of a round.
+- A board has a **table number** (`table_no`): the sticker. It is set once
+  and belongs to the identity.
+- The arbiter **links** a physical board to "board N of round R"
+  (`round`, `board_no`). The game is `(R, N)`, whichever physical board
+  feeds it. Setting a table number links the board to the board of that
+  number; linking it elsewhere afterwards is a remap for the round.
+- **Touching is identifying.** A board reports the whole position whenever
+  a piece is lifted, so the board that just reported a change is the board
+  somebody just touched. `Alnasl.Finder` remembers each board's last touch
+  and announces it; the numbering run ("the next board touched is table
+  N") lives in that process, on the box, so that any browser - a phone that
+  lost its connection, the kiosk screen - sees the same run.
 - A board linked to a game another board had **takes it over**: a board
   carried to another table, a broken one swapped for a spare. The game goes
   on from the moves it has.
@@ -291,8 +356,14 @@ still comes out whole.
   the arbiter if not.
 - A game from a **set position** (resumed, adjourned) gets a FEN before its
   first move; the server is told `start_fen`.
-- The **next round** moves every linked board to the same number of that
-  round. The games of the round before stay as they are.
+- The **next round** moves every linked board to the board of its table
+  number in that round (a board without a table number keeps the board
+  number it had): a remap is for a round. The games of the round before
+  stay as they are.
+- **Ready or not** (`Alnasl.Tables.checks/1`): duplicate table numbers,
+  two boards on one board of the round, one serial seen twice, a numbered
+  board that does not answer, a wrong starting position, a connected board
+  without a number, a gap below the highest electronic board.
 
 ## 7. The processes
 
@@ -305,7 +376,9 @@ Alnasl.Supervisor
 │       └─ its driver          Simulator / Replay player, DgtSerial, or an attachment to...
 ├─ BusSupervisor
 │   └─ DgtBus (per port)       the polling scheduler for a loop
-├─ Outbox                      the sender; each batch runs in a task so it can always answer
+├─ Finder                      who was touched last; the numbering run
+├─ Outbox                      the results server's sender; each batch runs in a task so it can always answer
+├─ LichessBroadcast.Sender     the same process, for Lichess
 └─ Endpoint                    the management site
 ```
 

@@ -468,10 +468,82 @@ defmodule AlnaslWeb.Words do
   defp log("outbox.server_ahead", _d),
     do: gettext("The server holds more moves for this game than the box does.")
 
+  defp log("destination.offline", d),
+    do: gettext("No connection to %{name}. The games are kept for it.", name: destination(d))
+
+  defp log("destination.online", d),
+    do: gettext("%{name} is back. Sending what was kept.", name: destination(d))
+
+  defp log("destination.blocked", d),
+    do: gettext("%{name} refuses what the box sends. See the Outbox page.", name: destination(d))
+
+  defp log("destination.enabled", d),
+    do: gettext("Arbiter at the box: sending to %{name} switched on.", name: destination(d))
+
+  defp log("destination.disabled", d),
+    do: gettext("Arbiter at the box: sending to %{name} switched off.", name: destination(d))
+
+  defp log("table.set", d),
+    do: gettext("\"%{name}\" is table %{table}.", name: d["name"], table: d["table"])
+
+  defp log("table.cleared", d),
+    do: gettext("\"%{name}\" no longer has a table number.", name: d["name"])
+
+  defp log("table.moved", d),
+    do:
+      gettext("Table %{table} is now \"%{to}\"; \"%{from}\" lost that number.",
+        table: d["table"],
+        to: d["to"],
+        from: d["from"]
+      )
+
+  defp log("table.remapped", d),
+    do:
+      gettext("\"%{name}\" (table %{table}) feeds this board for the round.",
+        name: d["name"],
+        table: d["table"]
+      )
+
+  defp log("table.swapped", d),
+    do: gettext("\"%{a}\" and \"%{b}\" changed places for the round.", a: d["a"], b: d["b"])
+
+  defp log("board.recognised", d),
+    do:
+      gettext(
+        "Board %{serial} is back on another port (%{to}): recognised as \"%{name}\", it keeps its number.",
+        serial: d["serial"],
+        to: d["to"],
+        name: d["name"]
+      )
+
+  defp log("board.other_serial", d),
+    do:
+      gettext(
+        "The board on this cable says it is serial %{seen}, not %{serial}. Left alone: a game is under way.",
+        seen: d["seen"],
+        serial: d["serial"]
+      )
+
+  defp log("board.replaced", d),
+    do:
+      gettext(
+        "Another board (serial %{seen}) is on the cable of \"%{name}\": it was added as \"%{new}\", and \"%{name}\" waits for its own board.",
+        seen: d["seen"],
+        name: d["name"],
+        new: d["new"]
+      )
+
   defp log("door.unlocked", d), do: gettext("The PIN was given from %{from}.", from: d["from"])
   defp log("door.refused", d), do: gettext("A wrong PIN was tried from %{from}.", from: d["from"])
   defp log("setup.saved", _d), do: gettext("Setup was changed.")
   defp log(kind, _d), do: kind
+
+  @doc "A destination's name, as people call it."
+  def destination(%{"destination" => id}), do: destination(id)
+  def destination("openresults"), do: gettext("the results server")
+  def destination("lichess"), do: "Lichess"
+  def destination(other) when is_binary(other), do: other
+  def destination(_none), do: gettext("a destination")
 
   defp moves(%{"moves" => moves}) when is_list(moves), do: Enum.join(moves, " ")
   defp moves(_other), do: ""
@@ -485,7 +557,9 @@ defmodule AlnaslWeb.Words do
       {gettext("Clocks"), "clock."},
       {gettext("Results"), "result."},
       {gettext("Repairs"), "repair."},
-      {gettext("Connection"), "outbox."}
+      {gettext("Connection"), "outbox."},
+      {gettext("Other destinations"), "destination."},
+      {gettext("Table numbers"), "table."}
     ]
   end
 

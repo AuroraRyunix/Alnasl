@@ -549,7 +549,10 @@ defmodule AlnaslWeb.PagesTest do
            board.moved board.flipped board.out_of_sync board.resumed move.recovered move.assumed move.corrected
            clock.move_missing clock.wrong_side clock.side_ok result.suggested result.set result.reopened repair.undo repair.append repair.edit
            repair.set_fen repair.resync repair.choose repair.paused repair.resumed pgn.attached outbox.offline
-           outbox.online outbox.blocked outbox.conflict outbox.server_ahead door.unlocked door.refused setup.saved)
+           outbox.online outbox.blocked outbox.conflict outbox.server_ahead door.unlocked door.refused setup.saved
+           destination.offline destination.online destination.blocked destination.enabled destination.disabled
+           table.set table.cleared table.moved table.remapped table.swapped board.recognised
+           board.other_serial board.replaced)
 
       for kind <- kinds do
         sentence = AlnaslWeb.Words.log(%Alnasl.Log.Event{kind: kind, data: "{}"})

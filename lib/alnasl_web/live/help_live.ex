@@ -58,7 +58,12 @@ defmodule AlnaslWeb.HelpLive do
             </li>
             <li>
               {gettext(
-                "Boards: link each board to its board number of the round. \"Link in order\" does a whole row at once."
+                "Boards: give each board its table number - by touching them in order, or all at once in the order they are connected. See \"Which board is which\" below."
+              )}
+            </li>
+            <li>
+              {gettext(
+                "Boards: \"Ready for round N?\" must say Ready. If not, it lists what is wrong, board by board - a clock that is not set for White included."
               )}
             </li>
             <li>
@@ -67,6 +72,84 @@ defmodule AlnaslWeb.HelpLive do
               )}
             </li>
           </ol>
+
+          <h2 id="help-which">{gettext("Which board is which")}</h2>
+          <p>
+            {gettext(
+              "Twelve boards look alike, and so do twelve cables. The box keeps three things apart:"
+            )}
+          </p>
+          <dl>
+            <dt>{gettext("Which board it is")}</dt>
+            <dd>
+              {gettext(
+                "A DGT board tells the box its serial number (it is also on a label under the board). That is what the box knows it by - not the USB port. Unplug it, plug it in elsewhere, restart the box: it is still the same board and keeps its number. If it comes back on another port, add it on that port: the box recognises the serial and puts it back in its old place. A board the box has never seen is marked \"New board\" and asks for a number."
+              )}
+            </dd>
+            <dt>{gettext("Its table number")}</dt>
+            <dd>
+              {gettext(
+                "The sticker on the board: \"this is table 7\". You set it once for the hall and it stays. \"Labels\" on the Boards page prints a sheet of stickers with the table number and the serial."
+              )}
+            </dd>
+            <dt>{gettext("Its board of the round")}</dt>
+            <dd>
+              {gettext(
+                "Normally the same number as the table. For one round you can say otherwise in the column \"Board of round N\" (\"table 7 plays board 3 today\"), swap two boards, or put everything back. The next round starts from the table numbers again. On the Round page the board number is the big one; \"table 7 · serial 06310\" is the small print."
+              )}
+            </dd>
+          </dl>
+          <p>{gettext("Three ways to give the numbers:")}</p>
+          <ul>
+            <li>
+              <b>{gettext("Number by touching")}</b>: {gettext(
+                "press Start, then lift a piece on table 1's board, then on table 2's, and so on. Each board gets the next number the moment it feels the piece go. Undo takes the last one back, Skip leaves a number out, Stop ends it."
+              )}
+            </li>
+            <li>
+              <b>{gettext("Number all in connection order")}</b>: {gettext(
+                "one click, when the boards were connected in the order of the tables."
+              )}
+            </li>
+            <li>
+              <b>{gettext("By hand")}</b>: {gettext("type the number in the column \"Table\".")}
+            </li>
+          </ul>
+          <p>
+            <b>{gettext("Which board is this?")}</b>
+            {gettext(
+              "Press it on the Boards page and lift a piece on the board you mean: its row lights up for a few seconds. The other way round, \"Show me\" on a row tells you which serial to look for, and says whether the board you then touch is the right one. (The box cannot make a board beep or blink; a touch is the signal.)"
+            )}
+          </p>
+
+          <h2 id="help-phone">{gettext("Number the boards with your phone")}</h2>
+          <ol>
+            <li>
+              {gettext(
+                "Start the box so that other devices can reach it (ALNASL_LISTEN=lan, see the README) and set a PIN in Setup - before the hall fills up: without one, anybody on the hall's network who finds the address can renumber your boards."
+              )}
+            </li>
+            <li>
+              {gettext(
+                "On the box, open Boards (or Setup): \"Open this site on your phone\" shows the address and a QR code. Point the phone's camera at it and give the PIN."
+              )}
+            </li>
+            <li>
+              {gettext(
+                "On the phone: Boards, \"Number by touching\", Start. The next table number fills the screen. Walk to that table and lift any piece; the phone flashes the number and the board's serial, buzzes and beeps (the beep can be switched off)."
+              )}
+            </li>
+            <li>
+              {gettext(
+                "Undo, Skip and Stop are at the bottom of the screen. If the phone loses the network between two tables, nothing is lost: the run is kept on the box, and the page shows where it stands as soon as it is back. The same page on the box's own screen shows the same thing."
+              )}
+            </li>
+          </ol>
+          <p>
+            {gettext(
+              "Do this before the round, with the pieces set up and nobody at the boards. The run ends by itself when every board has a number, or after fifteen minutes without a touch."
+            )}
+          </p>
 
           <h2 id="help-during">{gettext("During the round")}</h2>
           <p>{gettext("Keep the Round page open. Each tile shows a shape and a word:")}</p>
@@ -141,6 +224,49 @@ defmodule AlnaslWeb.HelpLive do
             <li>{gettext("PGN page: \"Whole round as PGN\" for the bulletin.")}</li>
             <li>{gettext("Round page: \"Start round N\" moves all boards on to the next round.")}</li>
           </ol>
+
+          <h2 id="help-lichess">{gettext("Broadcasting on Lichess")}</h2>
+          <p>
+            {gettext(
+              "Two ways, and they can run side by side. Either way, first make a broadcast on Lichess (lichess.org/broadcast/new) and a round in it."
+            )}
+          </p>
+          <dl>
+            <dt>{gettext("Push: the box sends the games to Lichess")}</dt>
+            <dd>
+              <ol>
+                <li>
+                  {gettext(
+                    "On Lichess, leave the round's source empty: the games will be pushed. Copy the link to the round."
+                  )}
+                </li>
+                <li>
+                  {gettext(
+                    "On Lichess, make a personal access token (lichess.org/account/oauth/token) with the permission to create and update studies and broadcasts. It is shown once: copy it."
+                  )}
+                </li>
+                <li>
+                  {gettext(
+                    "On the box, Setup, \"Lichess broadcast\": paste the link and the token, say which round of the tournament it is, tick \"Send the games\", Save. \"Test\" asks Lichess whether the token and the round are right, and says in words what is not."
+                  )}
+                </li>
+                <li>
+                  {gettext(
+                    "From then on every move, correction and result goes to Lichess within a couple of seconds, with the clocks. The Outbox page shows Lichess as a destination of its own: connected or not, how many games wait, and why."
+                  )}
+                </li>
+              </ol>
+              {gettext(
+                "Needs: internet at the box. Works without the results site. A new round on Lichess is a new round id: change it in Setup when the round changes."
+              )}
+            </dd>
+            <dt>{gettext("Pull: Lichess fetches the games from the results site")}</dt>
+            <dd>
+              {gettext(
+                "The results site serves each round as one PGN at https://<results site>/t/<tournament>/live/<round>/pgn. Give that address to Lichess as the round's source and Lichess reads it every few seconds. The box needs no Lichess token for this; it only has to reach the results site. Spectators on Lichess then see what the results site shows, including its delay. The same address works for any other broadcast tool that follows a PGN on the web."
+              )}
+            </dd>
+          </dl>
 
           <h2 id="help-trouble">{gettext("When something is wrong")}</h2>
           <dl>

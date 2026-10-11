@@ -203,6 +203,8 @@ defmodule Alnasl.BoardServer do
 
   defp driver_event(state, {:position, board}, t) do
     Recorder.record(state.board.id, {:position, board})
+    # Somebody touched it: "which board is this?" (`Alnasl.Finder`).
+    Alnasl.Finder.reading(state.board.id, state.raw, board)
 
     state = %{
       state
@@ -250,6 +252,9 @@ defmodule Alnasl.BoardServer do
     changes =
       %{serial: info[:serial], firmware: info[:firmware]}
       |> Map.reject(fn {key, value} -> value == nil or Map.get(state.board, key) == value end)
+      # A row that has a serial is that board; another serial on its port
+      # is another board, not a new name for this one.
+      |> Alnasl.Tables.keep_identity(state.board)
 
     state =
       if changes == %{} do
@@ -257,6 +262,10 @@ defmodule Alnasl.BoardServer do
       else
         %{state | board: state.board |> Board.changeset(changes) |> Alnasl.Repo.update!()}
       end
+
+    # A board that says who it is may be one the box already knows, on
+    # another port - or not the board this row is (`Alnasl.Tables.recognise/4`).
+    if info[:serial], do: Alnasl.Finder.identified(state.board, info[:serial])
 
     dirty(state)
   end
@@ -684,6 +693,7 @@ defmodule Alnasl.BoardServer do
       address: board.address,
       round: board.round,
       board_no: board.board_no,
+      table_no: board.table_no,
       flipped: board.flipped,
       serial: board.serial,
       firmware: board.firmware,
