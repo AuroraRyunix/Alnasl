@@ -52,18 +52,34 @@ defmodule Alnasl.DgtBusTest do
       boards =
         for address <- 1..3 do
           {:ok, board} =
-            Boards.create(%{name: "Loop #{address}", driver: "dgt_bus", port: "FAKEBUS", address: address, round: 1, board_no: address})
+            Boards.create(%{
+              name: "Loop #{address}",
+              driver: "dgt_bus",
+              port: "FAKEBUS",
+              address: address,
+              round: 1,
+              board_no: address
+            })
 
           board
         end
 
-      for board <- boards, do: eventually(fn -> s = Boards.snapshot(board.id); s.connected? && s.raw end)
+      for board <- boards,
+          do:
+            eventually(fn ->
+              s = Boards.snapshot(board.id)
+              s.connected? && s.raw
+            end)
+
       {:ok, boards: boards}
     end
 
-    defp set_loop_board(address, position), do: Fake.update("FAKEBUS", &Emulator.set_board(&1, address, position))
+    defp set_loop_board(address, position),
+      do: Fake.update("FAKEBUS", &Emulator.set_board(&1, address, position))
 
-    test "each board is read, and a move on one is a move on that one only", %{boards: [one, two, three]} do
+    test "each board is read, and a move on one is a move on that one only", %{
+      boards: [one, two, three]
+    } do
       for board <- [one, two, three] do
         assert Boards.snapshot(board.id).raw == Position.to_text(Position.start())
         assert Boards.snapshot(board.id).status == :waiting_start
@@ -83,7 +99,9 @@ defmodule Alnasl.DgtBusTest do
       assert FakeIngest.game(1, 3).moves == ~w(c4)
     end
 
-    test "a board that leaves the loop is counted, reported and taken back", %{boards: [one, two, three]} do
+    test "a board that leaves the loop is counted, reported and taken back", %{
+      boards: [one, two, three]
+    } do
       # Board 2 is unplugged from the loop: the others stay.
       Fake.update("FAKEBUS", fn loop -> {<<>>, Enum.reject(loop, &(&1.address == 2))} end)
       eventually(fn -> Boards.snapshot(two.id).status == :no_signal end, 10_000)
@@ -101,7 +119,8 @@ defmodule Alnasl.DgtBusTest do
 
       # Plugged back in, a move later.
       Fake.update("FAKEBUS", fn loop ->
-        {<<>>, loop ++ [%{Emulator.new(address: 2, bus?: true) | board: hd(boards_after(~w(d4)))}]}
+        {<<>>,
+         loop ++ [%{Emulator.new(address: 2, bus?: true) | board: hd(boards_after(~w(d4)))}]}
       end)
 
       eventually(fn -> Boards.snapshot(two.id).connected? end, 10_000)

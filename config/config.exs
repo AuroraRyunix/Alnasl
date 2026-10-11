@@ -19,6 +19,15 @@ config :alnasl, data_dir: Path.expand("../data", __DIR__)
 # application. Off in tests, which drive both by hand.
 config :alnasl, autostart: true
 
+# SQLite, in WAL mode, and with every commit forced to the disk before it
+# counts: "written first" has to survive the plug being pulled. The box
+# writes a few rows a move; it can afford the fsync.
+config :alnasl, Alnasl.Repo,
+  journal_mode: :wal,
+  synchronous: :full,
+  busy_timeout: 10_000,
+  log: false
+
 config :alnasl, AlnaslWeb.Gettext, default_locale: "en", locales: ~w(en nl)
 
 config :phoenix_live_view, :colocated_assets, disable_symlink_warning: true

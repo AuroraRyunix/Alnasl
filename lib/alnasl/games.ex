@@ -44,7 +44,11 @@ defmodule Alnasl.Games do
         |> Repo.insert!()
 
       game ->
-        names = Map.reject(names, fn {key, value} -> value in [nil, ""] or (key == :start_fen and game.plies != "[]") end)
+        names =
+          Map.reject(names, fn {key, value} ->
+            value in [nil, ""] or (key == :start_fen and game.plies != "[]")
+          end)
+
         game |> Game.changeset(names) |> Repo.update!()
     end
   end
@@ -208,8 +212,11 @@ defmodule Alnasl.Games do
 
     date =
       case List.first(plies) do
-        %{at: at} when is_integer(at) -> at |> DateTime.from_unix!(:millisecond) |> Calendar.strftime("%Y.%m.%d")
-        _none -> Calendar.strftime(game.inserted_at || DateTime.utc_now(), "%Y.%m.%d")
+        %{at: at} when is_integer(at) ->
+          at |> DateTime.from_unix!(:millisecond) |> Calendar.strftime("%Y.%m.%d")
+
+        _none ->
+          Calendar.strftime(game.inserted_at || DateTime.utc_now(), "%Y.%m.%d")
       end
 
     mover = fn index -> if rem(index, 2) == 0, do: :white_ms, else: :black_ms end

@@ -163,8 +163,9 @@ defmodule Alnasl.Dgt.Protocol do
   @spec parse(binary()) :: {[message()], binary()}
   def parse(buffer), do: parse(buffer, [])
 
-  defp parse(<<id, hi, lo, _::binary>> = buffer, acc) when id >= 0x80 and hi < 0x80 and lo < 0x80 do
-    size = (hi <<< 7) ||| lo
+  defp parse(<<id, hi, lo, _::binary>> = buffer, acc)
+       when id >= 0x80 and hi < 0x80 and lo < 0x80 do
+    size = hi <<< 7 ||| lo
 
     cond do
       size < 3 ->
@@ -189,7 +190,8 @@ defmodule Alnasl.Dgt.Protocol do
   defp parse(<<>>, acc), do: {Enum.reverse(acc), <<>>}
 
   defp decode(@msg_board_dump, <<squares::binary-size(64)>>) do
-    {:board, squares |> :binary.bin_to_list() |> Enum.map(&Map.get(@pieces, &1)) |> List.to_tuple()}
+    {:board,
+     squares |> :binary.bin_to_list() |> Enum.map(&Map.get(@pieces, &1)) |> List.to_tuple()}
   end
 
   defp decode(@msg_field_update, <<square, code>>) when square < 64,
@@ -200,7 +202,7 @@ defmodule Alnasl.Dgt.Protocol do
   defp decode(@msg_serialnr, data), do: {:serial, printable(data)}
   defp decode(@msg_long_serialnr, data), do: {:serial, printable(data)}
   defp decode(@msg_version, <<major, minor>>), do: {:version, "#{major}.#{minor}"}
-  defp decode(@msg_busadres, <<hi, lo>>), do: {:bus_address, (hi <<< 7) ||| lo}
+  defp decode(@msg_busadres, <<hi, lo>>), do: {:bus_address, hi <<< 7 ||| lo}
   defp decode(@msg_trademark, data), do: {:trademark, printable(data)}
   defp decode(@msg_battery_status, data), do: {:battery, data}
   defp decode(@msg_ee_moves, data), do: {:ee_moves, data}
@@ -285,7 +287,9 @@ defmodule Alnasl.Dgt.Protocol do
 
   def reading(%{} = clock, white) do
     {white_ms, black_ms} =
-      if white == :right, do: {clock.right_ms, clock.left_ms}, else: {clock.left_ms, clock.right_ms}
+      if white == :right,
+        do: {clock.right_ms, clock.left_ms},
+        else: {clock.left_ms, clock.right_ms}
 
     %{
       white_ms: white_ms,
@@ -310,7 +314,9 @@ defmodule Alnasl.Dgt.Protocol do
   """
   def apply_message({:board, squares}, _board), do: {:position, squares}
   def apply_message({:field, _square, _piece}, nil), do: :ignore
-  def apply_message({:field, square, piece}, board), do: {:position, put_elem(board, square, piece)}
+
+  def apply_message({:field, square, piece}, board),
+    do: {:position, put_elem(board, square, piece)}
 
   def apply_message({:clock, clock}, _board) do
     case reading(clock, :left) do
@@ -339,14 +345,18 @@ defmodule Alnasl.Dgt.Protocol do
   end
 
   def encode({:field, square, piece}), do: frame(@msg_field_update, <<square, code(piece)>>)
-  def encode({:serial, text}), do: frame(@msg_serialnr, String.pad_trailing(String.slice(text, 0, 5), 5))
+
+  def encode({:serial, text}),
+    do: frame(@msg_serialnr, String.pad_trailing(String.slice(text, 0, 5), 5))
 
   def encode({:version, text}) do
     [major, minor] = text |> String.split(".") |> Enum.map(&String.to_integer/1)
     frame(@msg_version, <<major, minor>>)
   end
 
-  def encode({:bus_address, address}), do: frame(@msg_busadres, <<address >>> 7 &&& 0x7F, address &&& 0x7F>>)
+  def encode({:bus_address, address}),
+    do: frame(@msg_busadres, <<address >>> 7 &&& 0x7F, address &&& 0x7F>>)
+
   def encode({:trademark, text}), do: frame(@msg_trademark, text)
 
   def encode({:clock, %{left_ms: left, right_ms: right} = clock}) do

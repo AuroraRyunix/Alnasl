@@ -87,7 +87,9 @@ defmodule Alnasl.Transport.Fake do
   end
 
   @impl GenServer
-  def handle_call({:open, _owner}, _from, %{plugged?: false} = s), do: {:reply, {:error, :enoent}, s}
+  def handle_call({:open, _owner}, _from, %{plugged?: false} = s),
+    do: {:reply, {:error, :enoent}, s}
+
   def handle_call({:open, owner}, _from, s), do: {:reply, {:ok, self()}, %{s | owner: owner}}
   def handle_call(:close, _from, s), do: {:reply, :ok, %{s | owner: nil}}
   def handle_call(:written, _from, s), do: {:reply, s.written, s}

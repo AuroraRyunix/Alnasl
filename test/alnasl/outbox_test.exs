@@ -26,7 +26,9 @@ defmodule Alnasl.OutboxTest do
   # Plays `sans` onto `game`, queueing an update after each move, as a board does.
   defp play(game, sans, clock \\ nil) do
     Enum.reduce(sans, game, fn san, game ->
-      {game, _replace?} = Games.apply_event(game, {:moves, [%{san: san, flags: [], clock: nil}]}, 1_000)
+      {game, _replace?} =
+        Games.apply_event(game, {:moves, [%{san: san, flags: [], clock: nil}]}, 1_000)
+
       Outbox.enqueue(game, clock, false)
     end)
   end
@@ -57,7 +59,9 @@ defmodule Alnasl.OutboxTest do
     assert a.seq == 2 and b.seq == 1
     assert FakeIngest.requests() == []
 
-    rows = Repo.all(from e in Entry, order_by: e.id, select: {e.board_no, e.seq, e.plies, e.state})
+    rows =
+      Repo.all(from e in Entry, order_by: e.id, select: {e.board_no, e.seq, e.plies, e.state})
+
     assert rows == [{1, 1, 1, "pending"}, {1, 2, 2, "pending"}, {2, 1, 1, "pending"}]
   end
 
@@ -82,7 +86,13 @@ defmodule Alnasl.OutboxTest do
     assert FakeIngest.game(1, 2).moves == other |> Games.sans()
 
     # The server heard each state of each game exactly once, oldest first.
-    by_board = Enum.group_by(for({200, b} <- FakeIngest.requests(), do: b), & &1["board"], &length(&1["moves"]))
+    by_board =
+      Enum.group_by(
+        for({200, b} <- FakeIngest.requests(), do: b),
+        & &1["board"],
+        &length(&1["moves"])
+      )
+
     assert by_board[1] == Enum.to_list(1..10)
     assert by_board[2] == [1, 2, 3]
   end
@@ -144,7 +154,13 @@ defmodule Alnasl.OutboxTest do
     assert Outbox.drain() == :empty
     assert FakeIngest.game(1, 1).moves == ~w(e4 e5 Nf3)
 
-    {game, true} = Games.apply_event(game, {:correction, 2, [%{san: "Bc4", flags: [:arbiter]}], :arbiter}, 3_000)
+    {game, true} =
+      Games.apply_event(
+        game,
+        {:correction, 2, [%{san: "Bc4", flags: [:arbiter]}], :arbiter},
+        3_000
+      )
+
     Outbox.enqueue(game, nil, true)
     assert Outbox.drain() == :empty
     assert FakeIngest.game(1, 1).moves == ~w(e4 e5 Bc4)
@@ -156,7 +172,10 @@ defmodule Alnasl.OutboxTest do
   test "a correction queued behind an outage still lands after the moves it corrects" do
     FakeIngest.mode(:down)
     game = play(new_game(), ~w(e4 e5 Nf3))
-    {game, true} = Games.apply_event(game, {:correction, 2, [%{san: "Bc4", flags: []}], :revised}, 2_000)
+
+    {game, true} =
+      Games.apply_event(game, {:correction, 2, [%{san: "Bc4", flags: []}], :revised}, 2_000)
+
     game = Outbox.enqueue(game, nil, true)
     _game = play(game, ~w(Nc6))
     assert {:retry, _, _} = Outbox.drain()
@@ -183,11 +202,22 @@ defmodule Alnasl.OutboxTest do
   test "a message the server calls wrong is set aside and the queue moves on" do
     game = new_game()
     # Straight into the queue: a move the server will refuse.
-    Repo.insert!(%Entry{game_id: game.id, round: 1, board_no: 1, seq: 1, plies: 1, body: Jason.encode!(%{round: 1, board: 1, moves: ["Ke4"]})})
+    Repo.insert!(%Entry{
+      game_id: game.id,
+      round: 1,
+      board_no: 1,
+      seq: 1,
+      plies: 1,
+      body: Jason.encode!(%{round: 1, board: 1, moves: ["Ke4"]})
+    })
+
     play(new_game(2), ~w(d4))
 
     assert Outbox.drain() == :empty
-    assert [%Entry{state: "rejected", error: "invalid_moves", detail: detail}] = Outbox.list("rejected")
+
+    assert [%Entry{state: "rejected", error: "invalid_moves", detail: detail}] =
+             Outbox.list("rejected")
+
     assert detail =~ "ply 1"
     assert FakeIngest.game(1, 2).moves == ~w(d4)
   end
@@ -221,7 +251,13 @@ defmodule Alnasl.OutboxTest do
     FakeIngest.mode(:ok)
     assert Outbox.drain() == :empty
     assert states() == [{1, "superseded"}, {1, "superseded"}, {1, "sent"}, {2, "sent"}]
-    assert FakeIngest.game(1, 1).clock == %{"white_ms" => 60_000, "black_ms" => 35_000, "running" => "white"}
+
+    assert FakeIngest.game(1, 1).clock == %{
+             "white_ms" => 60_000,
+             "black_ms" => 35_000,
+             "running" => "white"
+           }
+
     assert accepted() == [1, 2]
   end
 
@@ -249,8 +285,12 @@ defmodule Alnasl.OutboxTest do
   describe "the sender process" do
     defp wait_until(fun, left \\ 200) do
       cond do
-        fun.() -> :ok
-        left == 0 -> flunk("timed out waiting")
+        fun.() ->
+          :ok
+
+        left == 0 ->
+          flunk("timed out waiting")
+
         true ->
           receive do
             _any -> wait_until(fun, left - 1)

@@ -81,7 +81,9 @@ defmodule Alnasl.TrackerTest do
     {tr, out} = feed(tr, [{1_000, lift(b, "e2")}, {1_300, move(b, "e2", "e4")}])
     assert Tracker.sans(tr) == ["e4"]
     assert tr.status == :live
-    assert [{1_700, {:moves, [%{san: "e4", flags: []}]}} | _] = Enum.filter(out, &match?({_, {:moves, _}}, &1))
+
+    assert [{1_700, {:moves, [%{san: "e4", flags: []}]}} | _] =
+             Enum.filter(out, &match?({_, {:moves, _}}, &1))
   end
 
   test "a piece in the air is not a move, and not an alarm until it has been gone a long time" do
@@ -105,19 +107,32 @@ defmodule Alnasl.TrackerTest do
   test "a clock press accepts a move before it has settled" do
     b = Position.start()
     {tr, out} = feed(started(), [{1_000, move(b, "e2", "e4")}, {1_050, :press}], 0)
-    assert [{1_050, {:moves, [%{san: "e4"}]}} | _] = Enum.filter(out, &match?({_, {:moves, _}}, &1))
+
+    assert [{1_050, {:moves, [%{san: "e4"}]}} | _] =
+             Enum.filter(out, &match?({_, {:moves, _}}, &1))
+
     assert tr.status == :live
   end
 
   test "a capture in either order is one move" do
     {tr, b, t} = after_moves(~w(e4 d5))
 
-    off_first = [{t, lift(b, "d5")}, {t + 900, b |> lift("d5") |> lift("e4")}, {t + 1_400, move(b, "e4", "d5")}]
+    off_first = [
+      {t, lift(b, "d5")},
+      {t + 900, b |> lift("d5") |> lift("e4")},
+      {t + 1_400, move(b, "e4", "d5")}
+    ]
+
     {tr1, out} = feed(tr, off_first)
     assert Tracker.sans(tr1) == ~w(e4 d5 exd5)
     assert alarms(out) == []
 
-    lift_first = [{t, lift(b, "e4")}, {t + 900, b |> lift("d5") |> lift("e4")}, {t + 1_400, move(b, "e4", "d5")}]
+    lift_first = [
+      {t, lift(b, "e4")},
+      {t + 900, b |> lift("d5") |> lift("e4")},
+      {t + 1_400, move(b, "e4", "d5")}
+    ]
+
     {tr2, out} = feed(tr, lift_first)
     assert Tracker.sans(tr2) == ~w(e4 d5 exd5)
     assert alarms(out) == []
@@ -313,7 +328,10 @@ defmodule Alnasl.TrackerTest do
     {tr, out} = feed(tr, [{t, illegal}], 9_000)
     assert Tracker.sans(tr) == ~w(e4 e5)
     assert tr.status == :out_of_sync
-    assert [{at, {:status, :out_of_sync, :unexplained}}] = Enum.filter(out, &match?({_, {:status, :out_of_sync, _}}, &1))
+
+    assert [{at, {:status, :out_of_sync, :unexplained}}] =
+             Enum.filter(out, &match?({_, {:status, :out_of_sync, _}}, &1))
+
     assert at == t + tr.opts.transient_ms
 
     {tr, _} = feed(tr, [{t + 20_000, b}, {t + 25_000, move(b, "g1", "f3")}], 1_000)

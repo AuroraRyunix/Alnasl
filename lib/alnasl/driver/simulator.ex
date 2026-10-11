@@ -65,7 +65,10 @@ defmodule Alnasl.Driver.Simulator do
 
   defp script_options(options) do
     faults =
-      for {name, rate} <- options["faults"] || %{}, is_map_key(@fault_atoms, name), is_number(rate), into: %{} do
+      for {name, rate} <- options["faults"] || %{},
+          is_map_key(@fault_atoms, name),
+          is_number(rate),
+          into: %{} do
         {Map.fetch!(@fault_atoms, name), rate}
       end
 

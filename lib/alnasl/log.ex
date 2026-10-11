@@ -56,11 +56,17 @@ defmodule Alnasl.Log do
     |> Repo.all()
   end
 
-  defp filter_level(query, level) when level in ["warn", :warn], do: where(query, [e], e.level in ["warn", "error"])
-  defp filter_level(query, level) when level in ["error", :error], do: where(query, [e], e.level == "error")
+  defp filter_level(query, level) when level in ["warn", :warn],
+    do: where(query, [e], e.level in ["warn", "error"])
+
+  defp filter_level(query, level) when level in ["error", :error],
+    do: where(query, [e], e.level == "error")
+
   defp filter_level(query, _all), do: query
 
-  defp filter_kind(query, kind) when is_binary(kind) and kind != "", do: where(query, [e], like(e.kind, ^(kind <> "%")))
+  defp filter_kind(query, kind) when is_binary(kind) and kind != "",
+    do: where(query, [e], like(e.kind, ^(kind <> "%")))
+
   defp filter_kind(query, _all), do: query
 
   defp filter_board(query, no) when is_integer(no), do: where(query, [e], e.board_no == ^no)

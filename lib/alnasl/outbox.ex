@@ -162,8 +162,13 @@ defmodule Alnasl.Outbox do
 
       true ->
         case Repo.one(from e in Entry, where: e.state == "pending", order_by: e.id, limit: 1) do
-          nil -> :empty
-          entry -> if superseded?(entry), do: {:superseded, mark(entry, "superseded")}, else: post(entry, settings)
+          nil ->
+            :empty
+
+          entry ->
+            if superseded?(entry),
+              do: {:superseded, mark(entry, "superseded")},
+              else: post(entry, settings)
         end
     end
   end
@@ -191,7 +196,10 @@ defmodule Alnasl.Outbox do
     request =
       [
         url: url,
-        headers: [{"authorization", "Bearer " <> settings["relay_key"]}, {"content-type", "application/json"}],
+        headers: [
+          {"authorization", "Bearer " <> settings["relay_key"]},
+          {"content-type", "application/json"}
+        ],
         body: entry.body,
         retry: false,
         receive_timeout: 10_000,
@@ -272,10 +280,14 @@ defmodule Alnasl.Outbox do
   # has to say about it. Not an error the server reports - it just ignores
   # us - so the box says it: the arbiter should look at that board.
   defp server_ahead(%Entry{} = entry) do
-    newer? = Repo.exists?(from e in Entry, where: e.game_id == ^entry.game_id and e.id > ^entry.id)
+    newer? =
+      Repo.exists?(from e in Entry, where: e.game_id == ^entry.game_id and e.id > ^entry.id)
 
     unless newer? do
-      Log.add(:warn, "outbox.server_ahead", %{plies: entry.plies}, %{round: entry.round, board_no: entry.board_no})
+      Log.add(:warn, "outbox.server_ahead", %{plies: entry.plies}, %{
+        round: entry.round,
+        board_no: entry.board_no
+      })
     end
   end
 
@@ -324,7 +336,8 @@ defmodule Alnasl.Outbox do
 
   # --- the sender --------------------------------------------------------------
 
-  def start_link(opts \\ []), do: GenServer.start_link(__MODULE__, opts, name: Keyword.get(opts, :name, __MODULE__))
+  def start_link(opts \\ []),
+    do: GenServer.start_link(__MODULE__, opts, name: Keyword.get(opts, :name, __MODULE__))
 
   @doc "\"Send now\": forget the pause and try at once."
   def send_now do
@@ -336,7 +349,9 @@ defmodule Alnasl.Outbox do
   def init(_opts) do
     Settings.subscribe()
     send(self(), :deliver)
-    {:ok, %{state: :idle, last_ok: nil, last_error: nil, backoff: 1_000, timer: nil, next_try_at: nil}}
+
+    {:ok,
+     %{state: :idle, last_ok: nil, last_error: nil, backoff: 1_000, timer: nil, next_try_at: nil}}
   end
 
   @impl true
@@ -426,7 +441,12 @@ defmodule Alnasl.Outbox do
 
   defp schedule(s, wait) do
     timer = Process.send_after(self(), :retry, wait)
-    broadcast(%{s | timer: timer, next_try_at: DateTime.add(DateTime.utc_now(), wait, :millisecond)})
+
+    broadcast(%{
+      s
+      | timer: timer,
+        next_try_at: DateTime.add(DateTime.utc_now(), wait, :millisecond)
+    })
   end
 
   defp broadcast(s) do

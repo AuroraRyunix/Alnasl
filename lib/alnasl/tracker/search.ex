@@ -138,7 +138,9 @@ defmodule Alnasl.Tracker.Search do
         alive =
           phys
           |> outcomes(move, pos.turn, ctx.default)
-          |> Enum.filter(fn {board, _flags} -> feasible?(them, board, remaining - 1, ctx.target) end)
+          |> Enum.filter(fn {board, _flags} ->
+            feasible?(them, board, remaining - 1, ctx.target)
+          end)
 
         if alive != [] and Chess.legal?(pos, move) do
           next = Chess.apply_move(pos, move)

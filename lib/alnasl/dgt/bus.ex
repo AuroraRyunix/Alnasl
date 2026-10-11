@@ -99,8 +99,9 @@ defmodule Alnasl.Dgt.Bus do
   """
   def parse(buffer), do: parse(buffer, [])
 
-  defp parse(<<id, hi, lo, _::binary>> = buffer, acc) when id >= 0x80 and hi < 0x80 and lo < 0x80 do
-    size = (hi <<< 7) ||| lo
+  defp parse(<<id, hi, lo, _::binary>> = buffer, acc)
+       when id >= 0x80 and hi < 0x80 and lo < 0x80 do
+    size = hi <<< 7 ||| lo
 
     cond do
       size < 6 ->
@@ -111,7 +112,7 @@ defmodule Alnasl.Dgt.Bus do
         <<frame::binary-size(^size), rest::binary>> = buffer
         body = binary_part(frame, 0, size - 1)
         <<_header::binary-size(3), a_hi, a_lo, data::binary>> = body
-        address = (a_hi <<< 7) ||| a_lo
+        address = a_hi <<< 7 ||| a_lo
 
         answer =
           if :binary.last(frame) == checksum(body),
@@ -151,12 +152,22 @@ defmodule Alnasl.Dgt.Bus do
   def answer(kind, address, data) do
     id =
       Map.fetch!(
-        %{board: @msg_bus_brd_dump, clock: @msg_bus_bwtime, changes: @msg_bus_update, ping: @msg_bus_ping, version: @msg_bus_version},
+        %{
+          board: @msg_bus_brd_dump,
+          clock: @msg_bus_bwtime,
+          changes: @msg_bus_update,
+          ping: @msg_bus_ping,
+          version: @msg_bus_version
+        },
         kind
       )
 
     size = byte_size(data) + 6
-    body = <<id ||| 0x80, size >>> 7 &&& 0x7F, size &&& 0x7F, address >>> 7 &&& 0x7F, address &&& 0x7F, data::binary>>
+
+    body =
+      <<id ||| 0x80, size >>> 7 &&& 0x7F, size &&& 0x7F, address >>> 7 &&& 0x7F, address &&& 0x7F,
+        data::binary>>
+
     body <> <<checksum(body)>>
   end
 
@@ -165,7 +176,7 @@ defmodule Alnasl.Dgt.Bus do
     name = Enum.find_value(@commands, fn {name, code} -> code == id && name end)
 
     if name && sum == checksum(binary_part(frame, 0, 3)),
-      do: {name, (hi <<< 7) ||| lo},
+      do: {name, hi <<< 7 ||| lo},
       else: :error
   end
 

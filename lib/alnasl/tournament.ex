@@ -40,8 +40,11 @@ defmodule Alnasl.Tournament do
   @doc "The round numbers the server has published."
   def rounds do
     case snapshot() do
-      %{"rounds" => rounds} when is_list(rounds) -> rounds |> Enum.map(& &1["number"]) |> Enum.filter(&is_integer/1) |> Enum.sort()
-      _none -> []
+      %{"rounds" => rounds} when is_list(rounds) ->
+        rounds |> Enum.map(& &1["number"]) |> Enum.filter(&is_integer/1) |> Enum.sort()
+
+      _none ->
+        []
     end
   end
 
@@ -157,7 +160,11 @@ defmodule Alnasl.Tournament do
     %{
       name: get_in(snapshot, ["tournament", "name"]),
       rounds: length(snapshot["rounds"] || []),
-      boards: snapshot["rounds"] |> List.wrap() |> List.last() |> then(&length((&1 || %{})["boards"] || []))
+      boards:
+        snapshot["rounds"]
+        |> List.wrap()
+        |> List.last()
+        |> then(&length((&1 || %{})["boards"] || []))
     }
   end
 
@@ -170,17 +177,38 @@ defmodule Alnasl.Tournament do
       )
 
     case Req.post(request) do
-      {:ok, %{status: 422}} -> :ok
-      {:ok, %{status: 200}} -> :ok
-      {:ok, %{status: 401}} -> {:error, :key_refused}
-      {:ok, %{status: 403, body: %{"error" => "relay_key_wrong_tournament"}}} -> {:error, :key_other_tournament}
-      {:ok, %{status: 403, body: %{"error" => "relay_key_revoked"}}} -> {:error, :key_revoked}
-      {:ok, %{status: 403, body: %{"error" => code}}} -> {:error, {:refused, code}}
-      {:ok, %{status: 404}} -> {:error, :not_found}
-      {:ok, %{status: 429}} -> {:error, :rate_limited}
-      {:ok, %{status: 503}} -> {:error, :paused}
-      {:ok, %{status: status}} -> {:error, {:http, status}}
-      {:error, _exception} -> {:error, {:unreachable, :unknown}}
+      {:ok, %{status: 422}} ->
+        :ok
+
+      {:ok, %{status: 200}} ->
+        :ok
+
+      {:ok, %{status: 401}} ->
+        {:error, :key_refused}
+
+      {:ok, %{status: 403, body: %{"error" => "relay_key_wrong_tournament"}}} ->
+        {:error, :key_other_tournament}
+
+      {:ok, %{status: 403, body: %{"error" => "relay_key_revoked"}}} ->
+        {:error, :key_revoked}
+
+      {:ok, %{status: 403, body: %{"error" => code}}} ->
+        {:error, {:refused, code}}
+
+      {:ok, %{status: 404}} ->
+        {:error, :not_found}
+
+      {:ok, %{status: 429}} ->
+        {:error, :rate_limited}
+
+      {:ok, %{status: 503}} ->
+        {:error, :paused}
+
+      {:ok, %{status: status}} ->
+        {:error, {:http, status}}
+
+      {:error, _exception} ->
+        {:error, {:unreachable, :unknown}}
     end
   end
 end

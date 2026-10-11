@@ -37,7 +37,10 @@ defmodule Alnasl.Boards do
     attrs = attrs |> Map.new() |> encode_options()
 
     with {:ok, board} <- %Board{} |> Board.changeset(attrs) |> Repo.insert() do
-      Log.add(:info, "board.added", %{name: board.name, driver: board.driver}, %{board_id: board.id})
+      Log.add(:info, "board.added", %{name: board.name, driver: board.driver}, %{
+        board_id: board.id
+      })
+
       if board.enabled, do: start(board)
       notify(board.id)
       {:ok, board}
@@ -210,16 +213,30 @@ defmodule Alnasl.Boards do
   @doc "Links a board to board `board_no` of `round`. A board that had that game lets go of it."
   def link(%Board{} = board, round, board_no) when is_integer(round) and is_integer(board_no) do
     for other <- list(), other.id != board.id, other.round == round, other.board_no == board_no do
-      Log.add(:info, "board.moved", %{from: other.name, to: board.name}, %{round: round, board_no: board_no})
+      Log.add(:info, "board.moved", %{from: other.name, to: board.name}, %{
+        round: round,
+        board_no: board_no
+      })
+
       update(other, %{round: nil, board_no: nil})
     end
 
-    Log.add(:info, "board.linked", %{name: board.name}, %{board_id: board.id, round: round, board_no: board_no})
+    Log.add(:info, "board.linked", %{name: board.name}, %{
+      board_id: board.id,
+      round: round,
+      board_no: board_no
+    })
+
     update(board, %{round: round, board_no: board_no})
   end
 
   def unlink(%Board{} = board) do
-    Log.add(:info, "board.unlinked", %{name: board.name}, %{board_id: board.id, round: board.round, board_no: board.board_no})
+    Log.add(:info, "board.unlinked", %{name: board.name}, %{
+      board_id: board.id,
+      round: board.round,
+      board_no: board.board_no
+    })
+
     update(board, %{round: nil, board_no: nil})
   end
 
@@ -270,7 +287,11 @@ defmodule Alnasl.Boards do
     case linked_running(round, board_no) do
       nil ->
         with %{} = game <- Games.get(round, board_no) do
-          Log.add(:info, "result.set", %{result: result, by: "arbiter"}, %{round: round, board_no: board_no})
+          Log.add(:info, "result.set", %{result: result, by: "arbiter"}, %{
+            round: round,
+            board_no: board_no
+          })
+
           game |> Games.finish(result) |> Outbox.enqueue(nil, false)
           :ok
         end
@@ -302,7 +323,12 @@ defmodule Alnasl.Boards do
 
     result = if pgn_game.result in ["1-0", "0-1", "1/2-1/2"], do: pgn_game.result, else: "*"
     game = game |> Games.pause(false) |> Games.attach(moves, result, pgn_game[:start_fen])
-    Log.add(:info, "pgn.attached", %{moves: length(moves), result: result, by: "arbiter"}, %{round: round, board_no: board_no})
+
+    Log.add(:info, "pgn.attached", %{moves: length(moves), result: result, by: "arbiter"}, %{
+      round: round,
+      board_no: board_no
+    })
+
     {:ok, Outbox.enqueue(game, nil, true)}
   end
 
@@ -325,7 +351,12 @@ defmodule Alnasl.Boards do
 
     for i <- 1..count do
       options =
-        %{"speed" => speed, "faults" => faults, "seed" => existing + i, "start_delay_ms" => 3_000 * i}
+        %{
+          "speed" => speed,
+          "faults" => faults,
+          "seed" => existing + i,
+          "start_delay_ms" => 3_000 * i
+        }
         |> Map.merge(
           case games && Enum.at(games, i - 1) do
             %{moves: moves} = game -> %{"moves" => moves, "start_fen" => game[:start_fen]}

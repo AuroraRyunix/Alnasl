@@ -25,6 +25,12 @@ defmodule Alnasl.HallCase do
 
   setup tags do
     Alnasl.DataCase.setup_sandbox(tags)
+
+    # Board ids start again in every test (the database is rolled back), so
+    # the capture and PGN files of the test before would be taken for ours.
+    Alnasl.Recorder.flush()
+    File.rm_rf!(Alnasl.Paths.captures())
+    File.rm_rf!(Alnasl.Paths.pgn())
     start_supervised!(FakeIngest)
     FakeIngest.install()
     {:ok, _snapshot} = Tournament.refresh()
@@ -86,10 +92,17 @@ defmodule Alnasl.HallCase do
 
   @doc "A DGT board in software on port `port`, and the board row that reads it."
   def fake_dgt(port, attrs \\ %{}) do
-    ExUnit.Callbacks.start_supervised!({Fake, port: port, device: {Emulator, Emulator.new()}}, id: port)
+    ExUnit.Callbacks.start_supervised!({Fake, port: port, device: {Emulator, Emulator.new()}},
+      id: port
+    )
 
     {:ok, board} =
-      Boards.create(Map.merge(%{name: "DGT " <> port, driver: "dgt_serial", port: port, options: %{"clock" => true}}, attrs))
+      Boards.create(
+        Map.merge(
+          %{name: "DGT " <> port, driver: "dgt_serial", port: port, options: %{"clock" => true}},
+          attrs
+        )
+      )
 
     board
   end

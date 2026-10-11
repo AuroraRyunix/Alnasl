@@ -36,7 +36,8 @@ defmodule Alnasl.Pgn do
           {[game | good], bad}
 
         {:error, {ply, message}} ->
-          {good, [{index, game.headers["White"], game.headers["Black"], "ply #{ply}: #{message}"} | bad]}
+          {good,
+           [{index, game.headers["White"], game.headers["Black"], "ply #{ply}: #{message}"} | bad]}
 
         {:error, message} ->
           {good, [{index, game.headers["White"], game.headers["Black"], message} | bad]}
@@ -47,19 +48,31 @@ defmodule Alnasl.Pgn do
 
   @doc "The games of a PGN file that ships with Alnasl (`priv/games/<name>`)."
   def bundled(name) do
-    {games, _problems} = :alnasl |> :code.priv_dir() |> Path.join("games/#{name}") |> File.read!() |> load()
+    {games, _problems} =
+      :alnasl |> :code.priv_dir() |> Path.join("games/#{name}") |> File.read!() |> load()
+
     games
   end
 
-  @doc "Every bundled game, classics first."
+  @doc "Every bundled game, classics first. Read and checked once, then kept."
   def all_bundled do
-    dir = :alnasl |> :code.priv_dir() |> Path.join("games")
+    case :persistent_term.get({__MODULE__, :bundled}, nil) do
+      nil ->
+        dir = :alnasl |> :code.priv_dir() |> Path.join("games")
 
-    dir
-    |> File.ls!()
-    |> Enum.filter(&String.ends_with?(&1, ".pgn"))
-    |> Enum.sort_by(&{&1 != "classics.pgn", &1})
-    |> Enum.flat_map(&bundled/1)
+        games =
+          dir
+          |> File.ls!()
+          |> Enum.filter(&String.ends_with?(&1, ".pgn"))
+          |> Enum.sort_by(&{&1 != "classics.pgn", &1})
+          |> Enum.flat_map(&bundled/1)
+
+        :persistent_term.put({__MODULE__, :bundled}, games)
+        games
+
+      games ->
+        games
+    end
   end
 
   @doc """
@@ -78,7 +91,9 @@ defmodule Alnasl.Pgn do
       end ++ [{"Result", result}]
 
     extra =
-      Enum.reject(headers, fn {name, _} -> to_string(name) in ~w(Event Site Date Round White Black Result FEN SetUp) end)
+      Enum.reject(headers, fn {name, _} ->
+        to_string(name) in ~w(Event Site Date Round White Black Result FEN SetUp)
+      end)
 
     setup =
       case game[:start_fen] do
@@ -97,7 +112,8 @@ defmodule Alnasl.Pgn do
         _standard -> {1, :w}
       end
 
-    tags <> "\n\n" <> movetext(game[:moves] || [], game[:clocks] || [], first_number, result) <> "\n"
+    tags <>
+      "\n\n" <> movetext(game[:moves] || [], game[:clocks] || [], first_number, result) <> "\n"
   end
 
   defp find(headers, name) do

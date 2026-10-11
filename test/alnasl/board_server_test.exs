@@ -51,7 +51,10 @@ defmodule Alnasl.BoardServerTest do
 
       # The PGN on the box: headers from the tournament, a clock comment per move.
       pgn = File.read!(Games.pgn_path(game))
-      assert pgn =~ ~s([Event "Test Open"]) and pgn =~ ~s([White "GM Player 1"]) and pgn =~ ~s([Board "1"])
+
+      assert pgn =~ ~s([Event "Test Open"]) and pgn =~ ~s([White "GM Player 1"]) and
+               pgn =~ ~s([Board "1"])
+
       assert pgn =~ "[%clk "
       assert {[read], []} = Pgn.load(pgn)
       assert read.moves == @opera
@@ -74,8 +77,20 @@ defmodule Alnasl.BoardServerTest do
     end
 
     test "a board that is not linked shows its position and tracks nothing" do
-      {:ok, board} = Boards.create(%{name: "Sim", driver: "simulator", port: "sim-9", options: %{"moves" => ~w(e4 e5), "speed" => 600, "start_delay_ms" => 0}})
-      snapshot = eventually(fn -> s = Boards.snapshot(board.id); s.raw && s.stats.positions > 3 && s end)
+      {:ok, board} =
+        Boards.create(%{
+          name: "Sim",
+          driver: "simulator",
+          port: "sim-9",
+          options: %{"moves" => ~w(e4 e5), "speed" => 600, "start_delay_ms" => 0}
+        })
+
+      snapshot =
+        eventually(fn ->
+          s = Boards.snapshot(board.id)
+          s.raw && s.stats.positions > 3 && s
+        end)
+
       assert snapshot.status == :unlinked
       refute snapshot.linked?
       assert snapshot.plies == []
@@ -86,7 +101,13 @@ defmodule Alnasl.BoardServerTest do
   describe "a DGT board on a serial port (the real driver, an emulated board)" do
     test "connects, says who it is, and tracks moves from field updates" do
       board = fake_dgt("FAKE1", %{round: 1, board_no: 2})
-      snapshot = eventually(fn -> s = Boards.snapshot(board.id); s.connected? && s.raw && s end)
+
+      snapshot =
+        eventually(fn ->
+          s = Boards.snapshot(board.id)
+          s.connected? && s.raw && s
+        end)
+
       assert snapshot.status == :waiting_start
       assert snapshot.problems == []
       assert eventually(fn -> Boards.get!(board.id).serial end) == "12345"
@@ -101,9 +122,18 @@ defmodule Alnasl.BoardServerTest do
 
     test "the start-position check says what is wrong, in pieces and squares" do
       board = fake_dgt("FAKE1", %{round: 1, board_no: 1})
-      wrong = Position.start() |> put_elem(3, {:b, :k}) |> put_elem(4, {:b, :q}) |> put_elem(52, nil)
+
+      wrong =
+        Position.start() |> put_elem(3, {:b, :k}) |> put_elem(4, {:b, :q}) |> put_elem(52, nil)
+
       set_pieces("FAKE1", wrong)
-      snapshot = eventually(fn -> s = Boards.snapshot(board.id); s.problems != [] && s end)
+
+      snapshot =
+        eventually(fn ->
+          s = Boards.snapshot(board.id)
+          s.problems != [] && s
+        end)
+
       assert {:swapped, {:b, :q}, 3, {:b, :k}, 4} in snapshot.problems
       assert {:wrong, 52, {:w, :p}, nil} in snapshot.problems
       eventually(fn -> Boards.snapshot(board.id).status == :waiting_start end)
@@ -120,7 +150,13 @@ defmodule Alnasl.BoardServerTest do
       assert Boards.get!(board.id).flipped
 
       # Moves made on the turned board are the moves of the game.
-      for position <- boards_after(~w(e4 e5)), do: (set_pieces("FAKE1", Position.rotate(position)); eventually(fn -> Boards.snapshot(board.id).raw == Position.to_text(position) end))
+      for position <- boards_after(~w(e4 e5)),
+          do:
+            (
+              set_pieces("FAKE1", Position.rotate(position))
+              eventually(fn -> Boards.snapshot(board.id).raw == Position.to_text(position) end)
+            )
+
       eventually(fn -> sans(board.id) == ~w(e4 e5) end)
 
       # The arbiter can also turn it by hand.
@@ -152,7 +188,13 @@ defmodule Alnasl.BoardServerTest do
       Settings.put("tracker", %{"settle_ms" => 60_000})
       board = fake_dgt("FAKE1", %{round: 1, board_no: 1})
       eventually(fn -> Boards.snapshot(board.id).connected? end)
-      clock = fn white, black, running -> Alnasl.Transport.Fake.update("FAKE1", &Alnasl.Dgt.Emulator.set_clock(&1, %{white_ms: white, black_ms: black, running: running})) end
+
+      clock = fn white, black, running ->
+        Alnasl.Transport.Fake.update(
+          "FAKE1",
+          &Alnasl.Dgt.Emulator.set_clock(&1, %{white_ms: white, black_ms: black, running: running})
+        )
+      end
 
       clock.(5_400_000, 5_400_000, :white)
       eventually(fn -> Boards.snapshot(board.id).clock end)
@@ -181,12 +223,20 @@ defmodule Alnasl.BoardServerTest do
       {:ok, board: board, played: played}
     end
 
-    test "out of sync: the raw board beside the certain one, resync, candidates, typed moves", %{board: board} do
+    test "out of sync: the raw board beside the certain one, resync, candidates, typed moves", %{
+      board: board
+    } do
       # A rook through its own pawn: nothing explains that.
       now = List.last(boards_after(~w(e4 e5)))
       illegal = now |> put_elem(40, {:w, :r}) |> put_elem(56, nil)
       set_pieces("FAKE1", illegal)
-      snapshot = eventually(fn -> s = Boards.snapshot(board.id); s.status == :out_of_sync && s end)
+
+      snapshot =
+        eventually(fn ->
+          s = Boards.snapshot(board.id)
+          s.status == :out_of_sync && s
+        end)
+
       assert snapshot.raw == Position.to_text(illegal)
       assert snapshot.certain == Position.to_text(now)
       assert sans(board.id) == ~w(e4 e5)
@@ -209,7 +259,12 @@ defmodule Alnasl.BoardServerTest do
 
       assert Outbox.drain() == :empty
       assert FakeIngest.game(1, 3).moves == ~w(e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6)
-      repairs = for e <- Alnasl.Log.list(), String.starts_with?(e.kind, "repair."), do: {e.kind, Alnasl.Log.data(e)["by"]}
+
+      repairs =
+        for e <- Alnasl.Log.list(),
+            String.starts_with?(e.kind, "repair."),
+            do: {e.kind, Alnasl.Log.data(e)["by"]}
+
       assert {"repair.choose", "arbiter"} in repairs and {"repair.resync", "arbiter"} in repairs
     end
 
@@ -230,11 +285,14 @@ defmodule Alnasl.BoardServerTest do
       assert FakeIngest.game(1, 3).moves == full
       assert Enum.take(Games.plies(Games.get(1, 3)), -6) |> Enum.all?(&(&1.flags == [:arbiter]))
 
-      # Undo takes the last move back - and the board, which still shows it,
-      # gives it back: read from the pieces this time, not typed.
+      # Undo takes the last move back. The board still shows it, and is not
+      # read again until it changes.
       assert :ok = Boards.undo(board.id)
-      eventually(fn -> sans(board.id) == full and List.last(Games.plies(Games.get(1, 3))).flags == [] end)
+      assert sans(board.id) == Enum.drop(full, -1)
+      assert Outbox.drain() == :empty
+      assert FakeIngest.game(1, 3).moves == Enum.drop(full, -1)
       assert "repair.undo" in Enum.map(Alnasl.Log.list(), & &1.kind)
+      assert :ok = Boards.append(board.id, ["Nf6"])
 
       # An edited move is a statement about the game; the moves after it are
       # replayed where they still fit.
@@ -247,7 +305,9 @@ defmodule Alnasl.BoardServerTest do
       {200, last} = List.last(FakeIngest.requests())
       assert last["replace"] == true
 
-      # ...and the board, which shows a pawn on e5, now disagrees: that is said.
+      # The board, which shows a pawn on e5, disagrees - and that is said as
+      # soon as it next changes.
+      set_pieces("FAKE1", put_elem(later, 48, nil))
       eventually(fn -> Boards.snapshot(board.id).status == :out_of_sync end)
     end
 
@@ -335,10 +395,15 @@ defmodule Alnasl.BoardServerTest do
 
     test "a game that was not captured is attached from a PGN and replaces what the server holds" do
       FakeIngest.plant(1, 2, ~w(a3 a6))
-      {[game], []} = Pgn.load(~s([White "A"]\n[Black "B"]\n[Result "0-1"]\n\n1. f3 e5 2. g4 Qh4# 0-1\n))
+
+      {[game], []} =
+        Pgn.load(~s([White "A"]\n[Black "B"]\n[Result "0-1"]\n\n1. f3 e5 2. g4 Qh4# 0-1\n))
+
       assert {:ok, _} = Boards.attach_pgn(1, 2, game)
       assert Outbox.drain() == :empty
-      assert %{moves: ~w(f3 e5 g4 Qh4#), status: "finished", result: "0-1"} = FakeIngest.game(1, 2)
+
+      assert %{moves: ~w(f3 e5 g4 Qh4#), status: "finished", result: "0-1"} =
+               FakeIngest.game(1, 2)
 
       stored = Games.get(1, 2)
       assert stored.source == "pgn" and stored.white == "Player 3"
@@ -355,7 +420,7 @@ defmodule Alnasl.BoardServerTest do
       played = play_on("FAKE1", board.id, ~w(e4 e5 Nf3))
 
       Boards.stop(board)
-      refute Boards.running?(board.id)
+      eventually(fn -> not Boards.running?(board.id) end)
       assert Boards.snapshot(board.id).plies |> Enum.map(& &1.san) == played
 
       # A move is made while the box is down.

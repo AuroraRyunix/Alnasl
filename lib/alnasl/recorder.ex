@@ -33,15 +33,22 @@ defmodule Alnasl.Recorder do
 
   @rotate_bytes 8_000_000
 
-  def start_link(opts \\ []), do: GenServer.start_link(__MODULE__, opts, name: Keyword.get(opts, :name, __MODULE__))
+  def start_link(opts \\ []),
+    do: GenServer.start_link(__MODULE__, opts, name: Keyword.get(opts, :name, __MODULE__))
 
   # --- writing -----------------------------------------------------------------
 
   @doc "Appends what board `board_id` delivered. Never blocks the caller and never fails it."
   def record(board_id, event, server \\ __MODULE__) do
     case line(event) do
-      nil -> :ok
-      fields -> GenServer.cast(server, {:record, board_id, Map.put(fields, "t", System.os_time(:millisecond))})
+      nil ->
+        :ok
+
+      fields ->
+        GenServer.cast(
+          server,
+          {:record, board_id, Map.put(fields, "t", System.os_time(:millisecond))}
+        )
     end
   end
 
@@ -51,11 +58,21 @@ defmodule Alnasl.Recorder do
   defp line({:position, board}), do: %{"k" => "pos", "b" => Position.to_text(board)}
 
   defp line({:clock, reading}),
-    do: %{"k" => "clk", "w" => reading[:white_ms], "b" => reading[:black_ms], "r" => to_string(reading[:running] || :none)}
+    do: %{
+      "k" => "clk",
+      "w" => reading[:white_ms],
+      "b" => reading[:black_ms],
+      "r" => to_string(reading[:running] || :none)
+    }
 
   defp line({:status, status}), do: %{"k" => "st", "v" => to_string(status)}
-  defp line({:raw, direction, bytes}), do: %{"k" => to_string(direction), "h" => Base.encode16(bytes, case: :lower)}
-  defp line({:cfg, fields}), do: Map.put(Map.new(fields, fn {k, v} -> {to_string(k), v} end), "k", "cfg")
+
+  defp line({:raw, direction, bytes}),
+    do: %{"k" => to_string(direction), "h" => Base.encode16(bytes, case: :lower)}
+
+  defp line({:cfg, fields}),
+    do: Map.put(Map.new(fields, fn {k, v} -> {to_string(k), v} end), "k", "cfg")
+
   defp line({:note, text}), do: %{"k" => "note", "text" => text}
   defp line(_other), do: nil
 
@@ -97,7 +114,11 @@ defmodule Alnasl.Recorder do
   """
   def read(path) do
     with {:ok, text} <- File.read(path) do
-      lines = text |> String.split("\n", trim: true) |> Enum.map(&parse_line/1) |> Enum.reject(&is_nil/1)
+      lines =
+        text
+        |> String.split("\n", trim: true)
+        |> Enum.map(&parse_line/1)
+        |> Enum.reject(&is_nil/1)
 
       case lines do
         [] ->
@@ -140,8 +161,11 @@ defmodule Alnasl.Recorder do
 
       nil ->
         case Regex.run(~r/^#\s*(\d+\.\d+)\s+NOTE\s+(.*)$/, line) do
-          [_, seconds, text] -> %{"t" => round(String.to_float(seconds) * 1000), "k" => "note", "text" => text}
-          nil -> nil
+          [_, seconds, text] ->
+            %{"t" => round(String.to_float(seconds) * 1000), "k" => "note", "text" => text}
+
+          nil ->
+            nil
         end
     end
   end
@@ -155,7 +179,10 @@ defmodule Alnasl.Recorder do
         end
 
       %{"k" => "clk", "t" => t} = line ->
-        [{t - t0, {:clock, %{white_ms: line["w"], black_ms: line["b"], running: running(line["r"])}}}]
+        [
+          {t - t0,
+           {:clock, %{white_ms: line["w"], black_ms: line["b"], running: running(line["r"])}}}
+        ]
 
       %{"k" => "st", "t" => t, "v" => "connected"} ->
         [{t - t0, :connected}]
@@ -216,8 +243,11 @@ defmodule Alnasl.Recorder do
 
       events =
         Enum.map(capture.events, fn
-          {t, {:position, board}} -> {t, {:position, if(flipped?, do: Position.rotate(board), else: board)}}
-          other -> other
+          {t, {:position, board}} ->
+            {t, {:position, if(flipped?, do: Position.rotate(board), else: board)}}
+
+          other ->
+            other
         end)
 
       # Long enough after the last line for a last move to settle, short
@@ -231,7 +261,11 @@ defmodule Alnasl.Recorder do
          plies: tr.plies,
          alarms: for({t, {:status, :out_of_sync, why}} <- out, do: {t, why}),
          resumed: for({t, {:status, :live, _}} <- out, do: t),
-         corrections: for({t, {:correction, keep, plies, why}} <- out, do: {t, keep, Enum.map(plies, & &1.san), why}),
+         corrections:
+           for(
+             {t, {:correction, keep, plies, why}} <- out,
+             do: {t, keep, Enum.map(plies, & &1.san), why}
+           ),
          suggestions: for({t, {:result_suggestion, result, why}} <- out, do: {t, result, why}),
          status: tr.status,
          detail: tr.detail,
@@ -261,7 +295,13 @@ defmodule Alnasl.Recorder do
   @impl true
   def init(opts) do
     Process.flag(:trap_exit, true)
-    {:ok, %{files: %{}, rotate: Keyword.get(opts, :rotate_bytes, @rotate_bytes), dir: Keyword.get(opts, :dir)}}
+
+    {:ok,
+     %{
+       files: %{},
+       rotate: Keyword.get(opts, :rotate_bytes, @rotate_bytes),
+       dir: Keyword.get(opts, :dir)
+     }}
   end
 
   @impl true

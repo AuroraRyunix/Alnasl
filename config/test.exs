@@ -20,7 +20,10 @@ config :alnasl, AlnaslWeb.Endpoint,
   server: false
 
 # Print only warnings and errors during test
-config :alnasl, data_dir: Path.expand("../tmp/test/data", __DIR__), autostart: false, skip_migrations: true
+config :alnasl,
+  data_dir: Path.expand("../tmp/test/data", __DIR__),
+  autostart: false,
+  skip_migrations: true
 
 config :logger, level: :warning
 

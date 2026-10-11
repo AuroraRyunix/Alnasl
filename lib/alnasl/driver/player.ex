@@ -70,7 +70,9 @@ defmodule Alnasl.Driver.Player do
   def handle_call(:resume, _from, state), do: {:reply, :ok, state}
 
   def handle_call(:progress, _from, state) do
-    {:reply, %{done: state.done, total: state.total, paused?: state.paused?, finished?: state.left == []}, state}
+    {:reply,
+     %{done: state.done, total: state.total, paused?: state.paused?, finished?: state.left == []},
+     state}
   end
 
   @impl true

@@ -62,7 +62,9 @@ defmodule Alnasl.Driver.DgtBus do
     id = Keyword.fetch!(opts, :id)
 
     Agent.start_link(fn ->
-      {:ok, bus} = ensure(port, Keyword.take(opts, [:transport, :debug, :reply_ms, :gap_ms, :lost_after]))
+      {:ok, bus} =
+        ensure(port, Keyword.take(opts, [:transport, :debug, :reply_ms, :gap_ms, :lost_after]))
+
       attach(bus, address, owner, id)
       {bus, address}
     end)
@@ -75,7 +77,10 @@ defmodule Alnasl.Driver.DgtBus do
         {:ok, pid}
 
       [] ->
-        case DynamicSupervisor.start_child(Alnasl.BusSupervisor, {__MODULE__, [{:port, port} | opts]}) do
+        case DynamicSupervisor.start_child(
+               Alnasl.BusSupervisor,
+               {__MODULE__, [{:port, port} | opts]}
+             ) do
           {:ok, pid} -> {:ok, pid}
           {:error, {:already_started, pid}} -> {:ok, pid}
           error -> error
@@ -88,7 +93,9 @@ defmodule Alnasl.Driver.DgtBus do
   end
 
   def start_bus(opts) do
-    GenServer.start_link(__MODULE__, opts, name: {:via, Registry, {Alnasl.BusRegistry, Keyword.fetch!(opts, :port)}})
+    GenServer.start_link(__MODULE__, opts,
+      name: {:via, Registry, {Alnasl.BusRegistry, Keyword.fetch!(opts, :port)}}
+    )
   end
 
   @doc "Puts `address` in the rotation; its events go to `owner` as `{:driver, id, event}`."
@@ -131,8 +138,23 @@ defmodule Alnasl.Driver.DgtBus do
   def handle_call({:attach, address, owner, id}, _from, state) do
     ref = Process.monitor(owner)
 
-    board = %{owner: owner, id: id, ref: ref, board: nil, misses: 0, answered: 0, missed: 0, connected?: false}
-    state = %{state | boards: Map.put(state.boards, address, board), order: Enum.uniq(state.order ++ [address])}
+    board = %{
+      owner: owner,
+      id: id,
+      ref: ref,
+      board: nil,
+      misses: 0,
+      answered: 0,
+      missed: 0,
+      connected?: false
+    }
+
+    state = %{
+      state
+      | boards: Map.put(state.boards, address, board),
+        order: Enum.uniq(state.order ++ [address])
+    }
+
     if state.waiting == nil and state.handle != nil, do: send(self(), :poll)
     {:reply, :ok, state}
   end
@@ -142,7 +164,9 @@ defmodule Alnasl.Driver.DgtBus do
   def handle_call(:stats, _from, state) do
     stats =
       for address <- Enum.sort(Map.keys(state.boards)) do
-        state.boards[address] |> Map.take([:answered, :missed, :connected?]) |> Map.put(:address, address)
+        state.boards[address]
+        |> Map.take([:answered, :missed, :connected?])
+        |> Map.put(:address, address)
       end
 
     {:reply, stats, state}
@@ -167,12 +191,17 @@ defmodule Alnasl.Driver.DgtBus do
   def handle_info(:open, state), do: {:noreply, state}
 
   # Ask the next address in the rotation.
-  def handle_info(:poll, %{waiting: nil, handle: handle, order: [address | rest]} = state) when handle != nil do
+  def handle_info(:poll, %{waiting: nil, handle: handle, order: [address | rest]} = state)
+      when handle != nil do
     ask_clock? = rem(state.round, state.clock_every) == 0
-    frames = Bus.command(:board, address) <> if(ask_clock?, do: Bus.command(:clock, address), else: <<>>)
+
+    frames =
+      Bus.command(:board, address) <> if(ask_clock?, do: Bus.command(:clock, address), else: <<>>)
 
     emit(state, address, {:raw, :tx, frames})
-    if state.debug?, do: Logger.info("dgt bus #{state.port} tx #{Base.encode16(frames, case: :lower)}")
+
+    if state.debug?,
+      do: Logger.info("dgt bus #{state.port} tx #{Base.encode16(frames, case: :lower)}")
 
     case state.transport.write(handle, frames) do
       :ok ->
@@ -217,7 +246,9 @@ defmodule Alnasl.Driver.DgtBus do
   # --- answers -----------------------------------------------------------------
 
   defp received(state, bytes) do
-    if state.debug?, do: Logger.info("dgt bus #{state.port} rx #{Base.encode16(bytes, case: :lower)}")
+    if state.debug?,
+      do: Logger.info("dgt bus #{state.port} rx #{Base.encode16(bytes, case: :lower)}")
+
     {answers, rest} = Bus.parse(state.buffer <> bytes)
 
     case state.waiting do
@@ -241,11 +272,15 @@ defmodule Alnasl.Driver.DgtBus do
         board =
           case message do
             {:board, squares} ->
-              if squares != board.board, do: Driver.emit(board.owner, board.id, {:position, squares})
+              if squares != board.board,
+                do: Driver.emit(board.owner, board.id, {:position, squares})
+
               %{board | board: squares}
 
             {:clock, clock} ->
-              if reading = Protocol.reading(clock, :left), do: Driver.emit(board.owner, board.id, {:clock, reading})
+              if reading = Protocol.reading(clock, :left),
+                do: Driver.emit(board.owner, board.id, {:clock, reading})
+
               board
 
             {:version, version} ->
@@ -303,7 +338,12 @@ defmodule Alnasl.Driver.DgtBus do
 
       board ->
         Process.demonitor(board.ref, [:flush])
-        %{state | boards: Map.delete(state.boards, address), order: List.delete(state.order, address)}
+
+        %{
+          state
+          | boards: Map.delete(state.boards, address),
+            order: List.delete(state.order, address)
+        }
     end
   end
 

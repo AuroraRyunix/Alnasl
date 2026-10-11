@@ -14,17 +14,79 @@ defmodule Alnasl.Dgt.ProtocolTest do
   alias Alnasl.Position
 
   # The start position as a board dump: header 0x86, size 67 = 0x00 0x43.
-  @start_dump <<0x86, 0x00, 0x43,
-                # rank 8: r n b q k b n r
-                0x08, 0x09, 0x0A, 0x0C, 0x0B, 0x0A, 0x09, 0x08,
-                # rank 7: black pawns
-                0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                # rank 2: white pawns
-                0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
-                # rank 1: R N B Q K B N R
-                0x02, 0x03, 0x04, 0x06, 0x05, 0x04, 0x03, 0x02>>
+  @start_dump <<
+    0x86,
+    0x00,
+    0x43,
+    # rank 8: r n b q k b n r
+    0x08,
+    0x09,
+    0x0A,
+    0x0C,
+    0x0B,
+    0x0A,
+    0x09,
+    0x08,
+    # rank 7: black pawns
+    0x07,
+    0x07,
+    0x07,
+    0x07,
+    0x07,
+    0x07,
+    0x07,
+    0x07,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    # rank 2: white pawns
+    0x01,
+    0x01,
+    0x01,
+    0x01,
+    0x01,
+    0x01,
+    0x01,
+    0x01,
+    # rank 1: R N B Q K B N R
+    0x02,
+    0x03,
+    0x04,
+    0x06,
+    0x05,
+    0x04,
+    0x03,
+    0x02
+  >>
 
   describe "commands" do
     test "are the single bytes of the published list" do
@@ -73,8 +135,18 @@ defmodule Alnasl.Dgt.ProtocolTest do
 
     test "every piece code" do
       codes = [
-        {0x01, {:w, :p}}, {0x02, {:w, :r}}, {0x03, {:w, :n}}, {0x04, {:w, :b}}, {0x05, {:w, :k}}, {0x06, {:w, :q}},
-        {0x07, {:b, :p}}, {0x08, {:b, :r}}, {0x09, {:b, :n}}, {0x0A, {:b, :b}}, {0x0B, {:b, :k}}, {0x0C, {:b, :q}},
+        {0x01, {:w, :p}},
+        {0x02, {:w, :r}},
+        {0x03, {:w, :n}},
+        {0x04, {:w, :b}},
+        {0x05, {:w, :k}},
+        {0x06, {:w, :q}},
+        {0x07, {:b, :p}},
+        {0x08, {:b, :r}},
+        {0x09, {:b, :n}},
+        {0x0A, {:b, :b}},
+        {0x0B, {:b, :k}},
+        {0x0C, {:b, :q}},
         {0x00, nil}
       ]
 
@@ -109,7 +181,8 @@ defmodule Alnasl.Dgt.ProtocolTest do
       noise = <<0x00, 0x13, 0x7F>>
       assert {[{:field, 52, nil}], <<>>} = Protocol.parse(noise <> <<0x8E, 0x00, 0x05, 52, 0x00>>)
       # A size smaller than a header is not a message.
-      assert {[{:field, 1, nil}], <<>>} = Protocol.parse(<<0x8E, 0x00, 0x02, 0x8E, 0x00, 0x05, 1, 0>>)
+      assert {[{:field, 1, nil}], <<>>} =
+               Protocol.parse(<<0x8E, 0x00, 0x02, 0x8E, 0x00, 0x05, 1, 0>>)
     end
 
     test "the size is two 7-bit bytes, high first" do
@@ -141,7 +214,9 @@ defmodule Alnasl.Dgt.ProtocolTest do
 
     test "the flag bits in the high nibble of the hours do not change the time" do
       bytes = <<0x8D, 0x00, 0x0A, 0x11, 0x29, 0x58, 0x41, 0x30, 0x00, 0x01>>
-      assert {[{:clock, %{right_ms: 5_398_000, left_ms: 5_400_000}}], <<>>} = Protocol.parse(bytes)
+
+      assert {[{:clock, %{right_ms: 5_398_000, left_ms: 5_400_000}}], <<>>} =
+               Protocol.parse(bytes)
     end
 
     test "an acknowledgement (low nibble 0x0A in an hours byte) is never read as a time" do
@@ -168,8 +243,18 @@ defmodule Alnasl.Dgt.ProtocolTest do
 
     test "ASSUMED: left is White unless the board says the clock stands the other way" do
       {[{:clock, clock}], _} = Protocol.parse(bwtime(0x01 ||| 0x10))
-      assert Protocol.reading(clock, :left) == %{white_ms: 5_400_000, black_ms: 5_398_000, running: :white}
-      assert Protocol.reading(clock, :right) == %{white_ms: 5_398_000, black_ms: 5_400_000, running: :white}
+
+      assert Protocol.reading(clock, :left) == %{
+               white_ms: 5_400_000,
+               black_ms: 5_398_000,
+               running: :white
+             }
+
+      assert Protocol.reading(clock, :right) == %{
+               white_ms: 5_398_000,
+               black_ms: 5_400_000,
+               running: :white
+             }
     end
 
     test "a stopped clock runs for nobody" do
@@ -197,13 +282,28 @@ defmodule Alnasl.Dgt.ProtocolTest do
     test "is the inverse of reading them" do
       assert Protocol.encode({:board, Position.start()}) == @start_dump
 
-      for message <- [{:field, 36, {:w, :p}}, {:field, 52, nil}, {:serial, "24681"}, {:version, "1.8"}, {:bus_address, 300}] do
+      for message <- [
+            {:field, 36, {:w, :p}},
+            {:field, 52, nil},
+            {:serial, "24681"},
+            {:version, "1.8"},
+            {:bus_address, 300}
+          ] do
         assert {[^message], <<>>} = message |> Protocol.encode() |> Protocol.parse()
       end
 
-      clock = %{left_ms: 5_400_000, right_ms: 5_398_000, running?: true, turn: :black, lever: :left}
+      clock = %{
+        left_ms: 5_400_000,
+        right_ms: 5_398_000,
+        running?: true,
+        turn: :black,
+        lever: :left
+      }
+
       assert {[{:clock, read}], <<>>} = {:clock, clock} |> Protocol.encode() |> Protocol.parse()
-      assert Map.take(read, [:left_ms, :right_ms, :running?, :turn]) == Map.take(clock, [:left_ms, :right_ms, :running?, :turn])
+
+      assert Map.take(read, [:left_ms, :right_ms, :running?, :turn]) ==
+               Map.take(clock, [:left_ms, :right_ms, :running?, :turn])
     end
   end
 

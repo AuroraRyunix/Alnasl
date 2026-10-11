@@ -1,0 +1,519 @@
+defmodule AlnaslWeb.SetupLive do
+  @moduledoc """
+  First run, and whenever something changes: which results server, which
+  tournament, the relay key; the box's name and language; a PIN for browsers
+  on other machines; how patient the tracker is.
+
+  "Test connection" really asks the server, with what is in the form (saved
+  or not), and says in words which of three steps failed and why.
+
+  The relay key is a secret: once saved, only its first and last characters
+  are ever shown again. Leaving the field empty keeps the key that is stored.
+  """
+
+  use AlnaslWeb, :live_view
+
+  alias Alnasl.{Log, Settings, Tournament, Tracker}
+  alias AlnaslWeb.Words
+
+  @tracker_fields ~w(settle_ms castle_hold_ms promotion_hold_ms takeback_settle_ms transient_ms lifted_ms search_depth)
+
+  @impl true
+  def mount(_params, _session, socket) do
+    {:ok, socket |> assign(page_title: gettext("Setup"), checks: nil, testing?: false) |> load()}
+  end
+
+  defp load(socket) do
+    s =
+      Settings.get_many(
+        ~w(server_url slug box_name locale round auto_suggest capture_cap_mb clock_heartbeat_s tracker)
+      )
+
+    tracker =
+      Map.merge(
+        Map.new(Tracker.defaults(), fn {k, v} -> {Atom.to_string(k), v} end),
+        s["tracker"] || %{}
+      )
+
+    assign(socket,
+      server_form:
+        to_form(
+          %{"server_url" => s["server_url"], "tournament" => s["slug"], "relay_key" => ""},
+          as: :server
+        ),
+      box_form:
+        to_form(
+          %{
+            "box_name" => s["box_name"],
+            "locale" => s["locale"],
+            "round" => s["round"],
+            "auto_suggest" => s["auto_suggest"],
+            "capture_cap_mb" => s["capture_cap_mb"],
+            "clock_heartbeat_s" => s["clock_heartbeat_s"]
+          },
+          as: :box
+        ),
+      pin_form: to_form(%{"pin" => ""}, as: :door),
+      tracker_form:
+        to_form(
+          tracker
+          |> Map.take(@tracker_fields ++ ~w(takeback promotion_default))
+          |> Map.update!("promotion_default", &to_string/1),
+          as: :tracker
+        ),
+      key_hint: Settings.relay_key_hint(),
+      pin_set?: Settings.pin_set?(),
+      snapshot_at: Settings.get("snapshot_at")
+    )
+  end
+
+  # What is in the server form, as it would be saved.
+  defp read_server(params) do
+    {link_url, slug} = Settings.parse_tournament(params["tournament"])
+
+    url =
+      Settings.normalize_url(
+        if(String.trim(params["server_url"] || "") == "",
+          do: link_url || "",
+          else: params["server_url"]
+        )
+      )
+
+    key = String.trim(params["relay_key"] || "")
+    {url, String.trim(slug), if(key == "", do: Settings.get("relay_key"), else: key)}
+  end
+
+  # --- events ------------------------------------------------------------------
+
+  @impl true
+  # One form, two buttons: "Test connection" submits it with `intent=test`
+  # and nothing is saved.
+  def handle_event("save_server", %{"server" => params, "intent" => "test"}, socket) do
+    {url, slug, key} = read_server(params)
+    send(self(), {:run_test, url, slug, key})
+
+    {:noreply,
+     assign(socket, testing?: true, checks: nil, server_form: to_form(params, as: :server))}
+  end
+
+  def handle_event("save_server", %{"server" => params}, socket) do
+    {url, slug, key} = read_server(params)
+
+    cond do
+      url == "" or slug == "" ->
+        {:noreply,
+         socket
+         |> assign(server_form: to_form(params, as: :server))
+         |> put_flash(:error, gettext("Give the server's address and the tournament."))}
+
+      true ->
+        Settings.put_many(%{"server_url" => url, "slug" => slug, "relay_key" => key || ""})
+        Log.add(:info, "setup.saved", %{})
+
+        socket =
+          case Tournament.refresh() do
+            {:ok, _snapshot} ->
+              put_flash(socket, :info, gettext("Saved. The pairings were fetched."))
+
+            {:error, reason} ->
+              put_flash(
+                socket,
+                :error,
+                gettext("Saved - but: %{why}", why: Words.fetch_error(reason))
+              )
+          end
+
+        {:noreply, load(socket)}
+    end
+  end
+
+  def handle_event("save_box", %{"box" => params}, socket) do
+    name = String.trim(params["box_name"] || "")
+
+    Settings.put_many(%{
+      "box_name" => if(name == "", do: "Alnasl", else: String.slice(name, 0, 40)),
+      "locale" => if(params["locale"] in ["en", "nl"], do: params["locale"], else: "en"),
+      "round" => int(params["round"], 1, 1, 999),
+      "auto_suggest" => params["auto_suggest"] == "true",
+      "capture_cap_mb" => int(params["capture_cap_mb"], 500, 10, 100_000),
+      "clock_heartbeat_s" => int(params["clock_heartbeat_s"], 20, 5, 600)
+    })
+
+    Log.add(:info, "setup.saved", %{})
+    # The language may have changed: draw the page again from the top.
+    {:noreply, socket |> put_flash(:info, gettext("Saved.")) |> push_navigate(to: ~p"/setup")}
+  end
+
+  def handle_event("save_pin", %{"door" => %{"pin" => pin}}, socket) do
+    pin = String.trim(pin)
+
+    cond do
+      pin == "" ->
+        {:noreply, put_flash(socket, :error, gettext("Type a PIN, or use \"Remove the PIN\"."))}
+
+      String.length(pin) < 4 ->
+        {:noreply, put_flash(socket, :error, gettext("A PIN needs at least 4 characters."))}
+
+      true ->
+        Settings.set_pin(pin)
+        Log.add(:info, "setup.saved", %{})
+
+        {:noreply,
+         socket
+         |> put_flash(
+           :info,
+           gettext("The PIN is set. Browsers on other machines will be asked for it.")
+         )
+         |> load()}
+    end
+  end
+
+  def handle_event("clear_pin", _params, socket) do
+    Settings.set_pin(nil)
+    Log.add(:info, "setup.saved", %{})
+    {:noreply, socket |> put_flash(:info, gettext("The PIN is removed.")) |> load()}
+  end
+
+  def handle_event("save_tracker", %{"tracker" => params}, socket) do
+    values =
+      for field <- @tracker_fields, into: %{} do
+        default = Map.fetch!(Tracker.defaults(), String.to_existing_atom(field))
+
+        {field,
+         int(
+           params[field],
+           default,
+           if(field == "search_depth", do: 2, else: 0),
+           if(field == "search_depth", do: 6, else: 600_000)
+         )}
+      end
+      |> Map.put("takeback", params["takeback"] == "true")
+      |> Map.put(
+        "promotion_default",
+        if(params["promotion_default"] in ~w(q r b n), do: params["promotion_default"], else: "q")
+      )
+
+    Settings.put("tracker", values)
+    Log.add(:info, "setup.saved", %{})
+
+    {:noreply,
+     socket
+     |> put_flash(:info, gettext("Saved. Boards use the new timings from their next connection."))
+     |> load()}
+  end
+
+  def handle_event("reset_tracker", _params, socket) do
+    Settings.put("tracker", %{})
+
+    {:noreply,
+     socket |> put_flash(:info, gettext("The tracker is back to its defaults.")) |> load()}
+  end
+
+  defp int(text, default, low, high) do
+    case Integer.parse(to_string(text)) do
+      {n, _} -> n |> max(low) |> min(high)
+      :error -> default
+    end
+  end
+
+  @impl true
+  def handle_info({:run_test, url, slug, key}, socket) do
+    checks =
+      if url == "",
+        do: [server: {:error, {:unreachable, :nxdomain}}, tournament: :skipped, key: :skipped],
+        else: Tournament.test(url, slug, key)
+
+    {:noreply, assign(socket, checks: checks, testing?: false)}
+  end
+
+  def handle_info(_other, socket), do: {:noreply, socket}
+
+  # --- page --------------------------------------------------------------------
+
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <Layouts.app
+      flash={@flash}
+      nav={:setup}
+      link={@link}
+      box={@box}
+      locale={@locale}
+      title={gettext("Setup")}
+    >
+      <div class="cols">
+        <.panel id="setup-server" title={gettext("Results server")}>
+          <.form for={@server_form} id="server-form" phx-submit="save_server" class="stack">
+            <.input
+              field={@server_form[:server_url]}
+              id="server-url"
+              label={gettext("Address of the results site")}
+              placeholder="https://results.example.org"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <.input
+              field={@server_form[:tournament]}
+              id="server-tournament"
+              label={gettext("Tournament")}
+              hint={
+                gettext(
+                  "Its short name in the link (the part after /t/), or paste the whole link to its page."
+                )
+              }
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <.input
+              field={@server_form[:relay_key]}
+              id="server-key"
+              type="password"
+              label={gettext("Relay key")}
+              hint={
+                if @key_hint,
+                  do:
+                    gettext("A key is stored (%{hint}). Leave this empty to keep it.",
+                      hint: @key_hint
+                    ),
+                  else:
+                    gettext(
+                      "Made for this tournament by an admin of the results site. It starts with orrk_."
+                    )
+              }
+              autocomplete="off"
+            />
+            <div class="row">
+              <.button id="save-server" variant="primary" type="submit">{gettext("Save")}</.button>
+              <.button
+                id="test-connection"
+                type="submit"
+                name="intent"
+                value="test"
+                phx-disable-with={gettext("Testing...")}
+              >
+                {gettext("Test connection")}
+              </.button>
+            </div>
+          </.form>
+
+          <p :if={@testing?} id="test-running" class="note" role="status" style="margin-top:0.8rem">
+            {gettext("Asking the server...")}
+          </p>
+          <ul
+            :if={@checks}
+            id="test-result"
+            class="stack"
+            style="list-style:none;padding:0;margin:0.8rem 0 0"
+            role="status"
+          >
+            <li
+              :for={{step, result} <- @checks}
+              id={"check-#{step}"}
+              class="row"
+              style="align-items:flex-start;flex-wrap:nowrap"
+            >
+              <% {tone, sentence} = Words.test_step(step, result) %>
+              <.badge
+                tone={tone}
+                icon={if tone == "ok", do: "ok", else: if(tone == nil, do: "waiting", else: "error")}
+              >
+                {Words.step_name(step)}
+              </.badge>
+              <span>{sentence}</span>
+            </li>
+          </ul>
+          <p :if={@snapshot_at} class="note" style="margin-top:0.8rem">
+            {gettext("Pairings last fetched: %{t}",
+              t: String.slice(@snapshot_at, 0, 16) |> String.replace("T", " ")
+            )} UTC
+          </p>
+        </.panel>
+
+        <.panel id="setup-box" title={gettext("This box")}>
+          <.form for={@box_form} id="box-form" phx-submit="save_box" class="stack">
+            <div class="form-grid">
+              <.input
+                field={@box_form[:box_name]}
+                id="box-name"
+                label={gettext("Name")}
+                hint={gettext("Shown at the top left: tells two boxes apart.")}
+                maxlength="40"
+              />
+              <.input
+                field={@box_form[:locale]}
+                id="box-locale"
+                type="select"
+                label={gettext("Language")}
+                options={[{"English", "en"}, {"Nederlands", "nl"}]}
+              />
+              <.input
+                field={@box_form[:round]}
+                id="box-round"
+                type="number"
+                min="1"
+                max="999"
+                label={gettext("Round in play")}
+              />
+              <.input
+                field={@box_form[:clock_heartbeat_s]}
+                id="box-heartbeat"
+                type="number"
+                min="5"
+                max="600"
+                label={gettext("Send the clocks every (seconds)")}
+              />
+              <.input
+                field={@box_form[:capture_cap_mb]}
+                id="box-cap"
+                type="number"
+                min="10"
+                label={gettext("Keep at most this much raw capture (MB)")}
+              />
+            </div>
+            <.input
+              field={@box_form[:auto_suggest]}
+              id="box-auto"
+              type="checkbox"
+              label={gettext("Offer mate and stalemate to the results site without waiting for me")}
+              hint={
+                gettext(
+                  "Off: every result waits for the arbiter. On: a game that ends in mate or stalemate on the board is sent as finished at once - still provisional on the site."
+                )
+              }
+            />
+            <div class="row">
+              <.button id="save-box" variant="primary" type="submit">{gettext("Save")}</.button>
+            </div>
+          </.form>
+        </.panel>
+
+        <.panel id="setup-pin" title={gettext("Access from other machines")}>
+          <p class="note">
+            {gettext(
+              "The box itself is always let in. A browser on another machine in the hall is let in freely, unless a PIN is set here. (Other machines can only reach the box at all when it was started with ALNASL_LISTEN=lan.)"
+            )}
+          </p>
+          <p id="pin-state">
+            <.badge :if={@pin_set?} tone="ok" icon="ok">{gettext("A PIN is set")}</.badge>
+            <.badge :if={!@pin_set?} icon="waiting">{gettext("No PIN")}</.badge>
+          </p>
+          <.form
+            for={@pin_form}
+            id="pin-form"
+            phx-submit="save_pin"
+            class="row"
+            style="align-items:flex-end"
+          >
+            <.input
+              field={@pin_form[:pin]}
+              id="pin-input"
+              type="password"
+              label={gettext("New PIN")}
+              autocomplete="new-password"
+            />
+            <.button id="save-pin" type="submit">{gettext("Set the PIN")}</.button>
+            <.button
+              :if={@pin_set?}
+              id="clear-pin"
+              type="button"
+              variant="danger"
+              phx-click="clear_pin"
+              data-confirm={
+                gettext("Remove the PIN? Any browser that can reach the box will be let in.")
+              }
+            >
+              {gettext("Remove the PIN")}
+            </.button>
+          </.form>
+        </.panel>
+
+        <.panel id="setup-tracker" title={gettext("How patient the tracker is")}>
+          <p class="note">
+            {gettext(
+              "Times are in milliseconds. The defaults suit classical play; leave them unless a hall teaches you otherwise."
+            )}
+          </p>
+          <.form for={@tracker_form} id="tracker-form" phx-submit="save_tracker" class="stack">
+            <div class="form-grid">
+              <.input
+                field={@tracker_form[:settle_ms]}
+                id="tracker-settle"
+                type="number"
+                min="0"
+                label={gettext("A move must stand for")}
+              />
+              <.input
+                field={@tracker_form[:castle_hold_ms]}
+                id="tracker-castle"
+                type="number"
+                min="0"
+                label={gettext("A rook move that may be castling")}
+              />
+              <.input
+                field={@tracker_form[:promotion_hold_ms]}
+                id="tracker-promo"
+                type="number"
+                min="0"
+                label={gettext("A pawn waiting for its piece")}
+              />
+              <.input
+                field={@tracker_form[:takeback_settle_ms]}
+                id="tracker-takeback-ms"
+                type="number"
+                min="0"
+                label={gettext("A takeback must stand for")}
+              />
+              <.input
+                field={@tracker_form[:transient_ms]}
+                id="tracker-transient"
+                type="number"
+                min="0"
+                label={gettext("Unexplained board: alarm after")}
+              />
+              <.input
+                field={@tracker_form[:lifted_ms]}
+                id="tracker-lifted"
+                type="number"
+                min="0"
+                label={gettext("Piece off the board: alarm after")}
+              />
+              <.input
+                field={@tracker_form[:search_depth]}
+                id="tracker-depth"
+                type="number"
+                min="2"
+                max="6"
+                label={gettext("Unseen moves searched for (half-moves)")}
+              />
+              <.input
+                field={@tracker_form[:promotion_default]}
+                id="tracker-default"
+                type="select"
+                label={gettext("Pawn left on the last rank counts as")}
+                options={[
+                  {gettext("queen"), "q"},
+                  {gettext("rook"), "r"},
+                  {gettext("bishop"), "b"},
+                  {gettext("knight"), "n"}
+                ]}
+              />
+            </div>
+            <.input
+              field={@tracker_form[:takeback]}
+              id="tracker-takeback"
+              type="checkbox"
+              label={gettext("A board put back to the position before the last move is a takeback")}
+            />
+            <div class="row">
+              <.button id="save-tracker" variant="primary" type="submit">{gettext("Save")}</.button>
+              <.button id="reset-tracker" type="button" phx-click="reset_tracker">{gettext(
+                "Back to the defaults"
+              )}</.button>
+            </div>
+          </.form>
+        </.panel>
+      </div>
+    </Layouts.app>
+    """
+  end
+end

@@ -33,7 +33,20 @@ defmodule Alnasl.Games.Game do
 
   def changeset(game, attrs) do
     game
-    |> cast(attrs, [:white, :black, :start_fen, :plies, :status, :result, :suggestion, :paused, :source, :clock, :seq, :finished_at])
+    |> cast(attrs, [
+      :white,
+      :black,
+      :start_fen,
+      :plies,
+      :status,
+      :result,
+      :suggestion,
+      :paused,
+      :source,
+      :clock,
+      :seq,
+      :finished_at
+    ])
     |> validate_inclusion(:status, ~w(live finished))
     |> validate_inclusion(:result, @results)
     |> unique_constraint([:round, :board_no])

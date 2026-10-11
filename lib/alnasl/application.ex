@@ -18,13 +18,15 @@ defmodule Alnasl.Application do
         AlnaslWeb.Telemetry,
         Alnasl.Repo,
         # Always: the box is an appliance, not a deployment with a migration step.
-        {Ecto.Migrator, repos: Application.fetch_env!(:alnasl, :ecto_repos), skip: skip_migrations?()},
+        {Ecto.Migrator,
+         repos: Application.fetch_env!(:alnasl, :ecto_repos), skip: skip_migrations?()},
         {Phoenix.PubSub, name: Alnasl.PubSub},
         {Registry, keys: :unique, name: Alnasl.BoardRegistry},
         {Registry, keys: :unique, name: Alnasl.BusRegistry},
         Alnasl.Recorder,
         {DynamicSupervisor, name: Alnasl.BusSupervisor, strategy: :one_for_one},
-        {DynamicSupervisor, name: Alnasl.BoardSupervisor, strategy: :one_for_one, max_restarts: 100, max_seconds: 60}
+        {DynamicSupervisor,
+         name: Alnasl.BoardSupervisor, strategy: :one_for_one, max_restarts: 100, max_seconds: 60}
       ] ++
         if(autostart?, do: [Alnasl.Outbox, {Task, &Alnasl.Boards.start_all/0}], else: []) ++
         [AlnaslWeb.Endpoint]

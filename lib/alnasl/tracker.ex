@@ -89,6 +89,7 @@ defmodule Alnasl.Tracker do
             candidates_raw: nil,
             memo: nil,
             gesture: nil,
+            held: nil,
             stats: %{searches: 0, max_nodes: 0, max_us: 0, budget_hits: 0}
 
   @type t :: %__MODULE__{}
@@ -170,7 +171,7 @@ defmodule Alnasl.Tracker do
     marks =
       if tr.candidates_since, do: [tr.candidates_since + o.transient_ms | marks], else: marks
 
-    if tr.raw == tr.phys and tr.candidates == [],
+    if (tr.raw == tr.phys and tr.candidates == []) or (tr.held != nil and tr.held == tr.raw),
       do: nil,
       else: marks |> Enum.filter(&(&1 > tr.at)) |> Enum.min(fn -> nil end)
   end
@@ -194,11 +195,15 @@ defmodule Alnasl.Tracker do
 
   # --- the arbiter -------------------------------------------------------------
 
-  @doc "Takes back the last `n` plies. The board is read again afterwards."
+  @doc """
+  Takes back the last `n` plies. The board, which usually still shows them,
+  is not read again until it changes: the arbiter has just said what it
+  shows is not the game, and re-reading it at once would put the move back.
+  """
   def undo(%__MODULE__{} = tr, t, n \\ 1) do
     keep = max(length(tr.plies) - n, 0)
     {tr, events} = correct(tr, t, keep, [], :arbiter)
-    {tr, events} |> and_then(&evaluate(&1, t, false))
+    {%{tr | held: tr.raw}, events}
   end
 
   @doc "Adds moves typed in SAN. `{:error, {index, message}}` names the first that is not legal."
@@ -224,7 +229,8 @@ defmodule Alnasl.Tracker do
       first = {move, [:arbiter]}
       {rest, dropped} = replay_while_legal(Chess.apply_move(before.pos, move), later, [])
       {tr, events} = correct(tr, t, number - 1, [first | rest], :arbiter)
-      {:ok, {tr, events} |> and_then(&evaluate(&1, t, false)), dropped}
+      # As with `undo/3`: the board is looked at again when it next changes.
+      {:ok, {%{tr | held: tr.raw}, events}, dropped}
     end
   end
 
@@ -284,13 +290,23 @@ defmodule Alnasl.Tracker do
 
   defp evaluate(%__MODULE__{raw: nil} = tr, t, _force), do: {%{tr | at: t}, []}
 
+  # The arbiter changed the game by hand and the board has not moved since:
+  # it is left alone until it does.
+  defp evaluate(%__MODULE__{held: held, raw: raw} = tr, t, _force)
+       when held != nil and held == raw,
+       do: {%{tr | at: t}, []}
+
   defp evaluate(%__MODULE__{} = tr, t, force) do
-    tr = %{tr | at: t}
+    tr = %{tr | at: t, held: nil}
     stable = t - tr.raw_since
 
     cond do
-      tr.raw == tr.phys -> in_sync(tr)
-      normal?(tr) -> in_sync(%{tr | phys: tr.raw})
+      tr.raw == tr.phys ->
+        in_sync(tr)
+
+      normal?(tr) ->
+        in_sync(%{tr | phys: tr.raw})
+
       tr.candidates != [] and tr.raw != tr.candidates_raw and
           (one_move_away?(tr) or Position.in_hand?(tr.phys, tr.raw)) ->
         # The plain explanation beats the clever ones we were weighing.
@@ -535,7 +551,10 @@ defmodule Alnasl.Tracker do
 
           many ->
             tr = %{tr | candidates: Enum.take(many, 64), candidates_raw: tr.raw}
-            if tr.status == :out_of_sync, do: {tr, []}, else: set_status(tr, :ambiguous, length(many))
+
+            if tr.status == :out_of_sync,
+              do: {tr, []},
+              else: set_status(tr, :ambiguous, length(many))
         end
     end
   end
@@ -649,7 +668,8 @@ defmodule Alnasl.Tracker do
     with [square] <- Position.diff(tr.phys, tr.raw),
          {colour, :p} <- elem(tr.phys, square),
          {^colour, kind} when kind in [:q, :r, :b, :n] <- elem(tr.raw, square),
-         index when index != nil <- Enum.find_index(Enum.reverse(tr.plies), &(:assumed in &1.flags)) do
+         index when index != nil <-
+           Enum.find_index(Enum.reverse(tr.plies), &(:assumed in &1.flags)) do
       number = length(tr.plies) - index
       before = Enum.at(tr.history, index)
       ply = Enum.at(tr.plies, number - 1)
@@ -670,7 +690,10 @@ defmodule Alnasl.Tracker do
   defp replay_specs(_pos, phys, [], acc), do: {:ok, Enum.reverse(acc), phys}
 
   defp replay_specs(pos, phys, [{from, to, promo, flags} | rest], acc) do
-    case Enum.find(Chess.legal_moves(pos), &(&1.from == from and &1.to == to and &1.promo == promo)) do
+    case Enum.find(
+           Chess.legal_moves(pos),
+           &(&1.from == from and &1.to == to and &1.promo == promo)
+         ) do
       nil ->
         :error
 
@@ -798,7 +821,9 @@ defmodule Alnasl.Tracker do
         [{board, _} | _] =
           tr.phys
           |> Search.outcomes(move, tr.pos.turn, tr.opts.promotion_default)
-          |> Enum.sort_by(fn {_board, f} -> if (:assumed in f) == (:assumed in flags), do: 0, else: 1 end)
+          |> Enum.sort_by(fn {_board, f} ->
+            if :assumed in f == :assumed in flags, do: 0, else: 1
+          end)
 
         ply = %{
           san: san,
@@ -828,10 +853,17 @@ defmodule Alnasl.Tracker do
 
   defp suggestion(tr) do
     case Chess.state(tr.pos) do
-      :checkmate -> [{:result_suggestion, if(tr.pos.turn == :w, do: "0-1", else: "1-0"), :checkmate}]
-      :stalemate -> [{:result_suggestion, "1/2-1/2", :stalemate}]
-      :insufficient_material -> [{:result_suggestion, "1/2-1/2", :insufficient_material}]
-      :playing -> []
+      :checkmate ->
+        [{:result_suggestion, if(tr.pos.turn == :w, do: "0-1", else: "1-0"), :checkmate}]
+
+      :stalemate ->
+        [{:result_suggestion, "1/2-1/2", :stalemate}]
+
+      :insufficient_material ->
+        [{:result_suggestion, "1/2-1/2", :insufficient_material}]
+
+      :playing ->
+        []
     end
   end
 

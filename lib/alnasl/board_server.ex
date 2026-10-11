@@ -36,8 +36,21 @@ defmodule Alnasl.BoardServer do
 
   use GenServer, restart: :transient
 
+  alias Alnasl.{
+    Chess,
+    Clock,
+    Driver,
+    Games,
+    Log,
+    Outbox,
+    Position,
+    Recorder,
+    Session,
+    Settings,
+    Tournament,
+    Tracker
+  }
 
-  alias Alnasl.{Chess, Clock, Driver, Games, Log, Outbox, Position, Recorder, Session, Settings, Tournament, Tracker}
   alias Alnasl.Boards.Board
 
   @tick_ms 100
@@ -79,6 +92,7 @@ defmodule Alnasl.BoardServer do
       last_t: 0,
       warning: nil,
       queued_at: nil,
+      heartbeat_ms: (Settings.get("clock_heartbeat_s") || 20) * 1000,
       dirty?: false
     }
 
@@ -114,7 +128,8 @@ defmodule Alnasl.BoardServer do
   end
 
   # The game this board is linked to, and a session caught up with it.
-  defp load_game(%{board: %Board{round: round, board_no: no}} = state) when is_integer(round) and is_integer(no) do
+  defp load_game(%{board: %Board{round: round, board_no: no}} = state)
+       when is_integer(round) and is_integer(no) do
     names = Tournament.board(round, no) || %{}
     game = Games.ensure(round, no, %{white: names[:white], black: names[:black]})
     opts = Settings.tracker_opts() |> Keyword.put(:start_fen, game.start_fen)
@@ -148,7 +163,8 @@ defmodule Alnasl.BoardServer do
     {:noreply, driver_event(state, event, t)}
   end
 
-  def handle_info({:driver, _id, event}, state), do: {:noreply, driver_event(state, event, now(state))}
+  def handle_info({:driver, _id, event}, state),
+    do: {:noreply, driver_event(state, event, now(state))}
 
   def handle_info(:tick, state) do
     Process.send_after(self(), :tick, @tick_ms)
@@ -234,7 +250,11 @@ defmodule Alnasl.BoardServer do
   end
 
   defp driver_event(state, {:poll, :ok}, _t),
-    do: %{state | stats: Map.update!(state.stats, :polls_ok, &(&1 + 1)), last_seen: DateTime.utc_now(:second)}
+    do: %{
+      state
+      | stats: Map.update!(state.stats, :polls_ok, &(&1 + 1)),
+        last_seen: DateTime.utc_now(:second)
+    }
 
   defp driver_event(state, {:poll, :missed}, _t),
     do: dirty(%{state | stats: Map.update!(state.stats, :polls_missed, &(&1 + 1))})
@@ -328,7 +348,12 @@ defmodule Alnasl.BoardServer do
           {:correction, keep, plies, reason} ->
             {game, _} = Games.apply_event(state.game, event, wall)
 
-            Log.add(:info, "move.corrected", %{reason: reason, keep: keep, moves: Enum.map(plies, & &1.san)}, ref(state))
+            Log.add(
+              :info,
+              "move.corrected",
+              %{reason: reason, keep: keep, moves: Enum.map(plies, & &1.san)},
+              ref(state)
+            )
 
             {%{state | game: game}, :replace}
 
@@ -367,10 +392,17 @@ defmodule Alnasl.BoardServer do
     sans = Enum.map(plies, & &1.san)
 
     cond do
-      :recovered in flags -> Log.add(:warn, "move.recovered", %{moves: sans, long: :long_gap in flags}, ref(state))
-      :assumed in flags -> Log.add(:warn, "move.assumed", %{moves: sans}, ref(state))
-      :arbiter in flags -> :ok
-      true -> :ok
+      :recovered in flags ->
+        Log.add(:warn, "move.recovered", %{moves: sans, long: :long_gap in flags}, ref(state))
+
+      :assumed in flags ->
+        Log.add(:warn, "move.assumed", %{moves: sans}, ref(state))
+
+      :arbiter in flags ->
+        :ok
+
+      true ->
+        :ok
     end
   end
 
@@ -378,7 +410,8 @@ defmodule Alnasl.BoardServer do
     Log.add(:error, "board.out_of_sync", %{why: inspect(detail)}, ref(state))
   end
 
-  defp log_status(%{session: %{tracker: %{status: :out_of_sync}}} = state, status, _detail) when status in [:live, :waiting_start] do
+  defp log_status(%{session: %{tracker: %{status: :out_of_sync}}} = state, status, _detail)
+       when status in [:live, :waiting_start] do
     Log.add(:info, "board.resumed", %{}, ref(state))
   end
 
@@ -393,7 +426,8 @@ defmodule Alnasl.BoardServer do
       Log.add(:info, "result.suggested", %{result: result, why: why}, ref(state))
       state = %{state | game: Games.suggest(state.game, result)}
 
-      if why in [:checkmate, :stalemate, :insufficient_material] and Settings.get("auto_suggest") == true do
+      if why in [:checkmate, :stalemate, :insufficient_material] and
+           Settings.get("auto_suggest") == true do
         Log.add(:info, "result.set", %{result: result, by: "board"}, ref(state))
         %{state | game: Games.finish(state.game, result)}
       else
@@ -404,7 +438,12 @@ defmodule Alnasl.BoardServer do
 
   defp enqueue(state, t, replace?) do
     reading = Clock.read(state.session.clock, t)
-    game = state.game |> Games.remember_clock(reading && Map.put(reading, :running, reading.running)) |> Outbox.enqueue(reading, replace?)
+
+    game =
+      state.game
+      |> Games.remember_clock(reading && Map.put(reading, :running, reading.running))
+      |> Outbox.enqueue(reading, replace?)
+
     %{state | game: game, queued_at: System.monotonic_time(:millisecond)}
   end
 
@@ -414,7 +453,7 @@ defmodule Alnasl.BoardServer do
   defp heartbeat(%{game: %{status: "finished"}} = state, _t), do: state
 
   defp heartbeat(state, t) do
-    every = (Settings.get("clock_heartbeat_s") || 20) * 1000
+    every = state.heartbeat_ms
     since = state.queued_at && System.monotonic_time(:millisecond) - state.queued_at
 
     with true <- Clock.present?(state.session.clock),
@@ -429,7 +468,8 @@ defmodule Alnasl.BoardServer do
 
   defp dirty(state), do: %{state | dirty?: true}
 
-  defp ref(%{board: board}), do: %{board_id: board.id, round: board.round, board_no: board.board_no}
+  defp ref(%{board: board}),
+    do: %{board_id: board.id, round: board.round, board_no: board.board_no}
 
   # --- calls -------------------------------------------------------------------
 
@@ -438,7 +478,13 @@ defmodule Alnasl.BoardServer do
 
   def handle_call({:reload, %Board{} = board}, _from, state) do
     relink? = {board.round, board.board_no} != {state.board.round, state.board.board_no}
-    state = %{state | board: board}
+
+    state = %{
+      state
+      | board: board,
+        heartbeat_ms: (Settings.get("clock_heartbeat_s") || 20) * 1000
+    }
+
     state = if relink?, do: state |> load_game() |> refeed(), else: state
     {:reply, :ok, dirty(state)}
   end
@@ -450,22 +496,27 @@ defmodule Alnasl.BoardServer do
     {:reply, :ok, refeed(%{state | board: board})}
   end
 
-  def handle_call({:driver, :pause}, _from, state), do: {:reply, player(state, :pause), dirty(state)}
-  def handle_call({:driver, :resume}, _from, state), do: {:reply, player(state, :resume), dirty(state)}
+  def handle_call({:driver, :pause}, _from, state),
+    do: {:reply, player(state, :pause), dirty(state)}
+
+  def handle_call({:driver, :resume}, _from, state),
+    do: {:reply, player(state, :resume), dirty(state)}
 
   def handle_call({:note, text}, _from, state) do
     Recorder.record(state.board.id, {:note, text})
     {:reply, :ok, state}
   end
 
-  def handle_call({:repair, _op, _args}, _from, %{session: nil} = state), do: {:reply, {:error, :not_linked}, state}
+  def handle_call({:repair, _op, _args}, _from, %{session: nil} = state),
+    do: {:reply, {:error, :not_linked}, state}
 
   def handle_call({:repair, op, args}, _from, state) do
     {reply, state} = repair(state, op, args, now(state))
     {:reply, reply, dirty(state)}
   end
 
-  defp player(%{driver: pid, board: %{driver: driver}}, action) when is_pid(pid) and driver in ["simulator", "replay"] do
+  defp player(%{driver: pid, board: %{driver: driver}}, action)
+       when is_pid(pid) and driver in ["simulator", "replay"] do
     apply(Alnasl.Driver.Player, action, [pid])
   end
 
@@ -497,7 +548,13 @@ defmodule Alnasl.BoardServer do
   defp repair(state, :edit, {number, san}, t) do
     case Tracker.edit(state.session.tracker, t, number, san) do
       {:ok, result, dropped} ->
-        {_reply, state} = tracked(state, t, fn _tr -> result end, "repair.edit", %{ply: number, move: san, dropped: dropped})
+        {_reply, state} =
+          tracked(state, t, fn _tr -> result end, "repair.edit", %{
+            ply: number,
+            move: san,
+            dropped: dropped
+          })
+
         {{:ok, dropped}, state}
 
       {:error, message} ->
@@ -514,7 +571,12 @@ defmodule Alnasl.BoardServer do
 
   defp repair(state, :resync, depth, t) do
     {tracker, events, outcome} = Tracker.resync(state.session.tracker, t, depth)
-    {_reply, state} = tracked(state, t, fn _tr -> {tracker, events} end, "repair.resync", %{outcome: inspect(outcome)})
+
+    {_reply, state} =
+      tracked(state, t, fn _tr -> {tracker, events} end, "repair.resync", %{
+        outcome: inspect(outcome)
+      })
+
     {{:ok, outcome}, state}
   end
 
@@ -610,7 +672,10 @@ defmodule Alnasl.BoardServer do
       info: state.info,
       raw: state.seen && Position.to_text(state.seen),
       warning: state.warning,
-      player: if(is_pid(state.driver) and board.driver in ["simulator", "replay"], do: Alnasl.Driver.Player.progress(state.driver)),
+      player:
+        if(is_pid(state.driver) and board.driver in ["simulator", "replay"],
+          do: Alnasl.Driver.Player.progress(state.driver)
+        ),
       linked?: tracker != nil
     }
 
@@ -635,7 +700,11 @@ defmodule Alnasl.BoardServer do
         paused: game.paused,
         game_status: game.status,
         game_id: game.id,
-        problems: if(tracker.plies == [] and state.seen, do: Position.problems(start_board(tracker), state.seen), else: [])
+        problems:
+          if(tracker.plies == [] and state.seen,
+            do: Position.problems(start_board(tracker), state.seen),
+            else: []
+          )
       })
     else
       Map.merge(base, %{

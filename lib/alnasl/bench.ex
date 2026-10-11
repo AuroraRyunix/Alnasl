@@ -86,7 +86,8 @@ defmodule Alnasl.Bench do
     }
   end
 
-  defp prefix?(short, long), do: Pgn.first_difference(short, Enum.take(long, length(short))) == :same
+  defp prefix?(short, long),
+    do: Pgn.first_difference(short, Enum.take(long, length(short))) == :same
 
   # Did the tracker mark the place where its game leaves the real one? Either
   # the ply there (or one before it, when a whole recovered run is off) is
@@ -159,7 +160,8 @@ defmodule Alnasl.Bench do
         {"missed 10% + the others 5%", :gap2,
          %{faults: Map.new(benign ++ [:takeback, :slide], &{&1, 0.05}) |> Map.put(:missed, 0.1)}},
         {"unplugged for 2 plies, twice", :gap2, %{unplug: [{9, 2}, {21, 2}]}},
-        {"missed 25%, up to 3 plies in a row", :long, %{faults: %{missed: 0.25}, missed_streak: 3}},
+        {"missed 25%, up to 3 plies in a row", :long,
+         %{faults: %{missed: 0.25}, missed_streak: 3}},
         {"unplugged for 3 plies", :long, %{unplug: [{11, 3}]}},
         {"unplugged for 8 plies", :lost, %{unplug: [{11, 8}]}},
         {"an illegal move at ply 12, played on", :illegal, %{illegal_at: 12}}

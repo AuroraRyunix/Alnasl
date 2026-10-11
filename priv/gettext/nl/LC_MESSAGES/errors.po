@@ -1,0 +1,102 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: nl\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "can't be blank"
+msgstr "mag niet leeg zijn"
+
+msgid "has already been taken"
+msgstr "is al in gebruik"
+
+msgid "is invalid"
+msgstr "is ongeldig"
+
+msgid "must be accepted"
+msgstr "moet worden aanvaard"
+
+msgid "has invalid format"
+msgstr "heeft een ongeldig formaat"
+
+msgid "has an invalid entry"
+msgstr "bevat een ongeldig item"
+
+msgid "is reserved"
+msgstr "is gereserveerd"
+
+msgid "does not match confirmation"
+msgstr "komt niet overeen met de bevestiging"
+
+msgid "is still associated with this entry"
+msgstr "is nog aan dit item gekoppeld"
+
+msgid "are still associated with this entry"
+msgstr "zijn nog aan dit item gekoppeld"
+
+msgid "should have %{count} item(s)"
+msgid_plural "should have %{count} item(s)"
+msgstr[0] "moet %{count} item bevatten"
+msgstr[1] "moet %{count} items bevatten"
+
+msgid "should be %{count} character(s)"
+msgid_plural "should be %{count} character(s)"
+msgstr[0] "moet %{count} teken zijn"
+msgstr[1] "moet %{count} tekens zijn"
+
+msgid "should be %{count} byte(s)"
+msgid_plural "should be %{count} byte(s)"
+msgstr[0] "moet %{count} byte zijn"
+msgstr[1] "moet %{count} bytes zijn"
+
+msgid "should have at least %{count} item(s)"
+msgid_plural "should have at least %{count} item(s)"
+msgstr[0] "moet minstens %{count} item bevatten"
+msgstr[1] "moet minstens %{count} items bevatten"
+
+msgid "should be at least %{count} character(s)"
+msgid_plural "should be at least %{count} character(s)"
+msgstr[0] "moet minstens %{count} teken zijn"
+msgstr[1] "moet minstens %{count} tekens zijn"
+
+msgid "should be at least %{count} byte(s)"
+msgid_plural "should be at least %{count} byte(s)"
+msgstr[0] "moet minstens %{count} byte zijn"
+msgstr[1] "moet minstens %{count} bytes zijn"
+
+msgid "should have at most %{count} item(s)"
+msgid_plural "should have at most %{count} item(s)"
+msgstr[0] "mag hoogstens %{count} item bevatten"
+msgstr[1] "mag hoogstens %{count} items bevatten"
+
+msgid "should be at most %{count} character(s)"
+msgid_plural "should be at most %{count} character(s)"
+msgstr[0] "mag hoogstens %{count} teken zijn"
+msgstr[1] "mag hoogstens %{count} tekens zijn"
+
+msgid "should be at most %{count} byte(s)"
+msgid_plural "should be at most %{count} byte(s)"
+msgstr[0] "mag hoogstens %{count} byte zijn"
+msgstr[1] "mag hoogstens %{count} bytes zijn"
+
+msgid "must be less than %{number}"
+msgstr "moet kleiner zijn dan %{number}"
+
+msgid "must be greater than %{number}"
+msgstr "moet groter zijn dan %{number}"
+
+msgid "must be less than or equal to %{number}"
+msgstr "moet kleiner dan of gelijk aan %{number} zijn"
+
+msgid "must be greater than or equal to %{number}"
+msgstr "moet groter dan of gelijk aan %{number} zijn"
+
+msgid "must be equal to %{number}"
+msgstr "moet gelijk zijn aan %{number}"

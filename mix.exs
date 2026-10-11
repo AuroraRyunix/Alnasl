@@ -53,7 +53,7 @@ defmodule Alnasl.MixProject do
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 1.0"},
       {:jason, "~> 1.2"},
-            {:bandit, "~> 1.5"},
+      {:bandit, "~> 1.5"},
       {:req, "~> 0.5"}
     ] ++ uart()
   end
@@ -70,8 +70,7 @@ defmodule Alnasl.MixProject do
         _unset -> match?({:unix, _}, :os.type())
       end
 
-    if wanted, do: [{:circuits_uart, "~> 1.5"}], else: [
-    ]
+    if wanted, do: [{:circuits_uart, "~> 1.5"}], else: []
   end
 
   # Aliases are shortcuts or tasks specific to the current project.

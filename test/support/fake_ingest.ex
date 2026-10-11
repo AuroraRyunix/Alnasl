@@ -38,7 +38,13 @@ defmodule Alnasl.FakeIngest do
   @doc "Points Alnasl at this server: settings, and Req's plug."
   def install do
     Application.put_env(:alnasl, :req_options, plug: &__MODULE__.call/1)
-    Alnasl.Settings.put_many(%{"server_url" => "http://results.test", "slug" => @slug, "relay_key" => @key})
+
+    Alnasl.Settings.put_many(%{
+      "server_url" => "http://results.test",
+      "slug" => @slug,
+      "relay_key" => @key
+    })
+
     :ok
   end
 
@@ -54,17 +60,25 @@ defmodule Alnasl.FakeIngest do
   @doc "Every live-boards body received, oldest first, with the status answered."
   def requests, do: Agent.get(__MODULE__, &Enum.reverse(&1.requests))
 
-  def reset, do: Agent.update(__MODULE__, &%{&1 | games: %{}, requests: [], mode: :ok, fail_next: 0})
+  def reset,
+    do: Agent.update(__MODULE__, &%{&1 | games: %{}, requests: [], mode: :ok, fail_next: 0})
 
   @doc "Puts a game on the server behind Alnasl's back."
-  def plant(round, board, moves), do: Agent.update(__MODULE__, &put_in(&1.games[{round, board}], %{moves: moves, status: "live", result: nil, clock: %{}}))
+  def plant(round, board, moves),
+    do:
+      Agent.update(
+        __MODULE__,
+        &put_in(&1.games[{round, board}], %{moves: moves, status: "live", result: nil, clock: %{}})
+      )
 
   # --- the plug ----------------------------------------------------------------
 
   def call(conn) do
     {mode, failing?} =
       Agent.get_and_update(__MODULE__, fn s ->
-        if s.fail_next > 0, do: {{s.mode, true}, %{s | fail_next: s.fail_next - 1}}, else: {{s.mode, false}, s}
+        if s.fail_next > 0,
+          do: {{s.mode, true}, %{s | fail_next: s.fail_next - 1}},
+          else: {{s.mode, false}, s}
       end)
 
     cond do
@@ -73,7 +87,8 @@ defmodule Alnasl.FakeIngest do
     end
   end
 
-  defp route(%{method: "GET", path_info: ["api", "server"]} = conn, _mode), do: json(conn, 200, %{name: "fake"})
+  defp route(%{method: "GET", path_info: ["api", "server"]} = conn, _mode),
+    do: json(conn, 200, %{name: "fake"})
 
   defp route(%{method: "GET", path_info: ["api", "tournaments", slug]} = conn, _mode) do
     if slug == @slug,
@@ -128,7 +143,8 @@ defmodule Alnasl.FakeIngest do
     end
   end
 
-  defp ingest(_body), do: {422, %{error: "invalid_request", detail: "round, board and moves are required"}}
+  defp ingest(_body),
+    do: {422, %{error: "invalid_request", detail: "round, board and moves are required"}}
 
   defp decide(state, key, moves, body) do
     held = state.games[key]
@@ -140,7 +156,9 @@ defmodule Alnasl.FakeIngest do
         store(state, key, moves, body, held, replace?)
 
       count < length(held.moves) ->
-        {{200, %{status: "ok", applied: false, ply: length(held.moves), reason: "older_than_stored"}}, state}
+        {{200,
+          %{status: "ok", applied: false, ply: length(held.moves), reason: "older_than_stored"}},
+         state}
 
       Enum.take(moves, length(held.moves)) != held.moves ->
         {{409, %{error: "moves_conflict", detail: "the moves disagree with those held"}}, state}
@@ -183,12 +201,21 @@ defmodule Alnasl.FakeIngest do
       "tournament" => %{"name" => "Test Open", "slug" => @slug, "city" => "Ghent"},
       "players" =>
         for n <- 1..(boards * 2) do
-          %{"no" => n, "name" => "Player #{n}", "title" => if(n == 1, do: "GM"), "rating" => 2000 + n}
+          %{
+            "no" => n,
+            "name" => "Player #{n}",
+            "title" => if(n == 1, do: "GM"),
+            "rating" => 2000 + n
+          }
         end,
       "rounds" => [
         %{
           "number" => 1,
-          "boards" => for(b <- 1..boards, do: %{"board" => b, "white" => b * 2 - 1, "black" => b * 2, "result" => nil})
+          "boards" =>
+            for(
+              b <- 1..boards,
+              do: %{"board" => b, "white" => b * 2 - 1, "black" => b * 2, "result" => nil}
+            )
         }
       ]
     }

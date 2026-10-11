@@ -81,7 +81,8 @@ defmodule Alnasl.Settings do
     text = String.trim(text || "")
 
     case URI.parse(text) do
-      %URI{scheme: scheme, host: host, path: path} = uri when scheme in ["http", "https"] and is_binary(host) ->
+      %URI{scheme: scheme, host: host, path: path} = uri
+      when scheme in ["http", "https"] and is_binary(host) ->
         slug =
           case String.split(path || "", "/", trim: true) do
             ["t", slug | _] -> slug
@@ -102,10 +103,17 @@ defmodule Alnasl.Settings do
     text = String.trim(text || "")
 
     cond do
-      text == "" -> ""
-      String.starts_with?(text, ["http://", "https://"]) -> String.trim_trailing(text, "/")
-      String.starts_with?(text, ["localhost", "127.", "192.168.", "10."]) -> "http://" <> String.trim_trailing(text, "/")
-      true -> "https://" <> String.trim_trailing(text, "/")
+      text == "" ->
+        ""
+
+      String.starts_with?(text, ["http://", "https://"]) ->
+        String.trim_trailing(text, "/")
+
+      String.starts_with?(text, ["localhost", "127.", "192.168.", "10."]) ->
+        "http://" <> String.trim_trailing(text, "/")
+
+      true ->
+        "https://" <> String.trim_trailing(text, "/")
     end
   end
 
@@ -158,11 +166,20 @@ defmodule Alnasl.Settings do
 
     Enum.reduce(Alnasl.Tracker.defaults(), [], fn {key, default}, acc ->
       case Map.get(stored, Atom.to_string(key)) do
-        nil -> acc
-        value when is_integer(default) and is_integer(value) and value >= 0 -> [{key, value} | acc]
-        value when is_boolean(default) and is_boolean(value) -> [{key, value} | acc]
-        value when key == :promotion_default and value in ~w(q r b n) -> [{key, String.to_existing_atom(value)} | acc]
-        _bad -> acc
+        nil ->
+          acc
+
+        value when is_integer(default) and is_integer(value) and value >= 0 ->
+          [{key, value} | acc]
+
+        value when is_boolean(default) and is_boolean(value) ->
+          [{key, value} | acc]
+
+        value when key == :promotion_default and value in ~w(q r b n) ->
+          [{key, String.to_existing_atom(value)} | acc]
+
+        _bad ->
+          acc
       end
     end)
   end

@@ -1,6 +1,10 @@
 defmodule AlnaslWeb.Router do
   use AlnaslWeb, :router
 
+  import AlnaslWeb.Hall, only: [gate: 2, put_locale: 2]
+
+  # One pipeline. There are no accounts on the box: who may be here is
+  # decided by where the request comes from and the PIN (`AlnaslWeb.Hall`).
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
@@ -8,19 +12,36 @@ defmodule AlnaslWeb.Router do
     plug :put_root_layout, html: {AlnaslWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
-  end
-
-  pipeline :api do
-    plug :accepts, ["json"]
+    plug :put_locale
+    plug :gate
   end
 
   scope "/", AlnaslWeb do
     pipe_through :browser
 
-  end
+    get "/unlock", DoorController, :unlock
+    post "/unlock", DoorController, :enter
+    get "/lock", DoorController, :lock
+    get "/locale/:locale", DoorController, :locale
 
-  # Other scopes may use custom stacks.
-  # scope "/api", AlnaslWeb do
-  #   pipe_through :api
-  # end
+    get "/files/round/:round", FileController, :round
+    get "/files/round/:round/board/:board", FileController, :game
+    get "/files/capture/:board/:name", FileController, :capture
+
+    # Every page of the site. One session, so moving between them keeps the
+    # socket; the hook puts the language, the box's name and the connection
+    # badge on each, and turns away a browser that has not given the PIN.
+    live_session :hall, on_mount: AlnaslWeb.Hall do
+      live "/", RoundLive, :index
+      live "/round/:round", RoundLive, :index
+      live "/round/:round/board/:board", GameLive, :show
+      live "/boards", BoardsLive, :index
+      live "/outbox", OutboxLive, :index
+      live "/pgn", PgnLive, :index
+      live "/recordings", RecordingsLive, :index
+      live "/log", LogLive, :index
+      live "/setup", SetupLive, :index
+      live "/help", HelpLive, :index
+    end
+  end
 end

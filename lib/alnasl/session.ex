@@ -51,7 +51,8 @@ defmodule Alnasl.Session do
   def handle(%__MODULE__{} = session, _t, _other), do: {session, []}
 
   @doc "Applies a tracker operation (`fn tracker -> {tracker, events} end`) made by the arbiter."
-  def with_tracker(%__MODULE__{} = session, t, fun), do: session.tracker |> fun.() |> wrap(session, t)
+  def with_tracker(%__MODULE__{} = session, t, fun),
+    do: session.tracker |> fun.() |> wrap(session, t)
 
   def deadline(%__MODULE__{tracker: tracker}), do: Tracker.deadline(tracker)
 

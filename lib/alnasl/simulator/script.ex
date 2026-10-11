@@ -126,8 +126,14 @@ defmodule Alnasl.Simulator.Script do
 
     st =
       case Enum.find(o.unplug, fn {at, _plies} -> at == number end) do
-        {_at, plies} -> st |> note(number, :unplug) |> emit(:disconnected) |> Map.merge(%{mute: true, unplug_left: plies})
-        nil -> st
+        {_at, plies} ->
+          st
+          |> note(number, :unplug)
+          |> emit(:disconnected)
+          |> Map.merge(%{mute: true, unplug_left: plies})
+
+        nil ->
+          st
       end
 
     {think, st} =
@@ -142,7 +148,11 @@ defmodule Alnasl.Simulator.Script do
         st |> blind(move) |> press(pos, number)
 
       o.illegal_at == number ->
-        st |> note(number, :illegal) |> illegal(pos) |> Map.put(:derailed, true) |> press(pos, number)
+        st
+        |> note(number, :illegal)
+        |> illegal(pos)
+        |> Map.put(:derailed, true)
+        |> press(pos, number)
 
       st.unplug_left > 0 ->
         st = st |> play(pos, move, false) |> silent_press(pos)
@@ -203,7 +213,11 @@ defmodule Alnasl.Simulator.Script do
         {order, st} = pick(st, [:move_first, :take_first])
 
         if order == :move_first,
-          do: st |> steps([{:lift, move.from}, {:put, move.to, piece}]) |> pause() |> steps([{:lift, taken}]),
+          do:
+            st
+            |> steps([{:lift, move.from}, {:put, move.to, piece}])
+            |> pause()
+            |> steps([{:lift, taken}]),
           else: steps(st, [{:lift, taken}, {:lift, move.from}, {:put, move.to, piece}])
 
       %{promo: promo} when promo != nil ->
@@ -213,10 +227,15 @@ defmodule Alnasl.Simulator.Script do
 
         cond do
           leave? ->
-            st |> note(number, :leave_pawn) |> steps([{:lift, move.from}] ++ off ++ [{:put, move.to, piece}])
+            st
+            |> note(number, :leave_pawn)
+            |> steps([{:lift, move.from}] ++ off ++ [{:put, move.to, piece}])
 
           order == :swap_in_hand ->
-            st |> steps([{:lift, move.from}] ++ off) |> pause() |> steps([{:put, move.to, {us, promo}}])
+            st
+            |> steps([{:lift, move.from}] ++ off)
+            |> pause()
+            |> steps([{:put, move.to, {us, promo}}])
 
           true ->
             st
@@ -323,13 +342,23 @@ defmodule Alnasl.Simulator.Script do
   defp disturb(st, :lift, pos) do
     {square, st} = pick(st, occupied(st.b, pos.turn))
     piece = elem(st.b, square)
-    st |> steps([{:lift, square}]) |> pause(st.o.fault_ms) |> steps([{:put, square, piece}]) |> pause()
+
+    st
+    |> steps([{:lift, square}])
+    |> pause(st.o.fault_ms)
+    |> steps([{:put, square, piece}])
+    |> pause()
   end
 
   defp disturb(st, :knock, _pos) do
     {square, st} = pick(st, occupied(st.b))
     piece = elem(st.b, square)
-    st |> steps([{:lift, square}], {20, 80}) |> pause(st.o.fault_ms) |> steps([{:put, square, piece}]) |> pause()
+
+    st
+    |> steps([{:lift, square}], {20, 80})
+    |> pause(st.o.fault_ms)
+    |> steps([{:put, square, piece}])
+    |> pause()
   end
 
   defp disturb(st, :swap, pos) do
@@ -375,7 +404,10 @@ defmodule Alnasl.Simulator.Script do
 
       st
       |> note(number, :takeback)
-      |> steps([{:lift, other.from}] ++ if(taken, do: [{:lift, other.to}], else: []) ++ [{:put, other.to, piece}])
+      |> steps(
+        [{:lift, other.from}] ++
+          if(taken, do: [{:lift, other.to}], else: []) ++ [{:put, other.to, piece}]
+      )
       |> pause({200, 3_000})
       |> steps([{:lift, other.to}, {:put, other.from, piece}] ++ back)
       |> pause({200, 2_500})
@@ -401,7 +433,9 @@ defmodule Alnasl.Simulator.Script do
     st
     |> wait(3_000)
     |> note(0, :gesture)
-    |> steps(clear ++ [{:lift, wk}, {:put, white, {:w, :k}}, {:lift, bk}, {:put, black, {:b, :k}}])
+    |> steps(
+      clear ++ [{:lift, wk}, {:put, white, {:w, :k}}, {:lift, bk}, {:put, black, {:b, :k}}]
+    )
   end
 
   # --- clock -------------------------------------------------------------------

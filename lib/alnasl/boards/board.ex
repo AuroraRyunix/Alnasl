@@ -31,7 +31,19 @@ defmodule Alnasl.Boards.Board do
 
   def changeset(board, attrs) do
     board
-    |> cast(attrs, [:name, :driver, :port, :address, :options, :flipped, :enabled, :round, :board_no, :serial, :firmware])
+    |> cast(attrs, [
+      :name,
+      :driver,
+      :port,
+      :address,
+      :options,
+      :flipped,
+      :enabled,
+      :round,
+      :board_no,
+      :serial,
+      :firmware
+    ])
     |> validate_required([:name, :driver])
     |> validate_inclusion(:driver, @drivers)
     |> validate_number(:address, greater_than_or_equal_to: 0, less_than: 16_384)

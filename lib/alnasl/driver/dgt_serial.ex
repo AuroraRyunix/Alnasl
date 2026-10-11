@@ -148,7 +148,9 @@ defmodule Alnasl.Driver.DgtSerial do
 
   # A change to a board we have not seen whole: ask for the whole of it.
   defp message({:field, _square, _piece}, %{board: nil} = state), do: write(state, :board)
-  defp message({:field, square, piece}, state), do: position(state, put_elem(state.board, square, piece))
+
+  defp message({:field, square, piece}, state),
+    do: position(state, put_elem(state.board, square, piece))
 
   defp message({:clock, clock}, state) do
     case Protocol.reading(clock, state.clock_white) do
@@ -156,7 +158,9 @@ defmodule Alnasl.Driver.DgtSerial do
       reading -> Driver.emit(state.owner, state.id, {:clock, reading})
     end
 
-    if clock.battery_low?, do: Driver.emit(state.owner, state.id, {:info, %{clock_battery_low: true}})
+    if clock.battery_low?,
+      do: Driver.emit(state.owner, state.id, {:info, %{clock_battery_low: true}})
+
     state
   end
 
@@ -182,7 +186,10 @@ defmodule Alnasl.Driver.DgtSerial do
 
   defp write(state, command) do
     bytes = Protocol.command(command)
-    if state.debug?, do: Logger.info("dgt #{state.port} tx #{Base.encode16(bytes, case: :lower)} (#{command})")
+
+    if state.debug?,
+      do: Logger.info("dgt #{state.port} tx #{Base.encode16(bytes, case: :lower)} (#{command})")
+
     Driver.emit(state.owner, state.id, {:raw, :tx, bytes})
 
     case state.transport.write(state.handle, bytes) do

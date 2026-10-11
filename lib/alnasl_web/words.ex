@@ -1,0 +1,464 @@
+defmodule AlnaslWeb.Words do
+  @moduledoc """
+  Where machine facts become sentences: why the server could not be reached,
+  what is wrong with a starting position, what a line of the log says.
+
+  One place, so that the same fact reads the same on every page and in both
+  languages, and so that nothing the arbiter sees is an error code.
+  """
+
+  use Gettext, backend: AlnaslWeb.Gettext
+
+  alias Alnasl.{Log, Position}
+
+  # --- the connection ----------------------------------------------------------
+
+  @doc "Why the pairings could not be fetched."
+  def fetch_error(:not_configured),
+    do: gettext("Set the results server and the tournament first (Setup).")
+
+  def fetch_error(:unreachable),
+    do: gettext("The results server cannot be reached. Is the network up?")
+
+  def fetch_error(:not_found),
+    do: gettext("The results server does not know this tournament. Has it been published?")
+
+  def fetch_error(:not_json), do: gettext("That address answers, but not as a results server.")
+
+  def fetch_error({:http, status}),
+    do: gettext("The results server answered with an error (%{status}).", status: status)
+
+  def fetch_error(_other), do: gettext("The pairings could not be fetched.")
+
+  @doc "One step of \"Test connection\", in words: `{tone, sentence}`."
+  def test_step(:server, :ok), do: {"ok", gettext("The server answers.")}
+
+  def test_step(:server, {:error, {:unreachable, reason}}),
+    do: {"bad", gettext("The server cannot be reached: %{why}", why: unreachable(reason))}
+
+  def test_step(:server, {:error, {:http, status}}),
+    do:
+      {"bad",
+       gettext("The server answers with an error of its own (%{status}). Try again in a moment.",
+         status: status
+       )}
+
+  def test_step(:tournament, {:ok, %{name: name, rounds: rounds, boards: boards}}) do
+    {"ok",
+     gettext(
+       "The tournament is there: %{name}, %{rounds} round(s) published, %{boards} board(s) in the latest.",
+       name: name || "?",
+       rounds: rounds,
+       boards: boards
+     )}
+  end
+
+  def test_step(:tournament, {:error, :no_slug}),
+    do: {"bad", gettext("No tournament is filled in.")}
+
+  def test_step(:tournament, {:error, :not_found}),
+    do:
+      {"bad",
+       gettext(
+         "The server does not know this tournament. Check the name in the link; it must have been published at least once."
+       )}
+
+  def test_step(:tournament, {:error, :not_json}),
+    do: {"bad", gettext("That address answers, but not as a results server. Check the address.")}
+
+  def test_step(:tournament, {:error, reason}), do: {"bad", fetch_error(reason)}
+
+  def test_step(:key, :ok), do: {"ok", gettext("The relay key is accepted for this tournament.")}
+
+  def test_step(:key, {:error, :no_key}),
+    do:
+      {"bad",
+       gettext(
+         "No relay key is filled in. An admin of the results site makes one for the tournament."
+       )}
+
+  def test_step(:key, {:error, :key_refused}),
+    do: {"bad", gettext("The server does not accept this relay key. Was it copied whole?")}
+
+  def test_step(:key, {:error, :key_other_tournament}),
+    do: {"bad", gettext("This relay key belongs to another tournament.")}
+
+  def test_step(:key, {:error, :key_revoked}),
+    do: {"bad", gettext("This relay key has been revoked. Ask for a new one.")}
+
+  def test_step(:key, {:error, :rate_limited}),
+    do:
+      {"warn",
+       gettext("The server asks to slow down. The key is probably fine; try again in a minute.")}
+
+  def test_step(:key, {:error, :paused}),
+    do:
+      {"warn",
+       gettext("The server has paused all sending for the moment. The key could not be tested.")}
+
+  def test_step(:key, {:error, :not_found}),
+    do: {"bad", gettext("The server does not take live boards for this tournament.")}
+
+  def test_step(:key, {:error, {:refused, code}}),
+    do: {"bad", gettext("The server refuses: %{code}.", code: code)}
+
+  def test_step(_step, :skipped), do: {nil, gettext("Not tested: the step before it failed.")}
+  def test_step(_step, {:error, _other}), do: {"bad", gettext("This step failed.")}
+
+  def step_name(:server), do: gettext("Server")
+  def step_name(:tournament), do: gettext("Tournament")
+  def step_name(:key), do: gettext("Relay key")
+
+  defp unreachable(:econnrefused), do: gettext("nothing is listening at that address.")
+  defp unreachable(:nxdomain), do: gettext("that name does not exist. Check the address.")
+  defp unreachable(:timeout), do: gettext("no answer in time. Is the network up?")
+  defp unreachable(:ehostunreach), do: gettext("there is no route to it. Is the network up?")
+  defp unreachable(:enetunreach), do: gettext("there is no network.")
+  defp unreachable(:closed), do: gettext("the connection was closed.")
+
+  defp unreachable({:tls_alert, _alert}),
+    do: gettext("the secure connection failed. https or http?")
+
+  defp unreachable(_other), do: gettext("no connection.")
+
+  @doc "Why the outbox is not sending, from its last error."
+  def link_error(nil), do: nil
+
+  def link_error({:unreachable, reason}),
+    do: gettext("The server cannot be reached: %{why}", why: unreachable(reason))
+
+  def link_error(:rate_limited),
+    do: gettext("The server asks to slow down. Sending goes on by itself.")
+
+  def link_error({:http, 503, "publishing_paused"}),
+    do: gettext("The server has paused all sending. It goes on by itself when that is lifted.")
+
+  def link_error({:http, status, _code}),
+    do: gettext("The server answers with an error of its own (%{status}).", status: status)
+
+  def link_error({401, _code}),
+    do: gettext("The server does not accept the relay key. Check it in Setup.")
+
+  def link_error({403, "relay_key_revoked"}),
+    do: gettext("The relay key has been revoked. Ask for a new one and put it in Setup.")
+
+  def link_error({403, "relay_key_wrong_tournament"}),
+    do: gettext("The relay key belongs to another tournament. Check Setup.")
+
+  def link_error({403, code}),
+    do: gettext("The server refuses this box: %{code}.", code: code || "?")
+
+  def link_error({404, _code}),
+    do: gettext("The server does not know this tournament. Has it been published?")
+
+  def link_error({:crash, _message}),
+    do: gettext("Sending failed inside the box. It is tried again.")
+
+  def link_error(_other), do: gettext("Sending failed. It is tried again.")
+
+  @doc "Why the server refused one message."
+  def entry_error("invalid_moves"), do: gettext("The server calls a move in it illegal.")
+
+  def entry_error("moves_conflict"),
+    do: gettext("The server held other moves for this game. The game was sent again in full.")
+
+  def entry_error("invalid_request"), do: gettext("The server could not read it.")
+  def entry_error("invalid_fen"), do: gettext("The server does not accept the starting position.")
+  def entry_error("fen_mismatch"), do: gettext("The position did not match the moves.")
+  def entry_error("ply_mismatch"), do: gettext("The move count did not match the moves.")
+
+  def entry_error("older_than_stored"),
+    do: gettext("The server already had more moves than this.")
+
+  def entry_error(nil), do: nil
+  def entry_error(code), do: gettext("Refused: %{code}.", code: code)
+
+  # --- a board -----------------------------------------------------------------
+
+  @doc "What the state of a board means for the arbiter: `{headline, explanation}`."
+  def state_help(:out_of_sync, :ambiguous),
+    do:
+      {gettext("More than one sequence of moves fits the board"),
+       gettext(
+         "Moves went by unseen and the board cannot say which they were. Pick the right ones below; the box has kept following the game underneath."
+       )}
+
+  def state_help(:out_of_sync, :piece_missing),
+    do:
+      {gettext("A piece is missing from the board"),
+       gettext(
+         "A piece has been off its square for a long time. If it is put back, the board carries on by itself."
+       )}
+
+  def state_help(:out_of_sync, :search_gave_up),
+    do:
+      {gettext("The board cannot be explained"),
+       gettext(
+         "The search for the moves that lead to this position took too long and was stopped. Use the tools below."
+       )}
+
+  def state_help(:out_of_sync, _other),
+    do:
+      {gettext("The board does not match the game"),
+       gettext(
+         "No legal moves lead from the last certain position to what the board reads now. Nothing is being sent for this board. If the pieces are put right it carries on by itself; otherwise use the tools below."
+       )}
+
+  def state_help(:no_signal, _detail),
+    do:
+      {gettext("The board does not answer"),
+       gettext(
+         "Check the cable and the power. The game is kept; when the board is back the moves made meanwhile are looked for."
+       )}
+
+  def state_help(:recovered, _detail),
+    do:
+      {gettext("Moves were recovered"),
+       gettext(
+         "The last moves were not seen one by one; they were worked out from the position. Worth a glance at the scoresheet."
+       )}
+
+  def state_help(:waiting_start, :not_start),
+    do:
+      {gettext("Waiting for the starting position"),
+       gettext("The board does not show the starting position of this game.")}
+
+  def state_help(:waiting_start, _detail),
+    do:
+      {gettext("Ready"),
+       gettext("The starting position is on the board. The first move starts the game.")}
+
+  def state_help(:settling, {:gesture, result}),
+    do:
+      {gettext("The kings are in the centre"),
+       gettext("The players signal a result: %{result}. Confirm it below.", result: result)}
+
+  def state_help(:settling, _detail),
+    do: {gettext("A hand is over the board"), gettext("The position is not a finished move yet.")}
+
+  def state_help(:finished, _detail),
+    do: {gettext("The game is over"), gettext("The board is no longer followed.")}
+
+  def state_help(:unlinked, _detail),
+    do:
+      {gettext("No board is feeding this game"),
+       gettext("Link a board to it on the Boards page.")}
+
+  def state_help(_state, _detail), do: {nil, nil}
+
+  @doc "A finding of the start-position check, in pieces and squares."
+  def problem({:swapped, a, sq_a, b, sq_b}) do
+    gettext("%{a} and %{b} are swapped (%{sq_a}, %{sq_b})",
+      a: piece(a),
+      b: piece(b),
+      sq_a: Position.square_name(sq_a),
+      sq_b: Position.square_name(sq_b)
+    )
+  end
+
+  def problem({:wrong, square, expected, nil}),
+    do:
+      gettext("%{square}: %{piece} is missing",
+        square: Position.square_name(square),
+        piece: piece(expected)
+      )
+
+  def problem({:wrong, square, nil, seen}),
+    do:
+      gettext("%{square}: %{piece} should not be there",
+        square: Position.square_name(square),
+        piece: piece(seen)
+      )
+
+  def problem({:wrong, square, expected, seen}) do
+    gettext("%{square}: %{seen} instead of %{expected}",
+      square: Position.square_name(square),
+      seen: piece(seen),
+      expected: piece(expected)
+    )
+  end
+
+  def piece({:w, kind}), do: gettext("white %{piece}", piece: kind(kind))
+  def piece({:b, kind}), do: gettext("black %{piece}", piece: kind(kind))
+
+  defp kind(:k), do: gettext("king")
+  defp kind(:q), do: gettext("queen")
+  defp kind(:r), do: gettext("rook")
+  defp kind(:b), do: gettext("bishop")
+  defp kind(:n), do: gettext("knight")
+  defp kind(:p), do: gettext("pawn")
+
+  @doc "A flag on a move, as the small word shown beside it."
+  def flag(:recovered), do: gettext("recovered")
+  def flag(:long_gap), do: gettext("3+ at once")
+  def flag(:assumed), do: gettext("queen assumed")
+  def flag(:arbiter), do: gettext("by hand")
+  def flag(:imported), do: gettext("from PGN")
+  def flag(other), do: to_string(other)
+
+  def driver("simulator"), do: gettext("Simulator")
+  def driver("replay"), do: gettext("Replay of a capture")
+  def driver("dgt_serial"), do: gettext("DGT board, serial")
+  def driver("dgt_bus"), do: gettext("DGT board on a loop (not verified)")
+  def driver(other), do: other
+
+  # --- the log -----------------------------------------------------------------
+
+  @doc "A line of the log as a sentence."
+  def log(%Log.Event{kind: kind} = event), do: log(kind, Log.data(event))
+
+  defp log("board.added", d), do: gettext("Board \"%{name}\" added.", name: d["name"])
+  defp log("board.removed", d), do: gettext("Board \"%{name}\" removed.", name: d["name"])
+  defp log("board.connected", _d), do: gettext("The board answers.")
+  defp log("board.disconnected", _d), do: gettext("The board stopped answering.")
+
+  defp log("board.driver_failed", d),
+    do: gettext("The board could not be opened: %{reason}", reason: d["reason"])
+
+  defp log("board.linked", d),
+    do: gettext("\"%{name}\" linked to this board of the round.", name: d["name"])
+
+  defp log("board.unlinked", d), do: gettext("\"%{name}\" unlinked.", name: d["name"])
+
+  defp log("board.moved", d),
+    do: gettext("The game moved from \"%{from}\" to \"%{to}\".", from: d["from"], to: d["to"])
+
+  defp log("board.flipped", %{"flipped" => true, "auto" => true}),
+    do: gettext("The board is plugged in turned round; it is read the other way up.")
+
+  defp log("board.flipped", %{"flipped" => false, "auto" => true}),
+    do: gettext("The board is the right way round again.")
+
+  defp log("board.flipped", _d), do: gettext("The board was turned round by hand.")
+
+  defp log("board.out_of_sync", _d),
+    do: gettext("Out of sync: the board does not match the game.")
+
+  defp log("board.resumed", _d), do: gettext("Back in sync.")
+
+  defp log("move.recovered", d),
+    do: gettext("Recovered without seeing them one by one: %{moves}", moves: moves(d))
+
+  defp log("move.assumed", d),
+    do: gettext("Promotion piece not seen, a queen assumed: %{moves}", moves: moves(d))
+
+  defp log("move.corrected", %{"reason" => "takeback"}),
+    do: gettext("A move was taken back on the board.")
+
+  defp log("move.corrected", %{"reason" => "promotion"} = d),
+    do: gettext("The promotion piece was put on the board: %{moves}", moves: moves(d))
+
+  defp log("move.corrected", d),
+    do: gettext("The last move was replaced: %{moves}", moves: moves(d))
+
+  defp log("clock.move_missing", d),
+    do:
+      gettext("The clock was pressed %{presses} times for %{plies} moves: a move may be missing.",
+        presses: d["presses"],
+        plies: d["plies"]
+      )
+
+  defp log("result.suggested", %{"why" => "gesture"} = d),
+    do: gettext("The kings are in the centre: %{result}?", result: d["result"])
+
+  defp log("result.suggested", d),
+    do: gettext("The position is decided: %{result}?", result: d["result"])
+
+  defp log("result.set", %{"by" => "board"} = d),
+    do: gettext("Result %{result}, from the position.", result: d["result"])
+
+  defp log("result.set", d),
+    do: gettext("Result %{result}, set by the arbiter at the box.", result: d["result"])
+
+  defp log("result.reopened", _d), do: gettext("The game was reopened by the arbiter at the box.")
+
+  defp log("repair.undo", d),
+    do: gettext("Arbiter at the box: last move (%{move}) taken back.", move: d["move"] || "-")
+
+  defp log("repair.append", d),
+    do: gettext("Arbiter at the box: moves typed in: %{moves}", moves: moves(d))
+
+  defp log("repair.edit", d),
+    do:
+      gettext("Arbiter at the box: move %{ply} changed to %{move}.",
+        ply: d["ply"],
+        move: d["move"]
+      )
+
+  defp log("repair.set_fen", _d), do: gettext("Arbiter at the box: a position was set by hand.")
+
+  defp log("repair.resync", _d),
+    do: gettext("Arbiter at the box: asked for a deeper search from the board.")
+
+  defp log("repair.choose", d), do: gettext("Arbiter at the box: chose %{moves}", moves: moves(d))
+  defp log("repair.paused", _d), do: gettext("Arbiter at the box: sending paused for this board.")
+
+  defp log("repair.resumed", _d),
+    do: gettext("Arbiter at the box: sending resumed for this board.")
+
+  defp log("pgn.attached", d),
+    do:
+      gettext("Arbiter at the box: a game of %{moves} moves attached from a PGN.",
+        moves: d["moves"]
+      )
+
+  defp log("outbox.offline", _d),
+    do: gettext("No connection to the results server. Moves are kept.")
+
+  defp log("outbox.online", _d), do: gettext("The results server is back. Sending what was kept.")
+
+  defp log("outbox.blocked", _d),
+    do: gettext("The results server refuses this box. Check the relay key.")
+
+  defp log("outbox.conflict", _d),
+    do: gettext("The server held other moves for this game; it was sent again in full.")
+
+  defp log("outbox.server_ahead", _d),
+    do: gettext("The server holds more moves for this game than the box does.")
+
+  defp log("door.unlocked", d), do: gettext("The PIN was given from %{from}.", from: d["from"])
+  defp log("door.refused", d), do: gettext("A wrong PIN was tried from %{from}.", from: d["from"])
+  defp log("setup.saved", _d), do: gettext("Setup was changed.")
+  defp log(kind, _d), do: kind
+
+  defp moves(%{"moves" => moves}) when is_list(moves), do: Enum.join(moves, " ")
+  defp moves(_other), do: ""
+
+  @doc "The kinds the log can be filtered on."
+  def log_kinds do
+    [
+      {gettext("Everything"), ""},
+      {gettext("Boards"), "board."},
+      {gettext("Moves"), "move."},
+      {gettext("Results"), "result."},
+      {gettext("Repairs"), "repair."},
+      {gettext("Connection"), "outbox."}
+    ]
+  end
+
+  @doc "`\"1.2 MB\"`."
+  def size(bytes) when bytes >= 1_000_000, do: "#{Float.round(bytes / 1_000_000, 1)} MB"
+  def size(bytes) when bytes >= 1_000, do: "#{Float.round(bytes / 1_000, 1)} kB"
+  def size(bytes), do: "#{bytes} B"
+
+  @doc "A time of day in the box's own time zone (UTC when the system offers nothing else)."
+  def time(%DateTime{} = at), do: Calendar.strftime(local(at), "%H:%M:%S")
+  def time(_none), do: "-"
+
+  def datetime(%DateTime{} = at), do: Calendar.strftime(local(at), "%Y-%m-%d %H:%M")
+
+  def datetime(seconds) when is_integer(seconds),
+    do: seconds |> DateTime.from_unix!() |> datetime()
+
+  def datetime(_none), do: "-"
+
+  # The box's wall clock: the offset the operating system reports.
+  defp local(%DateTime{} = at) do
+    {{y, mo, d}, {h, mi, s}} =
+      :calendar.universal_time_to_local_time(
+        {{at.year, at.month, at.day}, {at.hour, at.minute, at.second}}
+      )
+
+    %{at | year: y, month: mo, day: d, hour: h, minute: mi, second: s}
+  end
+end
