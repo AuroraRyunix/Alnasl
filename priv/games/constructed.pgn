@@ -1,0 +1,140 @@
+[Event "Constructed test game 1 (random legal moves, seed 1)"]
+[Site "Alnasl"]
+[Date "2026.10.11"]
+[Round "-"]
+[White "Constructed, White 1"]
+[Black "Constructed, Black 1"]
+[Result "1-0"]
+
+1. b4 g5 2. h4 gxh4 3. g3 hxg3 4. f4 Bg7 5. b5 g2 6. e4 gxf1=N 7. e5 Nh6 8. Na3
+O-O 9. Kxf1 c6 10. Qe2 Qb6 11. Qh2 f6 12. bxc6 Qxg1+ 13. Kxg1 e6 14. Nc4 fxe5
+15. c7 e4 16. cxb8=R Nf5 17. c3 e5 18. fxe5 Bf6 19. exf6 Kh8 20. Rxc8 d6 21. Nb2
+e3 22. Qxh7# 1-0
+
+[Event "Constructed test game 2 (random legal moves, seed 2)"]
+[Site "Alnasl"]
+[Date "2026.10.11"]
+[Round "-"]
+[White "Constructed, White 2"]
+[Black "Constructed, Black 2"]
+[Result "1/2-1/2"]
+
+1. a4 c6 2. a5 e6 3. Nf3 c5 4. Ng5 Qc7 5. Rg1 Nf6 6. Ne4 Qd8 7. a6 Bd6 8. d3 O-O
+9. Ng5 Qe8 10. c3 Bxh2 11. Nd2 Be5 12. g3 c4 13. Rh1 cxd3 14. Ra2 dxe2 15. Rxh7
+exf1=N 16. Nxf1 d5 17. axb7 Nh5 18. bxc8=B f5 19. Bf4 Na6 20. Bxa6 Qf7 21. Qxh5
+Bf6 22. b3 Rfc8 23. Bxc8 Qxh5 24. Bxe6+ Kf8 25. Rd2 Qh2 26. Bc8 d4 27. Bb8 a6
+28. c4 Ra7 29. Rh4 f4 30. b4 Ke7 31. Rc2 d3 32. Ne6 fxg3 33. Rh5 g5 34. Rh6 g2
+35. Nxg5 gxf1=Q+ 36. Kxf1 dxc2 37. c5 c1=B 38. Bxh2 Ba3 39. c6 Rc7 40. Nf7 Rxc8
+41. f4 Rg8 42. Rh4 Rc8 43. Rh6 a5 44. bxa5 Bc1 45. a6 Bh8 46. a7 Re8 47. f5 Bd2
+48. a8=N Bc1 49. Bg1 Bxh6 50. Ba7 Rxa8 51. f6+ Kxf7 52. Be3 B6g7 53. Bf2 Rd8 54.
+fxg7 Rf8 55. g8=N Ba1 56. c7 Bg7 57. c8=R Rd8 58. Be1 Ba1 59. Rc1 Rd4 60. Bd2
+Rf4+ 61. Bxf4 Bd4 62. Bc7 Bc3 63. Nf6 Ba1 64. Bd8 Kg6 65. Rc8 Bb2 66. Be7 Kh6
+67. Rc4 Bxf6 68. Rc6 Kg5 69. Rc1 Bxe7 70. Kg1 Bf8 71. Rc4 Bc5+ 72. Kh1 Bf2 73.
+Rf4 Bg3 74. Kg2 Bh2 75. Kxh2 Kxf4 1/2-1/2
+
+[Event "Constructed test game 3 (random legal moves, seed 3)"]
+[Site "Alnasl"]
+[Date "2026.10.11"]
+[Round "-"]
+[White "Constructed, White 3"]
+[Black "Constructed, Black 3"]
+[Result "0-1"]
+
+1. e3 Nh6 2. h4 f6 3. Rh2 Ng4 4. Bd3 c5 5. a3 c4 6. Nc3 cxd3 7. Kf1 b6 8. h5 g6
+9. e4 f5 10. hxg6 d6 11. e5 a6 12. gxh7 Nxh2+ 13. Ke1 Qc7 14. exd6 b5 15. dxe7
+Qc5 16. exf8=Q+ Rxf8 17. Nb1 Kd8 18. c4 Nf3+ 19. Qxf3 Ke7 20. h8=R Rf7 21. a4
+bxc4 22. Ra3 Kd6 23. Qxd3+ cxd3 24. Rb3 Rg7 25. Rb7 Qc2 26. f4 Qc7 27. b4 Qe7+
+28. Kf2 a5 29. Na3 Qe5 30. Rh6+ Be6 31. Rh5 Qe3+ 32. dxe3 Bd7 33. b5 d2 34. b6
+d1=R 35. Ra7 Rd4 36. e4 Rg6 37. exf5 Rxa7 38. Rh8 Kc5 39. Rh3 Ra8 40. Rh8 Rxa4
+41. Ke2 Rxf4 42. b7 Rxg2+ 43. Kd1 Rff2 44. Bh6 Rg4 45. Bf8+ Kc6 46. bxa8=Q+ Kc7
+47. Nb1 Nc6 48. Rh6 Nd8 49. Rd6 Rxg1# 0-1
+
+[Event "Constructed test game 4 (random legal moves, seed 6)"]
+[Site "Alnasl"]
+[Date "2026.10.11"]
+[Round "-"]
+[White "Constructed, White 4"]
+[Black "Constructed, Black 4"]
+[Result "1/2-1/2"]
+
+1. d4 c5 2. e3 f6 3. d5 b6 4. g4 a6 5. b4 cxb4 6. h3 Bb7 7. g5 b3 8. axb3 h6 9.
+h4 g6 10. Nd2 a5 11. Nh3 Bc6 12. h5 hxg5 13. Bb2 b5 14. d6 g4 15. Qe2 Qc7 16.
+Qxg4 Qd8 17. O-O-O f5 18. Bg2 f4 19. Bxh8 b4 20. dxe7 Bxe7 21. h6 a4 22. c3 fxe3
+23. fxe3 Ra6 24. Kb2 axb3 25. Be4 Nf6 26. Rc1 bxc3+ 27. Kb1 Ra4 28. Nf1 g5 29.
+Ng1 c2+ 30. Kb2 Ra6 31. h7 Bxe4 32. Kxb3 Ng8 33. hxg8=B Rf6 34. Bc4 Bg2 35. Kb2
+Bxh1 36. Re1 Bf3 37. Nxf3 Na6 38. Bxf6 c1=R 39. Rxc1 Qb6+ 40. Ka1 Qa5+ 41. Kb2
+Qa1+ 42. Kc2 Qb1+ 43. Kxb1 Bf8 44. Re1 Nc5 45. Nxg5 Bg7 46. Qh5+ Kf8 47. Bb5 d6
+48. Qh1 Bxf6 49. Rd1 Bd8 50. Nf3 Nd3 51. Nh4 Nc1 52. Qh2 d5 53. Qc2 Bb6 54. e4
+d4 55. Qc4 Bc5 56. Bd7 Nb3 57. Qc3 Ba3 58. Qf3+ Kg8 59. Qe2 Bb4 60. Rd3 Kg7 61.
+Bh3 Bd6 62. e5 Bc7 63. Rg3+ Kf7 64. Qg4 Nd2+ 65. Nxd2 d3 66. e6+ Kf6 67. e7 Bd8
+68. e8=B Bc7 69. Bg2 Be5 70. Qf3+ Bf4 71. Ba4 Ke6 72. Qc6+ Bd6 73. Qc1 Be7 74.
+Qh1 Bxh4 75. Be8 Ke5 76. Rg5+ Ke6 77. Qc1 Bxg5 78. Nc4 Bh6 79. Qd2 Bf4 80. Qe1+
+Kf5 81. Ne3+ Ke5 82. Bf7 Bg3 83. Bg8 Bh2 84. Nc2+ Kf5 85. Bc4 Bg1 1/2-1/2
+
+[Event "Constructed test game 5 (random legal moves, seed 10)"]
+[Site "Alnasl"]
+[Date "2026.10.11"]
+[Round "-"]
+[White "Constructed, White 5"]
+[Black "Constructed, Black 5"]
+[Result "1/2-1/2"]
+
+1. g3 c5 2. a4 a6 3. Nf3 b6 4. a5 c4 5. b3 c3 6. axb6 cxd2+ 7. Kxd2 Nc6 8. c3
+Na7 9. Rxa6 Qxb6 10. Ra4 h6 11. Rxa7 Ba6 12. b4 h5 13. b5 O-O-O 14. Qe1 Re8 15.
+g4 Bxb5 16. Ra6 Qa7 17. Ne5 hxg4 18. h3 gxh3 19. Rd6 Qa6 20. Re6 Qa7 21. Rc6+
+Kb7 22. Nc4 Qxf2 23. Rc8 d5 24. Ba3 f5 25. Nb2 Rxc8 26. Rh2 Rc4 27. Na4 Rg4 28.
+Qc1 Re4 29. Bxh3 Re6 30. c4 Bd7 31. c5 Rb6 32. Qe1 f4 33. Bxd7 Qxc5 34. Rf2 Qe3+
+35. Kc2 f3 36. Bc8+ Kxc8 37. Nbc3 Rh5 38. Qh1 d4 39. Nxb6+ Kc7 40. Rxf3 dxc3 41.
+Qa1 Qf2 42. Kxc3 Rf5 43. Qf1 Rg5 44. Bc1 Rg4 45. Rxf8 Nh6 46. Nc4 Qf7 47. Qh3
+Qf3+ 48. Rxf3 g5 49. Rf8 Kd7 50. Rb8 e5 51. Qf1 Rxc4+ 52. Kd2 Re4 53. Qd1 Nf5
+54. Rb1 Ne3 55. Rb5 Rh4 56. Rb8 Rh7 57. Rc8 e4 58. Ra8 Nc4+ 59. Kc3+ Ke7 60. Bf4
+Rh1 61. Bh2 g4 62. Ra4 Kf8 63. Qa1 e3 64. Qd1 g3 65. Qg1 g2 66. Bc7 Ke8 67. Qxh1
+gxh1=N 68. Kxc4 Ng3 69. Bb6 Nh5 70. Bd8 Kf8 71. Bc7 Ng3 72. Ra5 Nh5 73. Bf4 Nf6
+74. Re5 Kg7 75. Re8 Nxe8 76. Bxe3 Kg8 77. Bh6 Nc7 78. Bd2 Kf7 79. Bb4 Na8 80. e4
+Nc7 81. Ba5 Ne8 82. e5 Ng7 83. Kb5 Nh5 84. e6+ Kf8 85. e7+ Kf7 1/2-1/2
+
+[Event "Constructed test game 6 (random legal moves, seed 13)"]
+[Site "Alnasl"]
+[Date "2026.10.11"]
+[Round "-"]
+[White "Constructed, White 6"]
+[Black "Constructed, Black 6"]
+[Result "1/2-1/2"]
+
+1. f3 Nh6 2. h4 c6 3. g3 Na6 4. f4 d6 5. g4 b5 6. Rh2 d5 7. Rf2 f5 8. Na3 fxg4
+9. f5 d4 10. f6 Qd7 11. c4 dxc3 12. fxg7 cxd2+ 13. Qxd2 Ng8 14. gxf8=N c5 15.
+Qd4 Qxd4 16. Nd7 Qd2+ 17. Kxd2 e6 18. Nf6+ Nxf6 19. Nxb5 O-O 20. h5 Ne4+ 21. Ke1
+Re8 22. Nc3 Kg7 23. h6+ Kg6 24. Rf8 c4 25. Be3 Nec5 26. Rf4 Na4 27. Nh3 gxh3 28.
+Rg4+ Kh5 29. Bd4 Kxg4 30. Bg1 N6c5 31. Bxh3+ Kf4 32. Ne4 Bb7 33. Nxc5 Bf3 34.
+Bf1 Nxc5 35. Bh2+ Kf5 36. Bg2 Bxe2 37. a4 e5 38. Bf3 Rac8 39. Kd2 Rb8 40. Be4+
+Kxe4 41. Bf4 exf4 42. a5 Re5 43. Rd1 Rd8+ 44. Kxe2 f3+ 45. Ke1 Rc8 46. a6 Nb3
+47. Rd3 Rc7 48. Rxb3 f2+ 49. Kd1 f1=R+ 50. Kd2 cxb3 51. Ke2 Rcc1 52. Kd2 Ref5
+53. Ke2 Rc8 54. Kd2 R5f3 55. Ke2 Rd1 56. Kxd1 Rc1+ 57. Kxc1 Re3 58. Kb1 Rh3 59.
+Kc1 Kf5 60. Kd2 Rc3 61. Kd1 Rd3+ 62. Ke2 Rg3 63. Kf2 Rc3 64. bxc3 Ke4 65. Kg1 b2
+66. c4 b1=Q+ 67. Kg2 Qc2+ 68. Kf1 Kd3 69. c5 Qc3 70. c6 Qc2 71. c7 Qxc7 72. Kg2
+Qc4 73. Kg3 Qh4+ 74. Kg2 Qxh6 75. Kf2 Qxa6 76. Kg3 Kc3 77. Kh3 Qg6 78. Kh4 Kb4
+79. Kh3 Qh5+ 80. Kg3 Qg4+ 81. Kxg4 h6 82. Kf4 h5 83. Ke4 a5 84. Kd5 a4 85. Ke5
+h4 1/2-1/2
+
+[Event "Constructed test game 7 (random legal moves, seed 17)"]
+[Site "Alnasl"]
+[Date "2026.10.11"]
+[Round "-"]
+[White "Constructed, White 7"]
+[Black "Constructed, Black 7"]
+[Result "1/2-1/2"]
+
+1. h4 Na6 2. Rh3 e5 3. a4 e4 4. Rg3 e3 5. Rxe3+ Ne7 6. h5 Rb8 7. d4 f5 8. h6 d6
+9. d5 Rg8 10. Re4 f4 11. Rb4 c5 12. dxc6 f3 13. Qxd6 Nxb4 14. Qe6 Qd5 15. g4
+fxe2 16. Qf7+ Qxf7 17. a5 exf1=B 18. Ra4 b6 19. Be3 Nexc6 20. Ne2 Bh3 21. hxg7
+b5 22. a6 Qd7 23. gxf8=R+ Ke7 24. Rxg8 Qd3 25. Bg5+ Kd7 26. Re8 Qxc2 27. Re5
+Nxe5 28. Bh6 bxa4 29. f4 Nxa6 30. g5 Bg2 31. fxe5 Kd8 32. Nbc3 Qe4 33. Nd5 Nc5
+34. Nb4 Qd5 35. g6 Bgh3 36. gxh7 a3 37. h8=N Qd6 38. bxa3 Bf1 39. Nd5 Bf5 40. a4
+Qg6 41. Nxg6 Bxg6 42. Ne7 Rb3 43. Nxg6 Rb2 44. Kxf1 Rb1+ 45. Bc1 Nb3 46. e6 Rb2
+47. Ne5 Nxc1 48. e7+ Kc8 49. e8=Q+ Kb7 50. a5 Rb4 51. Nc6 Rb6 52. a6+ Rxa6 53.
+Qd7+ Kb6 54. Qd2 Nxe2 55. Qd7 Ng1 56. Qc8 Ra1+ 57. Kg2 a5 58. Qd8+ Kxc6 59. Qb8
+Rb1 60. Qb4 Rb2+ 61. Kxg1 axb4 62. Kf1 Rb3 63. Kg2 Rb2+ 64. Kf1 b3 65. Kg1 Rb1+
+66. Kh2 Ra1 67. Kg2 Ra4 68. Kf3 Rh4 69. Kg2 Kc7 70. Kg3 Rh5 71. Kf4 b2 72. Kg3
+Kd8 73. Kg2 b1=Q 74. Kf3 Ke7 75. Kg4 Qe1 76. Kf4 Qa5 77. Ke4 Qa3 78. Kd4 Rh1 79.
+Kc4 Ke8 80. Kd4 Ke7 81. Ke5 Re1+ 82. Kd5 Rf1 83. Kd4 Rf8 84. Kd5 Ra8 85. Ke5 Qb4
+1/2-1/2
