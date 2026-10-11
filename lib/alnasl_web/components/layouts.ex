@@ -33,7 +33,7 @@ defmodule AlnaslWeb.Layouts do
     <div class="frame">
       <aside class="rail">
         <.link navigate={~p"/"} class="brand" id="brand">
-          <.icon name="arrow" />
+          <.logo />
           <div>
             <b>Alnasl</b>
             <span>{@box}</span>
@@ -80,16 +80,7 @@ defmodule AlnaslWeb.Layouts do
               lang="nl"
             >NL</a>
           </div>
-          <button
-            id="theme-toggle"
-            type="button"
-            class="btn small ghost"
-            phx-click={JS.dispatch("alnasl:theme")}
-            aria-label={gettext("Light or dark")}
-            title={gettext("Light or dark")}
-          >
-            <.icon name="theme" />
-          </button>
+          <.theme_picker id="theme-picker" />
         </div>
       </aside>
 
@@ -133,6 +124,65 @@ defmodule AlnaslWeb.Layouts do
 
     <.flash_group flash={@flash} />
     """
+  end
+
+  @doc """
+  The colour theme, chosen on the device (`assets/js/theme.js` does the work;
+  the choice is kept in this browser and nothing is sent to the box). `popover`
+  is the rail's; `grid` is Setup's, where a phone finds it.
+  """
+  attr :id, :string, required: true
+  attr :variant, :atom, default: :popover, values: [:popover, :grid]
+
+  def theme_picker(%{variant: :grid} = assigns) do
+    ~H"""
+    <div
+      id={@id}
+      class="theme-grid"
+      role="group"
+      aria-label={gettext("Colour theme")}
+      phx-update="ignore"
+    >
+      <.theme_option :for={{key, label} <- themes()} key={key} label={label} />
+    </div>
+    """
+  end
+
+  def theme_picker(assigns) do
+    ~H"""
+    <details id={@id} class="theme-picker" phx-update="ignore">
+      <summary class="btn small ghost" title={gettext("Colour theme")}>
+        <.icon name="theme" /> <span class="sr-only">{gettext("Colour theme")}</span>
+      </summary>
+      <div class="theme-picker-panel" role="group" aria-label={gettext("Colour theme")}>
+        <.theme_option :for={{key, label} <- themes()} key={key} label={label} />
+      </div>
+    </details>
+    """
+  end
+
+  attr :key, :string, required: true
+  attr :label, :string, required: true
+
+  defp theme_option(assigns) do
+    ~H"""
+    <button type="button" class="theme-picker-item" data-theme-opt={@key} aria-pressed="false">
+      <span class={"theme-dot theme-dot-#{@key}"} aria-hidden="true"></span>
+      {@label}
+    </button>
+    """
+  end
+
+  @doc "The themes, in the order they are offered; the names are OpenResults' own."
+  def themes do
+    [
+      {"system", gettext("Match device")},
+      {"paper", gettext("Paper")},
+      {"night", gettext("Night")},
+      {"board", gettext("Board")},
+      {"slate", gettext("Slate")},
+      {"contrast", gettext("High contrast")}
+    ]
   end
 
   attr :to, :string, required: true

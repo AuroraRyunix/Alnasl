@@ -174,18 +174,31 @@ defmodule AlnaslWeb.WalkLive do
           >
             {gettext("Find")}
           </.link>
+        </div>
+
+        <%!-- ignored by the patch: the hook owns what this shows, and a
+              re-render must not put "Sound off" back over a context that is
+              running --%>
+        <div id="walk-sound" class="walk-sound" phx-update="ignore">
           <button
             id="walk-mute"
             type="button"
-            class="btn small ghost walk-mute"
+            class="btn small walk-mute"
             data-mute
+            data-state="off"
             aria-pressed="false"
             aria-label={gettext("Sound on or off")}
-            title={gettext("Sound on or off")}
           >
-            <span data-on>{gettext("Sound on")}</span>
-            <span data-off hidden>{gettext("Sound off")}</span>
+            <span data-for="on" hidden>{gettext("Sound on")}</span>
+            <span data-for="off">{gettext("Sound off")}</span>
+            <span data-for="tap" hidden>{gettext("Tap to enable sound")}</span>
+            <span data-for="blocked" hidden>{gettext("Sound blocked by the browser")}</span>
           </button>
+          <p class="note">
+            {gettext(
+              "The beep needs the browser's permission, which a tap gives. An iPhone plays nothing with the ring/silent switch on silent, and iPhones do not vibrate; Android phones do."
+            )}
+          </p>
         </div>
 
         <%= if @live_action == :number do %>
@@ -203,56 +216,108 @@ defmodule AlnaslWeb.WalkLive do
 
       <script :type={Phoenix.LiveView.ColocatedHook} name=".Buzz">
         // The phone's answer to a touch on a board: a buzz, and a beep that
-        // can be switched off. Neither is promised by every browser, so both
-        // are asked for politely.
-        const KEY = "alnasl-walk-muted"
-        const muted = () => { try { return localStorage.getItem(KEY) === "1" } catch (_e) { return false } }
+        // has to be switched on. A phone keeps sound locked until a tap, so
+        // the tap on the switch makes the context and beeps at once, the
+        // context lives on window (a re-render or a reconnect does not lose
+        // it) and every later beep asks it to resume first. Web Audio needs
+        // no secure context; vibrate exists on Android only.
+        const KEY = "alnasl-walk-sound"
+        const wanted = () => { try { return localStorage.getItem(KEY) === "1" } catch (_e) { return false } }
+        const remember = (on) => { try { localStorage.setItem(KEY, on ? "1" : "0") } catch (_e) { /* private mode */ } }
+        const context = () => {
+          const Ctx = window.AudioContext || window.webkitAudioContext
+          if (!window.alnaslAudio && Ctx) { try { window.alnaslAudio = new Ctx() } catch (_e) { /* no sound here */ } }
+          return window.alnaslAudio
+        }
 
         export default {
           mounted() {
-            this.unlock = () => {
-              const Ctx = window.AudioContext || window.webkitAudioContext
-              if (!this.ctx && Ctx) { try { this.ctx = new Ctx() } catch (_e) { /* no sound here */ } }
-              if (this.ctx && this.ctx.state === "suspended") this.ctx.resume()
-            }
+            this.blocked = false
             this.onClick = (event) => {
-              this.unlock()
-              if (event.target.closest("[data-mute]")) {
-                try { localStorage.setItem(KEY, muted() ? "0" : "1") } catch (_e) { /* private mode */ }
-                this.show()
-              }
+              if (event.target.closest("[data-mute]")) return this.toggle()
+              if (wanted() && !this.running()) this.unlock(false)
             }
+            this.onVisible = () => { if (document.visibilityState === "visible" && wanted()) this.resumeQuietly() }
             this.el.addEventListener("click", this.onClick)
+            document.addEventListener("visibilitychange", this.onVisible)
             this.handleEvent("walk:buzz", ({kind}) => {
               if (navigator.vibrate) {
                 try { navigator.vibrate(kind === "already" ? [40, 60, 40] : 90) } catch (_e) { /* not allowed */ }
               }
-              if (!muted()) this.beep(kind === "already" ? 330 : 880)
+              if (wanted()) this.play(kind === "already" ? 330 : 880)
             })
             this.show()
           },
           updated() { this.show() },
-          destroyed() { if (this.ctx) this.ctx.close() },
-          show() {
-            const button = this.el.querySelector("[data-mute]")
-            if (!button) return
-            const off = muted()
-            button.setAttribute("aria-pressed", String(off))
-            button.querySelector("[data-on]").hidden = off
-            button.querySelector("[data-off]").hidden = !off
+          destroyed() { document.removeEventListener("visibilitychange", this.onVisible) },
+          running() { return !!window.alnaslAudio && window.alnaslAudio.state === "running" },
+          state() {
+            if (!wanted()) return "off"
+            if (this.running()) return "on"
+            return this.blocked ? "blocked" : "tap"
           },
-          beep(frequency) {
-            if (!this.ctx) return
-            const now = this.ctx.currentTime
-            const tone = this.ctx.createOscillator()
-            const gain = this.ctx.createGain()
+          show() {
+            const button = document.getElementById("walk-mute")
+            if (!button) return
+            const state = this.state()
+            button.dataset.state = state
+            button.setAttribute("aria-pressed", String(state === "on"))
+            button.querySelectorAll("[data-for]").forEach((span) => { span.hidden = span.dataset.for !== state })
+          },
+          toggle() {
+            if (wanted() && this.running()) {
+              remember(false)
+              this.show()
+            } else {
+              remember(true)
+              this.unlock(true)
+            }
+          },
+          // Inside a tap: make the context, start a tone at once (iOS wants
+          // the sound begun in the gesture), then see whether it runs.
+          unlock(confirm) {
+            const ctx = context()
+            if (!ctx) { this.blocked = true; return this.show() }
+            this.blocked = false
+            if (confirm) this.beep(ctx, 660)
+            const check = () => {
+              this.blocked = ctx.state !== "running"
+              this.show()
+            }
+            let settled = false
+            const once = () => { if (!settled) { settled = true; check() } }
+            try { ctx.resume().then(once, once) } catch (_e) { once() }
+            setTimeout(once, 700)
+            ctx.onstatechange = () => this.show()
+            this.show()
+          },
+          resumeQuietly() {
+            const ctx = window.alnaslAudio
+            if (!ctx || ctx.state === "running") return this.show()
+            try { ctx.resume().then(() => this.show(), () => this.show()) } catch (_e) { this.show() }
+          },
+          play(frequency) {
+            const ctx = context()
+            if (!ctx) return
+            if (ctx.state === "running") return this.beep(ctx, frequency)
+            const fail = () => { this.blocked = true; this.show() }
+            try {
+              ctx.resume().then(() => {
+                if (ctx.state === "running") { this.blocked = false; this.show(); this.beep(ctx, frequency) } else fail()
+              }, fail)
+            } catch (_e) { fail() }
+          },
+          beep(ctx, frequency) {
+            const now = ctx.currentTime
+            const tone = ctx.createOscillator()
+            const gain = ctx.createGain()
             tone.frequency.value = frequency
             gain.gain.setValueAtTime(0.0001, now)
-            gain.gain.exponentialRampToValueAtTime(0.25, now + 0.01)
-            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16)
-            tone.connect(gain).connect(this.ctx.destination)
+            gain.gain.exponentialRampToValueAtTime(0.35, now + 0.01)
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2)
+            tone.connect(gain).connect(ctx.destination)
             tone.start(now)
-            tone.stop(now + 0.18)
+            tone.stop(now + 0.22)
           }
         }
       </script>

@@ -6,6 +6,7 @@ defmodule AlnaslWeb.DoorHTML do
   def unlock(assigns) do
     ~H"""
     <main class="door">
+      <p class="door-brand"><.logo /> <b>Alnasl</b></p>
       <.panel id="door" title={gettext("This box asks for a PIN")}>
         <form id="unlock-form" action={~p"/unlock"} method="post" class="stack">
           <input type="hidden" name="_csrf_token" value={get_csrf_token()} />

@@ -5,6 +5,24 @@ defmodule AlnaslWeb.PagesTest do
 
   alias Alnasl.{Log, Pgn}
 
+  describe "Look" do
+    test "the theme picker is in the rail and in Setup, with every theme", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/setup")
+      keys = AlnaslWeb.Layouts.themes() |> Enum.map(&elem(&1, 0))
+
+      for id <- ~w(theme-picker theme-grid), key <- keys do
+        assert has_element?(view, "##{id} [data-theme-opt=#{key}]")
+      end
+    end
+
+    test "the favicon is the mark, and the page loads the theme before it paints", %{conn: conn} do
+      conn = get(conn, "/favicon.svg")
+      assert response_content_type(conn, :xml) =~ "svg"
+      assert response(conn, 200) =~ "<svg"
+      assert get(build_conn(), "/") |> html_response(200) =~ "/assets/js/theme.js"
+    end
+  end
+
   describe "Boards" do
     test "a simulator board is added from the form, linked, turned, disconnected and removed", %{
       conn: conn

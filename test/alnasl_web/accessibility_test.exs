@@ -3,7 +3,7 @@ defmodule AlnaslWeb.AccessibilityTest do
   The accessibility pass, as far as a machine can make one.
 
   - **Contrast**: every pairing of the colour tokens that is used for text
-    reaches 4.5:1 (WCAG AA) in the light and in the dark theme. The numbers
+    reaches 4.5:1 (WCAG AA) in every theme. The numbers
     are computed from `assets/css/app.css` itself, so a token cannot be
     changed into an unreadable one without this failing.
   - **Structure**, on every page with boards connected: one `h1`; a skip link
@@ -39,10 +39,18 @@ defmodule AlnaslWeb.AccessibilityTest do
     {"ink", "ok-bg"},
     {"ink", "warn-bg"},
     {"ink", "bad-bg"},
+    {"reconstructed", "reconstructed-bg"},
+    {"guessed", "guessed-bg"},
+    {"reconstructed", "panel"},
+    {"guessed", "panel"},
+    {"reconstructed", "bg"},
+    {"guessed", "bg"},
     {"warn", "panel"},
     {"bad", "panel"},
     {"panel", "ink"}
   ]
+
+  @named ~w(paper night board slate contrast)
 
   defp tokens(block) do
     for [_, name, hex] <- Regex.scan(~r/--([a-z-]+):\s*(#[0-9a-fA-F]{6})\s*;/, block),
@@ -50,13 +58,43 @@ defmodule AlnaslWeb.AccessibilityTest do
         do: {name, hex}
   end
 
-  defp themes do
+  defp names(block), do: for([_, n] <- Regex.scan(~r/--([a-z-]+):/, block), do: n)
+
+  # {theme => block text}: the five named themes, the palette `:root` holds,
+  # and what the media query gives a device that asks for dark.
+  defp blocks do
     css = File.read!("assets/css/app.css")
-    [_, light] = Regex.run(~r/:root\s*\{(.*?)\n\}/s, css)
-    [_, dark] = Regex.run(~r/:root\[data-theme="dark"\]\s*\{(.*?)\n\}/s, css)
-    [_, system_dark] = Regex.run(~r/:root:not\(\[data-theme="light"\]\)\s*\{(.*?)\n  \}/s, css)
-    %{light: tokens(light), dark: tokens(dark), system_dark: tokens(system_dark)}
+
+    [_, root] =
+      Regex.run(
+        ~r/:root\s*\{(.*?)
+\}/s,
+        css
+      )
+
+    [_, system_dark] =
+      Regex.run(
+        ~r/:root:not\(\[data-theme\]\)\s*\{(.*?)
+  \}/s,
+        css
+      )
+
+    named =
+      for t <- @named, into: %{} do
+        [_, b] =
+          Regex.run(
+            ~r/:root\[data-theme="#{t}"\]\s*\{(.*?)
+\}/s,
+            css
+          )
+
+        {t, b}
+      end
+
+    Map.merge(named, %{"root" => root, "system_dark" => system_dark})
   end
+
+  defp themes, do: Map.new(blocks(), fn {name, b} -> {name, tokens(b)} end)
 
   defp luminance("#" <> hex) do
     [r, g, b] =
@@ -73,13 +111,11 @@ defmodule AlnaslWeb.AccessibilityTest do
     (hi + 0.05) / (lo + 0.05)
   end
 
-  test "every text pairing of the tokens reaches 4.5:1 in both themes" do
+  test "every text pairing of the tokens reaches 4.5:1 in every theme" do
     themes = themes()
 
     report =
-      for theme <- [:light, :dark], {text, ground} <- @pairs do
-        t = themes[theme]
-
+      for {theme, t} <- themes, {text, ground} <- @pairs do
         assert is_binary(t[text]) and is_binary(t[ground]),
                "token --#{text} or --#{ground} missing in #{theme}"
 
@@ -90,13 +126,27 @@ defmodule AlnaslWeb.AccessibilityTest do
     assert failing == [], "below 4.5:1: #{inspect(failing)}"
 
     worst = Enum.min_by(report, &elem(&1, 3))
-    IO.puts("\n  contrast: #{length(report)} pairings checked, lowest #{inspect(worst)}")
+    IO.puts("
+  contrast: #{length(report)} pairings checked, lowest #{inspect(worst)}")
   end
 
-  test "the dark theme is the same whether the system asks for it or the arbiter picks it" do
+  test "every theme defines the whole palette, so none borrows a colour from another" do
+    blocks = blocks()
+    all = blocks["root"] |> names() |> Enum.reject(&(&1 in ~w(radius font mono))) |> Enum.sort()
+
+    for {theme, b} <- blocks do
+      assert Enum.sort(names(b)) -- all == [], "#{theme}: a token the palette lacks"
+      assert all -- Enum.sort(names(b)) == [], "#{theme}: missing #{inspect(all -- names(b))}"
+    end
+  end
+
+  test "Match device is paper by day and night by night, and the picker offers every theme" do
     themes = themes()
-    assert themes.dark == themes.system_dark
-    assert Map.keys(themes.dark) -- Map.keys(themes.light) == []
+    assert themes["system_dark"] == themes["night"]
+    assert themes["root"] == themes["paper"]
+
+    keys = AlnaslWeb.Layouts.themes() |> Enum.map(&elem(&1, 0))
+    assert keys == ["system" | @named]
   end
 
   # --- never colour alone ------------------------------------------------------

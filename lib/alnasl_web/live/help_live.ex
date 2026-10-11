@@ -136,7 +136,7 @@ defmodule AlnaslWeb.HelpLive do
             </li>
             <li>
               {gettext(
-                "On the phone: Boards, \"Number by touching\", Start. The next table number fills the screen. Walk to that table and lift any piece; the phone flashes the number and the board's serial, buzzes and beeps (the beep can be switched off)."
+                "On the phone: Boards, \"Number by touching\", Start. The next table number fills the screen. Walk to that table and lift any piece; the phone flashes the number and the board's serial, buzzes (Android only) and beeps once \"Sound off\" has been tapped to \"Sound on\"; a phone wants one tap per visit before it makes any sound, and an iPhone on silent plays none."
               )}
             </li>
             <li>
@@ -267,6 +267,13 @@ defmodule AlnaslWeb.HelpLive do
               )}
             </dd>
           </dl>
+
+          <h2 id="help-look">{gettext("Colours")}</h2>
+          <p>
+            {gettext(
+              "The site comes in the same themes as OpenResults: Paper, Night, Board, Slate and High contrast, and Match device, which follows the phone or computer. Choose with the half-moon at the bottom of the left rail, or under Setup (on a phone, the rail is not shown). The choice is kept in that browser only. High contrast is the one for a projector at the back of the hall."
+            )}
+          </p>
 
           <h2 id="help-trouble">{gettext("When something is wrong")}</h2>
           <dl>

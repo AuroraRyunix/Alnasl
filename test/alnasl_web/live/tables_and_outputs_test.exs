@@ -271,7 +271,15 @@ defmodule AlnaslWeb.TablesAndOutputsTest do
       {:ok, view, _html} = live(conn, ~p"/boards/number")
 
       assert has_element?(view, "#walk[phx-hook]")
-      assert has_element?(view, "#walk-mute[data-mute]")
+
+      assert has_element?(
+               view,
+               "#walk-sound[phx-update=ignore] #walk-mute[data-mute][data-state]"
+             )
+
+      for state <- ~w(on off tap blocked),
+          do: assert(has_element?(view, "#walk-mute [data-for=#{state}]"))
+
       assert has_element?(view, "#walk-start-form #walk-first[inputmode=numeric]")
       assert has_element?(view, "#walk-count", "0 of 2")
       refute has_element?(view, "#walk-keys")
