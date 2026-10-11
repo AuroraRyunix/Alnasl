@@ -374,8 +374,18 @@ defmodule AlnaslWeb.BoardsLive do
                       <span class="note">-</span>
                     <% s.plies != [] -> %>
                       <span class="note">{gettext("game under way")}</span>
+                    <% s.problems == [] and Words.clock_problem(s[:clock_check]) -> %>
+                      <.badge id={"start-clock-#{s.id}"} tone="warn" icon="warning">
+                        {gettext("Clock wrong")}
+                      </.badge>
+                      <div class="note" style="margin-top:0.2rem">
+                        {Words.clock_problem(s[:clock_check])}
+                      </div>
                     <% s.problems == [] -> %>
                       <.badge id={"start-ok-#{s.id}"} tone="ok" icon="ok">{gettext("Right")}</.badge>
+                      <div :if={s[:clock_check] == :ok} id={"start-clock-ok-#{s.id}"} class="note">
+                        {gettext("pieces and clock")}
+                      </div>
                     <% true -> %>
                       <.badge id={"start-wrong-#{s.id}"} tone="warn" icon="warning">
                         {gettext("%{n} wrong", n: length(s.problems))}
@@ -384,6 +394,9 @@ defmodule AlnaslWeb.BoardsLive do
                         <li :for={p <- Enum.take(s.problems, 3)}>{Words.problem(p)}</li>
                         <li :if={length(s.problems) > 3}>
                           {gettext("...and %{n} more", n: length(s.problems) - 3)}
+                        </li>
+                        <li :if={Words.clock_problem(s[:clock_check])} id={"start-clock-#{s.id}"}>
+                          {Words.clock_problem(s[:clock_check])}
                         </li>
                       </ul>
                   <% end %>

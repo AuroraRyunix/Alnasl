@@ -189,19 +189,22 @@ defmodule Mix.Tasks.Alnasl.Dgt do
   end
 
   defp show(file, t0, id, {:clock, reading}) do
-    write(file, %{
-      "k" => "clk",
-      "w" => reading.white_ms,
-      "b" => reading.black_ms,
-      "r" => to_string(reading.running),
-      "a" => id
-    })
+    write(file, reading |> Alnasl.Recorder.clock_line() |> Map.put("a", id))
 
     say(
       t0,
       "clock #{tag(id)}",
-      "white #{Alnasl.Clock.format(reading.white_ms)}  black #{Alnasl.Clock.format(reading.black_ms)}  running: #{reading.running}"
+      "white #{Alnasl.Clock.format(reading.white_ms)}  black #{Alnasl.Clock.format(reading.black_ms)}  running: #{reading.running}" <>
+        if(reading.running == :none and reading[:armed],
+          do: "  (lever: #{reading.armed} first)",
+          else: ""
+        )
     )
+  end
+
+  defp show(file, t0, id, {:info, %{clock: false} = info}) do
+    write(file, %{"k" => "clk", "r" => "off", "a" => id})
+    say(t0, "info #{tag(id)}", inspect(info))
   end
 
   defp show(file, t0, id, status) when status in [:connected, :disconnected] do

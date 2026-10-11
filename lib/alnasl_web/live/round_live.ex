@@ -76,6 +76,9 @@ defmodule AlnaslWeb.RoundLive do
           suggestion: snap && snap[:suggestion],
           paused: (snap && snap[:paused]) || (game && game.paused) || false,
           warning: snap && snap[:warning],
+          # The clock's part of the start check, while no move has been made.
+          clock_problem:
+            if(snap && plies == [], do: AlnaslWeb.Words.clock_problem(snap[:clock_check])),
           board_name: snap && snap.name,
           published: pairing[:result]
         }
@@ -86,7 +89,9 @@ defmodule AlnaslWeb.RoundLive do
     assign(socket,
       tiles: tiles,
       counts: counts,
-      alarms: Map.get(counts, :out_of_sync, 0) + Map.get(counts, :no_signal, 0),
+      alarms:
+        Map.get(counts, :out_of_sync, 0) + Map.get(counts, :no_signal, 0) +
+          Map.get(counts, :clock_alarm, 0),
       rounds: Enum.uniq(Tournament.rounds() ++ Games.rounds() ++ [round]) |> Enum.sort(),
       tournament: Tournament.info().name,
       configured?: Settings.connection_configured?(),
@@ -202,6 +207,7 @@ defmodule AlnaslWeb.RoundLive do
             state <- [
               :out_of_sync,
               :no_signal,
+              :clock_alarm,
               :recovered,
               :live,
               :settling,
@@ -271,6 +277,13 @@ defmodule AlnaslWeb.RoundLive do
             <span class="dot white"></span>
             <span class="name">{tile.white || gettext("White")}</span>
             <.clock :if={tile.clock} ms={tile.clock.white_ms} running={tile.clock.running == :white} />
+          </div>
+          <div
+            :if={tile.clock_problem && tile.state != :clock_alarm}
+            id={"tile-clock-#{tile.no}"}
+            class="tile-note"
+          >
+            <.icon name="warning" />{tile.clock_problem}
           </div>
           <div class="tile-foot">
             <%= cond do %>

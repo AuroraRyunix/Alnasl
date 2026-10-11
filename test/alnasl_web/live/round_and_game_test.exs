@@ -46,6 +46,53 @@ defmodule AlnaslWeb.RoundAndGameTest do
       assert has_element?(view, "#nav-round .count", "1")
     end
 
+    test "a clock set the wrong way is said on the tile in words; started that way it is an alarm, counted",
+         %{conn: conn} do
+      board = fake_dgt("FAKE1", %{round: 1, board_no: 2})
+      {:ok, view, _html} = live(conn, ~p"/round/1")
+      eventually_html(view, fn _ -> has_element?(view, "#tile-2 [data-state=waiting_start]") end)
+      refute has_element?(view, "#tile-clock-2")
+
+      set_clock("FAKE1", {:still, :black})
+
+      eventually_html(view, fn _ ->
+        has_element?(
+          view,
+          "#tile-clock-2",
+          "Clock not in starting position: Black's side would run first - the clock is turned or the lever is the wrong way"
+        )
+      end)
+
+      assert has_element?(view, "#tile-2 [data-state=waiting_start]")
+
+      set_clock("FAKE1", :black)
+
+      eventually_html(view, fn _ -> has_element?(view, "#tile-2.bad [data-state=clock_alarm]") end)
+
+      assert has_element?(view, "#nav-round .count", "1")
+      assert has_element?(view, "#round-summary [data-state=clock_alarm]")
+
+      # The board's own page says what it is, and that it is not the pieces.
+      {:ok, page, _html} = live(conn, ~p"/round/1/board/2")
+      assert has_element?(page, "#game-state[data-state=clock_alarm]")
+      assert has_element?(page, "#state-help[role=alert]", "Black's clock is running")
+      assert has_element?(page, "#clock-check", "Black's side would run first")
+      refute has_element?(page, "#start-check")
+
+      set_clock("FAKE1", :white)
+      eventually_html(view, fn _ -> has_element?(view, "#tile-2 [data-state=waiting_start]") end)
+      refute has_element?(view, "#tile-clock-2")
+      refute has_element?(view, "#nav-round .count")
+      eventually_html(page, fn _ -> not has_element?(page, "#clock-check") end)
+      assert Boards.snapshot(board.id).clock_check == :ok
+
+      # And the log has both lines, as sentences.
+      {:ok, log, _html} = live(conn, ~p"/log")
+      html = render(log)
+      assert html =~ "Clock alarm: Black&#39;s clock is running from the starting position"
+      assert html =~ "The clock is the right way again."
+    end
+
     test "pairings are fetched, and the next round takes the boards along", %{conn: conn} do
       board = fake_dgt("FAKE1", %{round: 1, board_no: 1})
       {:ok, view, _html} = live(conn, ~p"/")

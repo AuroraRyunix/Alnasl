@@ -114,14 +114,19 @@ defmodule Alnasl.Dgt.Emulator do
   defp clock_bytes(%{clock: nil}), do: <<>>
 
   defp clock_bytes(%{clock: clock}) do
+    # As the real clock does it (capture 2026-10-12): a side is always
+    # named, running or not, and the lever is up on that side.
+    side = if clock.running == :none, do: clock[:armed] || :white, else: clock.running
+
     Protocol.encode(
       {:clock,
        %{
-         left_ms: clock.white_ms,
-         right_ms: clock.black_ms,
+         white_ms: clock.white_ms,
+         black_ms: clock.black_ms,
          running?: clock.running != :none,
-         turn: if(clock.running == :none, do: nil, else: clock.running),
-         lever: if(clock.running == :white, do: :right, else: :left)
+         turn: side,
+         lever: side,
+         connected?: Map.get(clock, :connected?, true)
        }}
     )
   end

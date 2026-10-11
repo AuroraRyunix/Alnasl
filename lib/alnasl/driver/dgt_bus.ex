@@ -278,7 +278,7 @@ defmodule Alnasl.Driver.DgtBus do
               %{board | board: squares}
 
             {:clock, clock} ->
-              if reading = Protocol.reading(clock, :left),
+              if reading = Protocol.reading(clock),
                 do: Driver.emit(board.owner, board.id, {:clock, reading})
 
               board

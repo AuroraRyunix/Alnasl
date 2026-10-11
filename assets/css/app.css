@@ -913,6 +913,27 @@ code,
   border-color: var(--quiet);
 }
 
+.tile-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  margin: 0.3rem 0.55rem 0;
+  padding: 0.25rem 0.4rem;
+  border-radius: 4px;
+  background: var(--warn-bg);
+  color: var(--warn);
+  font-size: 0.75rem;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.tile-note svg {
+  flex: none;
+  width: 0.95rem;
+  height: 0.95rem;
+  margin-top: 0.1rem;
+}
+
 .tile-foot {
   display: flex;
   align-items: center;

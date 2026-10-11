@@ -6,14 +6,17 @@ defmodule Alnasl.Recorder do
 
       {"t":1791700000123,"k":"cfg","flipped":false,"round":4,"board":7,"driver":"dgt_serial"}
       {"t":1791700000456,"k":"pos","b":"rnbqkbnrpppppppp................................PPPPPPPPRNBQKBNR"}
-      {"t":1791700003210,"k":"clk","w":5400000,"b":5400000,"r":"white"}
+      {"t":1791700003210,"k":"clk","w":5400000,"b":5400000,"r":"white","l":"white"}
       {"t":1791700003300,"k":"rx","h":"8e0005340c"}
       {"t":1791700009000,"k":"st","v":"disconnected"}
       {"t":1791700012000,"k":"note","text":"knocked over on purpose"}
 
   `t` is wall-clock milliseconds. `pos` is the board exactly as the driver
   reported it - before the box turns a flipped board round - as 64 characters
-  from a8 to h1. `rx`/`tx` are the raw serial bytes of a real board, hex.
+  from a8 to h1. `clk` is a clock reading: both times, the side running
+  (`r`: `white`, `black`, `none` - or `off` for a clock switched off) and,
+  from a driver that can tell, the side its lever is set for (`l`).
+  `rx`/`tx` are the raw serial bytes of a real board, hex.
   `cfg` says how the board was set up when the lines after it were written,
   so a capture can be replayed the way it was read.
 
@@ -57,13 +60,8 @@ defmodule Alnasl.Recorder do
 
   defp line({:position, board}), do: %{"k" => "pos", "b" => Position.to_text(board)}
 
-  defp line({:clock, reading}),
-    do: %{
-      "k" => "clk",
-      "w" => reading[:white_ms],
-      "b" => reading[:black_ms],
-      "r" => to_string(reading[:running] || :none)
-    }
+  defp line({:clock, :off}), do: %{"k" => "clk", "r" => "off"}
+  defp line({:clock, reading}), do: clock_line(reading)
 
   defp line({:status, status}), do: %{"k" => "st", "v" => to_string(status)}
 
@@ -75,6 +73,17 @@ defmodule Alnasl.Recorder do
 
   defp line({:note, text}), do: %{"k" => "note", "text" => text}
   defp line(_other), do: nil
+
+  @doc "A clock reading as the fields of a `clk` line. `mix alnasl.dgt` writes the same."
+  def clock_line(reading) do
+    %{
+      "k" => "clk",
+      "w" => reading[:white_ms],
+      "b" => reading[:black_ms],
+      "r" => to_string(reading[:running] || :none)
+    }
+    |> then(&if(reading[:armed], do: Map.put(&1, "l", to_string(reading.armed)), else: &1))
+  end
 
   # --- reading -----------------------------------------------------------------
 
@@ -180,11 +189,20 @@ defmodule Alnasl.Recorder do
           :error -> []
         end
 
+      %{"k" => "clk", "t" => t, "r" => "off"} ->
+        [{t - t0, {:info, %{clock: false}}}]
+
       %{"k" => "clk", "t" => t} = line ->
-        [
-          {t - t0,
-           {:clock, %{white_ms: line["w"], black_ms: line["b"], running: running(line["r"])}}}
-        ]
+        reading = %{white_ms: line["w"], black_ms: line["b"], running: running(line["r"])}
+
+        reading =
+          case line["l"] do
+            "white" -> Map.put(reading, :armed, :white)
+            "black" -> Map.put(reading, :armed, :black)
+            _none -> reading
+          end
+
+        [{t - t0, {:clock, reading}}]
 
       %{"k" => "st", "t" => t, "v" => "connected"} ->
         [{t - t0, :connected}]
@@ -217,6 +235,7 @@ defmodule Alnasl.Recorder do
             case Protocol.apply_message(message, board) do
               {:position, board} -> {[{t - t0, {:position, board}}], board}
               {:clock, reading} -> {[{t - t0, {:clock, reading}}], board}
+              {:info, %{clock: false} = off} -> {[{t - t0, {:info, off}}], board}
               _other -> {[], board}
             end
           end)
@@ -235,7 +254,9 @@ defmodule Alnasl.Recorder do
   Plays a capture through a fresh tracker without touching anything: what
   moves it makes of it and where it lost the thread. Returns
   `%{moves, plies, alarms: [{ms, why}], corrections, status, duration_ms,
-  events, raw?, cfg}`.
+  events, raw?, cfg}` and, of the clock: `presses`, `clock_alarms: [{ms,
+  side}]`, `clock_cleared: [ms]`, `clock_off: [ms]` and `clock_check` (the
+  starting-position check as the recording ends).
   """
   def dry_run(path, tracker_opts \\ nil, address \\ nil) do
     with {:ok, capture} <- read(path, address) do
@@ -269,6 +290,11 @@ defmodule Alnasl.Recorder do
              do: {t, keep, Enum.map(plies, & &1.san), why}
            ),
          suggestions: for({t, {:result_suggestion, result, why}} <- out, do: {t, result, why}),
+         presses: presses(events),
+         clock_alarms: for({t, {:warning, :clock_side, side}} <- out, do: {t, side}),
+         clock_cleared: for({t, {:warning_cleared, :clock_side}} <- out, do: t),
+         clock_off: for({t, {:info, %{clock: false}}} <- events, do: t),
+         clock_check: Session.clock_check(session),
          status: tr.status,
          detail: tr.detail,
          duration_ms: (List.last(capture.events) || {0, nil}) |> elem(0),
@@ -278,6 +304,25 @@ defmodule Alnasl.Recorder do
          notes: capture.notes
        }}
     end
+  end
+
+  # Every press of the lever in a recording, moves or no moves (the session
+  # only counts them once a game is under way).
+  defp presses(events) do
+    {_clock, presses} =
+      Enum.reduce(events, {Alnasl.Clock.new(), 0}, fn
+        {t, {:clock, reading}}, {clock, presses} ->
+          {clock, pressed?} = Alnasl.Clock.update(clock, t, reading)
+          {clock, presses + if(pressed?, do: 1, else: 0)}
+
+        {t, {:info, %{clock: false}}}, {clock, presses} ->
+          {Alnasl.Clock.off(clock, t), presses}
+
+        _other, acc ->
+          acc
+      end)
+
+    presses
   end
 
   @doc "Copies a capture to `<data>/fixtures/<name>.jsonl`, a file a test can replay. `{:ok, path}`."

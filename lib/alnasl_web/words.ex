@@ -218,6 +218,16 @@ defmodule AlnaslWeb.Words do
          "The last moves were not seen one by one; they were worked out from the position. Worth a glance at the scoresheet."
        )}
 
+  def state_help(:clock_alarm, side),
+    do:
+      {clock_alarm(side),
+       gettext(
+         "The pieces are being followed, but the clock times of the moves are the wrong way round. Stop the clock, set it down with White's display toward White (to the right of the board, lever up on White's side) and start it again. This goes away by itself once the clock is right."
+       )}
+
+  def state_help(:waiting_start, {:clock, check}),
+    do: {gettext("The clock is not in its starting position"), clock_problem(check) <> "."}
+
   def state_help(:waiting_start, :not_start),
     do:
       {gettext("Waiting for the starting position"),
@@ -277,6 +287,34 @@ defmodule AlnaslWeb.Words do
       expected: piece(expected)
     )
   end
+
+  @doc """
+  The clock's finding of the start-position check (`{:wrong, side}`), in
+  words; `nil` when the clock is right or there is none.
+
+  There is no "the other way round is fine" here and no control to swap the
+  sides: the clock stands to the right of the board, and that is that.
+  """
+  def clock_problem({:wrong, :black}),
+    do:
+      gettext(
+        "Clock not in starting position: Black's side would run first - the clock is turned or the lever is the wrong way"
+      )
+
+  def clock_problem({:wrong, :white}),
+    do:
+      gettext(
+        "Clock not in starting position: White's side would run first - the clock is turned or the lever is the wrong way"
+      )
+
+  def clock_problem(_fine), do: nil
+
+  @doc "The clock alarm - a clock running on the wrong side from the starting position - in words."
+  def clock_alarm(:white),
+    do: gettext("White's clock is running and Black has not moved")
+
+  def clock_alarm(_black),
+    do: gettext("Black's clock is running and White has not moved")
 
   def piece({:w, kind}), do: gettext("white %{piece}", piece: kind(kind))
   def piece({:b, kind}), do: gettext("black %{piece}", piece: kind(kind))
@@ -358,6 +396,20 @@ defmodule AlnaslWeb.Words do
         plies: d["plies"]
       )
 
+  defp log("clock.wrong_side", %{"side" => "white"}),
+    do:
+      gettext(
+        "Clock alarm: White's clock is running from the starting position. The clock is turned round or was started the wrong way."
+      )
+
+  defp log("clock.wrong_side", _d),
+    do:
+      gettext(
+        "Clock alarm: Black's clock is running from the starting position. The clock is turned round or was started the wrong way."
+      )
+
+  defp log("clock.side_ok", _d), do: gettext("The clock is the right way again.")
+
   defp log("result.suggested", %{"why" => "gesture"} = d),
     do: gettext("The kings are in the centre: %{result}?", result: d["result"])
 
@@ -430,6 +482,7 @@ defmodule AlnaslWeb.Words do
       {gettext("Everything"), ""},
       {gettext("Boards"), "board."},
       {gettext("Moves"), "move."},
+      {gettext("Clocks"), "clock."},
       {gettext("Results"), "result."},
       {gettext("Repairs"), "repair."},
       {gettext("Connection"), "outbox."}

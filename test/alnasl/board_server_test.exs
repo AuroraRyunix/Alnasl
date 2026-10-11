@@ -431,4 +431,204 @@ defmodule Alnasl.BoardServerTest do
       assert FakeIngest.game(1, 1).moves == played ++ ~w(Nc6)
     end
   end
+
+  describe "the clock in the starting-position check" do
+    setup do
+      board = fake_dgt("FAKE1", %{round: 1, board_no: 1})
+      eventually(fn -> Boards.snapshot(board.id).raw end)
+      {:ok, board: board}
+    end
+
+    test "no clock, no clock check", %{board: board} do
+      snapshot = Boards.snapshot(board.id)
+      assert snapshot.problems == []
+      assert snapshot.clock_check == nil and snapshot.clock_alarm == nil
+      assert snapshot.status == :waiting_start
+    end
+
+    test "ready is the pieces AND a clock set so that White's side runs first", %{board: board} do
+      set_clock("FAKE1", {:still, :white})
+      eventually(fn -> Boards.snapshot(board.id).clock_check == :ok end)
+
+      # The lever the wrong way, or the clock turned round: said in the
+      # check, and nothing more - nobody has started anything yet.
+      set_clock("FAKE1", {:still, :black})
+      eventually(fn -> Boards.snapshot(board.id).clock_check == {:wrong, :black} end)
+      snapshot = Boards.snapshot(board.id)
+      assert snapshot.status == :waiting_start and snapshot.clock_alarm == nil
+      assert snapshot.problems == []
+      refute "clock.wrong_side" in log_kinds()
+
+      set_clock("FAKE1", {:still, :white})
+      eventually(fn -> Boards.snapshot(board.id).clock_check == :ok end)
+
+      # Already running before move 1 is fine, on White's side.
+      set_clock("FAKE1", :white)
+      eventually(fn -> Boards.snapshot(board.id).clock.running == :white end)
+      assert Boards.snapshot(board.id).clock_check == :ok
+      refute "clock.wrong_side" in log_kinds()
+    end
+
+    test "Black's clock started from the starting position is an alarm of its own, and clears by itself",
+         %{board: board} do
+      set_clock("FAKE1", {:still, :black})
+      set_clock("FAKE1", :black)
+      eventually(fn -> Boards.snapshot(board.id).status == :clock_alarm end)
+
+      snapshot = Boards.snapshot(board.id)
+      assert snapshot.clock_alarm == :black and snapshot.clock_check == {:wrong, :black}
+      # A clock alarm, not the pieces: they are where they belong.
+      assert snapshot.problems == [] and snapshot.plies == []
+      assert "clock.wrong_side" in log_kinds()
+      refute "board.out_of_sync" in log_kinds()
+      refute "clock.side_ok" in log_kinds()
+
+      # Stopped, but still set the wrong way: still wrong.
+      set_clock("FAKE1", {:still, :black})
+      eventually(fn -> Boards.snapshot(board.id).clock.running == :none end)
+      assert Boards.snapshot(board.id).status == :clock_alarm
+
+      # Put right: gone, without anybody touching the box.
+      set_clock("FAKE1", {:still, :white})
+      eventually(fn -> Boards.snapshot(board.id).status == :waiting_start end)
+      assert Boards.snapshot(board.id).clock_alarm == nil
+      assert "clock.side_ok" in log_kinds()
+      assert Enum.count(log_kinds(), &(&1 == "clock.wrong_side")) == 1
+    end
+
+    test "simply pressing the lever over puts it right too, and is not a move gone missing", %{
+      board: board
+    } do
+      set_clock("FAKE1", :black)
+      eventually(fn -> Boards.snapshot(board.id).status == :clock_alarm end)
+      set_clock("FAKE1", :white)
+      eventually(fn -> Boards.snapshot(board.id).status == :waiting_start end)
+
+      play_on("FAKE1", board.id, ~w(e4))
+      set_clock("FAKE1", :black)
+      eventually(fn -> Boards.snapshot(board.id).clock.running == :black end)
+      set_clock("FAKE1", :white)
+      eventually(fn -> Boards.snapshot(board.id).clock.running == :white end)
+      # Two presses for one move would be "Move missing?" had the first counted.
+      assert Boards.snapshot(board.id).warning == nil
+      assert Boards.snapshot(board.id).status == :live
+    end
+
+    test "the game played on with the clock turned round: the moves are followed, the alarm stays until a press leaves the right side running",
+         %{board: board} do
+      set_clock("FAKE1", :black)
+      eventually(fn -> Boards.snapshot(board.id).status == :clock_alarm end)
+
+      # White moves and presses; turned round, that starts what the box
+      # knows as White's side - with Black to move.
+      played = play_on("FAKE1", board.id, ~w(e4))
+      set_clock("FAKE1", :white)
+      played = play_on("FAKE1", board.id, ~w(e5), played)
+      set_clock("FAKE1", :black)
+      eventually(fn -> Boards.snapshot(board.id).clock.running == :black end)
+
+      snapshot = Boards.snapshot(board.id)
+      assert snapshot.status == :clock_alarm and snapshot.clock_alarm == :black
+      assert Enum.map(snapshot.plies, & &1.san) == ~w(e4 e5)
+
+      # The arbiter stops the clock, turns it round and starts it for White.
+      set_clock("FAKE1", {:still, :white})
+      set_clock("FAKE1", :white)
+      play_on("FAKE1", board.id, ~w(Nf3), played)
+      # White presses: Black's time runs with Black to move. Right at last.
+      set_clock("FAKE1", :black)
+      eventually(fn -> Boards.snapshot(board.id).status == :live end)
+      assert Boards.snapshot(board.id).clock_alarm == nil
+      assert "clock.side_ok" in log_kinds()
+      refute "board.out_of_sync" in log_kinds()
+    end
+
+    test "a clock switched off is no clock: no check and no alarm, until it is back", %{
+      board: board
+    } do
+      set_clock("FAKE1", :black)
+      eventually(fn -> Boards.snapshot(board.id).status == :clock_alarm end)
+
+      set_clock("FAKE1", :off)
+      eventually(fn -> Boards.snapshot(board.id).status == :waiting_start end)
+      snapshot = Boards.snapshot(board.id)
+      assert snapshot.clock == nil and snapshot.clock_check == nil and snapshot.clock_alarm == nil
+      assert snapshot.info[:clock] == false
+
+      set_clock("FAKE1", {:still, :white})
+      eventually(fn -> Boards.snapshot(board.id).clock_check == :ok end)
+      assert Boards.snapshot(board.id).info[:clock] == true
+    end
+
+    test "a board that is not linked to a game has its clock checked all the same" do
+      board = fake_dgt("FAKE2")
+      eventually(fn -> Boards.snapshot(board.id).raw end)
+      assert Boards.snapshot(board.id).clock_check == nil
+
+      set_clock("FAKE2", {:still, :black})
+      eventually(fn -> Boards.snapshot(board.id).clock_check == {:wrong, :black} end)
+      set_clock("FAKE2", {:still, :white})
+      eventually(fn -> Boards.snapshot(board.id).clock_check == :ok end)
+    end
+
+    test "there is no way to tell a board that its clock stands the other way round" do
+      # The user's decision: the cable is too short for it to stand anywhere
+      # else, so the box offers no such option - and ignores one if given.
+      board = fake_dgt("FAKE3", %{round: 1, board_no: 2, options: %{"clock_white" => "right"}})
+      eventually(fn -> Boards.snapshot(board.id).raw end)
+      set_clock("FAKE3", {:still, :white}, 5_000_000, 4_000_000)
+      eventually(fn -> Boards.snapshot(board.id).clock end)
+
+      assert %{white_ms: 5_000_000, black_ms: 4_000_000, running: :none} =
+               Boards.snapshot(board.id).clock
+
+      for file <- Path.wildcard("lib/**/*.{ex,heex}") do
+        refute File.read!(file) =~ "clock_white", "#{file} still knows clock_white"
+      end
+    end
+  end
+
+  describe "the recording of the real board, through the replay driver" do
+    @session "test/fixtures/captures/real-06310-clock-session.jsonl"
+
+    test "four minutes of a real clock and one knight: no moves, no alarm about the pieces, and the clock found turned round" do
+      {:ok, board} =
+        Boards.create(%{
+          name: "Replay 06310",
+          driver: "replay",
+          port: "replay-06310",
+          round: 1,
+          board_no: 4,
+          options: %{"path" => @session, "speed" => 300}
+        })
+
+      eventually(fn -> match?(%{finished?: true}, Boards.snapshot(board.id).player) end, 15_000)
+      # Let the last readings through the board's own process.
+      eventually(fn -> Boards.snapshot(board.id).clock_check == {:wrong, :black} end)
+      snapshot = Boards.snapshot(board.id)
+
+      # The pieces: a lone knight, last seen on d2. Never a starting
+      # position, so never a game and never a move.
+      assert snapshot.raw == String.duplicate(".", 51) <> "n" <> String.duplicate(".", 12)
+      assert snapshot.plies == [] and snapshot.status == :waiting_start
+      assert snapshot.detail == :not_start
+      assert length(snapshot.problems) == 32
+
+      # The clock: turned round and started on Black's side, running there
+      # when the recording ends, White's time untouched at 1:30:30.
+      assert snapshot.clock.running == :black
+      assert snapshot.clock.white_ms == 5_430_000
+      assert snapshot.clock.black_ms <= 5_287_000
+      assert snapshot.info[:clock] == true
+      assert snapshot.clock_alarm == nil
+
+      kinds = log_kinds()
+      refute "board.out_of_sync" in kinds
+      refute "board.driver_failed" in kinds
+      refute "clock.wrong_side" in kinds
+      # The four presses were over untouched pieces - but not a starting
+      # position, and no game: nothing claims a move is missing.
+      assert Games.plies(Games.get(1, 4)) == []
+    end
+  end
 end

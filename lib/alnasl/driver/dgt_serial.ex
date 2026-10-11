@@ -21,12 +21,25 @@ defmodule Alnasl.Driver.DgtSerial do
   ## Options
 
   `:port` (required), `:owner`, `:id`; in `:options` (string keys, the
-  board's JSON): `"clock_white"` - which side of the clock is White's,
-  `"left"` (default) or `"right"`; `"clock"` - `false` to not ask for clock
-  updates. `:transport` picks the line (default: by port name - a name
-  starting with `FAKE` is a stand-in). `:debug` logs every byte in hex.
+  board's JSON): `"clock"` - `false` to not ask for clock updates.
+  `:transport` picks the line (default: by port name - a name starting with
+  `FAKE` is a stand-in). `:debug` logs every byte in hex.
 
-  The driver has not met a real board. See `docs/tomorrow.md`.
+  There is no option for which side of the clock is White's, on purpose: the
+  clock stands to the right of the board, and a clock that is turned round
+  is reported as set up wrongly (`Alnasl.Dgt.Protocol.reading/1`,
+  `Alnasl.Clock.start_check/2`).
+
+  ## The clock
+
+  A reading goes out as `{:clock, reading}`. A clock that is switched off or
+  unplugged (the board says "no clock") goes out as `{:info, %{clock:
+  false}}`, once, and its last reading must not be believed after that. A
+  board that never had a clock says nothing about clocks at all.
+
+  It met a real board on 2026-10-12 (serial 06310, firmware 1.9): the
+  handshake, the dump, field updates and the clock are as written here. See
+  `docs/real-board-2026-10-12.md`.
   """
 
   use GenServer
@@ -57,7 +70,7 @@ defmodule Alnasl.Driver.DgtSerial do
       connected?: false,
       last_rx: nil,
       clock?: options["clock"] != false,
-      clock_white: if(options["clock_white"] == "right", do: :right, else: :left),
+      clock_seen?: nil,
       debug?: Keyword.get(opts, :debug, false) or options["debug"] == true,
       resync_ms: Keyword.get(opts, :resync_ms, 3_000),
       timeout_ms: Keyword.get(opts, :timeout_ms, 10_000),
@@ -153,15 +166,21 @@ defmodule Alnasl.Driver.DgtSerial do
     do: position(state, put_elem(state.board, square, piece))
 
   defp message({:clock, clock}, state) do
-    case Protocol.reading(clock, state.clock_white) do
-      nil -> Driver.emit(state.owner, state.id, {:info, %{clock: false}})
-      reading -> Driver.emit(state.owner, state.id, {:clock, reading})
+    case Protocol.reading(clock) do
+      nil ->
+        if state.clock_seen? != false,
+          do: Driver.emit(state.owner, state.id, {:info, %{clock: false}})
+
+        %{state | clock_seen?: false}
+
+      reading ->
+        Driver.emit(state.owner, state.id, {:clock, reading})
+
+        if clock.battery_low?,
+          do: Driver.emit(state.owner, state.id, {:info, %{clock_battery_low: true}})
+
+        %{state | clock_seen?: true}
     end
-
-    if clock.battery_low?,
-      do: Driver.emit(state.owner, state.id, {:info, %{clock_battery_low: true}})
-
-    state
   end
 
   defp message(other, state) do

@@ -2,10 +2,12 @@ defmodule Alnasl.Dgt.ProtocolTest do
   @moduledoc """
   The single-board DGT protocol, pinned with bytes written out by hand.
 
-  These bytes are what the published description says a board sends. They
-  were not recorded from a board: the first real capture is the test of this
-  test. A test whose name says ASSUMED pins a detail the description left the
-  author unsure of; expect those to be the ones a real board corrects.
+  These bytes are what the published description says a board sends,
+  written out by hand. The ones a real board has since sent are in
+  `test/alnasl/real_board_test.exs`, as recorded. A test whose name says
+  CONFIRMED pins a detail that recording settled (and two of them it
+  corrected: which side of the clock is White's is not an option, and the
+  lever is up on the side that runs).
   """
 
   use ExUnit.Case, async: true
@@ -203,19 +205,19 @@ defmodule Alnasl.Dgt.ProtocolTest do
   end
 
   describe "the clock message" do
-    # right 1:29:58, left 1:30:00, status byte last.
+    # Black's side 1:29:58, White's side 1:30:00, status byte last.
     defp bwtime(status), do: <<0x8D, 0x00, 0x0A, 0x01, 0x29, 0x58, 0x01, 0x30, 0x00, status>>
 
-    test "is ten bytes with BCD minutes and seconds, right player first" do
+    test "is ten bytes with BCD minutes and seconds, Black's side first" do
       assert {[{:clock, clock}], <<>>} = Protocol.parse(bwtime(0x01))
-      assert clock.right_ms == (1 * 3600 + 29 * 60 + 58) * 1000
-      assert clock.left_ms == (1 * 3600 + 30 * 60) * 1000
+      assert clock.black_ms == (1 * 3600 + 29 * 60 + 58) * 1000
+      assert clock.white_ms == (1 * 3600 + 30 * 60) * 1000
     end
 
     test "the flag bits in the high nibble of the hours do not change the time" do
       bytes = <<0x8D, 0x00, 0x0A, 0x11, 0x29, 0x58, 0x41, 0x30, 0x00, 0x01>>
 
-      assert {[{:clock, %{right_ms: 5_398_000, left_ms: 5_400_000}}], <<>>} =
+      assert {[{:clock, %{black_ms: 5_398_000, white_ms: 5_400_000}}], <<>>} =
                Protocol.parse(bytes)
     end
 
@@ -226,7 +228,7 @@ defmodule Alnasl.Dgt.ProtocolTest do
       assert {[{:clock_ack, _}], <<>>} = Protocol.parse(ack)
     end
 
-    test "ASSUMED: status bit 0 = running, bits 3/4 = Black's/White's turn, bit 5 = no clock" do
+    test "CONFIRMED: status bit 0 = running, bits 3/4 = Black's/White's side, bit 5 = no clock" do
       {[{:clock, clock}], _} = Protocol.parse(bwtime(0x01 ||| 0x10))
       assert clock.running? and clock.turn == :white and clock.connected?
 
@@ -238,28 +240,48 @@ defmodule Alnasl.Dgt.ProtocolTest do
 
       {[{:clock, clock}], _} = Protocol.parse(bwtime(0x20))
       refute clock.connected?
-      assert Protocol.reading(clock, :left) == nil
+      assert Protocol.reading(clock) == nil
+      assert Protocol.apply_message({:clock, clock}, nil) == {:info, %{clock: false}}
     end
 
-    test "ASSUMED: left is White unless the board says the clock stands the other way" do
+    test "CONFIRMED: bit 1 is the lever, up on the side whose time runs" do
+      {[{:clock, clock}], _} = Protocol.parse(bwtime(0x02))
+      assert clock.lever == :black
+      {[{:clock, clock}], _} = Protocol.parse(bwtime(0x00))
+      assert clock.lever == :white
+
+      # A running clock that names nobody: the lever says who.
+      {[{:clock, clock}], _} = Protocol.parse(bwtime(0x01 ||| 0x02))
+      assert Protocol.reading(clock).running == :black
+      {[{:clock, clock}], _} = Protocol.parse(bwtime(0x01))
+      assert Protocol.reading(clock).running == :white
+    end
+
+    test "CONFIRMED: White's side is bytes 3-5, and there is no way to say otherwise" do
       {[{:clock, clock}], _} = Protocol.parse(bwtime(0x01 ||| 0x10))
 
-      assert Protocol.reading(clock, :left) == %{
+      assert Protocol.reading(clock) == %{
                white_ms: 5_400_000,
                black_ms: 5_398_000,
-               running: :white
+               running: :white,
+               armed: :white
              }
 
-      assert Protocol.reading(clock, :right) == %{
-               white_ms: 5_398_000,
-               black_ms: 5_400_000,
-               running: :white
-             }
+      refute function_exported?(Protocol, :reading, 2)
     end
 
-    test "a stopped clock runs for nobody" do
+    test "a stopped clock runs for nobody, and says which side it is set for" do
       {[{:clock, clock}], _} = Protocol.parse(bwtime(0x10))
-      assert Protocol.reading(clock, :left).running == :none
+      assert %{running: :none, armed: :white} = Protocol.reading(clock)
+
+      # As it comes back on with the lever on Black's side.
+      {[{:clock, clock}], _} = Protocol.parse(bwtime(0x08 ||| 0x02))
+      assert %{running: :none, armed: :black} = Protocol.reading(clock)
+
+      # Paused on White's move, the lever tipped over by hand: either bit
+      # is enough to call it Black's.
+      {[{:clock, clock}], _} = Protocol.parse(bwtime(0x10 ||| 0x02))
+      assert %{running: :none, armed: :black} = Protocol.reading(clock)
     end
   end
 
@@ -293,17 +315,16 @@ defmodule Alnasl.Dgt.ProtocolTest do
       end
 
       clock = %{
-        left_ms: 5_400_000,
-        right_ms: 5_398_000,
+        white_ms: 5_400_000,
+        black_ms: 5_398_000,
         running?: true,
         turn: :black,
-        lever: :left
+        lever: :black
       }
 
       assert {[{:clock, read}], <<>>} = {:clock, clock} |> Protocol.encode() |> Protocol.parse()
 
-      assert Map.take(read, [:left_ms, :right_ms, :running?, :turn]) ==
-               Map.take(clock, [:left_ms, :right_ms, :running?, :turn])
+      assert Map.take(read, [:white_ms, :black_ms, :running?, :turn, :lever]) == clock
     end
   end
 

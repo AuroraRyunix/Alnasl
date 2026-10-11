@@ -110,6 +110,28 @@ defmodule Alnasl.HallCase do
   @doc "Puts the pieces of the emulated board as `board` (a 64-tuple)."
   def set_pieces(port, board), do: Fake.update(port, &Emulator.set_board(&1, board))
 
+  @doc """
+  Sets the clock of the emulated board. `state` is `:white` or `:black` (that
+  side's time runs), `{:still, side}` (it stands still with the lever up on
+  `side`) or `:off` (switched off: the board says "no clock").
+  """
+  def set_clock(port, state, white_ms \\ 5_400_000, black_ms \\ 5_400_000) do
+    reading =
+      case state do
+        {:still, side} -> %{running: :none, armed: side}
+        :off -> %{running: :none, connected?: false}
+        side -> %{running: side}
+      end
+
+    Fake.update(
+      port,
+      &Emulator.set_clock(&1, Map.merge(reading, %{white_ms: white_ms, black_ms: black_ms}))
+    )
+  end
+
+  @doc "The kinds of everything in the arbiter's log."
+  def log_kinds, do: Enum.map(Alnasl.Log.list(), & &1.kind)
+
   @doc "The boards after each of `sans`, from the start position."
   def boards_after(sans, start \\ Chess.start_fen()) do
     {:ok, plies} = Chess.replay(start, sans)

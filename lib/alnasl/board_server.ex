@@ -86,6 +86,9 @@ defmodule Alnasl.BoardServer do
       last_seen: nil,
       stats: %{positions: 0, polls_ok: 0, polls_missed: 0},
       info: %{},
+      # The clock as the board reports it, linked to a game or not: the
+      # starting-position check wants it before there is a game.
+      clock: Clock.new(),
       game: nil,
       session: nil,
       time: {0, System.monotonic_time(:millisecond), 1.0, nil},
@@ -216,8 +219,17 @@ defmodule Alnasl.BoardServer do
 
   defp driver_event(state, {:clock, reading}, t) do
     Recorder.record(state.board.id, {:clock, reading})
-    state = put_in(state.info[:clock], true)
+    {clock, _pressed?} = Clock.update(state.clock, t, reading)
+    state = %{state | clock: clock, info: Map.put(state.info, :clock, true)}
     state |> feed(t, {:clock, reading}) |> dirty()
+  end
+
+  # The clock was switched off or unplugged: no clock, so no clock check and
+  # no clock alarm, until it reports again.
+  defp driver_event(state, {:info, %{clock: false} = info}, t) do
+    Recorder.record(state.board.id, {:clock, :off})
+    state = %{state | clock: Clock.off(state.clock, t), info: Map.merge(state.info, info)}
+    state |> feed(t, {:info, %{clock: false}}) |> dirty()
   end
 
   defp driver_event(state, :connected, _t) do
@@ -375,8 +387,18 @@ defmodule Alnasl.BoardServer do
             Log.add(:warn, "clock.move_missing", %{presses: presses, plies: plies}, ref(state))
             {%{state | warning: :move_missing}, queue}
 
-          {:warning_cleared, _what} ->
+          {:warning_cleared, :move_missing} ->
             {%{state | warning: nil}, queue}
+
+          # The alarm itself lives in the session (`clock_alarm`); here it
+          # is only written down.
+          {:warning, :clock_side, side} ->
+            Log.add(:error, "clock.wrong_side", %{side: side}, ref(state))
+            {state, queue}
+
+          {:warning_cleared, :clock_side} ->
+            Log.add(:info, "clock.side_ok", %{}, ref(state))
+            {state, queue}
 
           _other ->
             {state, queue}
@@ -693,6 +715,8 @@ defmodule Alnasl.BoardServer do
         plies: Enum.map(tracker.plies, &Map.take(&1, [:san, :flags])),
         candidates: Tracker.candidates(tracker),
         clock: Clock.read(state.session.clock, t),
+        clock_check: Session.clock_check(state.session),
+        clock_alarm: state.session.clock_alarm,
         white: game.white,
         black: game.black,
         result: game.result,
@@ -713,6 +737,8 @@ defmodule Alnasl.BoardServer do
         plies: [],
         candidates: [],
         clock: nil,
+        clock_check: Clock.start_check(state.clock),
+        clock_alarm: nil,
         problems: if(state.seen, do: Position.problems(Position.start(), state.seen), else: [])
       })
     end
@@ -724,6 +750,7 @@ defmodule Alnasl.BoardServer do
       state.game.status == "finished" -> :finished
       not state.connected? -> :no_signal
       tracker.status == :out_of_sync -> :out_of_sync
+      state.session.clock_alarm != nil -> :clock_alarm
       tracker.status == :ambiguous -> :settling
       tracker.status == :live and recovered?(tracker) -> :recovered
       true -> tracker.status

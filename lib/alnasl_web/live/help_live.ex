@@ -53,6 +53,11 @@ defmodule AlnaslWeb.HelpLive do
             </li>
             <li>
               {gettext(
+                "A board with a clock is only \"Right\" when its clock is too: to the right of the board, the lever up on White's side so that White's time runs first. If not, the same column says the clock is not in its starting position."
+              )}
+            </li>
+            <li>
+              {gettext(
                 "Boards: link each board to its board number of the round. \"Link in order\" does a whole row at once."
               )}
             </li>
@@ -84,6 +89,12 @@ defmodule AlnaslWeb.HelpLive do
             </dd>
             <dt><.state state={:no_signal} /></dt>
             <dd>{gettext("The board does not answer. Check cable and power. The game is kept.")}</dd>
+            <dt><.state state={:clock_alarm} /></dt>
+            <dd>
+              {gettext(
+                "Black's clock is running and White has not moved: the clock is turned round, or it was started with the lever the wrong way. Stop it, put it right, start it again; the alarm goes away by itself. The moves are still followed."
+              )}
+            </dd>
           </dl>
           <p>
             {gettext(
@@ -137,6 +148,12 @@ defmodule AlnaslWeb.HelpLive do
             <dd>
               {gettext(
                 "The starting position was wrong or the first moves were made before the board was linked. Use \"Resync from here\"."
+              )}
+            </dd>
+            <dt>{gettext("\"Clock not in starting position\" before the round")}</dt>
+            <dd>
+              {gettext(
+                "The clock always stands to the right of the board, White's display toward White; the cable does not reach anywhere else, and the box cannot be told otherwise. Before the first move the lever must be up on White's side, so that White's time runs first. Turn the clock or tip the lever; the message goes away by itself."
               )}
             </dd>
             <dt>{gettext("Moves appear late")}</dt>

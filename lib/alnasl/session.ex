@@ -3,14 +3,40 @@ defmodule Alnasl.Session do
   One game on one board: the tracker and the clock together.
 
   Still pure. It takes what a driver delivers - `{:position, board}`,
-  `{:clock, reading}`, `:connected`, `:disconnected` - and time passing, and
-  returns the tracker's events with two additions:
+  `{:clock, reading}`, `{:info, %{clock: false}}` (the clock was switched
+  off), `:connected`, `:disconnected` - and time passing, and returns the
+  tracker's events with three additions:
 
   - every accepted ply carries the clock as it read when it was accepted
     (`ply.clock`, or `nil` without a clock);
   - `{:warning, :move_missing, presses, plies}` when the clock has been
     pressed at least twice more often than moves were seen, and
-    `{:warning_cleared, :move_missing}` when the moves have caught up.
+    `{:warning_cleared, :move_missing}` when the moves have caught up;
+  - `{:warning, :clock_side, side}` the moment a clock RUNS on the wrong
+    side with the pieces in the starting position and no move made (`side` is the one
+    running: `:black`, in every game that White begins), and
+    `{:warning_cleared, :clock_side}` when it has been put right.
+
+  ## The clock alarm
+
+  The clock's sides are fixed (`Alnasl.Clock`), so Black's time running
+  before White has moved means the clock is turned round or was started
+  with the lever the wrong way. It is an alarm about the clock, not about
+  the pieces: the tracker goes on reading the moves, and their clock times
+  are the wrong way round until somebody acts. It clears by itself:
+
+  - before the first move, as soon as the right side runs, or the clock
+    stands still with its lever the right way, or is switched off;
+    (a lever pressed over to the wrong side with the pieces untouched is
+    NOT this alarm: that is a first move the board did not see, and the
+    press is counted toward "a move is missing")
+  - once moves have been made, at the first press of the lever after which
+    the running side is the side to move. With the clock still turned round
+    every press leaves the wrong side running, so it stays.
+
+  A clock that merely stands still the wrong way before the game is not an
+  alarm: that is the starting-position check (`clock_check/1`), which the
+  site shows beside the check of the pieces.
 
   `run/3` plays a whole list of timed events through it, ticking at the
   tracker's own deadlines: the test bench, and the dry run of a recording.
@@ -18,7 +44,7 @@ defmodule Alnasl.Session do
 
   alias Alnasl.{Clock, Tracker}
 
-  defstruct tracker: nil, clock: Clock.new(), missing?: false
+  defstruct tracker: nil, clock: Clock.new(), missing?: false, clock_alarm: nil
 
   @type t :: %__MODULE__{}
 
@@ -34,14 +60,29 @@ defmodule Alnasl.Session do
 
   def handle(%__MODULE__{} = session, t, {:clock, reading}) do
     {clock, pressed?} = Clock.update(session.clock, t, reading)
+
+    # The press that puts a wrongly started clock right before the first
+    # move is somebody setting the clock, not a move: it is not counted
+    # toward "a move is missing".
+    clock =
+      if pressed? and session.clock_alarm != nil and session.tracker.plies == [] and
+           clock.running == to_move(session.tracker),
+         do: %{clock | presses: clock.presses - 1},
+         else: clock
+
     session = %{session | clock: clock}
 
     {session, events} =
       if pressed?,
-        do: session.tracker |> Tracker.press(t) |> wrap(session, t),
-        else: check_missing(session, [])
+        do: session.tracker |> Tracker.press(t) |> wrap(session, t, true),
+        else: session |> check_missing([]) |> check_clock(false)
 
     {session, [{:clock, Clock.read(clock, t)} | events]}
+  end
+
+  # The clock was switched off or unplugged: a board without a clock again.
+  def handle(%__MODULE__{} = session, t, {:info, %{clock: false}}) do
+    %{session | clock: Clock.off(session.clock, t)} |> check_missing([]) |> check_clock(false)
   end
 
   def handle(%__MODULE__{} = session, t, :tick) do
@@ -56,7 +97,20 @@ defmodule Alnasl.Session do
 
   def deadline(%__MODULE__{tracker: tracker}), do: Tracker.deadline(tracker)
 
-  defp wrap({tracker, events}, session, t) do
+  @doc """
+  The clock's part of the starting-position check: `nil` (no clock, or the
+  game is under way), `:ok`, or `{:wrong, side}` - see
+  `Alnasl.Clock.start_check/2`.
+  """
+  def clock_check(%__MODULE__{tracker: %{plies: []} = tracker, clock: clock}),
+    do: Clock.start_check(clock, to_move(tracker))
+
+  def clock_check(%__MODULE__{}), do: nil
+
+  defp to_move(%{pos: %{turn: :b}}), do: :black
+  defp to_move(_tracker), do: :white
+
+  defp wrap({tracker, events}, session, t, pressed? \\ false) do
     reading = Clock.read(session.clock, t)
 
     events =
@@ -66,7 +120,7 @@ defmodule Alnasl.Session do
         other -> other
       end)
 
-    check_missing(%{session | tracker: tracker}, events)
+    %{session | tracker: tracker} |> check_missing(events) |> check_clock(pressed?)
   end
 
   defp stamp([], _reading), do: []
@@ -75,6 +129,38 @@ defmodule Alnasl.Session do
     clock = reading && Map.take(reading, [:white_ms, :black_ms])
     {earlier, [last]} = Enum.split(plies, -1)
     Enum.map(earlier, &Map.put(&1, :clock, nil)) ++ [Map.put(last, :clock, clock)]
+  end
+
+  defp check_clock({session, events}, pressed?) do
+    clock = session.clock
+    to_move = to_move(session.tracker)
+    started? = session.tracker.plies != []
+    # The pieces stand as the game begins: before that, a clock running the
+    # wrong way is one more thing not set up yet, not a game going wrong.
+    at_start? = session.tracker.raw == session.tracker.pos.board
+
+    alarm =
+      cond do
+        not Clock.present?(clock) -> nil
+        not started? and Clock.start_check(clock, to_move) == :ok -> nil
+        # Started there, not pressed over to there: a lever pressed to the
+        # wrong side over untouched pieces is a first move the board did
+        # not see, and "Move missing?" has that.
+        not started? and at_start? and clock.started not in [nil, to_move] -> clock.running
+        started? and pressed? and clock.running == to_move -> nil
+        true -> session.clock_alarm
+      end
+
+    cond do
+      alarm == session.clock_alarm ->
+        {session, events}
+
+      alarm == nil ->
+        {%{session | clock_alarm: nil}, events ++ [{:warning_cleared, :clock_side}]}
+
+      true ->
+        {%{session | clock_alarm: alarm}, events ++ [{:warning, :clock_side, alarm}]}
+    end
   end
 
   defp check_missing(session, events) do

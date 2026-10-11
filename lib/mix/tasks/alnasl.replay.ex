@@ -12,8 +12,10 @@ defmodule Mix.Tasks.Alnasl.Replay do
   alnasl.dgt`) or a log written by `tools/serial_proxy.py` - raw bytes are
   decoded with the DGT protocol on the way in. Prints how many readings it
   held, the moves the tracker found, every time it went out of sync and
-  every correction, and the notes typed during the capture with their times,
-  so a note "castled, king first" can be checked against what was found.
+  every correction, what the clock did (presses, switched off, running on
+  the wrong side from the starting position), and the notes typed during the
+  capture with their times, so a note "castled, king first" can be checked
+  against what was found.
 
   `--address N` picks one board out of a capture of a loop (`mix alnasl.dgt
   --bus`).
@@ -67,8 +69,12 @@ defmodule Mix.Tasks.Alnasl.Replay do
 
           {:clock, c} ->
             info.(
-              "  #{at(t)}  clock w #{Clock.format(c.white_ms)} b #{Clock.format(c.black_ms)} #{c.running}"
+              "  #{at(t)}  clock w #{Clock.format(c.white_ms)} b #{Clock.format(c.black_ms)} #{c.running}" <>
+                if(c.running == :none and c[:armed], do: " (lever: #{c.armed} first)", else: "")
             )
+
+          {:info, %{clock: false}} ->
+            info.("  #{at(t)}  clock off")
 
           other ->
             info.("  #{at(t)}  #{inspect(other)}")
@@ -97,6 +103,22 @@ defmodule Mix.Tasks.Alnasl.Replay do
 
     for {t, result, why} <- report.suggestions,
         do: info.("  result suggested at #{at(t)}: #{result} (#{why})")
+
+    if report.presses > 0, do: info.("  clock presses: #{report.presses}")
+    for t <- report.clock_off, do: info.("  clock switched off at #{at(t)}")
+
+    for {t, side} <- report.clock_alarms,
+        do: info.("  CLOCK ALARM at #{at(t)}: #{side}'s side runs from the starting position")
+
+    for t <- report.clock_cleared, do: info.("  clock alarm cleared at #{at(t)}")
+
+    case report.clock_check do
+      {:wrong, side} ->
+        info.("  clock not in starting position at the end: #{side}'s side would run first")
+
+      _other ->
+        :ok
+    end
 
     for {t, text} <- report.notes, do: info.("  note at #{at(t)}: #{text}")
   end

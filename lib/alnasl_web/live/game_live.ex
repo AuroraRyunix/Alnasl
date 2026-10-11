@@ -450,7 +450,20 @@ defmodule AlnaslWeb.GameLive do
             </p>
           </.panel>
 
-          <.help_box state={@view.snap.status} detail={@view.snap[:detail]} />
+          <.help_box state={@view.snap.status} detail={help_detail(@view.snap)} />
+
+          <div
+            :if={@view.snap.plies == [] and Words.clock_problem(@view.snap[:clock_check])}
+            id="clock-check"
+            class="alarm warn"
+            role="status"
+          >
+            <.icon name="warning" />
+            <div>
+              <b>{gettext("The clock is not in its starting position")}</b>
+              <p>{Words.clock_problem(@view.snap[:clock_check])}.</p>
+            </div>
+          </div>
 
           <div
             :if={@view.snap[:problems] not in [nil, []] and @view.snap.plies == []}
@@ -701,6 +714,17 @@ defmodule AlnaslWeb.GameLive do
     """
   end
 
+  # What the sentence under the state is about: for a clock alarm the side
+  # that runs; for a board waiting with its pieces right, the clock if that
+  # is what it is still waiting for.
+  defp help_detail(%{status: :clock_alarm} = snap), do: snap[:clock_alarm]
+
+  defp help_detail(%{status: :waiting_start, detail: detail, clock_check: {:wrong, _} = check})
+       when detail != :not_start,
+       do: {:clock, check}
+
+  defp help_detail(snap), do: snap[:detail]
+
   attr :state, :atom, required: true
   attr :detail, :any, default: nil
 
@@ -710,7 +734,7 @@ defmodule AlnaslWeb.GameLive do
 
     ~H"""
     <div
-      :if={@headline && @state in [:out_of_sync, :no_signal, :recovered]}
+      :if={@headline && @state in [:out_of_sync, :no_signal, :recovered, :clock_alarm]}
       id="state-help"
       class={["alarm", @state == :recovered && "warn"]}
       role={if @state == :recovered, do: "status", else: "alert"}
@@ -722,7 +746,7 @@ defmodule AlnaslWeb.GameLive do
       </div>
     </div>
     <p
-      :if={@headline && @state not in [:out_of_sync, :no_signal, :recovered]}
+      :if={@headline && @state not in [:out_of_sync, :no_signal, :recovered, :clock_alarm]}
       id="state-help"
       class="note"
     >

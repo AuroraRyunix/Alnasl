@@ -27,6 +27,8 @@ defmodule AlnaslWeb.CoreComponents do
       ~s|<path d="M12 3.5 21.5 20h-19z" fill="currentColor"/><path d="M12 10v4.5M12 17.2v.2" stroke="var(--warn-bg, #fff)" stroke-width="2.2" stroke-linecap="round"/>|,
     "out_of_sync" =>
       ~s|<rect x="3.5" y="3.5" width="17" height="17" rx="2" fill="currentColor"/><path d="m8.5 8.5 7 7m0-7-7 7" stroke="var(--bad-bg, #fff)" stroke-width="2.4" stroke-linecap="round"/>|,
+    "clock_alarm" =>
+      ~s|<path d="M12 2.5 21.5 12 12 21.5 2.5 12z" fill="currentColor"/><path d="M12 7.5V12l3 2" fill="none" stroke="var(--bad-bg, #fff)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>|,
     "no_signal" =>
       ~s|<circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-dasharray="3.2 3"/><path d="m6 18 12-12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>|,
     "finished" =>
@@ -95,6 +97,7 @@ defmodule AlnaslWeb.CoreComponents do
   def tone(:waiting_start), do: nil
   def tone(:out_of_sync), do: "bad"
   def tone(:no_signal), do: "bad"
+  def tone(:clock_alarm), do: "bad"
   def tone(_other), do: nil
 
   @doc "The word for a board state."
@@ -105,6 +108,7 @@ defmodule AlnaslWeb.CoreComponents do
   def state_word(:recovered), do: gettext("Recovered a move")
   def state_word(:out_of_sync), do: gettext("Out of sync")
   def state_word(:no_signal), do: gettext("No signal")
+  def state_word(:clock_alarm), do: gettext("Clock wrong way")
   def state_word(:finished), do: gettext("Finished")
   def state_word(:unlinked), do: gettext("Not linked")
   def state_word(_other), do: gettext("Unknown")
@@ -116,6 +120,7 @@ defmodule AlnaslWeb.CoreComponents do
   defp state_icon(:recovered), do: "recovered"
   defp state_icon(:out_of_sync), do: "out_of_sync"
   defp state_icon(:no_signal), do: "no_signal"
+  defp state_icon(:clock_alarm), do: "clock_alarm"
   defp state_icon(:finished), do: "finished"
   defp state_icon(:unlinked), do: "unlinked"
   defp state_icon(_other), do: "waiting"

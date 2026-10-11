@@ -179,6 +179,8 @@ defmodule Alnasl.Boards do
       plies: if(game, do: Enum.map(Games.plies(game), &Map.take(&1, [:san, :flags])), else: []),
       candidates: [],
       clock: nil,
+      clock_check: nil,
+      clock_alarm: nil,
       problems: [],
       white: game && game.white,
       black: game && game.black,

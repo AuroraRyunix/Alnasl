@@ -109,6 +109,7 @@ defmodule AlnaslWeb.AccessibilityTest do
       :recovered,
       :out_of_sync,
       :no_signal,
+      :clock_alarm,
       :finished,
       :unlinked
     ]

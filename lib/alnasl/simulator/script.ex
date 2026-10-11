@@ -99,7 +99,7 @@ defmodule Alnasl.Simulator.Script do
     }
 
     st = emit(st, {:position, st.b})
-    st = if o.clock, do: emit(st, {:clock, reading(st, :white)}), else: st
+    st = if o.clock, do: emit(st, {:clock, reading(st, pos.turn)}), else: st
 
     {st, _pos} =
       sans
