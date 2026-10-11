@@ -13,14 +13,19 @@ defmodule AlnaslWeb.SetupLive do
 
   use AlnaslWeb, :live_view
 
-  alias Alnasl.{Log, Settings, Tournament, Tracker}
-  alias AlnaslWeb.Words
+  alias Alnasl.{Destination, Log, Settings, Tournament, Tracker}
+  alias Alnasl.Destination.{LichessApi, LichessBroadcast}
+  alias AlnaslWeb.{Access, DestinationWords, Words}
 
   @tracker_fields ~w(settle_ms castle_hold_ms promotion_hold_ms takeback_settle_ms transient_ms lifted_ms search_depth)
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, socket |> assign(page_title: gettext("Setup"), checks: nil, testing?: false) |> load()}
+    {:ok,
+     socket
+     |> assign(page_title: gettext("Setup"), checks: nil, testing?: false)
+     |> assign(lichess_checks: nil, lichess_testing?: false)
+     |> load()}
   end
 
   defp load(socket) do
@@ -54,6 +59,18 @@ defmodule AlnaslWeb.SetupLive do
           as: :box
         ),
       pin_form: to_form(%{"pin" => ""}, as: :door),
+      lichess_form:
+        to_form(
+          %{
+            "round" => Settings.get("lichess_round_id") || "",
+            "token" => "",
+            "round_no" => LichessBroadcast.round(),
+            "enabled" => Destination.enabled?(LichessBroadcast)
+          },
+          as: :lichess
+        ),
+      lichess_hint: LichessBroadcast.token_hint(),
+      lichess_round_id: Settings.get("lichess_round_id"),
       tracker_form:
         to_form(
           tracker
@@ -81,6 +98,21 @@ defmodule AlnaslWeb.SetupLive do
 
     key = String.trim(params["relay_key"] || "")
     {url, String.trim(slug), if(key == "", do: Settings.get("relay_key"), else: key)}
+  end
+
+  # What is in the Lichess form, as it would be saved: `{round id | :error | "", token}`.
+  defp read_lichess(params) do
+    text = String.trim(params["round"] || "")
+
+    round =
+      case {text, LichessApi.parse_round(text)} do
+        {"", _} -> ""
+        {_text, {:ok, id}} -> id
+        {_text, :error} -> :error
+      end
+
+    token = String.trim(params["token"] || "")
+    {round, if(token == "", do: Settings.get("lichess_token"), else: token)}
   end
 
   # --- events ------------------------------------------------------------------
@@ -125,6 +157,57 @@ defmodule AlnaslWeb.SetupLive do
 
         {:noreply, load(socket)}
     end
+  end
+
+  # One form, two buttons, like the results server's: "Test" saves nothing.
+  def handle_event("save_lichess", %{"lichess" => params, "intent" => "test"}, socket) do
+    {round, token} = read_lichess(params)
+    send(self(), {:run_lichess_test, round, token})
+
+    {:noreply,
+     assign(socket,
+       lichess_testing?: true,
+       lichess_checks: nil,
+       lichess_form: to_form(Map.put(params, "token", ""), as: :lichess)
+     )}
+  end
+
+  def handle_event("save_lichess", %{"lichess" => params}, socket) do
+    case read_lichess(params) do
+      {:error, _token} ->
+        {:noreply,
+         socket
+         |> assign(lichess_form: to_form(Map.put(params, "token", ""), as: :lichess))
+         |> put_flash(
+           :error,
+           gettext(
+             "That is not a Lichess round. Paste the link to the round, or its id of eight characters."
+           )
+         )}
+
+      {round, token} ->
+        Settings.put_many(%{
+          "lichess_round_id" => round,
+          "lichess_token" => token || "",
+          "lichess_round" => int(params["round_no"], Settings.get("round") || 1, 1, 999)
+        })
+
+        Destination.set_enabled(LichessBroadcast, params["enabled"] == "true")
+        Log.add(:info, "setup.saved", %{})
+        {:noreply, socket |> put_flash(:info, gettext("Saved.")) |> load()}
+    end
+  end
+
+  def handle_event("clear_lichess", _params, socket) do
+    Settings.put_many(%{"lichess_round_id" => "", "lichess_token" => ""})
+    Destination.set_enabled(LichessBroadcast, false)
+    Log.add(:info, "setup.saved", %{})
+
+    {:noreply,
+     socket
+     |> assign(lichess_checks: nil)
+     |> put_flash(:info, gettext("The Lichess round and its token are forgotten."))
+     |> load()}
   end
 
   def handle_event("save_box", %{"box" => params}, socket) do
@@ -224,6 +307,16 @@ defmodule AlnaslWeb.SetupLive do
         else: Tournament.test(url, slug, key)
 
     {:noreply, assign(socket, checks: checks, testing?: false)}
+  end
+
+  def handle_info({:run_lichess_test, round, token}, socket) do
+    checks =
+      case round do
+        :error -> [account: :skipped, scope: :skipped, round: {:error, :round_not_found}]
+        round -> LichessApi.test(LichessApi.base(), round, token)
+      end
+
+    {:noreply, assign(socket, lichess_checks: checks, lichess_testing?: false)}
   end
 
   def handle_info(_other, socket), do: {:noreply, socket}
@@ -329,6 +422,120 @@ defmodule AlnaslWeb.SetupLive do
           </p>
         </.panel>
 
+        <.panel id="setup-lichess" title={gettext("Lichess broadcast")}>
+          <p class="note">
+            {gettext(
+              "Optional. The box pushes each game of one round to a Lichess broadcast round as it changes - besides the results site, and without waiting for it. On Lichess, make the broadcast and its round first; leave the round's source empty."
+            )}
+            <.link navigate={~p"/help#help-lichess"}>{gettext("How, step by step")}</.link>
+          </p>
+          <.form for={@lichess_form} id="lichess-form" phx-submit="save_lichess" class="stack">
+            <.input
+              field={@lichess_form[:round]}
+              id="lichess-round"
+              label={gettext("The round on Lichess")}
+              hint={
+                gettext(
+                  "Paste the link to the round (lichess.org/broadcast/.../ID), or the ID itself."
+                )
+              }
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <.input
+              field={@lichess_form[:token]}
+              id="lichess-token"
+              type="password"
+              label={gettext("Lichess token")}
+              hint={
+                if @lichess_hint,
+                  do:
+                    gettext("A token is stored (%{hint}). Leave this empty to keep it.",
+                      hint: @lichess_hint
+                    ),
+                  else:
+                    gettext(
+                      "A personal access token of the broadcast's owner, with the permission to create and update studies and broadcasts (study:write). It starts with lip_."
+                    )
+              }
+              autocomplete="off"
+            />
+            <.input
+              field={@lichess_form[:round_no]}
+              id="lichess-round-no"
+              type="number"
+              min="1"
+              max="999"
+              label={gettext("Which round of the tournament it is")}
+            />
+            <.input
+              field={@lichess_form[:enabled]}
+              id="lichess-enabled"
+              type="checkbox"
+              label={gettext("Send the games of that round to Lichess")}
+            />
+            <div class="row">
+              <.button id="save-lichess" variant="primary" type="submit">{gettext("Save")}</.button>
+              <.button
+                id="test-lichess"
+                type="submit"
+                name="intent"
+                value="test"
+                phx-disable-with={gettext("Testing...")}
+              >
+                {gettext("Test")}
+              </.button>
+              <.button
+                :if={@lichess_hint || @lichess_round_id not in [nil, ""]}
+                id="clear-lichess"
+                type="button"
+                variant="danger"
+                phx-click="clear_lichess"
+                data-confirm={gettext("Forget the Lichess round and its token?")}
+              >
+                {gettext("Forget")}
+              </.button>
+            </div>
+          </.form>
+          <p
+            :if={@lichess_testing?}
+            id="lichess-test-running"
+            class="note"
+            role="status"
+            style="margin-top:0.8rem"
+          >
+            {gettext("Asking Lichess...")}
+          </p>
+          <ul
+            :if={@lichess_checks}
+            id="lichess-test-result"
+            class="stack"
+            style="list-style:none;padding:0;margin:0.8rem 0 0"
+            role="status"
+          >
+            <li
+              :for={{step, result} <- @lichess_checks}
+              id={"lichess-check-#{step}"}
+              class="row"
+              style="align-items:flex-start;flex-wrap:nowrap"
+            >
+              <% {tone, sentence} = DestinationWords.test_step(step, result) %>
+              <.badge
+                tone={tone}
+                icon={if tone == "ok", do: "ok", else: if(tone == nil, do: "waiting", else: "error")}
+              >
+                {DestinationWords.step_name(step)}
+              </.badge>
+              <span>{sentence}</span>
+            </li>
+          </ul>
+          <p class="note" style="margin-top:0.8rem">
+            {gettext(
+              "The test asks Lichess who the token belongs to and whether the round exists. It sends no game and changes nothing there."
+            )}
+          </p>
+        </.panel>
+
         <.panel id="setup-box" title={gettext("This box")}>
           <.form for={@box_form} id="box-form" phx-submit="save_box" class="stack">
             <div class="form-grid">
@@ -425,6 +632,10 @@ defmodule AlnaslWeb.SetupLive do
               {gettext("Remove the PIN")}
             </.button>
           </.form>
+        </.panel>
+
+        <.panel id="setup-phone" title={gettext("Open this site on your phone")}>
+          <Access.phone id="setup-phone-access" />
         </.panel>
 
         <.panel id="setup-tracker" title={gettext("How patient the tracker is")}>

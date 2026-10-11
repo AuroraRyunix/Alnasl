@@ -4,6 +4,8 @@ import "phoenix_html"
 import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import topbar from "../vendor/topbar"
+// Hooks written beside the template that uses them (the phone pages).
+import {hooks as colocatedHooks} from "phoenix-colocated/alnasl"
 
 // The theme follows the system until the arbiter picks one; the pick is kept
 // in this browser.
@@ -31,7 +33,7 @@ const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: Hooks,
+  hooks: {...colocatedHooks, ...Hooks},
 })
 
 topbar.config({barColors: {0: "#0a5967"}, shadowColor: "rgba(0, 0, 0, .25)"})

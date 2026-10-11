@@ -9,8 +9,9 @@ defmodule AlnaslWeb.OutboxLive do
 
   use AlnaslWeb, :live_view
 
-  alias Alnasl.{Outbox, Settings}
-  alias AlnaslWeb.Words
+  alias Alnasl.{Destination, Outbox, Settings}
+  alias Alnasl.Destination.LichessBroadcast
+  alias AlnaslWeb.{DestinationWords, Words}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -23,6 +24,8 @@ defmodule AlnaslWeb.OutboxLive do
       rejected: Outbox.list("rejected", 30),
       sent: Outbox.list("sent", 30),
       counts: Outbox.counts(),
+      destinations: Destination.statuses(),
+      lichess_refused: LichessBroadcast.refused(),
       server: Settings.get("server_url"),
       slug: Settings.get("slug"),
       refresh_due?: false
@@ -33,6 +36,22 @@ defmodule AlnaslWeb.OutboxLive do
   def handle_event("send_now", _params, socket) do
     Outbox.send_now()
     {:noreply, put_flash(socket, :info, gettext("Trying now."))}
+  end
+
+  # One destination's own "send now": the others are left to their pauses.
+  def handle_event("dest_send", %{"id" => id}, socket) do
+    if module = Destination.get(id), do: Destination.send_now(module)
+
+    {:noreply,
+     put_flash(socket, :info, gettext("Trying %{name} now.", name: DestinationWords.name(id)))}
+  end
+
+  def handle_event("dest_toggle", %{"id" => id}, socket) do
+    if module = Destination.get(id) do
+      Destination.set_enabled(module, not Destination.enabled?(module))
+    end
+
+    {:noreply, load(socket)}
   end
 
   def handle_event("prune", _params, socket) do
@@ -119,6 +138,65 @@ defmodule AlnaslWeb.OutboxLive do
             "Every move is written on the box before it is sent, and stays here until the server has answered for it. Without a connection the box simply keeps them; they go out in order when it is back."
           )}
         </p>
+      </.panel>
+
+      <.panel id="destinations" title={gettext("Where the games go")}>
+        <p class="note">
+          {gettext(
+            "Each destination has its own queue and its own patience. One being offline, refused or switched off never holds up another."
+          )}
+        </p>
+        <ul class="dests">
+          <li :for={d <- @destinations} id={"dest-#{d.id}"} class="dest">
+            <% {tone, icon, word} = DestinationWords.state(d) %>
+            <div class="row">
+              <b>{DestinationWords.name(d.id)}</b>
+              <.badge id={"dest-state-#{d.id}"} tone={tone} icon={icon}>{word}</.badge>
+              <span id={"dest-waiting-#{d.id}"} class="note">
+                {gettext("%{n} waiting", n: d.pending)}
+              </span>
+            </div>
+            <p class="note">{DestinationWords.about(d.id)}</p>
+            <p id={"dest-line-#{d.id}"} class="dest-line">
+              {gettext("Last success: %{t}.",
+                t:
+                  if(d.last_ok,
+                    do: Words.time(d.last_ok),
+                    else: gettext("none since the box started")
+                  )
+              )}
+              <span :if={d.last_error && d.state in [:offline, :blocked]} id={"dest-error-#{d.id}"}>
+                {DestinationWords.error(d.last_error)}
+              </span>
+              <span :if={d.next_try_at && d.state in [:offline, :blocked]}>
+                {gettext("Next try at %{t}.", t: Words.time(d.next_try_at))}
+              </span>
+            </p>
+            <ul :if={d.id == "lichess" and @lichess_refused != []} id="lichess-refused" class="note">
+              <li :for={{game, message} <- @lichess_refused}>
+                {gettext("Lichess refused board %{n}: %{message}", n: game.board_no, message: message)}
+              </li>
+            </ul>
+            <div class="row">
+              <.button
+                id={"dest-send-#{d.id}"}
+                small
+                icon="send"
+                phx-click="dest_send"
+                phx-value-id={d.id}
+                disabled={!d.enabled?}
+              >
+                {gettext("Send now")}
+              </.button>
+              <.button id={"dest-toggle-#{d.id}"} small phx-click="dest_toggle" phx-value-id={d.id}>
+                {if d.enabled?, do: gettext("Switch off"), else: gettext("Switch on")}
+              </.button>
+              <.link :if={d.state == :unconfigured} navigate={~p"/setup"}>
+                {gettext("Set it up")}
+              </.link>
+            </div>
+          </li>
+        </ul>
       </.panel>
 
       <.panel id="waiting" title={gettext("Waiting (%{n})", n: @link.pending)} flush>

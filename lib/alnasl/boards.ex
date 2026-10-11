@@ -162,6 +162,7 @@ defmodule Alnasl.Boards do
       address: board.address,
       round: board.round,
       board_no: board.board_no,
+      table_no: board.table_no,
       flipped: board.flipped,
       serial: board.serial,
       firmware: board.firmware,
@@ -251,9 +252,18 @@ defmodule Alnasl.Boards do
     |> Enum.each(fn {board, number} -> link(board, round, number) end)
   end
 
-  @doc "Moves every linked board to the same board number of another round: the next round begins."
+  @doc """
+  Moves every linked board on to another round: the next round begins. A
+  board with a table number feeds the board of that number again; one
+  without keeps the board number it had.
+  """
   def move_to_round(round) do
-    for board <- list(), board.board_no != nil, do: link(board, round, board.board_no)
+    # A board with a sticker goes back to its own number: "table 7 plays
+    # board 3" was said for a round, not for the tournament.
+    for board <- list(), board.board_no != nil do
+      link(board, round, board.table_no || board.board_no)
+    end
+
     Settings.put("round", round)
     :ok
   end

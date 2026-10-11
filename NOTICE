@@ -29,7 +29,14 @@ It includes the following, which keep their own notices:
    The twelve drawings are packed into one SVG sprite; the drawings are
    unchanged. The sprite was taken from OpenResults.
 
-3. Test games
+3. The QR code encoder
+
+   The Hex package `eqrcode` (https://hex.pm/packages/eqrcode), a
+   dependency, not a copy: Copyright (c) 2024 Silicon Jungles, MIT licence.
+   It turns the box's address into the matrix of a QR code; the drawing of
+   that matrix as SVG is Alnasl's own (lib/alnasl_web/access.ex).
+
+4. Test games
 
    priv/games/classics.pgn and the three single games beside it are the
    moves of chess games played between 1620 and 1928. The moves of a chess

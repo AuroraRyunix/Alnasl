@@ -76,15 +76,144 @@ arbiter's laptop on the hall's network. English and Dutch, light and dark.
 |---|---|
 | **Round** | The screen during play. A tile per board: players, the position the box is sure of, clocks, last move, and the state as a shape and a word - Live, Waiting for start, Settling, Recovered a move, Out of sync, No signal, Finished. A tile is the way to the board's own page. Fetch the pairings, start the next round |
 | **A board** | The position large, the move list, and - when board and game have parted ways - what the board reads beside what is certain. The repair tools: resync from the board (search deeper, or pick from the candidates), type moves, undo, change a move, set the result, start from a FEN, pause and resume sending, turn the board round |
-| **Boards** | What is plugged in. Add a DGT board or a simulator; connect and disconnect; each board's live picture, signal quality, serial number and firmware; the start-position check ("black queen and black king are swapped (d8, e8)"); link a board to its board number, or a whole row in order |
-| **Outbox** | The connection, honestly: connected or not, last success, how much is waiting and why it is not going, in words. What waits, what the server refused, what went out. "Send now" |
+| **Boards** | What is plugged in. Add a DGT board or a simulator; connect and disconnect; each board's live picture, signal quality, serial number and firmware; the start-position check ("black queen and black king are swapped (d8, e8)"); each board's **table number** and its board of the round; "Which board is this?"; "Ready for round N?" with the reasons when it is not; the address and QR code for a phone; a printable sheet of labels. See [Which board is which](#which-board-is-which) |
+| **Number / Find** | Two phone-sized pages under Boards: number the boards of a hall by touching them in order, and find out which board the one in front of you is |
+| **Outbox** | The connections, honestly: for the results server and for every other destination, connected or not, last success, how much is waiting and why it is not going, in words; each with its own switch and its own "Send now". What waits, what the server refused, what went out |
 | **PGN** | Read PGN files or pasted moves (checked for legality). Play a game on a simulator board; attach a game that was not captured to its board, after asking; compare a scoresheet with the captured game (the first difference). Export a game or the whole round |
 | **Recordings** | The raw captures per board. Replay one through the tracker as a dry run (what it makes of it, where it lost the thread); export it as a test fixture; download it |
 | **Log** | What happened, in sentences, with filters: board connected, moves recovered, out of sync, repaired by the arbiter, offline, back |
-| **Setup** | Results server, tournament (its short name, or paste the link), relay key (never shown again once saved), "Test connection" that really asks the server and explains failures; the box's name, language, round; a PIN for other machines; the tracker's timings |
+| **Setup** | Results server, tournament (its short name, or paste the link), relay key (never shown again once saved), "Test connection" that really asks the server and explains failures; a Lichess broadcast round and its token, with a test of its own; the box's name, language, round; a PIN for other machines and the address they open; the tracker's timings |
 | **Help** | The cycle on one page: before the round, during, after, and when something is wrong |
 
 A banner on every page says so when the results server cannot be reached.
+
+## Which board is which
+
+Twelve boards look alike, and so do twelve cables. Alnasl keeps three things
+apart, and the Boards page shows all three:
+
+1. **Which board it is.** A DGT board reports its serial number (it is also
+   on a label under the board); that is its identity. Not the USB port: pull
+   the cable, use another port, restart the box, and it is still the same
+   board with the same number. When a known board turns up on another port -
+   you add it there - the box recognises the serial and puts it back in its
+   old row, with its number, its game and its captures. A board the box has
+   never seen says "New board" and asks for a number. The same holds when
+   the ports come up in another order after a restart, or two cables are
+   swapped at the hub: the rows change ports, not identities - table 7 stays
+   the board that carries the sticker. And when a board the box does not
+   know sits on a known board's cable, it gets a row of its own and the
+   known board waits for its own to turn up; except mid-game, where nothing
+   is touched and the mismatch is listed. (A board on a loop
+   that reports no serial is known by its bus address; a simulator by its
+   slot.)
+2. **Its table number.** The sticker on the board: "this is table 7". Set
+   once for a hall. *Labels* prints a sheet of them, with the serial under
+   the number, so a sticker that has come off goes back on the right board.
+3. **Its board of the round.** Normally the table number. For one round the
+   arbiter can say otherwise ("table 7 plays board 3 today"), swap two, or
+   put everything back; the next round starts from the table numbers again.
+   On the Round page the board number is the big figure and "table 7 ·
+   serial 06310" the small print.
+
+Giving the numbers:
+
+- **Number by touching** - press Start, lift a piece on table 1's board,
+  then on table 2's, and so on. Each board gets the next number the moment
+  it feels the piece go. Undo, Skip, Stop.
+- **Number all in connection order** - one click.
+- **By hand** - type it in the Table column.
+
+And finding a board: **Which board is this?** lights up the row of the board
+you touch; **Show me** on a row tells you the serial to look for and says
+whether the board you then touch is the right one. Alnasl does not make a
+board beep or blink: no DGT command for that is sent, because none was
+verified.
+
+**Ready for round N?** is one list before the round: two boards with the
+same number, a board of the round without a board, a board without a number,
+the same serial seen twice (the same board on two ports, two adapters on one
+loop), a board that does not answer, a starting position that is wrong
+(colours swapped, king and queen), a board plugged in turned round (noticed
+and read the other way up - mentioned, not held against you).
+
+### With your phone
+
+The numbering is meant to be done walking: the two pages are built for a
+phone held in one hand.
+
+1. Start the box with `ALNASL_LISTEN=lan` and **set a PIN in Setup** -
+   before the hall fills up. Without one, anybody on the hall's network who
+   finds the address can renumber your boards.
+2. Boards (or Setup) on the box shows "Open this site on your phone": the
+   box's address as text, and as a QR code drawn on the box itself. Point
+   the camera at it, give the PIN once.
+3. Boards > *Number by touching* > Start. The next table number fills the
+   screen. Lift a piece: the phone flashes the number and the board's
+   serial, buzzes, and beeps (the beep has a switch).
+4. Undo, Skip and Stop are at the bottom, under the thumb.
+
+The run is kept on the box, not in the page. A phone that drops off the
+Wi-Fi between two tables comes back to the run where it stands; the same
+page on the box's own screen shows the same thing at the same moment. It
+ends by itself when every board has a number, or after fifteen minutes
+without a touch - so it is not still handing out numbers when the round has
+started and forty hands are on the boards.
+
+## Where the games go
+
+The results server is one destination. There can be more, and they do not
+wait for each other: each has its own queue, its own pause after a failure,
+its own line on the Outbox page (connected or not, last success, how many
+wait, the last error in words), its own switch and its own "Send now".
+
+| Destination | What it gets | Its place in the queue |
+|---|---|---|
+| **Results server** (OpenResults) | every change as a message of its own: the whole game so far, with the clock | the row of the outbox it has got to |
+| **Lichess broadcast** | the PGN of each game of one round as it stands, whenever it changed | per game, the game's change counter at the last push Lichess answered for |
+
+### Broadcasting on Lichess
+
+Two ways. They can run side by side.
+
+**Push - the box sends to Lichess.**
+
+1. On Lichess, make a broadcast (lichess.org/broadcast/new) and a round in
+   it. Leave the round's source empty: the games are pushed.
+2. Make a personal access token (lichess.org/account/oauth/token) with the
+   permission to create and update studies and broadcasts (`study:write`).
+   It must belong to the broadcast's owner or a contributor.
+3. On the box: Setup > *Lichess broadcast*. Paste the link to the round (or
+   its id), the token, the round of the tournament it stands for; tick
+   "Send the games"; Save. *Test* asks Lichess who the token belongs to,
+   whether it may write studies and whether the round is there - and says in
+   words what is not right. It sends no game.
+4. From then on every move, correction and result goes to Lichess as the
+   game's whole PGN: White, Black, titles, ratings and FIDE ids as the
+   pairing program knows them, Round, Board, Result, and the clock after
+   each move as `{[%clk h:mm:ss]}`. A burst of moves is one request (at most
+   one every two seconds, with every changed game of the round in it); a
+   `429` is obeyed for as long as Lichess asks. Offline, the games wait and
+   go out as they stand when the line is back.
+
+The token is stored on the box as given (it has to be sent) and is never
+shown again in full. A new round on Lichess has a new id: change it in
+Setup when the round changes.
+
+What of this is documented by Lichess and what is assumed is listed at the
+top of `lib/alnasl/destination/lichess_api.ex`. It has been run against a
+stand-in for Lichess, not yet against lichess.org.
+
+**Pull - Lichess fetches from the results site.** OpenResults serves a whole
+round as one PGN:
+
+    https://<results site>/t/<tournament>/live/<round>/pgn
+
+Give that address to the Lichess round as its source and Lichess reads it
+every few seconds. Alnasl needs nothing for this - no token, no setting; it
+only has to reach the results site as it always does. Spectators on Lichess
+see what the results site shows, its broadcast delay included. The same
+address works for any tool that follows a PGN on the web.
 
 ## Running it
 
@@ -124,7 +253,7 @@ A systemd unit and a ready-made image are not part of this build.
 | Variable | Default | Meaning |
 |---|---|---|
 | `PORT` | `4040` | The port of the management site |
-| `ALNASL_LISTEN` | (local only) | `lan` to let other machines in the hall reach the site. Set a PIN in Setup when you do |
+| `ALNASL_LISTEN` | (local only) | `lan` to let other machines in the hall reach the site - the arbiter's laptop, and the phone the boards are numbered with. Set a PIN in Setup when you do |
 | `ALNASL_DATA` | `./data` (dev), `~/.alnasl` (prod) | Where everything is kept |
 | `ALNASL_UART` | on for Linux/macOS, off for Windows | `1` / `0`: build the serial library or not |
 
@@ -191,6 +320,9 @@ page says so, and simulator boards are unaffected.
   first, numbered per game, then sent in order with the relay key. Each
   message is the whole game so far, which is the server's own rule and what
   makes a retry harmless. Offline for hours is normal.
+- **More than one destination.** The results server is one; a Lichess
+  broadcast is another (`Alnasl.Destination`). Each keeps its own place in
+  the queue and its own sender, so one being down never holds up another.
 - **Everything is recorded raw**, per board, so a game can be rebuilt and a
   failure in a hall replayed at a desk.
 - **A result is never final without the arbiter.** Mate on the board, or
@@ -270,7 +402,19 @@ and names on every page in both languages.
   to work, not something read in a specification. It is only ever a
   suggestion.
 - **No DGT clock commands** are sent (nothing is written to the clock's
-  display); the clock is only read.
+  display); the clock is only read. For the same reason "Show me" cannot
+  make a board or its clock beep: you are told the serial to look for.
+- **Lichess has not been met.** The push destination follows Lichess's API
+  documentation; the answers it expects are marked `ASSUMED` where the
+  documentation leaves room (`lib/alnasl/destination/lichess_api.ex`). Its
+  tests run against a stand-in that makes the same assumptions.
+- **A board that moves to a port the box has no board on is recognised
+  when it is added there**, not by itself: Alnasl does not open serial ports
+  nobody told it to open. (Boards that change places among the ports it
+  already reads are sorted out without anybody.)
+- **The phone pages were not held in a hand.** They are laid out for 375 px
+  and tested for what they contain and do; the buzz and the beep are browser
+  features a test cannot feel (iOS Safari has no vibration at all).
 - **Chess960** is not supported (neither is it by the server's checker).
 - **Three or more moves unseen in a row** can be reconstructed wrongly in
   constructed cases (flagged, never silent) - see the table above.
@@ -286,7 +430,8 @@ and names on every page in both languages.
 ## Stack
 
 Elixir, Phoenix 1.8 LiveView, SQLite (`ecto_sqlite3`), `Req` for HTTP,
-`circuits_uart` for serial ports. No Tailwind and no component library: the
+`circuits_uart` for serial ports, `eqrcode` (MIT) for the QR code of the
+box's address. No Tailwind and no component library: the
 stylesheet is hand-written (`assets/css/app.css`), bundled by esbuild.
 
 ## License

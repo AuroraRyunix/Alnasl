@@ -12,6 +12,7 @@ defmodule AlnaslWeb.RoundLive do
   use AlnaslWeb, :live_view
 
   alias Alnasl.{Boards, Games, Position, Settings, Tournament}
+  alias AlnaslWeb.TableWords
 
   @impl true
   def mount(_params, _session, socket) do
@@ -77,6 +78,8 @@ defmodule AlnaslWeb.RoundLive do
           paused: (snap && snap[:paused]) || (game && game.paused) || false,
           warning: snap && snap[:warning],
           board_name: snap && snap.name,
+          # Small, under the big board number: which physical board feeds it.
+          sticker: snap && TableWords.sticker(snap),
           published: pairing[:result]
         }
       end
@@ -285,7 +288,12 @@ defmodule AlnaslWeb.RoundLive do
             <span :if={tile.suggestion && !tile.result} class="flag">{gettext("Result? %{r}",
               r: tile.suggestion
             )}</span>
-            <span :if={tile.board_name} class="right">{tile.board_name}</span>
+            <span
+              :if={tile.board_name}
+              id={"tile-sticker-#{tile.no}"}
+              class="right"
+              title={tile.board_name}
+            >{tile.sticker}</span>
           </div>
         </.link>
       </div>
