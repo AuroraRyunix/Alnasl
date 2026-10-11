@@ -41,7 +41,14 @@ defmodule Mix.Tasks.Alnasl.Dgt do
   def run(args) do
     {opts, _rest} =
       OptionParser.parse!(args,
-        strict: [port: :string, out: :string, seconds: :integer, list: :boolean, bus: :string]
+        strict: [
+          port: :string,
+          out: :string,
+          seconds: :integer,
+          list: :boolean,
+          bus: :string,
+          notes: :boolean
+        ]
       )
 
     Mix.Task.run("app.config")
@@ -116,7 +123,9 @@ defmodule Mix.Tasks.Alnasl.Dgt do
     seconds = if opts[:seconds] == nil, do: 60, else: opts[:seconds]
     if seconds > 0, do: Process.send_after(self(), :stop, seconds * 1000)
     me = self()
-    spawn_link(fn -> notes(me) end)
+    # `--no-notes` for a terminal nobody is typing in (a script, an agent):
+    # reading the keyboard there fails and takes the capture with it.
+    if opts[:notes] != false, do: spawn_link(fn -> notes(me) end)
 
     Mix.shell().info(
       "Listening on #{port}#{if seconds > 0, do: " for #{seconds} s", else: ""}. Writing #{out}. Type a note + Enter to mark the capture."
