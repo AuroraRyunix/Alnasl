@@ -43,7 +43,8 @@ defmodule Alnasl.HallCase do
       "promotion_hold_ms" => 200,
       "takeback_settle_ms" => 120,
       "transient_ms" => 400,
-      "lifted_ms" => 1_500
+      "lifted_ms" => 1_500,
+      "unseen_hold_ms" => 150
     })
 
     Boards.subscribe()

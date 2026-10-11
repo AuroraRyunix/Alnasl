@@ -18,6 +18,7 @@ defmodule Alnasl.Games do
     "recovered" => :recovered,
     "long_gap" => :long_gap,
     "assumed" => :assumed,
+    "unseen" => :unseen,
     "arbiter" => :arbiter,
     "imported" => :imported
   }

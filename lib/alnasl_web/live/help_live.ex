@@ -179,6 +179,16 @@ defmodule AlnaslWeb.HelpLive do
               )}
             </dd>
           </dl>
+          <p id="help-unseen">
+            {gettext(
+              "\"White knight not seen on f3\" on a tile or a board's page is a warning, not an alarm: a piece left its square (parked beside the board, or the sensor lost it) and the game went on, so the box takes it to be standing there still and follows the moves. It goes away when the piece is seen there again, moves, or is taken. If the piece was in fact captured, correct the moves on the board's page. Setup has the switch."
+            )}
+          </p>
+          <p id="help-looking-back">
+            {gettext(
+              "On a board's page the Left and Right arrow keys, the buttons under the board, or a tap on a move step back through the game; Home is the start, End or \"Live\" is the game as it is played. Moves that arrive while you look back are added to the list and do not move the board."
+            )}
+          </p>
           <p>
             {gettext(
               "A banner across the top means the results site cannot be reached. Play goes on and nothing is lost; the Outbox page says how much is waiting and why."

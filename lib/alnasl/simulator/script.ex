@@ -31,6 +31,7 @@ defmodule Alnasl.Simulator.Script do
   | `:leave_pawn` | a pawn promoted to a queen but left standing as a pawn |
   | `:slam` | the move in one reading: the piece was never seen in the air, and a capture never in two steps. A hand faster than the board scans |
   | `:topple` | the move knocks a neighbour over: it is off its square when the clock is pressed and set back on the opponent's time |
+  | `:unseen` | a piece (never a king) stops being seen where it stands, for `:unseen_plies` plies or until it moves or is taken: parked beside the board, or standing where the sensor loses it. The game goes on |
 
   Besides those: `:unplug` (`[{ply, plies}]` - the board is gone from before
   `ply` for that many plies, then back), `:illegal_at` (a ply at which the
@@ -81,7 +82,9 @@ defmodule Alnasl.Simulator.Script do
     press_ms: {150, 900},
     # `{low, high}`: the clock's reading reaches the box that much after
     # the press, whatever the hands do meanwhile. `nil`: at once.
-    clock_lag_ms: nil
+    clock_lag_ms: nil,
+    # For how many plies a piece of the `:unseen` fault stays out of sight.
+    unseen_plies: {1, 5}
   }
 
   @bullet %{
@@ -132,7 +135,8 @@ defmodule Alnasl.Simulator.Script do
       derailed: false,
       unplug_left: 0,
       streak: 0,
-      clock_at: 0
+      clock_at: 0,
+      hidden: nil
     }
 
     st = emit(st, {:position, st.b})
@@ -202,6 +206,7 @@ defmodule Alnasl.Simulator.Script do
         if left == 0, do: st |> wait(700) |> plug(), else: st
 
       true ->
+        st = st |> see_again(number) |> maybe_hide(number)
         {missed?, st} = chance(st, :missed)
 
         if missed? and st.streak < o.missed_streak do
@@ -249,6 +254,35 @@ defmodule Alnasl.Simulator.Script do
       |> steps([{:put, square, piece}])
     else
       maybe_press(st, pos, number)
+    end
+  end
+
+  # The `:unseen` fault. The piece stands where it stood; the board just
+  # does not report it (`emit/2`).
+  defp maybe_hide(%{hidden: nil} = st, number) do
+    {yes?, st} = chance(st, :unseen)
+    squares = for sq <- occupied(st.b), not match?({_, :k}, elem(st.b, sq)), do: sq
+
+    if yes? and squares != [] do
+      {square, st} = pick(st, squares)
+      {plies, st} = between(st, st.o.unseen_plies)
+      st = %{st | hidden: %{square: square, piece: elem(st.b, square), until: number + plies}}
+      st |> note(number, :unseen) |> emit({:position, st.b}) |> pause(st.o.fault_ms)
+    else
+      st
+    end
+  end
+
+  defp maybe_hide(st, _number), do: st
+
+  defp see_again(%{hidden: nil} = st, _number), do: st
+
+  defp see_again(%{hidden: hidden} = st, number) do
+    cond do
+      # It moved, or was taken: the board has shown that by itself.
+      elem(st.b, hidden.square) != hidden.piece -> %{st | hidden: nil}
+      number >= hidden.until -> %{st | hidden: nil} |> emit({:position, st.b}) |> pause()
+      true -> st
     end
   end
 
@@ -583,6 +617,11 @@ defmodule Alnasl.Simulator.Script do
 
   defp emit(%{mute: true} = st, {:position, _board}), do: st
   defp emit(%{mute: true} = st, {:clock, _reading}), do: st
+
+  defp emit(%{hidden: %{square: square, piece: piece}} = st, {:position, board})
+       when elem(board, square) == piece,
+       do: %{st | ev: [{st.t, {:position, put_elem(board, square, nil)}} | st.ev]}
+
   defp emit(st, event), do: %{st | ev: [{st.t, event} | st.ev]}
 
   # A reading that arrives later than it was made - but never before the

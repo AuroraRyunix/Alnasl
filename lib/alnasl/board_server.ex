@@ -401,6 +401,10 @@ defmodule Alnasl.BoardServer do
           {:clock, _reading} ->
             {state, queue}
 
+          {:unseen, pieces} ->
+            log_unseen(state, pieces)
+            {state, queue}
+
           {:warning, :move_missing, presses, plies} ->
             Log.add(:warn, "clock.move_missing", %{presses: presses, plies: plies}, ref(state))
             {%{state | warning: :move_missing}, queue}
@@ -443,6 +447,21 @@ defmodule Alnasl.BoardServer do
 
       true ->
         :ok
+    end
+  end
+
+  # A piece went out of sight and the game went on, or it is accounted for
+  # again (seen, moved or taken - the moves say which).
+  defp log_unseen(state, []), do: Log.add(:info, "piece.accounted", %{}, ref(state))
+
+  defp log_unseen(state, pieces) do
+    for %{square: square, piece: {colour, kind}} <- pieces do
+      Log.add(
+        :warn,
+        "piece.unseen",
+        %{square: Position.square_name(square), colour: colour, piece: kind},
+        ref(state)
+      )
     end
   end
 
@@ -681,6 +700,10 @@ defmodule Alnasl.BoardServer do
         {:result_suggestion, result, why} ->
           suggest(state, result, why)
 
+        {:unseen, pieces} ->
+          log_unseen(state, pieces)
+          state
+
         _other ->
           state
       end
@@ -733,6 +756,7 @@ defmodule Alnasl.BoardServer do
         last_move: last && {last.from, last.to},
         plies: Enum.map(tracker.plies, &Map.take(&1, [:san, :flags])),
         candidates: Tracker.candidates(tracker),
+        unseen: for(%{square: sq, piece: piece} <- Tracker.unseen(tracker), do: {sq, piece}),
         clock: Clock.read(state.session.clock, t),
         clock_check: Session.clock_check(state.session),
         clock_alarm: state.session.clock_alarm,
@@ -755,6 +779,7 @@ defmodule Alnasl.BoardServer do
         detail: nil,
         plies: [],
         candidates: [],
+        unseen: [],
         clock: nil,
         clock_check: Clock.start_check(state.clock),
         clock_alarm: nil,

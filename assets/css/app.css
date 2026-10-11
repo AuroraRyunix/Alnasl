@@ -1841,3 +1841,38 @@ tr.sought td:first-child {
     transition: none !important;
   }
 }
+
+/* --- a board's page: looking back through the moves -------------------------- */
+
+.moves button.ply {
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 550;
+  text-align: left;
+  cursor: pointer;
+}
+
+.moves .ply.last {
+  background: var(--sq-mark);
+}
+
+.moves .ply.at {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.move-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+}
+
+.move-nav .btn {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  justify-content: center;
+}

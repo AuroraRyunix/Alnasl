@@ -316,6 +316,24 @@ defmodule AlnaslWeb.Words do
   def clock_alarm(_black),
     do: gettext("Black's clock is running and White has not moved")
 
+  @doc """
+  A piece the board does not show, taken to stand where it stood
+  (`{square, piece}`): the warning that stays for as long as that lasts.
+  """
+  def unseen({square, {:w, kind}}),
+    do:
+      gettext("White %{piece} not seen on %{square}",
+        piece: kind(kind),
+        square: Position.square_name(square)
+      )
+
+  def unseen({square, {_black, kind}}),
+    do:
+      gettext("Black %{piece} not seen on %{square}",
+        piece: kind(kind),
+        square: Position.square_name(square)
+      )
+
   def piece({:w, kind}), do: gettext("white %{piece}", piece: kind(kind))
   def piece({:b, kind}), do: gettext("black %{piece}", piece: kind(kind))
 
@@ -325,11 +343,14 @@ defmodule AlnaslWeb.Words do
   defp kind(:b), do: gettext("bishop")
   defp kind(:n), do: gettext("knight")
   defp kind(:p), do: gettext("pawn")
+  defp kind(text) when text in ~w(k q r b n p), do: kind(String.to_existing_atom(text))
+  defp kind(_other), do: gettext("piece")
 
   @doc "A flag on a move, as the small word shown beside it."
   def flag(:recovered), do: gettext("recovered")
   def flag(:long_gap), do: gettext("3+ at once")
   def flag(:assumed), do: gettext("queen assumed")
+  def flag(:unseen), do: gettext("a piece not seen")
   def flag(:arbiter), do: gettext("by hand")
   def flag(:imported), do: gettext("from PGN")
   def flag(other), do: to_string(other)
@@ -379,6 +400,25 @@ defmodule AlnaslWeb.Words do
 
   defp log("move.assumed", d),
     do: gettext("Promotion piece not seen, a queen assumed: %{moves}", moves: moves(d))
+
+  defp log("piece.unseen", %{"colour" => "w"} = d),
+    do:
+      gettext(
+        "White %{piece} is gone from %{square} and the game goes on: taken to stand there unseen.",
+        piece: kind(d["piece"]),
+        square: d["square"]
+      )
+
+  defp log("piece.unseen", d),
+    do:
+      gettext(
+        "Black %{piece} is gone from %{square} and the game goes on: taken to stand there unseen.",
+        piece: kind(d["piece"]),
+        square: d["square"]
+      )
+
+  defp log("piece.accounted", _d),
+    do: gettext("The piece that was not seen is accounted for.")
 
   defp log("move.corrected", %{"reason" => "takeback"}),
     do: gettext("A move was taken back on the board.")

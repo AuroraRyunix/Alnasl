@@ -5,6 +5,14 @@ defmodule AlnaslWeb.GameLive do
   what the box is sure of, and the tools to bring them together again.
 
   Every tool here is a statement by the arbiter and is logged as one.
+
+  ## Looking back
+
+  The board follows the game. Left and Right (and the buttons under the
+  board, and a click on a move) step through it; `@at` is then the number
+  of plies shown, and moves that arrive meanwhile are added to the list
+  without moving the board. End, the "Live" button, or stepping forward
+  onto the last move goes back to following (`@at == nil`).
   """
 
   use AlnaslWeb, :live_view
@@ -20,6 +28,7 @@ defmodule AlnaslWeb.GameLive do
       {:ok,
        socket
        |> assign(round: round, no: board, refresh_due?: false, notice: nil, compare: nil)
+       |> assign(at: nil)
        |> assign(page_title: gettext("Board %{n}", n: board))
        |> assign(forms())
        |> load()}
@@ -64,11 +73,36 @@ defmodule AlnaslWeb.GameLive do
             diff != [] and snap.status in [:out_of_sync, :settling, :waiting_start, :no_signal],
           white: snap[:white] || pairing[:white],
           black: snap[:black] || pairing[:black],
-          rows: rows(snap.plies, snap[:start_fen])
+          rows: rows(snap.plies, snap[:start_fen]),
+          line: line(snap.plies, snap[:start_fen])
         }
       end
 
-    assign(socket, board: board, game: game, view: view, refresh_due?: false)
+    # A game that got shorter than the ply being looked at: back to live.
+    at = socket.assigns.at
+    at = if at && view && at < length(view.snap.plies), do: at
+
+    assign(socket, board: board, game: game, view: view, refresh_due?: false, at: at)
+  end
+
+  # The position after each ply, the start included, as what the board
+  # component draws: `[{position_text, last_move_squares}]`. Empty when the
+  # moves do not replay (they always should).
+  defp line(plies, start_fen) do
+    start = start_fen || Chess.start_fen()
+
+    case Chess.replay(start, Enum.map(plies, & &1.san)) do
+      {:ok, replayed} ->
+        {line, _fen} =
+          Enum.map_reduce(replayed, start, fn ply, before ->
+            {{fen_text(ply.fen), Chess.last_squares(before, ply.san)}, ply.fen}
+          end)
+
+        [{fen_text(start), nil} | line]
+
+      _error ->
+        []
+    end
   end
 
   defp offline(game) do
@@ -82,6 +116,7 @@ defmodule AlnaslWeb.GameLive do
       last_move: last,
       start_fen: game.start_fen || Chess.start_fen(),
       candidates: [],
+      unseen: [],
       clock: nil,
       white: game.white,
       black: game.black,
@@ -132,6 +167,30 @@ defmodule AlnaslWeb.GameLive do
   # --- events ------------------------------------------------------------------
 
   @impl true
+  def handle_event("nav", %{"to" => to}, socket) do
+    count = if socket.assigns.view, do: length(socket.assigns.view.snap.plies), else: 0
+    at = socket.assigns.at || count
+
+    at =
+      case to do
+        "start" -> 0
+        "back" -> max(at - 1, 0)
+        "forward" -> at + 1
+        _live -> count
+      end
+
+    {:noreply, assign(socket, at: if(at < count, do: at))}
+  end
+
+  def handle_event("goto", %{"ply" => ply}, socket) do
+    count = if socket.assigns.view, do: length(socket.assigns.view.snap.plies), else: 0
+
+    case Integer.parse(ply) do
+      {at, ""} when at >= 0 and at < count -> {:noreply, assign(socket, at: at)}
+      _last_or_bad -> {:noreply, assign(socket, at: nil)}
+    end
+  end
+
   def handle_event("resync", _params, socket) do
     with_board(socket, fn board ->
       case Boards.resync(board.id, 6) do
@@ -292,7 +351,10 @@ defmodule AlnaslWeb.GameLive do
       case socket.assigns.view do
         %{raw: raw} when is_binary(raw) ->
           {:ok, board} = Position.from_text(raw)
-          Position.placement(board) <> " w - - 0 1"
+          # The side whose clock runs is the side to move; without a
+          # running clock, White - the arbiter can change the letter.
+          turn = if match?(%{running: :black}, socket.assigns.view.snap[:clock]), do: :b, else: :w
+          Position.fen(board, turn)
 
         _none ->
           ""
@@ -392,6 +454,11 @@ defmodule AlnaslWeb.GameLive do
               <span :if={@view.snap[:warning]} id="game-warning" class="flag">{gettext(
                 "Move missing?"
               )}</span>
+              <span
+                :for={{piece, index} <- Enum.with_index(@view.snap[:unseen] || [])}
+                id={"game-unseen-#{index}"}
+                class="flag"
+              >{Words.unseen(piece)}</span>
               <span :if={@board} class="note">{@board.name} · {Words.driver(@board.driver)}</span>
             </div>
 
@@ -405,7 +472,16 @@ defmodule AlnaslWeb.GameLive do
               />
             </div>
 
-            <div :if={@view.apart?} id="twin" class="twin">
+            <div :if={@at} id="looking-back" class="solo">
+              <.board
+                id="board-at"
+                position={@view.line |> Enum.at(@at) |> elem(0)}
+                last={@view.line |> Enum.at(@at) |> elem(1)}
+                coords
+                label={gettext("The position after move %{n} in the list", n: @at)}
+              />
+            </div>
+            <div :if={@view.apart? and !@at} id="twin" class="twin">
               <figure>
                 <figcaption>{gettext("What the board reads")}</figcaption>
                 <.board
@@ -426,7 +502,7 @@ defmodule AlnaslWeb.GameLive do
                 />
               </figure>
             </div>
-            <div :if={!@view.apart?} class="solo">
+            <div :if={!@view.apart? and !@at} class="solo">
               <.board
                 id="board-certain"
                 position={@view.certain}
@@ -445,12 +521,70 @@ defmodule AlnaslWeb.GameLive do
                 running={@view.snap.clock.running == :white}
               />
             </div>
-            <p :if={@view.apart?} class="note" style="margin-top:0.5rem">
+            <p :if={@view.apart? and !@at} class="note" style="margin-top:0.5rem">
               {gettext("The outlined squares are where the two differ.")}
             </p>
+            <div :if={@view.line != [] and @view.snap.plies != []} id="move-nav" class="move-nav">
+              <.button
+                id="nav-start"
+                small
+                phx-click="nav"
+                phx-value-to="start"
+                disabled={@at == 0}
+                aria-label={gettext("To the start of the game (Home)")}
+              >|&lt;</.button>
+              <.button
+                id="nav-back"
+                small
+                phx-click="nav"
+                phx-value-to="back"
+                disabled={@at == 0}
+                aria-label={gettext("One move back (Left arrow)")}
+              >&lt;</.button>
+              <span id="nav-at" class="note" aria-live="polite">
+                {gettext("%{at} of %{n}",
+                  at: @at || length(@view.snap.plies),
+                  n: length(@view.snap.plies)
+                )}
+              </span>
+              <.button
+                id="nav-forward"
+                small
+                phx-click="nav"
+                phx-value-to="forward"
+                disabled={@at == nil}
+                aria-label={gettext("One move forward (Right arrow)")}
+              >&gt;</.button>
+              <.button
+                id="nav-live"
+                small
+                variant={if @at, do: "primary"}
+                phx-click="nav"
+                phx-value-to="live"
+                disabled={@at == nil}
+                aria-label={gettext("Back to the game as it is played (End)")}
+              >{gettext("Live")}</.button>
+            </div>
           </.panel>
 
           <.help_box state={@view.snap.status} detail={help_detail(@view.snap)} />
+
+          <div
+            :if={@view.snap[:unseen] not in [nil, []]}
+            id="unseen-help"
+            class="alarm warn"
+            role="status"
+          >
+            <.icon name="warning" />
+            <div>
+              <b :for={piece <- @view.snap.unseen}>{Words.unseen(piece)}</b>
+              <p>
+                {gettext(
+                  "The piece left its square and the game went on, so it is taken to be standing there still. This goes away when it is seen there again, moves, or is taken. If it was in fact captured, correct the moves below."
+                )}
+              </p>
+            </div>
+          </div>
 
           <div
             :if={@view.snap.plies == [] and Words.clock_problem(@view.snap[:clock_check])}
@@ -514,13 +648,48 @@ defmodule AlnaslWeb.GameLive do
               <b :if={@view.snap[:result]} id="game-result">{@view.snap.result}</b>
             </:actions>
             <p :if={@view.snap.plies == []} class="note">{gettext("No moves yet.")}</p>
-            <div :if={@view.snap.plies != []} id="move-list" class="moves" phx-hook="StickToEnd">
+            <div
+              :if={@view.snap.plies != []}
+              id="move-list"
+              class="moves"
+              phx-hook=".MoveList"
+              data-follow={to_string(@at == nil)}
+            >
               <%= for {number, white, black} <- @view.rows do %>
                 <span class="num">{number}.</span>
-                <.ply ply={white} last={length(@view.snap.plies)} />
-                <.ply ply={black} last={length(@view.snap.plies)} />
+                <.ply ply={white} last={length(@view.snap.plies)} at={@at} />
+                <.ply ply={black} last={length(@view.snap.plies)} at={@at} />
               <% end %>
             </div>
+            <script :type={Phoenix.LiveView.ColocatedHook} name=".MoveList">
+              // The move list: kept at its end while the game is followed, at
+              // the move being looked at otherwise - and the keys that step
+              // through it. Keys typed into a field are that field's.
+              const KEYS = {ArrowLeft: "back", ArrowRight: "forward", Home: "start", End: "live"}
+
+              export default {
+                mounted() {
+                  this.onKey = (event) => {
+                    if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return
+                    const el = event.target
+                    if (el && (el.isContentEditable || /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName || ""))) return
+                    const to = KEYS[event.key]
+                    if (!to) return
+                    event.preventDefault()
+                    this.pushEvent("nav", {to})
+                  }
+                  window.addEventListener("keydown", this.onKey)
+                  this.place()
+                },
+                updated() { this.place() },
+                destroyed() { window.removeEventListener("keydown", this.onKey) },
+                place() {
+                  const at = this.el.querySelector(".ply.at")
+                  if (this.el.dataset.follow === "true" || !at) this.el.scrollTop = this.el.scrollHeight
+                  else at.scrollIntoView({block: "nearest"})
+                }
+              }
+            </script>
           </.panel>
 
           <.panel
@@ -640,6 +809,11 @@ defmodule AlnaslWeb.GameLive do
                     label="FEN"
                     autocomplete="off"
                     spellcheck="false"
+                    hint={
+                      gettext(
+                        "Taken from the board: a side may castle wherever its king and rook stand on their home squares, and the side to move is the one whose clock runs (White without a clock). Change the text if the game says otherwise."
+                      )
+                    }
                   />
                   <div class="row">
                     <.button id="tool-fen-from-board" type="button" small phx-click="use_board_fen">{gettext(
@@ -695,6 +869,7 @@ defmodule AlnaslWeb.GameLive do
 
   attr :ply, :any, required: true
   attr :last, :integer, required: true
+  attr :at, :any, default: nil
 
   defp ply(%{ply: nil} = assigns) do
     ~H"""
@@ -704,13 +879,27 @@ defmodule AlnaslWeb.GameLive do
 
   defp ply(assigns) do
     {ply, index} = assigns.ply
-    assigns = assign(assigns, move: ply, index: index, flags: ply.flags -- [:long_gap])
+    # `:unseen` is said once, above the board, not beside every move made
+    # while it lasted.
+    assigns = assign(assigns, move: ply, index: index, flags: ply.flags -- [:long_gap, :unseen])
 
     ~H"""
-    <span id={"ply-#{@index}"} class={["ply", @index == @last && "last", @flags != [] && "flagged"]}>
+    <button
+      id={"ply-#{@index}"}
+      type="button"
+      class={[
+        "ply",
+        @index == @last && "last",
+        @index == @at && "at",
+        @flags != [] && "flagged"
+      ]}
+      phx-click="goto"
+      phx-value-ply={@index}
+      aria-current={if @index == (@at || @last), do: "true"}
+    >
       <.figurine san={@move.san} />
       <span :for={flag <- @flags} class="flag">{Words.flag(flag)}</span>
-    </span>
+    </button>
     """
   end
 

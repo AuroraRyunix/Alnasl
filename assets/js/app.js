@@ -21,13 +21,7 @@ window.addEventListener("alnasl:theme", () => {
   try { localStorage.setItem("alnasl-theme", root.dataset.theme) } catch (_e) { /* private mode */ }
 })
 
-const Hooks = {
-  // Keeps a scrolling list at its end as lines are added: the move list.
-  StickToEnd: {
-    mounted() { this.el.scrollTop = this.el.scrollHeight },
-    updated() { this.el.scrollTop = this.el.scrollHeight },
-  },
-}
+const Hooks = {}
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {

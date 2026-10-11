@@ -101,6 +101,61 @@ not see how; that is out of sync like any other.
   arbiter says so, and only then is `status: finished` sent - unless Setup
   says mate and stalemate may go by themselves.
 
+### A piece not seen
+
+A real game on board 06310: the knight that had just gone to f3 was lifted
+off and stood beside the board while five moves were played, then came down
+on e5. Rule 7 held every one of those boards ("a piece in a hand"), and when
+the knight landed the game was six plies on - out of sync.
+
+So, between rules 6 and 7:
+
+- **When.** The board was the expected one with exactly one piece gone and
+  nothing else different (`absent`); that square has stayed empty since;
+  and now the board is one legal move by *another* piece away from the
+  certain position, counting the absent piece as still standing there. The
+  move must stand for `unseen_hold_ms` (2 s), or be pressed on the clock,
+  or be followed by the next hand (rule 6, same supposition). Two moves
+  found by the search on the same supposition count too, flagged
+  `recovered`.
+- **Then.** The move is accepted as a plain move. The piece stays in the
+  position; `phys` has its square empty, and the tracker's `unseen` list
+  names it. The board compares equal again, the status is Live, and the
+  site shows a warning for as long as it lasts. Plies accepted meanwhile
+  carry the flag `unseen` (stored, not shown beside each move).
+- **How it ends.** The piece is read on its square again (it was there all
+  along). Or a piece of that kind and colour appears on a square the unseen
+  one can legally move to, on its side's turn: that is its move - the move
+  generator is asked for moves *from* the unseen square too, and a move
+  from an empty `phys` square puts the position's piece on the target. Or a
+  piece of the other colour lands on the square by a legal capture.
+- **What it does not explain.** Anything that is not legal with the piece
+  on its square: a piece moved onto or through it, the piece appearing on
+  the wrong side's turn or on a square it cannot reach. That is rule 7 and,
+  in time, the alarm. The piece is never dropped from the game by the box:
+  if it was in fact captured unseen, the arbiter says so.
+- **Limits.** One piece at a time (a second piece gone is more likely an
+  exchange that went by unseen, which the search has). Never a king. No
+  limit in plies: a warning that stays is honest, an alarm after N moves
+  would be arbitrary.
+
+What keeps an ordinary move from being read as this: a piece in the air
+during its own move is followed by *its own* landing, which rule 2 takes
+first. A capture with the captured piece off first leaves the capturer's
+landing on that square - rule 2 again. A capturer that rests on the way
+(queen to g6, then on to f7, with the f7 pawn already off) is accepted as
+"Qg6, pawn not seen" if it rests longer than the hold, and put right by
+rule 4 when it lands. Castling with the king in the air while the rook
+goes across cannot be it: never a king. A takeback does not put a piece
+out of sight again - rule 3 skips an earlier position whose unseen piece
+has been seen since. And two pieces of opposite colours gone at once are
+no longer searched as an unseen exchange when one of them was already gone
+by itself: that is a piece out of sight and a hand.
+
+Not covered: a takeback of the very move that began it, while the piece
+is still away (the board then matches nothing the tracker remembers, and
+is the alarm after `transient_ms`).
+
 ### After the arbiter changes the game
 
 Undo and "change a move" make the game disagree with the board on purpose.

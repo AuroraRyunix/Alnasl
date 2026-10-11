@@ -83,6 +83,32 @@ defmodule Alnasl.Position do
     end)
   end
 
+  @doc """
+  A FEN for a board that is all there is to go on: a position set by hand
+  from what the sensors read.
+
+  A board does not know who may still castle, so the convention of every
+  board editor is used: a side may castle wherever its king and that rook
+  stand on their home squares. That offers a right a king or rook has in
+  fact lost by moving and going back; the arbiter can strike it from the
+  text before it is used. No en passant square, and the move counters
+  start over. `turn` is the side to move (`:w` unless somebody knows).
+  """
+  def fen(board, turn \\ :w) do
+    rights =
+      for {king, rook, colour, letter} <- [
+            {60, 63, :w, "K"},
+            {60, 56, :w, "Q"},
+            {4, 7, :b, "k"},
+            {4, 0, :b, "q"}
+          ],
+          elem(board, king) == {colour, :k} and elem(board, rook) == {colour, :r},
+          into: "",
+          do: letter
+
+    "#{placement(board)} #{turn} #{if rights == "", do: "-", else: rights} - 0 1"
+  end
+
   @doc "The board as seen from the other side: a board plugged in turned round."
   def rotate(board), do: board |> Tuple.to_list() |> Enum.reverse() |> List.to_tuple()
 

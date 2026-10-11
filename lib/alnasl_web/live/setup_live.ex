@@ -79,7 +79,7 @@ defmodule AlnaslWeb.SetupLive do
       tracker_form:
         to_form(
           tracker
-          |> Map.take(@tracker_fields ++ ~w(takeback promotion_default))
+          |> Map.take(@tracker_fields ++ ~w(takeback unseen_piece promotion_default))
           |> Map.update!("promotion_default", &to_string/1),
           as: :tracker
         ),
@@ -276,6 +276,7 @@ defmodule AlnaslWeb.SetupLive do
          )}
       end
       |> Map.put("takeback", params["takeback"] == "true")
+      |> Map.put("unseen_piece", params["unseen_piece"] == "true")
       |> Map.put(
         "promotion_default",
         if(params["promotion_default"] in ~w(q r b n), do: params["promotion_default"], else: "q")
@@ -766,6 +767,21 @@ defmodule AlnaslWeb.SetupLive do
               type="checkbox"
               label={gettext("A board put back to the position before the last move is a takeback")}
             />
+            <.input
+              field={@tracker_form[:unseen_piece]}
+              id="tracker-unseen"
+              type="checkbox"
+              label={
+                gettext(
+                  "A piece that leaves its square while the game goes on is still there (a warning, not an alarm)"
+                )
+              }
+            />
+            <p id="tracker-unseen-note" class="note">
+              {gettext(
+                "A player parks a piece beside the board, or a sensor loses one: the box follows the moves and shows \"not seen on ...\" until the piece is seen again, moves, or is taken. One piece at a time; a king never. Off: such a board waits, and becomes an alarm."
+              )}
+            </p>
             <div class="row">
               <.button id="save-tracker" variant="primary" type="submit">{gettext("Save")}</.button>
               <.button id="reset-tracker" type="button" phx-click="reset_tracker">{gettext(

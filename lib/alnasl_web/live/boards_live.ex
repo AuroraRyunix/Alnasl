@@ -610,6 +610,14 @@ defmodule AlnaslWeb.BoardsLive do
                       <span class="note">-</span>
                     <% s.plies != [] -> %>
                       <span class="note">{gettext("game under way")}</span>
+                      <.badge
+                        :for={piece <- s[:unseen] || []}
+                        id={"unseen-#{s.id}"}
+                        tone="warn"
+                        icon="warning"
+                      >
+                        {Words.unseen(piece)}
+                      </.badge>
                     <% s.problems == [] and Words.clock_problem(s[:clock_check]) -> %>
                       <.badge id={"start-clock-#{s.id}"} tone="warn" icon="warning">
                         {gettext("Clock wrong")}

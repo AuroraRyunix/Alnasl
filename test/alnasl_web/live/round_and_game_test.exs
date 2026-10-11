@@ -233,7 +233,8 @@ defmodule AlnaslWeb.RoundAndGameTest do
                "not a position"
 
       view |> element("#tool-fen-from-board") |> render_click()
-      assert has_element?(view, "#fen-input[value*='w - - 0 1']")
+      # The pieces after 1. e4 e5: kings and rooks at home, so every right.
+      assert has_element?(view, "#fen-input[value*=' w KQkq - 0 1']")
 
       view
       |> form("#set-fen-form", position: %{fen: "4k3/8/8/8/8/8/4P3/4K3 w - - 0 40"})

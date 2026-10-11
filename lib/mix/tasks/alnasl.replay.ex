@@ -101,6 +101,20 @@ defmodule Mix.Tasks.Alnasl.Replay do
     for {t, keep, moves, why} <- report.corrections,
         do: info.("  correction at #{at(t)}: keep #{keep}, then #{inspect(moves)} (#{why})")
 
+    for {t, pieces} <- report.unseen do
+      case pieces do
+        [] ->
+          info.("  unseen piece accounted for at #{at(t)}")
+
+        pieces ->
+          for %{square: square, piece: {colour, kind}} <- pieces,
+              do:
+                info.(
+                  "  piece not seen from #{at(t)}: #{colour}#{kind} on #{Position.square_name(square)}"
+                )
+      end
+    end
+
     for {t, result, why} <- report.suggestions,
         do: info.("  result suggested at #{at(t)}: #{result} (#{why})")
 

@@ -337,6 +337,14 @@ page says so, and simulator boards are unaffected.
   hand over the board - and only if it stays unexplained does the board go
   "Out of sync", raised to the arbiter, and it comes back by itself the
   moment the pieces make sense again.
+- **A piece that leaves the board is not a reason to stop.** A player parks
+  a knight beside the board, or a sensor loses a piece: when one piece (never
+  a king) is gone from its square and the game goes on around it, it is
+  taken to stand there still. The moves are followed as plain moves, and the
+  board's page, the Round tile and the Boards list say "White knight not
+  seen on f3" until it is seen there again, moves from there, or is taken
+  there. Anything that cannot be so with the piece on its square is the
+  alarm it always was. A switch in Setup, on by default.
 - **The outbox sends, and never loses.** Every change is written to SQLite
   first, numbered per game, then sent in order with the relay key. Each
   message is the whole game so far, which is the server's own rule and what
@@ -351,7 +359,7 @@ page says so, and simulator boards are unaffected.
 
 ## What is proven, and how
 
-By `mix test` (283 tests), three tools, and one evening with a real board:
+By `mix test` (330 tests), three tools, and two evenings with a real board:
 
 **The tracker**, against 69 games (59 classics before 1930, 7 constructed
 for underpromotion and en passant, 3 more; 4599 plies) played through the
@@ -361,6 +369,7 @@ simulator under each fault mix, three passes each (`mix alnasl.bench
 | fault mix | exact | stopped, asked | wrong but flagged | **wrong, silent** |
 |---|---|---|---|---|
 | clean; hover, lift, knock, swap, missing clock presses, pawn left for a queen, takebacks, slides - each alone at 20-30%, and all together | 207 of 207, every row; **no alarm ever raised** | 0 | 0 | **0** |
+| a piece not seen where it stands for 1-5 plies (5% of plies): alone, without a clock, and with the benign faults at 5% each | 207 of 207, every row; no alarm | 0 | 0 | **0** |
 | one ply at a time unseen (10%), alone and with the others | 198-204 | 3-9 | 0 | **0** |
 | unplugged for 2 plies, twice | 204 | 3 | 0 | **0** |
 | up to 3 plies in a row unseen (25%) | 15 | 192 | 0 | **0** |
@@ -424,7 +433,23 @@ driver (`test/alnasl/real_board_test.exs`, fixtures `real-06310-*.jsonl`):
 - that a clock turned round and started on the wrong side is seen as
   exactly that. The recording ends with one.
 
-Two things the recording corrected: the lever is up on the side whose time
+**The tracker, against a game on that board** (2026-10-11, fixtures
+`real-06310-unseen-knight.jsonl` and `real-06310-castling-after-set.jsonl`):
+
+- a real game followed from the starting position with the clock: 1. d4 d5
+  2. Nc3 Nf6 3. Nf3, each move confirmed by its press;
+- the knight then taken off f3 and parked beside the board for five moves,
+  and brought down on e5. As recorded, the tracker waited for it and went
+  out of sync six plies behind; with the rule above it reads 3... Nc6
+  4. Be3 e6 5. Qc1 Bb4 6. Ne5 Bd7 7. Qd2, no alarm
+  (`test/alnasl/unseen_piece_test.exs`);
+- a position set by hand from the board mid-game, after which Black
+  castled short and White long, king first. As recorded both were out of
+  sync: the FEN offered for a bare board said nobody could castle. It now
+  offers every right whose king and rook stand at home, and the side to
+  move from the clock (`test/alnasl/position_set_by_hand_test.exs`).
+
+Two things the first recording corrected: the lever is up on the side whose time
 *runs* (the code had it the other way, in a fallback that was never
 reached), and a "no clock" message was dropped when a recording was
 replayed from its bytes.

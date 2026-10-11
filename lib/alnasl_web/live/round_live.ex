@@ -77,6 +77,7 @@ defmodule AlnaslWeb.RoundLive do
           suggestion: snap && snap[:suggestion],
           paused: (snap && snap[:paused]) || (game && game.paused) || false,
           warning: snap && snap[:warning],
+          unseen: (snap && snap[:unseen]) || [],
           # The clock's part of the start check, while no move has been made.
           clock_problem:
             if(snap && plies == [], do: AlnaslWeb.Words.clock_problem(snap[:clock_check])),
@@ -262,6 +263,9 @@ defmodule AlnaslWeb.RoundLive do
             <span class="tile-no">{tile.no}</span>
             <span :if={tile.paused} class="flag plain">{gettext("Not sending")}</span>
             <span :if={tile.warning} class="flag">{gettext("Move missing?")}</span>
+            <span :for={piece <- tile.unseen} id={"tile-unseen-#{tile.no}"} class="flag">{AlnaslWeb.Words.unseen(
+              piece
+            )}</span>
             <.state state={tile.state} />
           </div>
           <div class="side">

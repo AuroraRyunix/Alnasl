@@ -82,8 +82,17 @@ defmodule Alnasl.Tracker do
     transient_ms: 8_000,
     lifted_ms: 60_000,
     promotion_default: :q,
-    result_gesture: true
+    result_gesture: true,
+    # A piece that left its square and stayed away while the game went on
+    # is taken to be standing there unseen (see "A piece not seen"). A move
+    # that would make it so must stand this long, or be pressed on the clock.
+    unseen_piece: true,
+    unseen_hold_ms: 2_000
   }
+
+  # How many pieces may be unseen at once. One: a second piece gone is more
+  # likely an exchange nobody saw than a second player with a pocket.
+  @unseen_max 1
 
   defstruct opts: @defaults,
             start_fen: nil,
@@ -105,6 +114,8 @@ defmodule Alnasl.Tracker do
             memo: nil,
             gesture: nil,
             held: nil,
+            unseen: [],
+            absent: nil,
             stats: %{searches: 0, max_nodes: 0, max_us: 0, budget_hits: 0}
 
   @type t :: %__MODULE__{}
@@ -172,6 +183,12 @@ defmodule Alnasl.Tracker do
   @doc "The FEN of the certain position."
   def fen(%__MODULE__{pos: pos}), do: Chess.to_fen(pos)
 
+  @doc """
+  The pieces taken to stand where the board does not see them:
+  `[%{square, piece}]`, `piece` as `{colour, kind}`.
+  """
+  def unseen(%__MODULE__{unseen: unseen}), do: unseen
+
   @doc "The candidate continuations when the status is ambiguous, each a list of SAN."
   def candidates(%__MODULE__{candidates: candidates, pos: pos}) do
     Enum.map(candidates, fn found ->
@@ -201,7 +218,8 @@ defmodule Alnasl.Tracker do
         o.promotion_hold_ms,
         o.takeback_settle_ms,
         o.transient_ms,
-        o.lifted_ms
+        o.lifted_ms,
+        o.unseen_hold_ms
       ]
       |> Enum.map(&(tr.raw_since + &1))
 
@@ -218,17 +236,18 @@ defmodule Alnasl.Tracker do
   @doc "The board reads `board` at time `t`."
   @spec observe(t(), integer(), tuple()) :: {t(), [event()]}
   def observe(%__MODULE__{} = tr, t, board) when is_tuple(board) do
+    was = tr
     tr = if board == tr.raw, do: tr, else: %{tr | raw: board, raw_since: t, before: tr.raw}
-    evaluate(tr, t, false)
+    tr |> evaluate(t, false) |> noting(was)
   end
 
   @doc "A clock was pressed at `t`: a move that is waiting to settle is accepted now."
   @spec press(t(), integer()) :: {t(), [event()]}
-  def press(%__MODULE__{} = tr, t), do: evaluate(tr, t, true)
+  def press(%__MODULE__{} = tr, t), do: tr |> evaluate(t, true) |> noting(tr)
 
   @doc "Time passed. Call it at `deadline/1`, or every 100 ms."
   @spec tick(t(), integer()) :: {t(), [event()]}
-  def tick(%__MODULE__{} = tr, t), do: evaluate(tr, t, false)
+  def tick(%__MODULE__{} = tr, t), do: tr |> evaluate(t, false) |> noting(tr)
 
   # --- the arbiter -------------------------------------------------------------
 
@@ -239,16 +258,18 @@ defmodule Alnasl.Tracker do
   """
   def undo(%__MODULE__{} = tr, t, n \\ 1) do
     keep = max(length(tr.plies) - n, 0)
+    was = tr
     {tr, events} = correct(tr, t, keep, [], :arbiter)
-    {%{tr | held: tr.raw}, events}
+    noting({%{tr | held: tr.raw}, events}, was)
   end
 
   @doc "Adds moves typed in SAN. `{:error, {index, message}}` names the first that is not legal."
   def append(%__MODULE__{} = tr, t, sans) do
     with {:ok, steps} <- parse_sans(tr.pos, sans) do
+      was = tr
       {tr, plies} = push(tr, steps, [:arbiter], t, nil)
       tr = %{tr | candidates: [], candidates_since: nil, memo: nil}
-      {:ok, {tr, [{:moves, plies}]} |> and_then(&evaluate(&1, t, false))}
+      {:ok, {tr, [{:moves, plies}]} |> and_then(&evaluate(&1, t, false)) |> noting(was)}
     end
   end
 
@@ -265,9 +286,10 @@ defmodule Alnasl.Tracker do
     with {:ok, move} <- Chess.parse_san(before.pos, san) do
       first = {move, [:arbiter]}
       {rest, dropped} = replay_while_legal(Chess.apply_move(before.pos, move), later, [])
+      was = tr
       {tr, events} = correct(tr, t, number - 1, [first | rest], :arbiter)
       # As with `undo/3`: the board is looked at again when it next changes.
-      {:ok, {%{tr | held: tr.raw}, events}, dropped}
+      {:ok, noting({%{tr | held: tr.raw}, events}, was), dropped}
     end
   end
 
@@ -279,7 +301,7 @@ defmodule Alnasl.Tracker do
       {:ok, pos} ->
         fen = Chess.to_fen(pos)
         fresh = %{new(Map.put(tr.opts, :start_fen, fen)) | raw: tr.raw, raw_since: tr.raw_since}
-        {:ok, {fresh, [{:restart, fen}]} |> and_then(&evaluate(&1, t, false))}
+        {:ok, {fresh, [{:restart, fen}]} |> and_then(&evaluate(&1, t, false)) |> noting(tr)}
 
       {:error, message} ->
         {:error, message}
@@ -347,6 +369,8 @@ defmodule Alnasl.Tracker do
          do: %{tr | begun?: true},
          else: tr
 
+    tr = tr |> seen_again() |> absent()
+
     cond do
       tr.raw == tr.phys ->
         in_sync(tr)
@@ -364,6 +388,93 @@ defmodule Alnasl.Tracker do
 
       true ->
         explain(tr, t, stable, force)
+    end
+  end
+
+  # A piece that was not seen stands on its square again: it was there all
+  # along, as assumed. Whatever else the board shows is looked at after.
+  defp seen_again(%{unseen: []} = tr), do: tr
+
+  defp seen_again(tr) do
+    Enum.reduce(tr.unseen, tr, fn %{square: square, piece: piece} = entry, tr ->
+      if elem(tr.raw, square) == piece,
+        do: %{tr | phys: put_elem(tr.phys, square, piece), unseen: tr.unseen -- [entry]},
+        else: tr
+    end)
+  end
+
+  # The one piece that is missing while nothing else differs - and stays
+  # the piece to wonder about for as long as its square stays empty,
+  # whatever else is lifted meanwhile. A hand holding the piece it is about
+  # to move looks exactly like this, which is why this alone means nothing.
+  defp absent(tr) do
+    gone? = fn square -> elem(tr.raw, square) == nil and elem(tr.phys, square) != nil end
+
+    square =
+      case Position.diff(tr.phys, tr.raw) do
+        [square] -> if gone?.(square), do: square
+        _other -> if tr.absent && gone?.(tr.absent), do: tr.absent
+      end
+
+    %{tr | absent: square}
+  end
+
+  # The tracker as it would be if the absent piece were taken to stand on
+  # its square unseen - or `nil` when that may not be supposed: the rule is
+  # off, a piece is unseen already, or it is a king (nobody parks a king
+  # beside the board; a king in the air is castling).
+  defp supposing(%{opts: %{unseen_piece: false}}), do: nil
+  defp supposing(%{absent: nil}), do: nil
+  defp supposing(%{unseen: unseen}) when length(unseen) >= @unseen_max, do: nil
+
+  defp supposing(%{absent: square} = tr) do
+    case elem(tr.phys, square) do
+      {_colour, :k} ->
+        nil
+
+      piece ->
+        if elem(tr.pos.board, square) == piece,
+          do: %{
+            tr
+            | phys: put_elem(tr.phys, square, nil),
+              unseen: [%{square: square, piece: piece} | tr.unseen],
+              absent: nil
+          }
+    end
+  end
+
+  # One legal move by another piece explains the board, if the absent piece
+  # is still where it was. (A move that takes the absent piece, or is the
+  # absent piece's own, needs no supposing: the board shows those whole.)
+  defp unseen_move(tr) do
+    with %{} = supposed <- supposing(tr),
+         [{move, flags}] <- one_ply(supposed),
+         true <- move.from != tr.absent and move.to != tr.absent do
+      {supposed, move, flags}
+    else
+      _no -> nil
+    end
+  end
+
+  # Moves were accepted on the supposition; what the game goes back to when
+  # they are undone is the board as it was before it: the piece on its
+  # square, seen.
+  defp since({tr, events}, was) do
+    back = length(tr.plies) - length(was.plies)
+
+    history =
+      List.update_at(tr.history, back - 1, &%{&1 | phys: was.phys, unseen: was.unseen})
+
+    {%{tr | history: history}, events}
+  end
+
+  defp unseen_under_hand(tr) do
+    with %{} = supposed <- supposing(tr),
+         {move, _board} = step <- move_under_hand(supposed),
+         true <- move.from != tr.absent and move.to != tr.absent do
+      {supposed, step}
+    else
+      _no -> nil
     end
   end
 
@@ -394,7 +505,7 @@ defmodule Alnasl.Tracker do
   defp explain(tr, t, stable, force) do
     o = tr.opts
 
-    case one_ply(tr.pos, tr.phys, tr.raw, o.promotion_default) do
+    case one_ply(tr) do
       [{move, flags}] ->
         if force or stable >= hold(tr, move, flags),
           do: accept(tr, t, [{move, flags}], []),
@@ -404,6 +515,18 @@ defmodule Alnasl.Tracker do
         cond do
           (step = move_under_hand(tr)) != nil ->
             accept_under_hand(tr, t, step)
+
+          # The same, with a piece that is not on the board any more.
+          (found = unseen_under_hand(tr)) != nil ->
+            {supposed, step} = found
+            supposed |> accept_under_hand(t, step) |> since(tr)
+
+          (found = unseen_move(tr)) != nil ->
+            {supposed, move, flags} = found
+
+            if force or stable >= max(hold(tr, move, flags), o.unseen_hold_ms),
+              do: supposed |> accept(t, [{move, flags}], []) |> since(tr),
+              else: set_status(tr, :settling, :move)
 
           stable < o.settle_ms ->
             set_status(tr, :settling, :moving)
@@ -458,7 +581,11 @@ defmodule Alnasl.Tracker do
   defp exchange?(tr, stable) do
     us = tr.pos.turn
 
+    # Not when one of the two was already gone by itself before the other
+    # was lifted: that is a piece out of sight and a hand, and the hand is
+    # about to say which move it was.
     with true <- stable >= tr.opts.settle_ms,
+         nil <- supposing(tr),
          [a, b] <- Position.diff(tr.phys, tr.raw),
          {colour_a, _} <- elem(tr.phys, a),
          {colour_b, _} <- elem(tr.phys, b),
@@ -498,10 +625,24 @@ defmodule Alnasl.Tracker do
         unexplained(tr, stable, :ambiguous)
 
       {:ok, []} ->
-        unexplained(tr, stable, :unexplained)
+        unseen_search(tr, t, stable)
 
       :budget ->
         unexplained(tr, stable, :search_gave_up)
+    end
+  end
+
+  # Nothing explains the board as it is. Two moves do, if the absent piece
+  # is still on its square: the move that would have said so went by
+  # before it had stood long enough to be believed.
+  defp unseen_search(tr, t, stable) do
+    with %{} = supposed <- supposing(tr),
+         {{:ok, found}, supposed} <- search(supposed, 2, 2, tr.opts.max_nodes),
+         [one] <- distinct(found),
+         true <- stable >= tr.opts.unseen_hold_ms do
+      supposed |> accept(t, one.steps, [:recovered]) |> since(tr)
+    else
+      _no -> unexplained(tr, stable, :unexplained)
     end
   end
 
@@ -564,7 +705,7 @@ defmodule Alnasl.Tracker do
         extended =
           tr.candidates
           |> Enum.flat_map(fn found ->
-            case one_ply(found.pos, found.phys, tr.raw, o.promotion_default) do
+            case one_ply(found.pos, found.phys, tr.raw, o.promotion_default, tr.unseen) do
               [] ->
                 case Search.find(found.pos, found.phys, tr.raw,
                        min_depth: 2,
@@ -599,7 +740,8 @@ defmodule Alnasl.Tracker do
         extended =
           if extended == [] do
             for %{prev: %{} = prev} <- tr.candidates,
-                {move, flags} <- one_ply(prev.pos, prev.phys, tr.raw, o.promotion_default) do
+                {move, flags} <-
+                  one_ply(prev.pos, prev.phys, tr.raw, o.promotion_default, tr.unseen) do
               join(prev, %{
                 steps: [{move, flags}],
                 pos: Chess.apply_move(prev.pos, move),
@@ -655,8 +797,7 @@ defmodule Alnasl.Tracker do
     |> Enum.uniq_by(fn f -> {Enum.map(f.steps, &elem(&1, 0)), f.phys} end)
   end
 
-  defp one_move_away?(tr),
-    do: one_ply(tr.pos, tr.phys, tr.raw, tr.opts.promotion_default) != []
+  defp one_move_away?(tr), do: one_ply(tr) != []
 
   defp drop_candidates(tr),
     do: %{tr | candidates: [], candidates_since: nil, candidates_raw: nil}
@@ -672,13 +813,20 @@ defmodule Alnasl.Tracker do
 
   # --- the pieces of the decision ----------------------------------------------
 
-  defp one_ply(pos, phys, raw, default) do
+  defp one_ply(tr),
+    do: one_ply(tr.pos, tr.phys, tr.raw, tr.opts.promotion_default, tr.unseen)
+
+  # `unseen`: a piece the board does not show can still move, and its
+  # square will not be among those that changed.
+  defp one_ply(pos, phys, raw, default, unseen) do
     squares = Position.diff(phys, raw)
 
     if length(squares) > 4 do
       []
     else
-      for move <- Chess.moves_from(pos, squares),
+      from = squares ++ for(%{square: sq} <- unseen, elem(phys, sq) == nil, do: sq)
+
+      for move <- Chess.moves_from(pos, Enum.uniq(from)),
           {board, flags} <- Search.outcomes(phys, move, pos.turn, default),
           board == raw,
           Chess.legal?(pos, move),
@@ -705,7 +853,8 @@ defmodule Alnasl.Tracker do
     us = tr.pos.turn
 
     with true <- Position.in_hand?(before, tr.raw),
-         [{move, []}] <- one_ply(tr.pos, tr.phys, before, tr.opts.promotion_default),
+         [{move, []}] <-
+           one_ply(tr.pos, tr.phys, before, tr.opts.promotion_default, tr.unseen),
          true <- elem(tr.raw, move.to) != nil,
          true <- Enum.all?(Position.diff(before, tr.raw), &(elem(before, &1) != {us, :k})),
          false <- half_castle?(tr.pos, move) do
@@ -749,7 +898,9 @@ defmodule Alnasl.Tracker do
   defp takeback(tr) do
     tr.history
     |> Enum.take(tr.opts.takeback_plies)
-    |> Enum.find_index(&(&1.phys == tr.raw))
+    # Not back to where a piece was out of sight that has been seen since:
+    # a takeback puts pieces back on squares, it does not make one vanish.
+    |> Enum.find_index(&(&1.phys == tr.raw and &1.unseen -- tr.unseen == []))
     |> case do
       nil -> nil
       index -> index + 1
@@ -777,7 +928,7 @@ defmodule Alnasl.Tracker do
   defp revision(%{history: []}), do: nil
 
   defp revision(%{history: [before | _]} = tr) do
-    case one_ply(before.pos, before.phys, tr.raw, tr.opts.promotion_default) do
+    case one_ply(before.pos, before.phys, tr.raw, tr.opts.promotion_default, before.unseen) do
       [step] -> step
       _other -> nil
     end
@@ -861,7 +1012,8 @@ defmodule Alnasl.Tracker do
             min_depth: min,
             max_depth: max,
             max_nodes: max_nodes,
-            promotion_default: tr.opts.promotion_default
+            promotion_default: tr.opts.promotion_default,
+            unseen: Enum.map(tr.unseen, & &1.square)
           )
 
         us = System.monotonic_time(:microsecond) - started
@@ -914,7 +1066,8 @@ defmodule Alnasl.Tracker do
           | plies: Enum.take(tr.plies, keep),
             history: Enum.drop(tr.history, back),
             pos: before.pos,
-            phys: before.phys
+            phys: before.phys,
+            unseen: before.unseen
         }
       else
         tr
@@ -947,12 +1100,19 @@ defmodule Alnasl.Tracker do
             if :assumed in f == :assumed in flags, do: 0, else: 1
           end)
 
+        # Still unseen after this move: not the piece that moved, not
+        # taken where it stood.
+        unseen =
+          Enum.filter(tr.unseen, fn %{square: sq, piece: piece} ->
+            elem(next.board, sq) == piece and elem(board, sq) == nil
+          end)
+
         ply = %{
           san: san,
           from: move.from,
           to: move.to,
           promo: move.promo,
-          flags: Enum.uniq(flags ++ extra),
+          flags: Enum.uniq(flags ++ extra ++ if(unseen == [], do: [], else: [:unseen])),
           at: t,
           fen: Chess.to_fen(next)
         }
@@ -960,15 +1120,24 @@ defmodule Alnasl.Tracker do
         {ply,
          %{
            tr
-           | history: [%{pos: tr.pos, phys: tr.phys} | tr.history],
+           | history: [%{pos: tr.pos, phys: tr.phys, unseen: tr.unseen} | tr.history],
              pos: next,
              phys: board,
+             unseen: unseen,
              plies: tr.plies ++ [ply]
          }}
       end)
 
     tr = if final && steps != [], do: %{tr | phys: final}, else: tr
     {tr, plies}
+  end
+
+  # Says so when the pieces taken to be unseen are not the ones they were:
+  # `{:unseen, [%{square, piece}]}`, the whole list as it is now.
+  defp noting({%__MODULE__{unseen: now} = tr, events}, %__MODULE__{unseen: was}) do
+    if Enum.sort(now) == Enum.sort(was),
+      do: {tr, events},
+      else: {tr, events ++ [{:unseen, now}]}
   end
 
   defp suggestion(%{plies: []}), do: []

@@ -12,6 +12,9 @@ defmodule Alnasl.TrackerMatrixTest do
     piece resting on its way, a missing clock press, a pawn left for a
     queen): the tracker's moves are the game's moves, and it never once
     raised an alarm.
+  - `:unseen` - a piece that is not seen where it stands for one to five
+    plies (parked beside the board, a weak sensor), alone and among the
+    other survivable faults: every game whole, no alarm.
   - `:gap2` - one ply at a time goes by unseen, so two moves must be found at
     once. Either they are found, or more than one pair fits and the tracker
     stops, says so, and keeps the true continuation among its candidates
@@ -65,6 +68,13 @@ defmodule Alnasl.TrackerMatrixTest do
           assert m.verdicts == %{exact: m.games}
           assert m.alarms == 0
           assert m.recovered == 0
+
+        # A piece out of sight for a few plies (`:unseen`): the game is
+        # followed through it, whole, and nobody is called.
+        :unseen ->
+          assert m.verdicts == %{exact: m.games}
+          assert m.alarms == 0
+          assert m.faults > 100
 
         :gap2 ->
           assert v.(:flagged) == 0

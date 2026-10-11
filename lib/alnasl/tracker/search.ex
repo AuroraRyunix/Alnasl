@@ -48,7 +48,9 @@ defmodule Alnasl.Tracker.Search do
     ctx = %{
       target: target,
       max_nodes: Keyword.get(opts, :max_nodes, 200_000),
-      default: Keyword.get(opts, :promotion_default, :q)
+      default: Keyword.get(opts, :promotion_default, :q),
+      # Squares on which the position has a piece the board does not show.
+      unseen: Keyword.get(opts, :unseen, [])
     }
 
     Process.put(:alnasl_search_nodes, 0)
@@ -80,7 +82,8 @@ defmodule Alnasl.Tracker.Search do
   """
   @spec outcomes(tuple(), Chess.move(), Chess.colour(), atom() | nil) :: [{tuple(), [atom()]}]
   def outcomes(phys, move, colour, default) do
-    piece = elem(phys, move.from)
+    # Nothing on the square it leaves: a piece the board had lost sight of.
+    piece = elem(phys, move.from) || {colour, move.piece}
 
     base =
       phys
@@ -127,7 +130,7 @@ defmodule Alnasl.Tracker.Search do
     else
       moves =
         if remaining == 2,
-          do: Chess.moves_from(pos, own(squares, phys, pos.turn)),
+          do: Chess.moves_from(pos, own(squares, phys, pos.turn) ++ unseen(pos, phys, ctx)),
           else: Chess.pseudo_legal_moves(pos)
 
       them = if pos.turn == :w, do: :b, else: :w
@@ -156,7 +159,7 @@ defmodule Alnasl.Tracker.Search do
   end
 
   defp last_ply(pos, phys, squares, acc, ctx) do
-    for move <- Chess.moves_from(pos, own(squares, phys, pos.turn)),
+    for move <- Chess.moves_from(pos, own(squares, phys, pos.turn) ++ unseen(pos, phys, ctx)),
         move.to in squares,
         {board, flags} <- outcomes(phys, move, pos.turn, ctx.default),
         board == ctx.target,
@@ -171,6 +174,11 @@ defmodule Alnasl.Tracker.Search do
 
   defp own(squares, phys, colour),
     do: Enum.filter(squares, &match?({^colour, _}, elem(phys, &1)))
+
+  # A piece the board does not show may be the one that moved: its square
+  # reads empty before and after, so it is not among those that differ.
+  defp unseen(pos, phys, ctx),
+    do: for(sq <- ctx.unseen, elem(phys, sq) == nil, elem(pos.board, sq) != nil, do: sq)
 
   defp differing(a, b), do: for(i <- 0..63, elem(a, i) != elem(b, i), do: i)
 

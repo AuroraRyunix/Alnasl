@@ -179,6 +179,7 @@ defmodule Alnasl.Boards do
       detail: nil,
       plies: if(game, do: Enum.map(Games.plies(game), &Map.take(&1, [:san, :flags])), else: []),
       candidates: [],
+      unseen: [],
       clock: nil,
       clock_check: nil,
       clock_alarm: nil,

@@ -295,6 +295,7 @@ defmodule Alnasl.Recorder do
          clock_cleared: for({t, {:warning_cleared, :clock_side}} <- out, do: t),
          clock_off: for({t, {:info, %{clock: false}}} <- events, do: t),
          clock_check: Session.clock_check(session),
+         unseen: for({t, {:unseen, pieces}} <- out, do: {t, pieces}),
          status: tr.status,
          detail: tr.detail,
          duration_ms: (List.last(capture.events) || {0, nil}) |> elem(0),
