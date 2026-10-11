@@ -1,2 +1,45 @@
 Alnasl
 Copyright 2026 Jorian Burssens
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+It includes the following, which keep their own notices:
+
+1. The chess move checker and the PGN reader
+
+   lib/alnasl/chess.ex            from OpenResults, lib/openresults/chess.ex
+   lib/alnasl/pgn_reader.ex       from OpenResults, lib/openresults/live_boards/pgn_reader.ex
+   test/alnasl/chess_test.exs     from OpenResults, test/openresults/chess_test.exs
+
+   Copyright (c) the OpenResults authors - the same author as Alnasl - and
+   used here under the Apache License, Version 2.0. Changes: the module names;
+   in chess.ex, `pseudo_legal_moves/1`, `moves_from/2` and `legal?/2` were
+   made public for the tracker's recovery search. OpenResults itself is
+   distributed under its own licence; this copy is licensed by its author
+   under Apache-2.0 for Alnasl.
+
+2. The "cburnett" chess pieces
+
+   priv/static/pieces/cburnett.svg
+
+   Copyright (c) 2006 Colin M.L. Burnett. The author offers these drawings
+   under GFDL, CC BY-SA 3.0, GPLv2+ and the BSD 3-clause licence, at the
+   user's choice; Alnasl uses them under the BSD 3-clause licence, which is
+   reproduced with the attribution in priv/static/pieces/cburnett-LICENSE.
+   The twelve drawings are packed into one SVG sprite; the drawings are
+   unchanged. The sprite was taken from OpenResults.
+
+3. Test games
+
+   priv/games/classics.pgn and the three single games beside it are the
+   moves of chess games played between 1620 and 1928. The moves of a chess
+   game are facts and are not subject to copyright. The scores were written
+   out from memory and checked for legality move by move; they have not
+   been compared with a printed source. priv/games/constructed.pgn was
+   generated for this project (random legal moves) to cover underpromotion
+   and en passant.
+
+Alnasl is not affiliated with or endorsed by DGT (Digital Game Technology
+B.V.). "DGT" is their trademark. The serial protocol implemented in
+lib/alnasl/dgt/ follows DGT's published protocol description for
+single-board communication; no DGT code is included.
