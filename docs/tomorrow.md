@@ -1,13 +1,51 @@
-# The first session with real boards
+# The sessions with real boards
 
 Everything above the serial driver is proven on simulated boards. This is
-the checklist for the day the driver meets a real one. The aim of the
-session is **recordings**, not a working round: with the files listed at the
-end, the single-board driver can be confirmed or corrected and the bus
-driver finished at a desk.
+the checklist for the days the driver meets real ones. The aim of a session
+is **recordings**, not a working round: with the files listed at the end,
+the single-board driver can be confirmed or corrected and the bus driver
+finished at a desk.
 
 Work through it in order. Each step says what should happen, and what it
 means when it does not.
+
+## Where it stands
+
+**Step 1 was half done on 2026-10-12** - one board (serial 06310, firmware
+1.9), one black knight, a DGT clock. `docs/real-board-2026-10-12.md` has
+every byte. Confirmed:
+
+- the port, the framing, the handshake (serial number, version, dump);
+- the piece code of a black knight and the order of the squares (the knight
+  was on d6 and the box said d6), field updates as it was lifted and put
+  down on e4, d4, c2, d2;
+- the clock: times, running or not, which side, the lever, the 30-second
+  increment at a press, pause and resume, switched off ("no clock") and on;
+- left is White - and that is now fixed, not an option: the clock stands to
+  the right of the board. A clock turned round is reported as set up
+  wrongly. This went into the starting-position check and a clock alarm.
+
+**What remains**, in this order:
+
+1. **A real game on one board** - the rest of step 1 below: all the pieces
+   in the starting position (eleven piece codes have not been seen), moves
+   with real hands, a capture both ways, castling both ways, a promotion,
+   a knock, a slide, an unplug. And the **result gesture** (kings in the
+   centre), which is still only how LiveChess is understood to work.
+2. **The clock in a game**: start it on White's side, press after every
+   move; then once on purpose with the clock turned round, to see the
+   starting-position check and the alarm on the real thing (they are
+   tested against the recording's clock bytes, with emulated pieces).
+3. **The loop** - step 3: DGT's own LiveChess driving two or three boards,
+   recorded through the proxy (or a second adapter), then Alnasl's guess.
+   Nothing about the bus has been confirmed.
+
+Smaller things a session can settle in passing: a board lying the other
+way round (does it read mirrored, and does the box turn it?); the clock's
+battery-low bit; which side runs when a paused clock whose lever was tipped
+by hand is started again; and the port held by another program - the
+`:eacces` seen on 2026-10-12 left no line in a capture, so write down what
+the Boards page says while it happens.
 
 ## 0. Before the boards are unpacked (5 minutes)
 
@@ -43,8 +81,13 @@ On the Pi none of this is needed: `mix deps.get` builds the library.
 
 ## 1. One board, on its own cable
 
-Plug in ONE board (not the loop), with its clock if it has one, pieces in
-the starting position.
+(The first second of this - the handshake - and the clock were recorded on
+2026-10-12. The moves were not: there was one knight on the board.)
+
+Plug in ONE board (not the loop), with its clock - **to the right of the
+board, White's display toward White, the lever up on White's side** -
+pieces in the starting position. Close any other program that has the port
+open: only one can.
 
 ```
 mix alnasl.dgt --list
@@ -64,7 +107,7 @@ mix alnasl.dgt --port COM3 --seconds 180 --out captures/single-1.jsonl
 0.0   tx    4b          tell me every change
 0.1   rx    91 00 08 ...                 <- serial number
 0.1   info  %{serial: "..."}
-0.1   rx    93 00 05 01 ..               <- version
+0.1   rx    93 00 05 01 09               <- version
 0.1   rx    86 00 43 08 09 0a 0c 0b ...  <- the board: 67 bytes
 0.1   connected
 0.1   position  rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR
@@ -73,6 +116,7 @@ mix alnasl.dgt --port COM3 --seconds 180 --out captures/single-1.jsonl
 | If you see | It means |
 |---|---|
 | `tx` lines and never an `rx` | wrong port, wrong cable, the board has no power - or it is still in bus mode from its last use (power it off and on) |
+| `info %{error: ":eacces"}` every 3 s | another program has the port (LiveChess, a terminal, a second `mix alnasl.dgt`). Close it; the driver gets in by itself |
 | `rx` bytes but no `position` | the framing in `lib/alnasl/dgt/protocol.ex` does not match. **Keep the capture**: it holds the bytes |
 | a position, but mirrored (White's pieces on rank 8) | the board is the other way round. Fine: the box turns it by itself. Note it down |
 | a position with wrong pieces | the piece codes differ. Keep the capture |
@@ -95,6 +139,8 @@ do it):
 | `clock start` | start the clock |
 | `clock press` | make a move and press the clock; three times |
 | `clock press no move` | press the clock twice without moving |
+| `clock pause lever` | pause the clock, tip the lever over, start it again: which side runs? |
+| `promote` | play (or set up) a pawn to the last rank; once with a queen put on, once leaving the pawn |
 | `kings centre` | both kings on e4 and d5 (the "1-0" signal) |
 | `unplug` | pull the cable for 10 seconds, plug it back |
 
@@ -112,11 +158,10 @@ match what you played? Did a lifted piece produce a move (it must not)?
 
 For the clock, look at the `clock` lines the live output printed while you
 pressed: do white and black have the right times, and does `running` name
-the side whose clock is really running? If the two are swapped, that is the
-ASSUMED "left is White" - say so, it is one option to flip. If `running` is
-wrong or always `none`, the status byte's bits are not what
-`protocol.ex` assumes: the `rx 8d 00 0a ...` lines in the capture are what
-is needed.
+the side whose clock is really running? On 2026-10-12 they did. If the two
+are swapped now, the clock is standing the wrong way round - there is
+nothing to flip in the box, on purpose; turn the clock. A clock standing
+still prints `(lever: black first)` when it is set the wrong way.
 
 ## 2. The same board, through the whole application
 
@@ -126,7 +171,13 @@ mix phx.server
 
 Open http://localhost:4040, **Boards** → Add a board → "DGT board on its own
 serial port" → the port → Add. It should show the position, serial number
-and firmware, and "Start position: Right". Link it to a board number, open
+and firmware, and "Start position: Right - pieces and clock". Tip the
+clock's lever to Black's side: it must change to "Clock wrong" with the
+sentence "Clock not in starting position: Black's side would run first - the
+clock is turned or the lever is the wrong way", and back by itself when the
+lever is put right. Start the clock on Black's side with the pieces set up:
+the tile on **Round** must go to "Clock wrong way" at once, and back when
+the clock is corrected. Link it to a board number, open
 **Round**, play a few moves, lift a piece, knock one over. This is the same
 driver as step 1 with the site on top; if step 1 worked, this is the
 pleasant part. Its capture is in `data/captures/board-<id>/`.
@@ -202,7 +253,7 @@ branch):
 
 | File | Used for |
 |---|---|
-| `single-1.jsonl` | Each `ASSUMED` in `protocol.ex` is checked against the `rx` bytes and corrected; the bytes become a test fixture; the tracker's handling of real hands (lift times, capture order, slides) is compared with your notes, and the timings in Setup adjusted if real hands are slower or faster than the simulator's |
+| `single-1.jsonl` | (Done for the handshake and the clock: `docs/real-board-2026-10-12.md`.) Each `ASSUMED` in `protocol.ex` is checked against the `rx` bytes and corrected; the bytes become a test fixture; the tracker's handling of real hands (lift times, capture order, slides) is compared with your notes, and the timings in Setup adjusted if real hands are slower or faster than the simulator's |
 | `loop-livechess.log` | `bus.ex` is rewritten from it: command ids, the address bytes, the checksum, how LiveChess finds the boards, whether it asks for changes or dumps. Every TODO in that file is answered by this log or it is not answered |
 | `loop-alnasl.jsonl` | Shows what the boards do with the current guess - sometimes a board's silence, or its error answer, says which byte was wrong |
 | step 2 captures | A whole game through the real driver: the first real fixture for the test suite |

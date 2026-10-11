@@ -177,6 +177,23 @@ A chess clock helps, and is used: a press confirms a move at once, and
 **presses are counted against moves** - two presses more than moves seen
 raises "Move missing?" on the tile long before the position betrays it.
 
+The clock's **sides are fixed**. It stands to the right of the board,
+White's display toward White: the cable reaches nowhere else, and DGT's own
+software assumes the same. So the box never guesses which side is whose and
+offers nothing to swap them with. That makes a clock the wrong way round a
+fact that can be stated instead of a setting that can be wrong:
+
+- before the first move, a clock that stands still with its lever up on
+  Black's side - or runs there - fails the **starting-position check**,
+  beside the pieces;
+- Black's time **started** over a starting position is an alarm of its own
+  ("Clock wrong way"): not out of sync, the moves go on being followed. It
+  clears by itself when the clock is put right, and after moves have been
+  made at the first press that leaves the side to move running.
+
+`Alnasl.Clock` and `Alnasl.Session` have the exact rules;
+`docs/real-board-2026-10-12.md` has the bits they rest on.
+
 ## 4. The outbox
 
 `Alnasl.Outbox`. The guarantee: **a move the site shows is a move that is
@@ -234,7 +251,7 @@ object a line:
 |---|---|
 | `cfg` | how the board was set up when the lines after it were written: driver, port, whether it is turned round, the game it was linked to, a starting position |
 | `pos` | the board as the driver reported it - **before** the box turns a turned board - 64 characters a8..h1, FEN letters, `.` for empty |
-| `clk` | a clock reading: milliseconds, and `white`, `black` or `none` running |
+| `clk` | a clock reading: milliseconds, `white`, `black` or `none` running (or `off`: the clock was switched off), and the side its lever is set for when the driver can tell |
 | `rx`, `tx` | raw serial bytes, hex (real boards only) |
 | `st` | `connected` / `disconnected` |
 | `note` | something a person typed |
@@ -268,7 +285,8 @@ still comes out whole.
   (the starting position reads upside down) and read the other way up; it
   can also be turned by hand.
 - The **start-position check** compares what the board reads with where the
-  game starts and says what is wrong in pieces and squares.
+  game starts and says what is wrong in pieces and squares - and, when a
+  clock is attached, whether it is set so that the side to move runs first.
 - A **late** board is caught up by the search if it is a few moves in, by
   the arbiter if not.
 - A game from a **set position** (resumed, adjourned) gets a FEN before its

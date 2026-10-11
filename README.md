@@ -7,10 +7,13 @@ with the clock times, to the live results site as it is played. It runs on a
 small box beside the boards - a Raspberry Pi with a screen, keyboard and mouse
 for the arbiter - and keeps working when the hall's internet does not.
 
-> Status: **first build. Everything runs - on simulated boards.** The tracker,
-> the outbox, the management site and the drivers are written and tested
-> without hardware; the DGT serial driver has not met a real board yet, and
-> the wire format of a DGT *loop* is assumed, not verified. See
+> Status: **first build. Everything runs on simulated boards, and one real
+> board has been read.** The tracker, the outbox and the management site are
+> written and tested without hardware. The DGT serial driver met a real
+> board and clock on 2026-10-12: handshake, position, piece movements and the
+> clock are confirmed ([docs/real-board-2026-10-12.md](docs/real-board-2026-10-12.md));
+> a whole game on it has not been played yet, and the wire format of a DGT
+> *loop* is still assumed, not verified. See
 > [What is not done](#what-is-not-done) and [docs/tomorrow.md](docs/tomorrow.md).
 
 ## The name
@@ -74,9 +77,9 @@ arbiter's laptop on the hall's network. English and Dutch, light and dark.
 
 | Page | What it is for |
 |---|---|
-| **Round** | The screen during play. A tile per board: players, the position the box is sure of, clocks, last move, and the state as a shape and a word - Live, Waiting for start, Settling, Recovered a move, Out of sync, No signal, Finished. A tile is the way to the board's own page. Fetch the pairings, start the next round |
+| **Round** | The screen during play. A tile per board: players, the position the box is sure of, clocks, last move, and the state as a shape and a word - Live, Waiting for start, Settling, Recovered a move, Out of sync, No signal, Clock wrong way, Finished. Before the first move a tile also says, in words, when the clock is not set for White. A tile is the way to the board's own page. Fetch the pairings, start the next round |
 | **A board** | The position large, the move list, and - when board and game have parted ways - what the board reads beside what is certain. The repair tools: resync from the board (search deeper, or pick from the candidates), type moves, undo, change a move, set the result, start from a FEN, pause and resume sending, turn the board round |
-| **Boards** | What is plugged in. Add a DGT board or a simulator; connect and disconnect; each board's live picture, signal quality, serial number and firmware; the start-position check ("black queen and black king are swapped (d8, e8)"); link a board to its board number, or a whole row in order |
+| **Boards** | What is plugged in. Add a DGT board or a simulator; connect and disconnect; each board's live picture, signal quality, serial number and firmware; the start-position check, pieces and clock ("black queen and black king are swapped (d8, e8)", "Clock not in starting position: Black's side would run first - the clock is turned or the lever is the wrong way"); link a board to its board number, or a whole row in order |
 | **Outbox** | The connection, honestly: connected or not, last success, how much is waiting and why it is not going, in words. What waits, what the server refused, what went out. "Send now" |
 | **PGN** | Read PGN files or pasted moves (checked for legality). Play a game on a simulator board; attach a game that was not captured to its board, after asking; compare a scoresheet with the captured game (the first difference). Export a game or the whole round |
 | **Recordings** | The raw captures per board. Replay one through the tracker as a dry run (what it makes of it, where it lost the thread); export it as a test fixture; download it |
@@ -198,7 +201,7 @@ page says so, and simulator boards are unaffected.
 
 ## What is proven, and how
 
-Without hardware, by `mix test` (189 tests) and three tools:
+By `mix test` (211 tests), three tools, and one evening with a real board:
 
 **The tracker**, against 69 games (59 classics before 1930, 7 constructed
 for underpromotion and en passant, 3 more; 4599 plies) played through the
@@ -244,9 +247,34 @@ played - 74, 40 and 45 plies - with the results set on the box (0-1, 0-1,
 "0 waiting" while the sender was busy, and each request opened a connection
 pool of its own.
 
-**The DGT serial driver**, byte for byte against an emulated board built
-from the same protocol description: it proves driver and protocol module
-agree with each other, and nothing about a real board.
+**The DGT serial driver, against a real board** (serial 06310, firmware
+1.9, with a DGT clock; recorded 2026-10-12, decoded message by message in
+[docs/real-board-2026-10-12.md](docs/real-board-2026-10-12.md)). Confirmed
+by that recording, and pinned by tests that push its bytes through the
+driver (`test/alnasl/real_board_test.exs`, fixtures `real-06310-*.jsonl`):
+
+- the line and the framing, with messages arriving in pieces of at most 16
+  bytes;
+- the handshake: serial number, firmware version, the 64-square dump;
+- a piece code and the order of the squares - one black knight, on d6, as
+  the user saw it - and field updates as it was lifted and put down;
+- the clock message: the times, running or not, which side runs, the lever,
+  "no clock" when it is switched off; a press with its 30-second increment,
+  a pause, a resume;
+- which side of the clock is White's. It is fixed: the clock stands to the
+  right of the board, and there is no setting to swap it;
+- that a clock turned round and started on the wrong side is seen as
+  exactly that. The recording ends with one.
+
+Two things the recording corrected: the lever is up on the side whose time
+*runs* (the code had it the other way, in a fallback that was never
+reached), and a "no clock" message was dropped when a recording was
+replayed from its bytes.
+
+The same driver is also run, byte for byte, against an emulated board built
+from the protocol description - which proves driver and emulator agree
+with each other, and is how the clock check and the clock alarm are tested
+with the pieces in the starting position.
 
 **The site**: LiveView tests of every page's main actions; an accessibility
 pass that computes the contrast of every text pairing of the colour tokens
@@ -255,11 +283,12 @@ and names on every page in both languages.
 
 ## What is not done
 
-- **No real board has been read.** The DGT serial driver follows DGT's
-  published protocol as written from memory of that description. Its framing
-  and piece codes are tested with hand-built bytes; the clock message's
-  status bits and which side of the clock is White are marked `ASSUMED` in
-  `lib/alnasl/dgt/protocol.ex`. First session: [docs/tomorrow.md](docs/tomorrow.md).
+- **No game has been played on a real board.** One board has been read
+  (see above), with one knight on it: eleven of the twelve piece codes, a
+  capture, castling, a promotion and a whole game through the tracker with
+  real hands are still to come. The clock's battery-low bit and the flag
+  bits beside the hours were never set; a board lying the other way round
+  was not tried. Next session: [docs/tomorrow.md](docs/tomorrow.md).
 - **The bus (loop) wire format is assumed.** `lib/alnasl/dgt/bus.ex` holds
   every byte of it, each marked `ASSUMED`, with a TODO list. The polling
   scheduler and the per-address board model are built and tested against an
@@ -270,7 +299,11 @@ and names on every page in both languages.
   to work, not something read in a specification. It is only ever a
   suggestion.
 - **No DGT clock commands** are sent (nothing is written to the clock's
-  display); the clock is only read.
+  display); the clock is only read. What the clock says about itself when it
+  is switched on (`0A 10 01 2A 00 00 00`) is recognised and not decoded.
+- **The clock alarm knows one thing**: a clock *started* on the wrong side
+  with the pieces in the starting position. A clock swapped or re-set
+  wrongly in the middle of a game is not looked for.
 - **Chess960** is not supported (neither is it by the server's checker).
 - **Three or more moves unseen in a row** can be reconstructed wrongly in
   constructed cases (flagged, never silent) - see the table above.
