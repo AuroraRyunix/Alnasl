@@ -19,7 +19,9 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
-Nothing has been released yet. This is everything so far, in the order it
+## [0.1.0] - 2026-10-12
+
+The first release. This is everything so far, in the order it
 was built; the commit messages have the long version.
 
 - [Feature] **An installer, a portable copy and an updater.** Windows: `Alnasl-Setup.exe` (per user, no administrator, a Start menu entry and a small window that is the stop button) and a zip that installs nothing. Linux, x86_64 and arm64: one line that installs a service under `/opt/alnasl`, as its own user, in the group that may open serial ports. The program asks GitHub every half hour whether a newer version is out and says so; it downloads nothing until you say yes, tells you the size first, and refuses to restart under a game in progress unless you insist. The question can be switched off (Setup, Updates). The data is in a folder of its own that no installer, update or uninstall touches. Nothing is signed: Windows will say so, once.
