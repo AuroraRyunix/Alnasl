@@ -36,6 +36,14 @@ defmodule AlnaslWeb.TableWords do
 
   defp names(names), do: Enum.map_join(names, ", ", &"\"#{&1}\"")
 
+  defp sentence({:outside, name, titles}),
+    do:
+      gettext(
+        "%{name} is not playing in %{tournament}: what it reads goes nowhere. Put it there (the line under the bar), or give its table to a tournament in Setup.",
+        name: name,
+        tournament: Enum.join(titles, " / ")
+      )
+
   defp sentence({:duplicate_table, n, names}),
     do:
       gettext("Table %{n} is on more than one board: %{names}. A sticker belongs on one.",

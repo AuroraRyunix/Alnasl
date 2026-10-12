@@ -98,6 +98,7 @@ defmodule AlnaslWeb.RecordingsLive do
       flash={@flash}
       nav={:recordings}
       link={@link}
+      hall={@hall}
       update={@update}
       box={@box}
       locale={@locale}

@@ -16,6 +16,7 @@ defmodule AlnaslWeb.HelpLive do
       flash={@flash}
       nav={:help}
       link={@link}
+      hall={@hall}
       update={@update}
       box={@box}
       locale={@locale}
@@ -93,10 +94,25 @@ defmodule AlnaslWeb.HelpLive do
             </li>
             <li>
               {gettext(
-                "Say which tables play in which tournament: \"Tables from 5 to 8\" under the tournament. Table 5 is then its board 1. One board can also be put in a tournament on the Boards page."
+                "The boards are put in the tournament for you. With one tournament and nothing played yet in the box's own, every board the box knows plays there at once, its table number being its board; the line under the bar says so and has an Undo. With a group, or a game already under way, the box asks which tables play in which, with ranges filled in: \"Tables from 5 to 8\", table 5 being the tournament's board 1. One board can also be put in a tournament on the Boards page."
               )}
             </li>
           </ol>
+          <p id="help-outside">
+            {gettext(
+              "A board that plays in no linked tournament is never left silent: the line under the bar, the Boards page, the Round page and \"Ready for round N?\" all say \"Board 1 is not playing in ...\", with a button to put it there. If a game is under way on it, the button offers \"these moves are board N of round R\" (the moves stay, under the pairing's names, and are sent in full) or \"start fresh\" (the game is closed without a result and kept where it was). A board connected later joins the only linked tournament by itself, as long as the box's own has not been used."
+            )}
+          </p>
+          <p id="help-statuses">
+            {gettext(
+              "The bar names what it is about: \"OpenPairings: connected\" is the code you pasted; \"Results site: ...\" is the tournament's results page. \"No relay key yet\" means OpenPairings has not saved a relay key for the tournament: in OpenPairings, Settings, Live boards, The results site. The box starts sending by itself a few seconds after the key is saved. \"Live\" and the number beside it is this browser's connection to the box, not to the internet."
+            )}
+          </p>
+          <p id="help-sending-automatic">
+            {gettext(
+              "Sending is automatic: to OpenPairings from the moment a tournament is linked, to the results site from the moment it has an address and a key (a game recorded before that goes out in full). Lichess stays off until you fill in a round and a token. \"Send now\" on the Outbox page only nudges a destination that is waiting out a pause, and always says what it did or why it did nothing."
+            )}
+          </p>
           <p id="help-rounds-start">
             {gettext(
               "From then on a round starts by itself: a few seconds after the arbiter pairs it in OpenPairings, that tournament's boards show the new round with names, ratings and colours. The boards of the other tournaments are not touched. \"Start round N\" on the Round page stays for when there is no connection, and a tournament can be told not to start rounds by itself (Setup)."
@@ -401,6 +417,12 @@ defmodule AlnaslWeb.HelpLive do
             <dd>
               {gettext(
                 "Not in the program's folder. Windows: %LOCALAPPDATA%\\AlnaslData (type that in Explorer's address bar). Linux, installed: /var/lib/alnasl. It holds the database, the PGN of every game, the raw recordings, and the keys and codes you pasted. Updating and uninstalling leave it alone; installing again finds it. To move to another computer, copy that folder while Alnasl is stopped."
+              )}
+            </dd>
+            <dt>{gettext("Which copy is which")}</dt>
+            <dd id="help-copies">
+              {gettext(
+                "Setup, \"This copy of Alnasl\", says the version, how this copy was started and where its data folder is. The boards' table numbers are kept there, per board serial number, so they survive the next round, updates and reinstalls. A second copy started another way on the same computer (from source, installed, portable) has a data folder of its own: its own boards, numbers and tournaments."
               )}
             </dd>
             <dt>{gettext("Uninstalling")}</dt>

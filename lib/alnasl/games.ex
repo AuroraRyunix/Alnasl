@@ -252,6 +252,41 @@ defmodule Alnasl.Games do
   end
 
   @doc """
+  The game is played on another tournament's board now: a board was given to
+  a tournament while the game was under way. It takes the next game number
+  of its new place, its PGN follows, and what was waiting to be sent for the
+  tournament it left is not sent (the new place has its own). `:taken` when
+  the place holds a game with moves already.
+  """
+  def carry(%Game{} = game, tournament_id, round, board_no) do
+    there = history(tournament_id, round, board_no)
+
+    if Enum.any?(there, &begun?/1) do
+      :taken
+    else
+      # What the board's process made when it was linked: an empty game.
+      for empty <- there, do: Repo.delete(empty)
+      File.rm(pgn_path(game))
+
+      Alnasl.Outbox.drop_pending(game)
+
+      moved =
+        game
+        |> Ecto.Changeset.change(%{
+          tournament_id: tournament_id,
+          round: round,
+          board_no: board_no,
+          game_no: 1,
+          pairing_flag: nil
+        })
+        |> Repo.update!()
+        |> tap(&write_pgn/1)
+
+      {:ok, moved}
+    end
+  end
+
+  @doc """
   Moves a game to another board of its round: the pairing program gave it
   another number. A number below 1 is a place to wait while two games
   change places.

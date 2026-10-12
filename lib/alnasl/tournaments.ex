@@ -185,6 +185,19 @@ defmodule Alnasl.Tournaments do
 
   def assign_tables(%Tournament{} = tournament, from, to)
       when is_integer(from) and is_integer(to) and from > 0 and to >= from do
+    with {:ok, tournament, _carried} <- assign_tables_carry(tournament, from, to),
+         do: {:ok, tournament}
+  end
+
+  def assign_tables(_tournament, _from, _to), do: {:error, :range}
+
+  @doc """
+  `assign_tables/3`, and what became of a game under way on a board that
+  moved with its table: `{:ok, tournament, [carried]}`, each
+  `Alnasl.Tables.assign_carry/3`'s account of it.
+  """
+  def assign_tables_carry(%Tournament{} = tournament, from, to)
+      when is_integer(from) and is_integer(to) and from > 0 and to >= from do
     for other <- list(),
         other.id != tournament.id,
         other.table_from != nil,
@@ -194,9 +207,11 @@ defmodule Alnasl.Tournaments do
 
     tournament = update!(tournament, %{table_from: from, table_to: to})
 
-    for board <- Alnasl.Boards.list(), board.table_no != nil, board.table_no in from..to do
-      Alnasl.Tables.assign(board, tournament)
-    end
+    carried =
+      for board <- Alnasl.Boards.list(), board.table_no != nil, board.table_no in from..to do
+        {:ok, _board, carried} = Alnasl.Tables.assign_carry(board, tournament)
+        carried
+      end
 
     Alnasl.Log.add(:info, "tournament.tables", %{
       tournament: title(tournament) || "",
@@ -204,10 +219,10 @@ defmodule Alnasl.Tournaments do
       to: to
     })
 
-    {:ok, tournament}
+    {:ok, tournament, Enum.reject(carried, &is_nil/1)}
   end
 
-  def assign_tables(_tournament, _from, _to), do: {:error, :range}
+  def assign_tables_carry(_tournament, _from, _to), do: {:error, :range}
 
   @doc "The tournament whose range of tables holds table `number`, if any."
   def for_table(number) when is_integer(number) do

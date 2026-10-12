@@ -527,8 +527,13 @@ defmodule AlnaslWeb.TablesAndOutputsTest do
       eventually_html(view, fn _ -> has_element?(view, "#dest-waiting-lichess", "0 waiting") end)
       assert has_element?(view, "#dest-waiting-openresults", "1 waiting")
 
-      assert view |> element("#dest-send-lichess") |> render_click() =~
-               "Trying Lichess broadcast now"
+      # Nothing waits for Lichess just now: the button cannot do anything, and
+      # says so beside it - and pressed anyway, the answer is the same.
+      assert has_element?(view, "#dest-send-lichess[disabled]")
+      assert has_element?(view, "#dest-send-why-lichess", "Nothing is waiting")
+
+      assert render_click(view, "dest_send", %{"id" => "lichess"}) =~
+               "Lichess broadcast: Nothing is waiting."
 
       view |> element("#dest-toggle-lichess") |> render_click()
       refute Destination.enabled?(LichessBroadcast)

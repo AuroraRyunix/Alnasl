@@ -28,6 +28,7 @@ defmodule AlnaslWeb.SetupLive do
     Log,
     OpenPairings,
     OpenResults,
+    Seating,
     Settings,
     Tournaments,
     Tracker,
@@ -35,7 +36,7 @@ defmodule AlnaslWeb.SetupLive do
   }
 
   alias Alnasl.Destination.{LichessApi, LichessBroadcast}
-  alias AlnaslWeb.{Access, DestinationWords, LinkWords, Words}
+  alias AlnaslWeb.{Access, DestinationWords, Hall, LinkWords, SeatingComponents, Status, Words}
 
   @tracker_fields ~w(settle_ms castle_hold_ms promotion_hold_ms takeback_settle_ms transient_ms lifted_ms search_depth)
 
@@ -121,6 +122,7 @@ defmodule AlnaslWeb.SetupLive do
           as: :tracker
         ),
       key_hint: Tournaments.relay_key_hint(own),
+      about: Alnasl.BoxInfo.info(),
       pin_set?: Settings.pin_set?(),
       listen: Listen.chosen(),
       listen_forced: Listen.forced(),
@@ -288,21 +290,8 @@ defmodule AlnaslWeb.SetupLive do
         {:noreply,
          socket
          |> assign(code_form: to_form(%{"code" => ""}, as: :link))
-         |> put_flash(
-           :info,
-           case tournaments do
-             [] ->
-               gettext(
-                 "The code is accepted. It reaches no tournament just now; one that is added to it later appears here by itself."
-               )
-
-             found ->
-               gettext(
-                 "The code is accepted: %{count} tournament(s). Say below which tables play in which.",
-                 count: length(found)
-               )
-           end
-         )
+         |> put_flash(:info, accepted_words(tournaments, Seating.after_code(tournaments)))
+         |> Hall.refresh()
          |> load()}
 
       {:pending, _link, reason} ->
@@ -380,25 +369,18 @@ defmodule AlnaslWeb.SetupLive do
       cond do
         tournament == nil -> {:error, :range}
         from == nil -> Tournaments.assign_tables(tournament, nil, nil)
-        true -> Tournaments.assign_tables(tournament, from, to)
+        true -> Seating.assign_range(tournament, from, to)
       end
 
     case result do
       {:ok, _tournament} when from == nil ->
         {:noreply, socket |> put_flash(:info, gettext("No range of tables any more.")) |> load()}
 
-      {:ok, tournament} ->
+      {:ok, tournament, carried} ->
         {:noreply,
          socket
-         |> put_flash(
-           :info,
-           gettext(
-             "Tables %{from}-%{to} play in %{name}: table %{from} is its board 1.",
-             from: from,
-             to: to,
-             name: Tournaments.title(tournament) || gettext("this box's own tournament")
-           )
-         )
+         |> put_flash(:info, Hall.range_words(tournament, from, to, carried))
+         |> Hall.refresh()
          |> load()}
 
       _error ->
@@ -653,6 +635,35 @@ defmodule AlnaslWeb.SetupLive do
 
   def handle_info(_other, socket), do: {:noreply, socket}
 
+  # What the code brought, and the next step the box took (or asks for).
+  defp accepted_words([], _step),
+    do:
+      gettext(
+        "The code is accepted. It reaches no tournament just now; one that is added to it later appears here by itself."
+      )
+
+  defp accepted_words(found, {:joined, tournament, boards}) do
+    gettext("The code is accepted: %{count} tournament(s).", count: length(found)) <>
+      " " <>
+      ngettext(
+        "The board now plays in %{name}: its table number is its board.",
+        "All %{count} boards now play in %{name}: a board's table number is its board.",
+        length(boards),
+        name: Tournaments.title(tournament) || "",
+        count: length(boards)
+      )
+  end
+
+  defp accepted_words(found, {:ask, _tournaments}),
+    do:
+      gettext("The code is accepted: %{count} tournament(s).", count: length(found)) <>
+        " " <> gettext("Say below which tables play in which.")
+
+  defp accepted_words(found, :nothing),
+    do:
+      gettext("The code is accepted: %{count} tournament(s).", count: length(found)) <>
+        " " <> gettext("Boards you connect later can be put in them on the Boards page.")
+
   # "board 3, board 7 and board 12", by the number the arbiter knows them by.
   defp board_list(games) do
     names =
@@ -696,6 +707,7 @@ defmodule AlnaslWeb.SetupLive do
       flash={@flash}
       nav={:setup}
       link={@link}
+      hall={@hall}
       update={@update}
       box={@box}
       locale={@locale}
@@ -730,6 +742,8 @@ defmodule AlnaslWeb.SetupLive do
               </div>
             </.form>
           </div>
+
+          <SeatingComponents.ask ask={@hall.seating.ask} />
 
           <ul id="links" class="dests" style="margin-top:0.8rem">
             <li :for={link <- @links} id={"link-#{link.id}"} class="dest">
@@ -867,26 +881,25 @@ defmodule AlnaslWeb.SetupLive do
                     </span>
                   </span>
                 </p>
-                <p id={"tournament-results-#{t.id}"} class="note">
-                  <%= cond do %>
-                    <% t.server_url == "" -> %>
-                      {gettext(
-                        "Not published on a results site: its moves go to OpenPairings only. Publish it there and the address arrives here by itself."
-                      )}
-                    <% t.relay_key == "" -> %>
-                      {gettext(
-                        "Results page: %{url}, %{slug} - but no relay key is saved in OpenPairings (Settings, Live boards), so nothing is sent there.",
-                        url: t.server_url,
-                        slug: t.slug
-                      )}
-                    <% true -> %>
-                      {gettext("Results page: %{url}, %{slug}, key %{hint}. It came with the code.",
-                        url: t.server_url,
-                        slug: t.slug,
-                        hint: Tournaments.relay_key_hint(t)
-                      )}
-                  <% end %>
+                <% {results_tone, results_text} = Status.results_line(t) %>
+                <p
+                  :if={results_tone != "warn"}
+                  id={"tournament-results-#{t.id}"}
+                  class="note"
+                >
+                  {results_text}
                 </p>
+                <div
+                  :if={results_tone == "warn"}
+                  id={"tournament-nokey-#{t.id}"}
+                  class="callout warn"
+                  role="status"
+                >
+                  <b>
+                    {gettext("%{url}, %{slug}: no relay key yet", url: t.server_url, slug: t.slug)}
+                  </b>
+                  <p>{results_text}</p>
+                </div>
               <% else %>
                 <p id={"tournament-line-#{t.id}"} class="dest-line">
                   {gettext(
@@ -970,6 +983,31 @@ defmodule AlnaslWeb.SetupLive do
           <p class="note">
             {gettext(
               "Tables 5 to 8 given to a tournament: table 5 is its board 1. A board that gets one of those table numbers later joins by itself. One board can also be put in a tournament on the Boards page."
+            )}
+          </p>
+        </.panel>
+
+        <.panel id="setup-about" title={gettext("This copy of Alnasl")}>
+          <dl class="kv">
+            <dt>{gettext("Version")}</dt>
+            <dd id="about-version">{@about.version}</dd>
+            <dt>{gettext("Started as")}</dt>
+            <dd id="about-kind">{Words.install_kind(@about.kind)}</dd>
+            <dt>{gettext("Data folder")}</dt>
+            <dd id="about-data" class="mono">{@about.data_dir}</dd>
+            <dt>{gettext("Knows")}</dt>
+            <dd id="about-counts">
+              {ngettext("%{count} board", "%{count} boards", @about.boards, count: @about.boards)}, {ngettext(
+                "%{count} tournament",
+                "%{count} tournaments",
+                @about.tournaments,
+                count: @about.tournaments
+              )}
+            </dd>
+          </dl>
+          <p id="about-note" class="note">
+            {gettext(
+              "The boards, their table numbers and the tournaments are kept in the data folder, and stay through updates and reinstalls. A second copy of Alnasl started another way on the same computer (from source, installed, portable) has a data folder of its own, so it has its own boards, numbers and tournaments."
             )}
           </p>
         </.panel>

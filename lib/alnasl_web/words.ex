@@ -775,6 +775,42 @@ defmodule AlnaslWeb.Words do
   defp log("table.tournament", d),
     do: gettext("\"%{name}\" plays in %{tournament}.", name: d["name"], tournament: tournament(d))
 
+  defp log("seating.joined", d),
+    do:
+      ngettext(
+        "The board now plays in %{tournament}.",
+        "All %{count} boards now play in %{tournament}.",
+        d["count"] || 0,
+        tournament: d["tournament"],
+        count: d["count"] || 0
+      )
+
+  defp log("seating.undone", d),
+    do: gettext("Undone: the boards left %{tournament}.", tournament: d["tournament"])
+
+  defp log("table.game_carried", d),
+    do:
+      gettext("The game under way on \"%{name}\" (%{moves} moves) went with it to %{tournament}.",
+        name: d["name"],
+        moves: d["moves"],
+        tournament: d["tournament"]
+      )
+
+  defp log("table.game_fresh", d),
+    do:
+      gettext(
+        "The game under way on \"%{name}\" (%{moves} moves) was closed without a result; the board begins again.",
+        name: d["name"],
+        moves: d["moves"]
+      )
+
+  defp log("table.game_left", d),
+    do:
+      gettext("The game under way on \"%{name}\" (%{moves} moves) stayed where it was.",
+        name: d["name"],
+        moves: d["moves"]
+      )
+
   defp log("round.started", d),
     do: gettext("Round %{round} started: %{name}.", round: d["round"], name: tournament(d))
 
@@ -888,4 +924,10 @@ defmodule AlnaslWeb.Words do
 
     %{at | year: y, month: mo, day: d, hour: h, minute: mi, second: s}
   end
+
+  @doc "How this copy was started (`Alnasl.BoxInfo.kind/0`)."
+  def install_kind(:installed), do: gettext("Installed (Windows installer)")
+  def install_kind(:service), do: gettext("Installed as a service (Linux)")
+  def install_kind(:portable), do: gettext("Portable copy (a release folder)")
+  def install_kind(:source), do: gettext("From source (a checkout)")
 end

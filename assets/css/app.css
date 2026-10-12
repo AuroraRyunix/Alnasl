@@ -539,6 +539,88 @@ code,
   font-weight: 600;
 }
 
+/* "Live - 2 ms": the browser's connection to the box. A dot, a word and a
+   number that does not shift the bar when it changes. */
+.live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  color: var(--quiet);
+  white-space: nowrap;
+}
+
+.live-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--idle);
+  flex: none;
+}
+
+.live-pill[data-state="live"] .live-dot {
+  background: var(--ok);
+}
+
+.live-pill[data-state="reconnecting"] {
+  color: var(--warn);
+  border-color: var(--warn);
+}
+
+.live-pill[data-state="reconnecting"] .live-dot {
+  background: var(--warn);
+  animation: live-pulse 1.4s ease-in-out infinite;
+}
+
+.live-ms {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes live-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-pill .live-dot {
+    animation: none !important;
+  }
+}
+
+.heads {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.outside-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1;
+}
+
+.outside-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.9rem;
+  align-items: baseline;
+}
+
+.outside-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.9rem;
+  margin-left: auto;
+}
+
 .banner.news {
   background: var(--panel);
   color: var(--ink);

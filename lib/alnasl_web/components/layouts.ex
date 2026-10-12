@@ -26,6 +26,12 @@ defmodule AlnaslWeb.Layouts do
   attr :locale, :string, default: "en"
   attr :update, :any, default: nil, doc: "`Alnasl.Updates.notice/0`"
   attr :alarms, :integer, default: 0
+
+  attr :hall, :map,
+    default: nil,
+    doc:
+      "`AlnaslWeb.Status.build/1`: the badges, and the lines about boards outside (assigned by `AlnaslWeb.Hall`)"
+
   slot :actions
   slot :inner_block, required: true
 
@@ -108,6 +114,8 @@ defmodule AlnaslWeb.Layouts do
           <.link navigate={~p"/outbox"}>{gettext("What is waiting")}</.link>
         </div>
 
+        <AlnaslWeb.SeatingComponents.notices seating={@hall && @hall.seating} nav={@nav} />
+
         <div :if={@update} id="update-banner" class="banner news" role="status">
           <.icon name="send" />
           <span>
@@ -150,9 +158,23 @@ defmodule AlnaslWeb.Layouts do
             {@title}<span :if={@subtitle} class="sub">{@subtitle}</span>
           </h1>
           {render_slot(@actions)}
-          <.link navigate={~p"/outbox"} id="link-state" style="text-decoration:none">
-            <.link_state link={@link} />
-          </.link>
+          <.live_pill />
+          <span id="link-state" class="heads">
+            <%= if @hall && is_list(@hall.heads) do %>
+              <.link
+                :for={head <- @hall.heads}
+                id={head.id}
+                navigate={head.to}
+                style="text-decoration:none"
+              >
+                <.badge tone={head.tone} icon={head.icon}>{head.text}</.badge>
+              </.link>
+            <% else %>
+              <.link navigate={~p"/outbox"} style="text-decoration:none">
+                <.link_state link={@link} />
+              </.link>
+            <% end %>
+          </span>
         </header>
 
         <main id="main" class="page">
@@ -268,6 +290,32 @@ defmodule AlnaslWeb.Layouts do
           <% end %>
         </.badge>
     <% end %>
+    """
+  end
+
+  @doc """
+  "Live · 2 ms": this browser's connection to the box, in the bar. The
+  number is how long the box takes to answer a question asked every few
+  seconds (`assets/js/app.js`, `LivePill`); when the socket drops it says
+  "Reconnecting...". It says nothing about the results server.
+  """
+  def live_pill(assigns) do
+    ~H"""
+    <span
+      id="live-pill"
+      class="live-pill"
+      phx-hook="LivePill"
+      phx-update="ignore"
+      data-state="connecting"
+      data-live={gettext("Live")}
+      data-reconnecting={gettext("Reconnecting...")}
+      data-connecting={gettext("Connecting...")}
+      role="status"
+    >
+      <span class="live-dot" aria-hidden="true"></span>
+      <span class="live-word">{gettext("Connecting...")}</span>
+      <span class="live-ms"></span>
+    </span>
     """
   end
 

@@ -46,6 +46,7 @@ defmodule Alnasl.Boards do
 
       if board.enabled, do: start(board)
       notify(board.id)
+      Tournaments.notify(board.tournament_id)
       {:ok, board}
     end
   end
@@ -74,15 +75,21 @@ defmodule Alnasl.Boards do
     Repo.delete(board)
     Log.add(:info, "board.removed", %{name: board.name}, %{board_id: board.id})
     notify(board.id)
+    Tournaments.notify(board.tournament_id)
     :ok
   end
 
-  # A board belongs to a tournament from the start: the box's own, unless
-  # whoever adds it says otherwise.
+  # A board belongs to a tournament from the start: the one whoever adds it
+  # names; else the only linked tournament there is, while the box's own has
+  # never been used (`Alnasl.Seating.default_tournament/0`); else the box's
+  # own.
   defp in_a_tournament(attrs) do
-    if attrs[:tournament_id] || attrs["tournament_id"],
-      do: attrs,
-      else: Map.put(attrs, :tournament_id, Tournaments.default_id())
+    if attrs[:tournament_id] || attrs["tournament_id"] do
+      attrs
+    else
+      tournament = Alnasl.Seating.default_tournament() || Tournaments.default()
+      Map.put(attrs, :tournament_id, tournament.id)
+    end
   end
 
   defp encode_options(attrs) do

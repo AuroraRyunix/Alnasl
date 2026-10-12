@@ -139,6 +139,17 @@ defmodule Alnasl.Outbox do
     :ok
   end
 
+  @doc "Forgets what waits for a game under its old place: it has a new place and says it in full there."
+  def drop_pending(%Game{id: id}) do
+    Repo.update_all(
+      from(e in Entry, where: e.game_id == ^id and e.state == "pending"),
+      set: [state: "superseded"]
+    )
+
+    Phoenix.PubSub.broadcast(Alnasl.PubSub, @topic, :outbox_changed)
+    :ok
+  end
+
   @doc "Wakes the senders that are running - every destination's, not only the results server's."
   def kick, do: Alnasl.Destination.kick()
 
