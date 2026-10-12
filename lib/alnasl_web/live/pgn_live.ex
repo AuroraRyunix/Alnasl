@@ -19,17 +19,22 @@ defmodule AlnaslWeb.PgnLive do
 
   use AlnaslWeb, :live_view
 
-  alias Alnasl.{Boards, Games, Pgn, Settings, Tournament}
+  alias Alnasl.{Boards, Games, Pgn, Tournaments}
+  alias AlnaslWeb.Scope
 
   @impl true
   def mount(_params, _session, socket) do
+    # One tournament at a time: the first one shown, until another is picked.
+    first = hd(Tournaments.active())
+
     {:ok,
      socket
      |> assign(
        page_title: "PGN",
        games: [],
        problems: [],
-       round: Settings.get("round") || 1,
+       tid: first.id,
+       round: first.round,
        confirm: nil,
        verdicts: %{}
      )
@@ -39,12 +44,15 @@ defmodule AlnaslWeb.PgnLive do
   end
 
   defp load(socket) do
-    round = socket.assigns.round
+    %{tid: tid, round: round} = socket.assigns
+    shown = Tournaments.active()
 
     assign(socket,
-      stored: Games.list(round),
-      rounds: Enum.uniq(Tournament.rounds() ++ Games.rounds() ++ [round]) |> Enum.sort(),
-      numbers: round |> Tournament.boards() |> Enum.map(& &1.board)
+      stored: Games.list(tid, round),
+      rounds: Enum.uniq(Tournaments.rounds(tid) ++ Games.rounds(tid) ++ [round]) |> Enum.sort(),
+      numbers: tid |> Tournaments.boards(round) |> Enum.map(& &1.board),
+      shown: shown,
+      names: Map.new(shown, &{&1.id, Tournaments.title(&1) || gettext("This box")})
     )
   end
 
@@ -102,6 +110,17 @@ defmodule AlnaslWeb.PgnLive do
   def handle_event("clear", _params, socket),
     do: {:noreply, assign(socket, games: [], problems: [], confirm: nil, verdicts: %{})}
 
+  def handle_event("pick_tournament", %{"tournament_id" => value}, socket) do
+    with {tid, ""} <- Integer.parse(value), %{} = tournament <- Tournaments.get(tid) do
+      {:noreply,
+       socket
+       |> assign(tid: tournament.id, round: tournament.round, confirm: nil, targets: %{})
+       |> load()}
+    else
+      _none -> {:noreply, socket}
+    end
+  end
+
   def handle_event("round", %{"round" => round}, socket) do
     {:noreply, socket |> assign(round: int(round, socket.assigns.round), confirm: nil) |> load()}
   end
@@ -148,6 +167,7 @@ defmodule AlnaslWeb.PgnLive do
     else
       boards =
         Boards.add_simulators(length(games), socket.assigns.round,
+          tournament_id: socket.assigns.tid,
           games: games,
           first: next_free(socket),
           faults: %{"lift" => 0.08, "slide" => 0.1}
@@ -166,7 +186,10 @@ defmodule AlnaslWeb.PgnLive do
   def handle_event("ask_attach", %{"index" => index}, socket) do
     with {_game, i} <- find(socket, index),
          number when is_integer(number) <- socket.assigns.targets[i] do
-      {:noreply, assign(socket, confirm: {i, number, Games.get(socket.assigns.round, number)})}
+      {:noreply,
+       assign(socket,
+         confirm: {i, number, Games.current(socket.assigns.tid, socket.assigns.round, number)}
+       )}
     else
       _none ->
         {:noreply,
@@ -178,7 +201,7 @@ defmodule AlnaslWeb.PgnLive do
 
   def handle_event("attach", _params, %{assigns: %{confirm: {i, number, _existing}}} = socket) do
     {game, _} = Enum.find(socket.assigns.games, fn {_g, index} -> index == i end)
-    {:ok, _stored} = Boards.attach_pgn(socket.assigns.round, number, game)
+    {:ok, _stored} = Boards.attach_pgn(socket.assigns.tid, socket.assigns.round, number, game)
 
     {:noreply,
      socket
@@ -199,7 +222,8 @@ defmodule AlnaslWeb.PgnLive do
   def handle_event("compare", %{"index" => index}, socket) do
     with {game, i} <- find(socket, index),
          {:board, number} when is_integer(number) <- {:board, socket.assigns.targets[i]},
-         {:game, %{} = stored} <- {:game, Games.get(socket.assigns.round, number)} do
+         {:game, %{} = stored} <-
+           {:game, Games.current(socket.assigns.tid, socket.assigns.round, number)} do
       verdict =
         {number, Pgn.first_difference(Games.sans(stored), game.moves), length(Games.sans(stored)),
          length(game.moves)}
@@ -221,7 +245,9 @@ defmodule AlnaslWeb.PgnLive do
 
   defp next_free(socket) do
     used =
-      Enum.map(Boards.list(), & &1.board_no) ++ Enum.map(socket.assigns.stored, & &1.board_no)
+      (Boards.list()
+       |> Enum.filter(&(&1.tournament_id == socket.assigns.tid))
+       |> Enum.map(& &1.board_no)) ++ Enum.map(socket.assigns.stored, & &1.board_no)
 
     (used |> Enum.reject(&is_nil/1) |> Enum.max(fn -> 0 end)) + 1
   end
@@ -248,6 +274,17 @@ defmodule AlnaslWeb.PgnLive do
     ~H"""
     <Layouts.app flash={@flash} nav={:pgn} link={@link} box={@box} locale={@locale} title="PGN">
       <:actions>
+        <form
+          :if={length(@shown) > 1}
+          id="pgn-tournament-form"
+          phx-change="pick_tournament"
+          class="row"
+        >
+          <label for="pgn-tournament" class="note">{gettext("Tournament")}</label>
+          <select id="pgn-tournament" name="tournament_id" class="input" style="width:auto">
+            <option :for={t <- @shown} value={t.id} selected={t.id == @tid}>{@names[t.id]}</option>
+          </select>
+        </form>
         <form id="pgn-round-form" phx-change="round" class="row">
           <label for="pgn-round" class="note">{gettext("Round")}</label>
           <select id="pgn-round" name="round" class="input" style="width:auto">
@@ -307,7 +344,7 @@ defmodule AlnaslWeb.PgnLive do
               :if={@stored != []}
               id="export-round"
               small
-              href={~p"/files/round/#{@round}"}
+              href={Scope.round_file(@tid, @round)}
               download
             >{gettext("Whole round as PGN")}</.button>
           </:actions>
@@ -327,7 +364,7 @@ defmodule AlnaslWeb.PgnLive do
             <tbody>
               <tr :for={game <- @stored} id={"stored-#{game.board_no}"}>
                 <td>
-                  <.link navigate={~p"/round/#{@round}/board/#{game.board_no}"}>{game.board_no}</.link>
+                  <.link navigate={Scope.game_path(@tid, @round, game.board_no)}>{game.board_no}</.link>
                 </td>
                 <td>{game.white || "?"} - {game.black || "?"}</td>
                 <td class="num">{div(length(Games.sans(game)) + 1, 2)}</td>
@@ -339,7 +376,7 @@ defmodule AlnaslWeb.PgnLive do
                   <.button
                     id={"export-#{game.board_no}"}
                     small
-                    href={~p"/files/round/#{@round}/board/#{game.board_no}"}
+                    href={Scope.game_file(@tid, @round, game.board_no)}
                     download
                   >PGN</.button>
                 </td>

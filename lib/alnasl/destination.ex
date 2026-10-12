@@ -18,7 +18,9 @@ defmodule Alnasl.Destination do
     (`Alnasl.Outbox`, unchanged);
   - `Alnasl.Destination.LichessBroadcast` sends the game as it is now, so
     its place is, per game, the game's counter at the last push Lichess
-    answered for (`destination_cursors`).
+    answered for (`destination_cursors`);
+  - `Alnasl.Destination.OpenPairings` reports the game as it is now to the
+    pairing program it came from, and keeps its place the same way.
 
   Both are in the database before anything is sent, and both are per game in
   the order things happened: `games.seq` only ever goes up, and it goes up
@@ -78,7 +80,11 @@ defmodule Alnasl.Destination do
   @doc "Is it on before the arbiter has said anything?"
   @callback default_enabled?() :: boolean()
 
-  @all [Alnasl.Destination.OpenResults, Alnasl.Destination.LichessBroadcast]
+  @all [
+    Alnasl.Destination.OpenResults,
+    Alnasl.Destination.LichessBroadcast,
+    Alnasl.Destination.OpenPairings
+  ]
 
   @doc "Every destination Alnasl knows, the results server first."
   def all, do: @all
@@ -138,6 +144,17 @@ defmodule Alnasl.Destination do
   @doc "\"Send now\" for one destination: forget the pause and try at once."
   def send_now(module) do
     if pid = Process.whereis(sender(module)), do: send(pid, :send_now)
+    :ok
+  end
+
+  @doc """
+  Where a tournament's games go has changed - a results page, a key, a
+  Lichess round, a connect code: every sender forgets its pause and tries
+  at once, as it does when one of its own settings changes.
+  """
+  def settings_changed do
+    for module <- @all, pid = Process.whereis(sender(module)), do: send(pid, :send_now)
+    Phoenix.PubSub.broadcast(Alnasl.PubSub, "outbox", :outbox_changed)
     :ok
   end
 

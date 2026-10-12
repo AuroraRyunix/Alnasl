@@ -1,11 +1,18 @@
 defmodule AlnaslWeb.SetupLive do
   @moduledoc """
-  First run, and whenever something changes: which results server, which
-  tournament, the relay key; the box's name and language; a PIN for browsers
-  on other machines; how patient the tracker is.
+  First run, and whenever something changes: which tournaments the box
+  serves - a connect code from OpenPairings brings each with its pairings
+  and its results page - which tables play in which, the results page of
+  the box's own tournament, a Lichess round per tournament; the box's name
+  and language; a PIN for browsers on other machines; how patient the
+  tracker is.
 
-  "Test connection" really asks the server, with what is in the form (saved
-  or not), and says in words which of three steps failed and why.
+  "Test connection" really asks - the pairing program, or the results
+  server with what is in the form (saved or not) - and says in words which
+  step failed and why.
+
+  A connect code is a secret like the relay key: once added it is never
+  shown again, only where it leads and its first and last characters.
 
   The relay key is a secret: once saved, only its first and last characters
   are ever shown again. Leaving the field empty keeps the key that is stored.
@@ -13,26 +20,46 @@ defmodule AlnaslWeb.SetupLive do
 
   use AlnaslWeb, :live_view
 
-  alias Alnasl.{Destination, Log, Settings, Tournament, Tracker}
+  alias Alnasl.{
+    Boards,
+    Destination,
+    Log,
+    OpenPairings,
+    OpenResults,
+    Settings,
+    Tournaments,
+    Tracker
+  }
+
   alias Alnasl.Destination.{LichessApi, LichessBroadcast}
-  alias AlnaslWeb.{Access, DestinationWords, Words}
+  alias AlnaslWeb.{Access, DestinationWords, LinkWords, Words}
 
   @tracker_fields ~w(settle_ms castle_hold_ms promotion_hold_ms takeback_settle_ms transient_ms lifted_ms search_depth)
 
   @impl true
   def mount(_params, _session, socket) do
+    if connected?(socket), do: Tournaments.subscribe()
+
     {:ok,
      socket
      |> assign(page_title: gettext("Setup"), checks: nil, testing?: false)
      |> assign(lichess_checks: nil, lichess_testing?: false)
+     |> assign(link_tests: %{}, link_testing: nil, lichess_tid: Tournaments.default_id())
+     |> assign(code_form: to_form(%{"code" => ""}, as: :link))
      |> load()}
   end
 
   defp load(socket) do
     s =
       Settings.get_many(
-        ~w(server_url slug box_name locale round auto_suggest new_game_on_setup capture_cap_mb clock_heartbeat_s tracker)
+        ~w(box_name locale auto_suggest new_game_on_setup capture_cap_mb clock_heartbeat_s tracker)
       )
+
+    own = Tournaments.default()
+    tournaments = Tournaments.list()
+    # The tournament whose Lichess round the card is about.
+    lichess = Enum.find(tournaments, own, &(&1.id == socket.assigns.lichess_tid))
+    boards = Enum.frequencies_by(Boards.list(), & &1.tournament_id)
 
     tracker =
       Map.merge(
@@ -48,7 +75,7 @@ defmodule AlnaslWeb.SetupLive do
       fast?: Enum.all?(preset, fn {key, value} -> tracker[Atom.to_string(key)] == value end),
       server_form:
         to_form(
-          %{"server_url" => s["server_url"], "tournament" => s["slug"], "relay_key" => ""},
+          %{"server_url" => own.server_url, "tournament" => own.slug, "relay_key" => ""},
           as: :server
         ),
       box_form:
@@ -56,7 +83,7 @@ defmodule AlnaslWeb.SetupLive do
           %{
             "box_name" => s["box_name"],
             "locale" => s["locale"],
-            "round" => s["round"],
+            "round" => own.round,
             "auto_suggest" => s["auto_suggest"],
             "new_game_on_setup" => s["new_game_on_setup"],
             "capture_cap_mb" => s["capture_cap_mb"],
@@ -68,15 +95,20 @@ defmodule AlnaslWeb.SetupLive do
       lichess_form:
         to_form(
           %{
-            "round" => Settings.get("lichess_round_id") || "",
+            "round" => lichess.lichess_round_id || "",
             "token" => "",
-            "round_no" => LichessBroadcast.round(),
+            "round_no" => Tournaments.lichess_round(lichess),
             "enabled" => Destination.enabled?(LichessBroadcast)
           },
           as: :lichess
         ),
-      lichess_hint: LichessBroadcast.token_hint(),
-      lichess_round_id: Settings.get("lichess_round_id"),
+      lichess_hint: Tournaments.lichess_token_hint(lichess),
+      lichess_round_id: lichess.lichess_round_id,
+      lichess: lichess,
+      own: own,
+      tournaments: tournaments,
+      links: Tournaments.links(),
+      board_counts: boards,
       tracker_form:
         to_form(
           tracker
@@ -84,9 +116,8 @@ defmodule AlnaslWeb.SetupLive do
           |> Map.update!("promotion_default", &to_string/1),
           as: :tracker
         ),
-      key_hint: Settings.relay_key_hint(),
-      pin_set?: Settings.pin_set?(),
-      snapshot_at: Settings.get("snapshot_at")
+      key_hint: Tournaments.relay_key_hint(own),
+      pin_set?: Settings.pin_set?()
     )
   end
 
@@ -103,11 +134,11 @@ defmodule AlnaslWeb.SetupLive do
       )
 
     key = String.trim(params["relay_key"] || "")
-    {url, String.trim(slug), if(key == "", do: Settings.get("relay_key"), else: key)}
+    {url, String.trim(slug), if(key == "", do: Tournaments.default().relay_key, else: key)}
   end
 
   # What is in the Lichess form, as it would be saved: `{round id | :error | "", token}`.
-  defp read_lichess(params) do
+  defp read_lichess(params, tournament) do
     text = String.trim(params["round"] || "")
 
     round =
@@ -118,7 +149,7 @@ defmodule AlnaslWeb.SetupLive do
       end
 
     token = String.trim(params["token"] || "")
-    {round, if(token == "", do: Settings.get("lichess_token"), else: token)}
+    {round, if(token == "", do: tournament.lichess_token, else: token)}
   end
 
   # --- events ------------------------------------------------------------------
@@ -145,29 +176,20 @@ defmodule AlnaslWeb.SetupLive do
          |> put_flash(:error, gettext("Give the server's address and the tournament."))}
 
       true ->
-        Settings.put_many(%{"server_url" => url, "slug" => slug, "relay_key" => key || ""})
+        Tournaments.update!(Tournaments.default(), %{
+          server_url: url,
+          slug: slug,
+          relay_key: key || ""
+        })
+
         Log.add(:info, "setup.saved", %{})
-
-        socket =
-          case Tournament.refresh() do
-            {:ok, _snapshot} ->
-              put_flash(socket, :info, gettext("Saved. The pairings were fetched."))
-
-            {:error, reason} ->
-              put_flash(
-                socket,
-                :error,
-                gettext("Saved - but: %{why}", why: Words.fetch_error(reason))
-              )
-          end
-
-        {:noreply, load(socket)}
+        {:noreply, socket |> put_flash(:info, gettext("Saved.")) |> load()}
     end
   end
 
   # One form, two buttons, like the results server's: "Test" saves nothing.
   def handle_event("save_lichess", %{"lichess" => params, "intent" => "test"}, socket) do
-    {round, token} = read_lichess(params)
+    {round, token} = read_lichess(params, socket.assigns.lichess)
     send(self(), {:run_lichess_test, round, token})
 
     {:noreply,
@@ -179,7 +201,7 @@ defmodule AlnaslWeb.SetupLive do
   end
 
   def handle_event("save_lichess", %{"lichess" => params}, socket) do
-    case read_lichess(params) do
+    case read_lichess(params, socket.assigns.lichess) do
       {:error, _token} ->
         {:noreply,
          socket
@@ -192,10 +214,10 @@ defmodule AlnaslWeb.SetupLive do
          )}
 
       {round, token} ->
-        Settings.put_many(%{
-          "lichess_round_id" => round,
-          "lichess_token" => token || "",
-          "lichess_round" => int(params["round_no"], Settings.get("round") || 1, 1, 999)
+        Tournaments.update!(socket.assigns.lichess, %{
+          lichess_round_id: round,
+          lichess_token: token || "",
+          lichess_round: int(params["round_no"], socket.assigns.lichess.round || 1, 1, 999)
         })
 
         Destination.set_enabled(LichessBroadcast, params["enabled"] == "true")
@@ -205,8 +227,11 @@ defmodule AlnaslWeb.SetupLive do
   end
 
   def handle_event("clear_lichess", _params, socket) do
-    Settings.put_many(%{"lichess_round_id" => "", "lichess_token" => ""})
-    Destination.set_enabled(LichessBroadcast, false)
+    Tournaments.update!(socket.assigns.lichess, %{lichess_round_id: "", lichess_token: ""})
+
+    # The switch is the destination's, not one tournament's: it goes off
+    # with the last Lichess round.
+    unless LichessBroadcast.configured?(), do: Destination.set_enabled(LichessBroadcast, false)
     Log.add(:info, "setup.saved", %{})
 
     {:noreply,
@@ -222,7 +247,6 @@ defmodule AlnaslWeb.SetupLive do
     Settings.put_many(%{
       "box_name" => if(name == "", do: "Alnasl", else: String.slice(name, 0, 40)),
       "locale" => if(params["locale"] in ["en", "nl"], do: params["locale"], else: "en"),
-      "round" => int(params["round"], 1, 1, 999),
       "auto_suggest" => params["auto_suggest"] == "true",
       "new_game_on_setup" =>
         if(params["new_game_on_setup"] in ~w(always never),
@@ -233,9 +257,152 @@ defmodule AlnaslWeb.SetupLive do
       "clock_heartbeat_s" => int(params["clock_heartbeat_s"], 20, 5, 600)
     })
 
+    Tournaments.set_round(Tournaments.default_id(), int(params["round"], 1, 1, 999))
     Log.add(:info, "setup.saved", %{})
     # The language may have changed: draw the page again from the top.
     {:noreply, socket |> put_flash(:info, gettext("Saved.")) |> push_navigate(to: ~p"/setup")}
+  end
+
+  # --- tournaments and connect codes -------------------------------------------
+
+  def handle_event("add_code", %{"link" => %{"code" => text}}, socket) do
+    case OpenPairings.add_code(text) do
+      {:ok, _link, tournaments} ->
+        {:noreply,
+         socket
+         |> assign(code_form: to_form(%{"code" => ""}, as: :link))
+         |> put_flash(
+           :info,
+           case tournaments do
+             [] ->
+               gettext(
+                 "The code is accepted. It reaches no tournament just now; one that is added to it later appears here by itself."
+               )
+
+             found ->
+               gettext(
+                 "The code is accepted: %{count} tournament(s). Say below which tables play in which.",
+                 count: length(found)
+               )
+           end
+         )
+         |> load()}
+
+      {:pending, _link, reason} ->
+        {:noreply,
+         socket
+         |> assign(code_form: to_form(%{"code" => ""}, as: :link))
+         |> put_flash(
+           :error,
+           gettext(
+             "The code is kept, but could not be checked: %{why} The box asks again by itself.",
+             why: LinkWords.error(reason)
+           )
+         )
+         |> load()}
+
+      {:error, reason} ->
+        # The text is not put back in the field: it holds a secret.
+        {:noreply,
+         socket
+         |> assign(code_form: to_form(%{"code" => ""}, as: :link))
+         |> put_flash(:error, LinkWords.code_error(reason))}
+    end
+  end
+
+  def handle_event("test_link", %{"id" => id}, socket) do
+    id = String.to_integer(id)
+    send(self(), {:run_link_test, id})
+
+    {:noreply,
+     assign(socket, link_testing: id, link_tests: Map.delete(socket.assigns.link_tests, id))}
+  end
+
+  def handle_event("retry_link", %{"id" => id}, socket) do
+    case Tournaments.get_link(id) do
+      nil ->
+        {:noreply, load(socket)}
+
+      link ->
+        socket =
+          case OpenPairings.retry(link) do
+            {:ok, _link} -> put_flash(socket, :info, gettext("OpenPairings answers again."))
+            {:error, reason} -> put_flash(socket, :error, LinkWords.error(reason))
+          end
+
+        {:noreply, load(socket)}
+    end
+  end
+
+  def handle_event("remove_link", %{"id" => id}, socket) do
+    if link = Tournaments.get_link(id), do: OpenPairings.remove_link(link)
+
+    {:noreply,
+     socket
+     |> put_flash(
+       :info,
+       gettext(
+         "The code and its tournaments are off the box. Their boards are back in the box's own tournament, not linked."
+       )
+     )
+     |> load()}
+  end
+
+  # A tournament the pairing program no longer lists, taken off by itself.
+  def handle_event("remove_tournament", %{"id" => id}, socket) do
+    with %{} = tournament <- Tournaments.get(id), do: Tournaments.remove(tournament)
+    {:noreply, socket |> put_flash(:info, gettext("The tournament is off the box.")) |> load()}
+  end
+
+  def handle_event("assign_tables", %{"tables" => %{"id" => id} = params}, socket) do
+    tournament = Tournaments.get(id)
+    from = optional_int(params["from"])
+    to = optional_int(params["to"]) || from
+
+    result =
+      cond do
+        tournament == nil -> {:error, :range}
+        from == nil -> Tournaments.assign_tables(tournament, nil, nil)
+        true -> Tournaments.assign_tables(tournament, from, to)
+      end
+
+    case result do
+      {:ok, _tournament} when from == nil ->
+        {:noreply, socket |> put_flash(:info, gettext("No range of tables any more.")) |> load()}
+
+      {:ok, tournament} ->
+        {:noreply,
+         socket
+         |> put_flash(
+           :info,
+           gettext(
+             "Tables %{from}-%{to} play in %{name}: table %{from} is its board 1.",
+             from: from,
+             to: to,
+             name: Tournaments.title(tournament) || gettext("this box's own tournament")
+           )
+         )
+         |> load()}
+
+      _error ->
+        {:noreply,
+         put_flash(socket, :error, gettext("Give the first and the last table: 5 and 8."))}
+    end
+  end
+
+  def handle_event("auto_start", %{"id" => id}, socket) do
+    with %{} = tournament <- Tournaments.get(id) do
+      Tournaments.update!(tournament, %{auto_start: not tournament.auto_start})
+    end
+
+    {:noreply, load(socket)}
+  end
+
+  def handle_event("pick_lichess", %{"tournament_id" => id}, socket) do
+    case Integer.parse(id) do
+      {id, ""} -> {:noreply, socket |> assign(lichess_tid: id, lichess_checks: nil) |> load()}
+      _bad -> {:noreply, socket}
+    end
   end
 
   def handle_event("save_pin", %{"door" => %{"pin" => pin}}, socket) do
@@ -324,6 +491,13 @@ defmodule AlnaslWeb.SetupLive do
      socket |> put_flash(:info, gettext("The tracker is back to its defaults.")) |> load()}
   end
 
+  defp optional_int(text) do
+    case Integer.parse(String.trim(text || "")) do
+      {n, ""} when n > 0 and n < 10_000 -> n
+      _none -> nil
+    end
+  end
+
   defp int(text, default, low, high) do
     case Integer.parse(to_string(text)) do
       {n, _} -> n |> max(low) |> min(high)
@@ -335,8 +509,8 @@ defmodule AlnaslWeb.SetupLive do
   def handle_info({:run_test, url, slug, key}, socket) do
     checks =
       if url == "",
-        do: [server: {:error, {:unreachable, :nxdomain}}, tournament: :skipped, key: :skipped],
-        else: Tournament.test(url, slug, key)
+        do: [server: {:error, {:unreachable, :nxdomain}}, key: :skipped],
+        else: OpenResults.test(url, slug, key)
 
     {:noreply, assign(socket, checks: checks, testing?: false)}
   end
@@ -351,7 +525,41 @@ defmodule AlnaslWeb.SetupLive do
     {:noreply, assign(socket, lichess_checks: checks, lichess_testing?: false)}
   end
 
+  def handle_info({:run_link_test, id}, socket) do
+    result =
+      case Tournaments.get_link(id) do
+        nil -> nil
+        link -> OpenPairings.test(link)
+      end
+
+    {:noreply,
+     assign(socket,
+       link_testing: nil,
+       link_tests: Map.put(socket.assigns.link_tests, id, result)
+     )}
+  end
+
+  # A tournament appeared, a round was started, a link went quiet.
+  def handle_info({:tournament, _id}, socket), do: {:noreply, load(socket)}
+
   def handle_info(_other, socket), do: {:noreply, socket}
+
+  defp when_(nil), do: gettext("never")
+  defp when_(%DateTime{} = at), do: Words.time(at)
+
+  # What the box holds of a linked tournament, counted.
+  defp received(tournament) do
+    document = Tournaments.document(tournament) || %{}
+    rounds = List.wrap(document["rounds"])
+    current = Enum.find(rounds, &(&1["number"] == tournament.remote_round)) || %{}
+
+    %{
+      players: length(List.wrap(document["players"])),
+      rounds: length(rounds),
+      boards: Enum.count(List.wrap(current["boards"]), &(&1["kind"] == "game")),
+      time_control: get_in(document, ["tournament", "time_control", "text"])
+    }
+  end
 
   # --- page --------------------------------------------------------------------
 
@@ -367,7 +575,282 @@ defmodule AlnaslWeb.SetupLive do
       title={gettext("Setup")}
     >
       <div class="cols">
-        <.panel id="setup-server" title={gettext("Results server")}>
+        <.panel id="setup-tournaments" title={gettext("Tournaments")}>
+          <p class="note">
+            {gettext(
+              "A connect code from OpenPairings (Settings, Live boards) brings a tournament - or a whole group of them - to the box: pairings, colours, rate of play, and the results page with its relay key. A round paired there starts here by itself. One box can hold several codes."
+            )}
+            <.link navigate={~p"/help#help-openpairings"}>{gettext("How, step by step")}</.link>
+          </p>
+          <.form for={@code_form} id="code-form" phx-submit="add_code" class="stack">
+            <.input
+              field={@code_form[:code]}
+              id="code-input"
+              type="password"
+              label={gettext("Connect code")}
+              placeholder="https://.../api/boards/v1#oplt_..."
+              hint={
+                gettext(
+                  "Paste the whole line. From the QR code: scan it with the phone's own camera, copy the link it shows instead of opening it, and paste it here. The code is a secret and is not shown again."
+                )
+              }
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <div class="row">
+              <.button id="add-code" variant="primary" type="submit">{gettext("Add")}</.button>
+            </div>
+          </.form>
+
+          <ul id="links" class="dests" style="margin-top:0.8rem">
+            <li :for={link <- @links} id={"link-#{link.id}"} class="dest">
+              <% {tone, icon, word} = LinkWords.state(link) %>
+              <div class="row">
+                <b>{LinkWords.about(link)}</b>
+                <.badge id={"link-state-#{link.id}"} tone={tone} icon={icon}>{word}</.badge>
+              </div>
+              <p id={"link-line-#{link.id}"} class="dest-line">
+                {gettext("Last contact: %{t}.", t: when_(link.last_ok_at))}
+                <span :if={link.server_version}>
+                  {link.server_name || "OpenPairings"} {link.server_version}.
+                </span>
+                <span class="note">{gettext("Code %{hint}.", hint: Tournaments.secret_hint(link))}</span>
+              </p>
+              <p :if={LinkWords.why(link)} id={"link-why-#{link.id}"} class="note">
+                {LinkWords.why(link)}
+              </p>
+              <div class="row">
+                <.button
+                  id={"test-link-#{link.id}"}
+                  small
+                  phx-click="test_link"
+                  phx-value-id={link.id}
+                  phx-disable-with={gettext("Testing...")}
+                >{gettext("Test connection")}</.button>
+                <.button
+                  :if={link.state in ["unauthorized", "unsupported"]}
+                  id={"retry-link-#{link.id}"}
+                  small
+                  phx-click="retry_link"
+                  phx-value-id={link.id}
+                >{gettext("Try this code again")}</.button>
+                <.button
+                  id={"remove-link-#{link.id}"}
+                  small
+                  variant="danger"
+                  phx-click="remove_link"
+                  phx-value-id={link.id}
+                  data-confirm={
+                    gettext(
+                      "Take this code and its tournaments off the box? Their boards go back to the box's own tournament, not linked; their games are forgotten here (the PGN files already written stay on the disk). OpenPairings keeps what was reported to it."
+                    )
+                  }
+                >{gettext("Remove")}</.button>
+              </div>
+              <p
+                :if={@link_testing == link.id}
+                id={"link-test-running-#{link.id}"}
+                class="note"
+                role="status"
+              >
+                {gettext("Asking OpenPairings...")}
+              </p>
+              <ul
+                :if={@link_tests[link.id]}
+                id={"link-test-#{link.id}"}
+                class="stack"
+                style="list-style:none;padding:0;margin:0.6rem 0 0"
+                role="status"
+              >
+                <li
+                  :for={{step, result} <- @link_tests[link.id]}
+                  id={"link-check-#{link.id}-#{step}"}
+                  class="row"
+                  style="align-items:flex-start;flex-wrap:nowrap"
+                >
+                  <% {tone, sentence} = LinkWords.test_step(step, result) %>
+                  <.badge
+                    tone={tone}
+                    icon={
+                      if tone == "ok", do: "ok", else: if(tone == nil, do: "waiting", else: "error")
+                    }
+                  >
+                    {LinkWords.step_name(step)}
+                  </.badge>
+                  <span>
+                    {sentence}
+                    <span
+                      :for={
+                        {found, index} <-
+                          Enum.with_index(
+                            case result do
+                              {:ok, list} when is_list(list) -> list
+                              _other -> []
+                            end
+                          )
+                      }
+                      id={"link-found-#{link.id}-#{index}"}
+                      class="note"
+                      style="display:block"
+                    >
+                      {elem(LinkWords.summary(found), 1)}
+                    </span>
+                  </span>
+                </li>
+              </ul>
+            </li>
+          </ul>
+
+          <ul id="tournaments" class="dests">
+            <li :for={t <- @tournaments} id={"tournament-#{t.id}"} class="dest">
+              <div class="row">
+                <b>{Tournaments.title(t) || gettext("This box's own tournament")}</b>
+                <span :if={t.label not in [nil, ""] and t.name not in [nil, "", t.label]} class="note">
+                  {t.name}
+                </span>
+                <.badge :if={t.kind == "local"} id={"tournament-kind-#{t.id}"} icon="waiting">
+                  {gettext("No pairing program")}
+                </.badge>
+                <.badge :if={t.gone} id={"tournament-gone-#{t.id}"} tone="warn" icon="warning">
+                  {gettext("No longer listed")}
+                </.badge>
+              </div>
+              <%= if t.kind == "linked" do %>
+                <% got = received(t) %>
+                <p id={"tournament-line-#{t.id}"} class="dest-line">
+                  <%= if t.document do %>
+                    {gettext(
+                      "Received %{t}: %{players} player(s), %{rounds} round(s) paired, %{boards} board(s) in round %{round}.",
+                      t: when_(t.document_at),
+                      players: got.players,
+                      rounds: got.rounds,
+                      boards: got.boards,
+                      round: t.remote_round || "-"
+                    )}
+                    <span :if={got.time_control}>{got.time_control}.</span>
+                  <% else %>
+                    {gettext("Nothing received yet.")}
+                  <% end %>
+                  <span class="note">
+                    {gettext("The boards follow round %{n}.", n: t.round)}
+                    <span :if={t.version}>
+                      {gettext("Version %{v}.", v: String.slice(t.version, 0, 8))}
+                    </span>
+                  </span>
+                </p>
+                <p id={"tournament-results-#{t.id}"} class="note">
+                  <%= cond do %>
+                    <% t.server_url == "" -> %>
+                      {gettext(
+                        "Not published on a results site: its moves go to OpenPairings only. Publish it there and the address arrives here by itself."
+                      )}
+                    <% t.relay_key == "" -> %>
+                      {gettext(
+                        "Results page: %{url}, %{slug} - but no relay key is saved in OpenPairings (Settings, Live boards), so nothing is sent there.",
+                        url: t.server_url,
+                        slug: t.slug
+                      )}
+                    <% true -> %>
+                      {gettext("Results page: %{url}, %{slug}, key %{hint}. It came with the code.",
+                        url: t.server_url,
+                        slug: t.slug,
+                        hint: Tournaments.relay_key_hint(t)
+                      )}
+                  <% end %>
+                </p>
+              <% else %>
+                <p id={"tournament-line-#{t.id}"} class="dest-line">
+                  {gettext(
+                    "For boards without a pairing program: names by hand or from a PGN. The boards follow round %{n}.",
+                    n: t.round
+                  )}
+                </p>
+              <% end %>
+              <.form
+                for={
+                  to_form(%{"id" => t.id, "from" => t.table_from, "to" => t.table_to}, as: :tables)
+                }
+                id={"tables-form-#{t.id}"}
+                phx-submit="assign_tables"
+                class="row"
+                style="align-items:flex-end"
+              >
+                <input type="hidden" name="tables[id]" value={t.id} />
+                <div class="field">
+                  <label for={"tables-from-#{t.id}"}>{gettext("Tables from")}</label>
+                  <input
+                    id={"tables-from-#{t.id}"}
+                    name="tables[from]"
+                    type="number"
+                    inputmode="numeric"
+                    min="1"
+                    max="9999"
+                    value={t.table_from}
+                    class="input table-no"
+                  />
+                </div>
+                <div class="field">
+                  <label for={"tables-to-#{t.id}"}>{gettext("to")}</label>
+                  <input
+                    id={"tables-to-#{t.id}"}
+                    name="tables[to]"
+                    type="number"
+                    inputmode="numeric"
+                    min="1"
+                    max="9999"
+                    value={t.table_to}
+                    class="input table-no"
+                  />
+                </div>
+                <.button id={"assign-tables-#{t.id}"} small type="submit">
+                  {gettext("These tables play here")}
+                </.button>
+                <span id={"tournament-boards-#{t.id}"} class="note">
+                  {gettext("%{count} board(s) now", count: Map.get(@board_counts, t.id, 0))}
+                </span>
+              </.form>
+              <div class="row">
+                <.button
+                  :if={t.kind == "linked"}
+                  id={"auto-start-#{t.id}"}
+                  small
+                  phx-click="auto_start"
+                  phx-value-id={t.id}
+                  aria-pressed={to_string(t.auto_start)}
+                >
+                  {if t.auto_start,
+                    do: gettext("Rounds start by themselves: on"),
+                    else: gettext("Rounds start by themselves: off")}
+                </.button>
+                <.button
+                  :if={t.gone}
+                  id={"remove-tournament-#{t.id}"}
+                  small
+                  variant="danger"
+                  phx-click="remove_tournament"
+                  phx-value-id={t.id}
+                  data-confirm={
+                    gettext(
+                      "Take this tournament off the box? Its boards go back to the box's own tournament, not linked; its games are forgotten here (the PGN files already written stay on the disk)."
+                    )
+                  }
+                >{gettext("Remove")}</.button>
+              </div>
+            </li>
+          </ul>
+          <p class="note">
+            {gettext(
+              "Tables 5 to 8 given to a tournament: table 5 is its board 1. A board that gets one of those table numbers later joins by itself. One board can also be put in a tournament on the Boards page."
+            )}
+          </p>
+        </.panel>
+
+        <.panel id="setup-server" title={gettext("Results page of this box's own tournament")}>
+          <p class="note">
+            {gettext(
+              "Only for a tournament without a connect code: a tournament of OpenPairings brings its results page and relay key with it. Who plays is then said by hand on each board's page, or read from a PGN - the box does not read pairings from the results site."
+            )}
+          </p>
           <.form for={@server_form} id="server-form" phx-submit="save_server" class="stack">
             <.input
               field={@server_form[:server_url]}
@@ -447,11 +930,6 @@ defmodule AlnaslWeb.SetupLive do
               <span>{sentence}</span>
             </li>
           </ul>
-          <p :if={@snapshot_at} class="note" style="margin-top:0.8rem">
-            {gettext("Pairings last fetched: %{t}",
-              t: String.slice(@snapshot_at, 0, 16) |> String.replace("T", " ")
-            )} UTC
-          </p>
         </.panel>
 
         <.panel id="setup-lichess" title={gettext("Lichess broadcast")}>
@@ -461,6 +939,20 @@ defmodule AlnaslWeb.SetupLive do
             )}
             <.link navigate={~p"/help#help-lichess"}>{gettext("How, step by step")}</.link>
           </p>
+          <form
+            :if={length(@tournaments) > 1}
+            id="lichess-tournament-form"
+            phx-change="pick_lichess"
+            class="row"
+            style="margin-bottom:0.6rem"
+          >
+            <label for="lichess-tournament" class="note">{gettext("Tournament")}</label>
+            <select id="lichess-tournament" name="tournament_id" class="input" style="width:auto">
+              <option :for={t <- @tournaments} value={t.id} selected={t.id == @lichess.id}>
+                {Tournaments.title(t) || gettext("This box")}
+              </option>
+            </select>
+          </form>
           <.form for={@lichess_form} id="lichess-form" phx-submit="save_lichess" class="stack">
             <.input
               field={@lichess_form[:round]}
@@ -600,7 +1092,7 @@ defmodule AlnaslWeb.SetupLive do
                 type="number"
                 min="1"
                 max="999"
-                label={gettext("Round in play")}
+                label={gettext("Round in play (this box's own tournament)")}
               />
               <.input
                 field={@box_form[:clock_heartbeat_s]}

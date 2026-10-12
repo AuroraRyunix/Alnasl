@@ -38,11 +38,12 @@ defmodule Alnasl.FakeLichess do
   def install do
     Application.put_env(:alnasl, :lichess_req_options, plug: &__MODULE__.call/1)
 
-    Alnasl.Settings.put_many(%{
-      "lichess_url" => @base,
-      "lichess_round_id" => @round,
-      "lichess_token" => @token,
-      "lichess_round" => 1
+    Alnasl.Settings.put("lichess_url", @base)
+
+    Alnasl.Tournaments.update!(Alnasl.Tournaments.default(), %{
+      lichess_round_id: @round,
+      lichess_token: @token,
+      lichess_round: 1
     })
 
     Alnasl.Settings.put("dest_lichess_enabled", true)

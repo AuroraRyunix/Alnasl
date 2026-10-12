@@ -1,11 +1,13 @@
 defmodule Alnasl.Settings do
   @moduledoc """
-  What the arbiter set up, kept in the database so it survives the plug being
-  pulled: the results server, the tournament, the relay key, the language,
-  the box's name, the PIN, the round in play, and the tracker's timings.
+  What the arbiter set up for the box as a whole, kept in the database so it
+  survives the plug being pulled: the language, the box's name, the PIN, and
+  the tracker's timings.
 
-  The relay key is a secret. It is stored as given (the box has to send it),
-  never logged, and `relay_key_hint/0` is all the site ever shows of it.
+  What belongs to a tournament - its results page and relay key, its Lichess
+  round, the round in play - is the tournament's (`Alnasl.Tournaments`): a
+  box serves more than one.
+
   The PIN is stored as a salted hash.
   """
 
@@ -15,15 +17,9 @@ defmodule Alnasl.Settings do
   alias Alnasl.Settings.Setting
 
   @defaults %{
-    "server_url" => "",
-    "slug" => "",
-    "relay_key" => "",
     "box_name" => "Alnasl",
     "locale" => "en",
     "pin" => nil,
-    "round" => 1,
-    "snapshot" => nil,
-    "snapshot_at" => nil,
     "auto_suggest" => false,
     "new_game_on_setup" => "unpaired",
     "clock_heartbeat_s" => 20,
@@ -66,13 +62,7 @@ defmodule Alnasl.Settings do
 
   def put_many(map), do: Enum.each(map, fn {key, value} -> put(to_string(key), value) end)
 
-  # --- the connection ----------------------------------------------------------
-
-  @doc "Is there a server, a tournament and a key?"
-  def connection_configured? do
-    s = get_many(~w(server_url slug relay_key))
-    s["server_url"] != "" and s["slug"] != "" and s["relay_key"] != ""
-  end
+  # --- reading what was typed -------------------------------------------------
 
   @doc """
   Reads what an arbiter pastes: a bare slug, or a link to the tournament on
@@ -115,20 +105,6 @@ defmodule Alnasl.Settings do
 
       true ->
         "https://" <> String.trim_trailing(text, "/")
-    end
-  end
-
-  @doc "`\"orrk_...9f2c\"`: enough to tell two keys apart, not enough to use."
-  def relay_key_hint do
-    case get("relay_key") do
-      key when is_binary(key) and byte_size(key) > 12 ->
-        String.slice(key, 0, 5) <> "..." <> String.slice(key, -4, 4)
-
-      key when is_binary(key) and key != "" ->
-        "..."
-
-      _none ->
-        nil
     end
   end
 

@@ -5,7 +5,7 @@ defmodule AlnaslWeb.RoundAndGameTest do
 
   describe "Round" do
     test "before anything is set up it says where to go", %{conn: conn} do
-      Settings.put_many(%{"server_url" => "", "slug" => "", "relay_key" => "", "snapshot" => nil})
+      own_put(server_url: "", slug: "", relay_key: "", document: nil)
       {:ok, view, _html} = live(conn, ~p"/")
       assert has_element?(view, "#round-empty")
       assert has_element?(view, "#empty-setup")
@@ -93,20 +93,19 @@ defmodule AlnaslWeb.RoundAndGameTest do
       assert html =~ "The clock is the right way again."
     end
 
-    test "pairings are fetched, and the next round takes the boards along", %{conn: conn} do
+    test "the next round takes the boards along; nothing is fetched from the results server",
+         %{conn: conn} do
       board = fake_dgt("FAKE1", %{round: 1, board_no: 1})
       {:ok, view, _html} = live(conn, ~p"/")
 
-      assert view |> element("#refresh-pairings") |> render_click() =~ "fetched"
-
-      FakeIngest.mode(:down)
-      assert view |> element("#refresh-pairings") |> render_click() =~ "cannot be reached"
-      FakeIngest.mode(:ok)
+      # The box's own tournament has no pairing program to ask.
+      refute has_element?(view, "#refresh-pairings")
+      assert Enum.all?(FakeIngest.requests(), fn {_status, body} -> is_map_key(body, "moves") end)
 
       view |> element("#next-round") |> render_click()
       assert_patch(view, ~p"/round/2")
       assert Boards.get!(board.id).round == 2
-      assert Settings.get("round") == 2
+      assert own().round == 2
       assert has_element?(view, "#round-2[aria-current=true]")
     end
   end

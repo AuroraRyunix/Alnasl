@@ -182,8 +182,11 @@ defmodule AlnaslWeb.PagesTest do
       form.(good) |> render_submit(%{"intent" => "test"})
       html = eventually_html(view, fn _ -> has_element?(view, "#test-result") end)
 
-      assert html =~ "The server answers." and html =~ "Test Open" and
-               html =~ "relay key is accepted"
+      assert html =~ "The server answers." and html =~ "relay key is accepted"
+
+      # The box does not read the tournament from the results server any
+      # more: the test is the address and the key.
+      refute has_element?(view, "#check-tournament")
 
       assert has_element?(view, "#check-key .state.ok")
 
@@ -193,8 +196,14 @@ defmodule AlnaslWeb.PagesTest do
                "does not accept this relay key"
 
       form.(%{good | tournament: "nope"}) |> render_submit(%{"intent" => "test"})
-      html = eventually_html(view, fn _ -> has_element?(view, "#check-tournament .state.bad") end)
-      assert html =~ "does not know this tournament" and html =~ "Not tested"
+
+      assert eventually_html(view, fn html -> html =~ "belongs to another tournament" end) =~
+               "belongs to another tournament"
+
+      form.(%{good | tournament: ""}) |> render_submit(%{"intent" => "test"})
+
+      assert eventually_html(view, fn html -> html =~ "No tournament is filled in" end) =~
+               "No tournament is filled in"
 
       FakeIngest.mode(:down)
       form.(good) |> render_submit(%{"intent" => "test"})
@@ -202,11 +211,11 @@ defmodule AlnaslWeb.PagesTest do
       assert html =~ "nothing is listening at that address"
 
       # Testing saved nothing.
-      assert Settings.get("relay_key") == FakeIngest.key()
+      assert own().relay_key == FakeIngest.key()
     end
 
     test "a pasted link is taken apart, and the stored key is never shown again", %{conn: conn} do
-      Settings.put_many(%{"server_url" => "", "slug" => "", "relay_key" => ""})
+      own_put(server_url: "", slug: "", relay_key: "")
       {:ok, view, html} = live(conn, ~p"/setup")
       assert html =~ "It starts with orrk_"
 
@@ -221,9 +230,9 @@ defmodule AlnaslWeb.PagesTest do
         )
         |> render_submit()
 
-      assert Settings.get("server_url") == "http://results.test"
-      assert Settings.get("slug") == "test-open"
-      assert html =~ "The pairings were fetched"
+      assert own().server_url == "http://results.test"
+      assert own().slug == "test-open"
+      assert html =~ "Saved."
       refute html =~ FakeIngest.key()
       assert html =~ "orrk_...cdef"
 
@@ -234,8 +243,8 @@ defmodule AlnaslWeb.PagesTest do
       )
       |> render_submit()
 
-      assert Settings.get("relay_key") == FakeIngest.key()
-      assert Settings.get("server_url") == "https://results.test"
+      assert own().relay_key == FakeIngest.key()
+      assert own().server_url == "https://results.test"
 
       assert view
              |> form("#server-form", server: %{server_url: "", tournament: "", relay_key: ""})
@@ -262,13 +271,12 @@ defmodule AlnaslWeb.PagesTest do
 
       assert_redirect(view, ~p"/setup")
 
-      assert Settings.get_many(
-               ~w(box_name locale round auto_suggest capture_cap_mb clock_heartbeat_s)
-             ) ==
+      assert own().round == 3
+
+      assert Settings.get_many(~w(box_name locale auto_suggest capture_cap_mb clock_heartbeat_s)) ==
                %{
                  "box_name" => "Hall B",
                  "locale" => "nl",
-                 "round" => 3,
                  "auto_suggest" => true,
                  "capture_cap_mb" => 200,
                  "clock_heartbeat_s" => 30
@@ -393,7 +401,7 @@ defmodule AlnaslWeb.PagesTest do
       eventually_html(view, fn _ -> has_element?(view, "#rejected-table") end)
       assert has_element?(view, "#rejected-table", "calls a move in it illegal")
 
-      Settings.put("relay_key", "orrk_wrong")
+      own_put(relay_key: "orrk_wrong")
       Games.ensure(1, 2) |> Outbox.enqueue(nil, true)
       html = eventually_html(view, fn _ -> has_element?(view, "#offline-banner.bad") end)
       assert html =~ "refuses this box"
@@ -592,7 +600,11 @@ defmodule AlnaslWeb.PagesTest do
            outbox.online outbox.blocked outbox.conflict outbox.server_ahead door.unlocked door.refused setup.saved
            destination.offline destination.online destination.blocked destination.enabled destination.disabled
            table.set table.cleared table.moved table.remapped table.swapped board.recognised
-           board.other_serial board.replaced piece.unseen piece.accounted game.new move.rewritten)
+           board.other_serial board.replaced piece.unseen piece.accounted game.new move.rewritten
+           link.added link.removed link.ok link.unreachable link.unauthorized link.unsupported
+           tournament.added tournament.back tournament.gone tournament.tables table.tournament
+           round.started pairing.changed pairing.gone pairing.board_moved pairing.adopted
+           pairing.set_aside destination.forced)
 
       for kind <- kinds do
         sentence = AlnaslWeb.Words.log(%Alnasl.Log.Event{kind: kind, data: "{}"})

@@ -39,11 +39,18 @@ defmodule Alnasl.FakeIngest do
   def install do
     Application.put_env(:alnasl, :req_options, plug: &__MODULE__.call/1)
 
-    Alnasl.Settings.put_many(%{
-      "server_url" => "http://results.test",
-      "slug" => @slug,
-      "relay_key" => @key
-    })
+    # The box's own tournament sends there, and knows the pairings the way
+    # it would from an arbiter or a pairing program: the box does not read
+    # them from the results server.
+    own =
+      Alnasl.Tournaments.update!(Alnasl.Tournaments.default(), %{
+        server_url: "http://results.test",
+        slug: @slug,
+        relay_key: @key
+      })
+
+    {:ok, _own} =
+      Alnasl.Tournaments.import_snapshot(own, Agent.get(__MODULE__, & &1.snapshot))
 
     :ok
   end

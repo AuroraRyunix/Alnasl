@@ -70,6 +70,9 @@ defmodule AlnaslWeb.Words do
 
   def test_step(:key, :ok), do: {"ok", gettext("The relay key is accepted for this tournament.")}
 
+  def test_step(:key, {:error, :no_slug}),
+    do: {"bad", gettext("No tournament is filled in.")}
+
   def test_step(:key, {:error, :no_key}),
     do:
       {"bad",
@@ -123,6 +126,12 @@ defmodule AlnaslWeb.Words do
 
   @doc "Why the outbox is not sending, from its last error."
   def link_error(nil), do: nil
+
+  # With several tournaments, whose refusal it is.
+  def link_error({:tournament, name, reason}) when is_binary(name),
+    do: name <> ": " <> link_error(reason)
+
+  def link_error({:tournament, _unnamed, reason}), do: link_error(reason)
 
   def link_error({:unreachable, reason}),
     do: gettext("The server cannot be reached: %{why}", why: unreachable(reason))
@@ -691,14 +700,116 @@ defmodule AlnaslWeb.Words do
   defp log("door.unlocked", d), do: gettext("The PIN was given from %{from}.", from: d["from"])
   defp log("door.refused", d), do: gettext("A wrong PIN was tried from %{from}.", from: d["from"])
   defp log("setup.saved", _d), do: gettext("Setup was changed.")
+
+  defp log("link.added", %{"reason" => _} = d),
+    do:
+      gettext(
+        "A connect code for %{server} was added. It could not be checked yet; the box keeps asking.",
+        server: d["server"]
+      )
+
+  defp log("link.added", d),
+    do: gettext("A connect code for %{server} was added and accepted.", server: d["server"])
+
+  defp log("link.removed", d),
+    do: gettext("The connect code for %{server} was taken off the box.", server: d["server"])
+
+  defp log("link.ok", d), do: gettext("%{server} answers again.", server: d["server"])
+
+  defp log("link.unreachable", d),
+    do:
+      gettext("%{server} does not answer. The boards go on with the pairings the box has.",
+        server: d["server"]
+      )
+
+  defp log("link.unauthorized", d),
+    do:
+      gettext(
+        "%{server} refuses the connect code: wrong, or withdrawn there. The box has stopped asking.",
+        server: d["server"]
+      )
+
+  defp log("link.unsupported", d),
+    do:
+      gettext("%{server} speaks a version of the board link this box does not know.",
+        server: d["server"]
+      )
+
+  defp log("tournament.added", d),
+    do: gettext("A tournament arrived over the link: %{name}.", name: tournament(d))
+
+  defp log("tournament.back", d),
+    do: gettext("The pairing program lists %{name} again.", name: tournament(d))
+
+  defp log("tournament.gone", d),
+    do:
+      gettext(
+        "The pairing program no longer lists %{name}. Nothing is reported to it any more.",
+        name: tournament(d)
+      )
+
+  defp log("tournament.tables", d),
+    do:
+      gettext("Tables %{from}-%{to} play in %{name}.",
+        from: d["from"],
+        to: d["to"],
+        name: tournament(d)
+      )
+
+  defp log("table.tournament", d),
+    do: gettext("\"%{name}\" plays in %{tournament}.", name: d["name"], tournament: tournament(d))
+
+  defp log("round.started", d),
+    do: gettext("Round %{round} started: %{name}.", round: d["round"], name: tournament(d))
+
+  defp log("pairing.changed", _d),
+    do:
+      gettext(
+        "The pairing of this board changed in OpenPairings after the game had begun. The game is kept; the arbiter decides."
+      )
+
+  defp log("pairing.gone", _d),
+    do:
+      gettext(
+        "The pairing of this board is gone in OpenPairings: the round was paired again after the game had begun. The game is kept; the arbiter decides."
+      )
+
+  defp log("pairing.board_moved", d),
+    do:
+      gettext("OpenPairings moved this game from board %{from} to board %{to}; it went along.",
+        from: d["from"],
+        to: d["to"]
+      )
+
+  defp log("pairing.adopted", _d),
+    do: gettext("Arbiter at the box: the game is the new pairing's. The moves stand.")
+
+  defp log("pairing.set_aside", _d),
+    do:
+      gettext(
+        "Arbiter at the box: the game is set aside and a new one begins for the pairing as it is now."
+      )
+
+  defp log("destination.forced", d),
+    do:
+      gettext(
+        "Arbiter at the box: %{games} game(s) sent to %{name} again, to replace what it holds.",
+        games: d["games"],
+        name: destination(d)
+      )
+
   defp log(kind, _d), do: kind
 
   @doc "A destination's name, as people call it."
   def destination(%{"destination" => id}), do: destination(id)
   def destination("openresults"), do: gettext("the results server")
   def destination("lichess"), do: "Lichess"
+  def destination("openpairings"), do: "OpenPairings"
   def destination(other) when is_binary(other), do: other
   def destination(_none), do: gettext("a destination")
+
+  defp tournament(%{"tournament" => name}) when is_binary(name) and name != "", do: name
+  defp tournament(_unnamed), do: gettext("this box's own tournament")
 
   defp moves(%{"moves" => moves}) when is_list(moves), do: Enum.join(moves, " ")
   defp moves(_other), do: ""
@@ -714,7 +825,10 @@ defmodule AlnaslWeb.Words do
       {gettext("Repairs"), "repair."},
       {gettext("Connection"), "outbox."},
       {gettext("Other destinations"), "destination."},
-      {gettext("Table numbers"), "table."}
+      {gettext("Table numbers"), "table."},
+      {gettext("Pairing program"), "link."},
+      {gettext("Tournaments"), "tournament."},
+      {gettext("Pairings"), "pairing."}
     ]
   end
 

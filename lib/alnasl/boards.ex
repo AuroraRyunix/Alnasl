@@ -9,6 +9,9 @@ defmodule Alnasl.Boards do
 
   The round model in short:
 
+  - a board plays in a tournament (`tournament_id`; the box's own unless
+    its table was given to another), and round and board numbers are that
+    tournament's;
   - the arbiter **links** a physical board to "board N of round R". The game
     is `(R, N)`, whichever physical board feeds it;
   - a board linked to a game another board already has takes it over - a
@@ -22,7 +25,7 @@ defmodule Alnasl.Boards do
 
   import Ecto.Query, only: [order_by: 3]
 
-  alias Alnasl.{BoardServer, Games, Log, Outbox, Pgn, Repo, Settings, Tournament, Transport}
+  alias Alnasl.{BoardServer, Games, Log, Outbox, Pgn, Repo, Tables, Tournaments, Transport}
   alias Alnasl.Boards.Board
 
   def subscribe, do: BoardServer.subscribe()
@@ -34,7 +37,7 @@ defmodule Alnasl.Boards do
   def get!(id), do: Repo.get!(Board, id)
 
   def create(attrs) do
-    attrs = attrs |> Map.new() |> encode_options()
+    attrs = attrs |> Map.new() |> encode_options() |> in_a_tournament()
 
     with {:ok, board} <- %Board{} |> Board.changeset(attrs) |> Repo.insert() do
       Log.add(:info, "board.added", %{name: board.name, driver: board.driver}, %{
@@ -72,6 +75,14 @@ defmodule Alnasl.Boards do
     Log.add(:info, "board.removed", %{name: board.name}, %{board_id: board.id})
     notify(board.id)
     :ok
+  end
+
+  # A board belongs to a tournament from the start: the box's own, unless
+  # whoever adds it says otherwise.
+  defp in_a_tournament(attrs) do
+    if attrs[:tournament_id] || attrs["tournament_id"],
+      do: attrs,
+      else: Map.put(attrs, :tournament_id, Tournaments.default_id())
   end
 
   defp encode_options(attrs) do
@@ -152,7 +163,9 @@ defmodule Alnasl.Boards do
   def snapshots, do: Enum.map(list(), &snapshot/1)
 
   defp offline(board) do
-    game = board.round && board.board_no && Games.get(board.round, board.board_no)
+    game =
+      board.round && board.board_no &&
+        Games.current(board.tournament_id, board.round, board.board_no)
 
     %{
       id: board.id,
@@ -160,6 +173,7 @@ defmodule Alnasl.Boards do
       driver: board.driver,
       port: board.port,
       address: board.address,
+      tournament_id: board.tournament_id,
       round: board.round,
       board_no: board.board_no,
       table_no: board.table_no,
@@ -192,6 +206,7 @@ defmodule Alnasl.Boards do
       game_status: game && game.status,
       game_id: game && game.id,
       game_no: game && game.game_no,
+      pairing_flag: game && game.pairing_flag,
       fen: game && elem(Games.position(game), 0),
       certain: nil,
       last_move: game && elem(Games.position(game), 1)
@@ -215,9 +230,16 @@ defmodule Alnasl.Boards do
 
   # --- linking -----------------------------------------------------------------
 
-  @doc "Links a board to board `board_no` of `round`. A board that had that game lets go of it."
+  @doc """
+  Links a board to board `board_no` of `round` of its tournament. A board
+  that had that game lets go of it.
+  """
   def link(%Board{} = board, round, board_no) when is_integer(round) and is_integer(board_no) do
-    for other <- list(), other.id != board.id, other.round == round, other.board_no == board_no do
+    for other <- list(),
+        other.id != board.id,
+        other.tournament_id == board.tournament_id,
+        other.round == round,
+        other.board_no == board_no do
       Log.add(:info, "board.moved", %{from: other.name, to: board.name}, %{
         round: round,
         board_no: board_no
@@ -257,20 +279,27 @@ defmodule Alnasl.Boards do
   end
 
   @doc """
-  Moves every linked board on to another round: the next round begins. A
-  board with a table number feeds the board of that number again; one
-  without keeps the board number it had.
+  Moves every linked board of a tournament on to another round: the next
+  round begins. A board with a table number feeds the board its table
+  stands for again; one without keeps the board number it had. The boards
+  of the other tournaments are not touched.
   """
-  def move_to_round(round) do
+  def move_to_round(tournament_id, round) do
     # A board with a sticker goes back to its own number: "table 7 plays
     # board 3" was said for a round, not for the tournament.
-    for board <- list(), board.board_no != nil do
-      link(board, round, board.table_no || board.board_no)
+    for board <- list(), board.tournament_id == tournament_id do
+      case Tables.home_board(board) || board.board_no do
+        nil -> :ok
+        number -> link(board, round, number)
+      end
     end
 
-    Settings.put("round", round)
+    Tournaments.set_round(tournament_id, round)
     :ok
   end
+
+  @doc "`move_to_round/2` for the box's own tournament."
+  def move_to_round(round), do: move_to_round(Tournaments.default_id(), round)
 
   def flip(%Board{id: id}, flipped?), do: call(id, {:flip, flipped?})
   def pause_player(%Board{id: id}), do: call(id, {:driver, :pause})
@@ -306,14 +335,76 @@ defmodule Alnasl.Boards do
   def new_game(id), do: call(id, {:repair, :new_game, nil})
 
   @doc """
-  Starts round `round`: the pairings are fetched again and every linked
-  board moves to that round (`move_to_round/1`). What "Start round N" on
-  the Round page does, and what a pairing program will ask for.
+  Starts round `round` of a tournament: every board of that tournament
+  moves to that round (`move_to_round/2`) and takes the names the pairings
+  give its board. What "Start round N" on the Round page does, and what
+  happens by itself when the pairing program pairs a round
+  (`Alnasl.OpenPairings.Sync`).
   """
-  def start_round(round) when is_integer(round) and round >= 1 do
-    move_to_round(round)
-    Tournament.refresh()
+  def start_round(tournament_id, round) when is_integer(round) and round >= 1 do
+    move_to_round(tournament_id, round)
+
+    Log.add(:info, "round.started", %{
+      round: round,
+      tournament: tournament_name(tournament_id)
+    })
+
     :ok
+  end
+
+  @doc "`start_round/2` for the box's own tournament."
+  def start_round(round) when is_integer(round), do: start_round(Tournaments.default_id(), round)
+
+  defp tournament_name(id) do
+    case Tournaments.get(id) do
+      nil -> ""
+      tournament -> Tournaments.title(tournament) || ""
+    end
+  end
+
+  @doc """
+  The games of a tournament changed behind the boards' backs - names, a
+  pairing flag: every board of it reads its game again.
+  """
+  def refresh_games(tournament_id) do
+    for board <- list(), board.tournament_id == tournament_id do
+      call(board.id, :reload_game, :ok)
+      notify(board.id)
+    end
+
+    :ok
+  end
+
+  # --- a pairing that changed under a game -------------------------------------
+
+  @doc """
+  The game is the new pairing's: the moves stand, the names and the pairing
+  become what the pairing program now says for that board, and every
+  destination is told again, in full.
+  """
+  def adopt_pairing(%Games.Game{} = game) do
+    pairing = Tournaments.board(game.tournament_id, game.round, game.board_no)
+    game = game |> Games.adopt(pairing) |> Outbox.enqueue(nil, true)
+    Log.add(:info, "pairing.adopted", %{}, %{round: game.round, board_no: game.board_no})
+    refresh_games(game.tournament_id)
+    {:ok, game}
+  end
+
+  @doc """
+  The game is set aside (kept on the box, with its PGN) and a new one
+  begins on that board for the pairing as it is now.
+  """
+  def set_aside(%Games.Game{} = game) do
+    case linked_running(game.tournament_id, game.round, game.board_no) do
+      nil ->
+        pairing = Tournaments.board(game.tournament_id, game.round, game.board_no)
+        {_aside, fresh} = Games.set_aside(game, pairing)
+        Log.add(:info, "pairing.set_aside", %{}, %{round: game.round, board_no: game.board_no})
+        {:ok, Outbox.enqueue(fresh, nil, true)}
+
+      board ->
+        call(board.id, {:repair, :set_aside, nil})
+    end
   end
 
   @doc "Sets the result of the game on a board. The arbiter's word."
@@ -325,10 +416,13 @@ defmodule Alnasl.Boards do
   Sets the result of a game no connected board is feeding (one attached from
   a PGN, or whose board is switched off).
   """
-  def set_game_result(round, board_no, result) do
-    case linked_running(round, board_no) do
+  def set_game_result(round, board_no, result),
+    do: set_game_result(Tournaments.default_id(), round, board_no, result)
+
+  def set_game_result(tournament_id, round, board_no, result) do
+    case linked_running(tournament_id, round, board_no) do
       nil ->
-        with %{} = game <- Games.get(round, board_no) do
+        with %{} = game <- Games.current(tournament_id, round, board_no) do
           Log.add(:info, "result.set", %{result: result, by: "arbiter"}, %{
             round: round,
             board_no: board_no
@@ -348,20 +442,32 @@ defmodule Alnasl.Boards do
   played but not captured. It replaces what the box and the server hold for
   that board. A connected board linked to it lets go.
   """
-  def attach_pgn(round, board_no, %{moves: moves} = pgn_game) do
-    if board = linked_running(round, board_no), do: unlink(board)
+  def attach_pgn(round, board_no, %{moves: _} = pgn_game),
+    do: attach_pgn(Tournaments.default_id(), round, board_no, pgn_game)
 
-    for board <- list(), board.round == round, board.board_no == board_no do
+  def attach_pgn(tournament_id, round, board_no, %{moves: moves} = pgn_game) do
+    if board = linked_running(tournament_id, round, board_no), do: unlink(board)
+
+    for board <- list(),
+        board.tournament_id == tournament_id,
+        board.round == round,
+        board.board_no == board_no do
       update(board, %{round: nil, board_no: nil})
     end
 
-    names = Tournament.board(round, board_no) || %{}
+    pairing = Tournaments.board(tournament_id, round, board_no)
+    names = pairing || %{}
 
     game =
-      Games.ensure(round, board_no, %{
-        white: names[:white] || pgn_game.headers["White"],
-        black: names[:black] || pgn_game.headers["Black"]
-      })
+      Games.ensure(
+        tournament_id,
+        round,
+        board_no,
+        Map.merge(Games.pairing_attrs(pairing), %{
+          white: names[:white] || pgn_game.headers["White"],
+          black: names[:black] || pgn_game.headers["Black"]
+        })
+      )
 
     result = if pgn_game.result in ["1-0", "0-1", "1/2-1/2"], do: pgn_game.result, else: "*"
     game = game |> Games.pause(false) |> Games.attach(moves, result, pgn_game[:start_fen])
@@ -374,8 +480,12 @@ defmodule Alnasl.Boards do
     {:ok, Outbox.enqueue(game, nil, true)}
   end
 
-  defp linked_running(round, board_no) do
-    Enum.find(list(), &(&1.round == round and &1.board_no == board_no and running?(&1.id)))
+  defp linked_running(tournament_id, round, board_no) do
+    Enum.find(
+      list(),
+      &(&1.tournament_id == tournament_id and &1.round == round and &1.board_no == board_no and
+          running?(&1.id))
+    )
   end
 
   # --- demonstrations ----------------------------------------------------------
@@ -390,6 +500,7 @@ defmodule Alnasl.Boards do
     profile = Keyword.get(opts, :profile)
     speed = Keyword.get(opts, :speed, 20)
     first = Keyword.get(opts, :first, 1)
+    tournament_id = Keyword.get(opts, :tournament_id) || Tournaments.default_id()
     existing = length(list())
 
     for i <- 1..count do
@@ -414,6 +525,7 @@ defmodule Alnasl.Boards do
           driver: "simulator",
           port: "sim-#{existing + i}",
           options: options,
+          tournament_id: tournament_id,
           round: round,
           board_no: first + i - 1
         })

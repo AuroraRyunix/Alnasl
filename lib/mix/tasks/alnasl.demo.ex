@@ -24,8 +24,10 @@ defmodule Mix.Tasks.Alnasl.Demo do
 
   No results server is set up - the connection badge says "Not set up" and
   the outbox keeps everything, which is itself worth seeing. To send to a
-  real server, give all three of `--server`, `--slug` and `--key`; the
-  tournament is then fetched from it instead of made up.
+  real server, give all three of `--server`, `--slug` and `--key`: the
+  made-up tournament's moves then go to that results page. A tournament of
+  OpenPairings is added on the Setup page of the running demo, with its
+  connect code.
 
   Stop it with Ctrl+C twice.
   """
@@ -118,30 +120,22 @@ defmodule Mix.Tasks.Alnasl.Demo do
   defp iex?, do: Code.ensure_loaded?(IEx) and IEx.started?()
 
   defp set_up(count, opts) do
-    alias Alnasl.{Boards, Pgn, Settings, Tournament}
+    alias Alnasl.{Boards, Pgn, Settings, Tournaments}
 
     # Not the very short ones: a demo should last a few minutes.
     games = Pgn.all_bundled() |> Enum.filter(&(length(&1.moves) >= 40)) |> Enum.take(count)
     count = length(games)
     Settings.put("box_name", "Demo")
-    Settings.put("round", 1)
+    own = Tournaments.default()
+    Tournaments.set_round(own.id, 1)
+    {:ok, own} = Tournaments.import_snapshot(own, snapshot(games))
 
     if opts[:server] && opts[:slug] && opts[:key] do
-      Settings.put_many(%{
-        "server_url" => Settings.normalize_url(opts[:server]),
-        "slug" => opts[:slug],
-        "relay_key" => opts[:key]
+      Tournaments.update!(own, %{
+        server_url: Settings.normalize_url(opts[:server]),
+        slug: opts[:slug],
+        relay_key: opts[:key]
       })
-
-      case Tournament.refresh() do
-        {:ok, _snapshot} ->
-          :ok
-
-        {:error, reason} ->
-          Mix.shell().error("The tournament could not be fetched: #{inspect(reason)}")
-      end
-    else
-      Settings.put("snapshot", snapshot(games))
     end
 
     bullet? = opts[:faults] == "bullet"

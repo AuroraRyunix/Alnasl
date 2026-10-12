@@ -2351,3 +2351,61 @@ tr.sought td:first-child {
 .choice-actions .btn {
   min-height: 2.75rem;
 }
+
+/* --- several tournaments on one box ----------------------------------------- */
+
+/* One tournament under the other, each with its own heading and round. */
+.round-section + .round-section {
+  margin-top: 1.6rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--rule);
+}
+
+.round-head {
+  margin-bottom: 0.7rem;
+}
+
+.round-head h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.round-head h2 .note {
+  margin-left: 0.5rem;
+  font-weight: 400;
+}
+
+.round-meta {
+  gap: 0.4rem 0.9rem;
+  margin-bottom: 0.7rem;
+}
+
+.round-meta:empty {
+  display: none;
+}
+
+.tile .name .rating {
+  margin-left: 0.35rem;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The pairing changed under this game: a frame of its own, not a colour alone. */
+.tile.flagged {
+  outline: 3px dashed var(--bad);
+  outline-offset: 2px;
+}
+
+.callout.bad {
+  flex-direction: column;
+  align-items: flex-start;
+  border-color: var(--bad);
+}
+
+.callout.warn {
+  border-color: var(--warn);
+}
+
+.callout p {
+  margin: 0;
+}

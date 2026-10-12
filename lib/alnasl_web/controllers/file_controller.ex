@@ -4,11 +4,12 @@ defmodule AlnaslWeb.FileController do
   use AlnaslWeb, :controller
 
   alias Alnasl.{Games, Recorder}
+  alias AlnaslWeb.Scope
 
   def game(conn, %{"round" => round, "board" => board} = params) do
     with {round, ""} <- Integer.parse(round),
          {board, ""} <- Integer.parse(board),
-         %{} = game <- one(round, board, params["game"]) do
+         %{} = game <- one(Scope.tournament(params).id, round, board, params["game"]) do
       download(
         conn,
         Games.pgn(game),
@@ -20,10 +21,15 @@ defmodule AlnaslWeb.FileController do
     end
   end
 
-  def round(conn, %{"round" => round}) do
+  def round(conn, %{"round" => round} = params) do
     case Integer.parse(round) do
       {round, ""} ->
-        download(conn, Games.round_pgn(round), "round-#{round}.pgn", "application/x-chess-pgn")
+        download(
+          conn,
+          Games.round_pgn(Scope.tournament(params).id, round),
+          "round-#{round}.pgn",
+          "application/x-chess-pgn"
+        )
 
       _bad ->
         send_resp(conn, 404, "no such round")
@@ -46,11 +52,11 @@ defmodule AlnaslWeb.FileController do
 
   # `?game=2`: an earlier (or later) game on that board; without it, the
   # one being played.
-  defp one(round, board, nil), do: Games.get(round, board)
+  defp one(tournament, round, board, nil), do: Games.current(tournament, round, board)
 
-  defp one(round, board, number) do
+  defp one(tournament, round, board, number) do
     case Integer.parse(number) do
-      {game_no, ""} -> Games.get(round, board, game_no)
+      {game_no, ""} -> Games.fetch(tournament, round, board, game_no)
       _bad -> nil
     end
   end

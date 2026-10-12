@@ -26,6 +26,8 @@ defmodule AlnaslWeb.Router do
 
     get "/files/round/:round", FileController, :round
     get "/files/round/:round/board/:board", FileController, :game
+    get "/files/t/:tid/round/:round", FileController, :round
+    get "/files/t/:tid/round/:round/board/:board", FileController, :game
     get "/files/capture/:board/:name", FileController, :capture
     get "/files/labels", LabelsController, :index
 
@@ -36,6 +38,10 @@ defmodule AlnaslWeb.Router do
       live "/", RoundLive, :index
       live "/round/:round", RoundLive, :index
       live "/round/:round/board/:board", GameLive, :show
+      # The same pages for a tournament other than the box's own.
+      live "/t/:tid", RoundLive, :index
+      live "/t/:tid/round/:round", RoundLive, :index
+      live "/t/:tid/round/:round/board/:board", GameLive, :show
       live "/boards", BoardsLive, :index
       live "/boards/number", WalkLive, :number
       live "/boards/find", WalkLive, :find

@@ -3,15 +3,15 @@ defmodule Alnasl.Games do
   The games of the rounds, as the box holds them: the move list with its
   flags and clock times, the result, and the PGN written from them.
 
-  A game is found by `(round, board_no)` - the same pair the results server
-  keys it by. It exists from the moment a board is linked to it (or a PGN is
-  attached), and every change is in the database before anything else
-  happens with it.
+  A game is found by tournament, round and board - within a tournament the
+  same pair the results server keys it by. It exists from the moment a
+  board is linked to it (or a PGN is attached), and every change is in the
+  database before anything else happens with it.
   """
 
   import Ecto.Query
 
-  alias Alnasl.{Chess, Paths, Pgn, Repo, Settings, Tournament}
+  alias Alnasl.{Chess, Paths, Pgn, Repo, Tournaments}
   alias Alnasl.Games.Game
 
   @flags %{
@@ -26,69 +26,241 @@ defmodule Alnasl.Games do
     "imported" => :imported
   }
 
-  @doc "The game being played on that board of that round: the last one begun there."
-  def get(round, board_no), do: round |> history(board_no) |> List.last()
+  # --- finding a game ----------------------------------------------------------
 
-  @doc "One particular game of that board of that round, by its number (from 1)."
-  def get(round, board_no, game_no),
-    do: Repo.get_by(Game, round: round, board_no: board_no, game_no: game_no)
+  @doc "The game being played on that board of that round of that tournament: the last one begun there."
+  def current(tournament_id, round, board_no),
+    do: tournament_id |> history(round, board_no) |> List.last()
+
+  @doc "One particular game of that board, by its number (from 1)."
+  def fetch(tournament_id, round, board_no, game_no) do
+    Repo.get_by(Game,
+      tournament_id: tournament_id,
+      round: round,
+      board_no: board_no,
+      game_no: game_no
+    )
+  end
 
   def get!(id), do: Repo.get!(Game, id)
 
   @doc "Every game that board of that round has seen, in the order they were played."
-  def history(round, board_no) do
+  def history(tournament_id, round, board_no) do
     Game
-    |> where([g], g.round == ^round and g.board_no == ^board_no)
+    |> where(
+      [g],
+      g.tournament_id == ^tournament_id and g.round == ^round and g.board_no == ^board_no
+    )
     |> order_by([g], g.game_no)
     |> Repo.all()
   end
 
-  @doc "The games of a round, one a board: the one being played there."
-  def list(round) do
-    round
-    |> all()
+  @doc "The games of a round of a tournament, one a board: the one being played there."
+  def list(tournament_id, round) do
+    tournament_id
+    |> all(round)
     |> Enum.group_by(& &1.board_no)
     |> Enum.map(fn {_board_no, games} -> List.last(games) end)
     |> Enum.sort_by(& &1.board_no)
   end
 
-  @doc "Every game of a round, earlier games on a board included."
-  def all(round) do
-    Game |> where([g], g.round == ^round) |> order_by([g], [g.board_no, g.game_no]) |> Repo.all()
+  @doc "Every game of a round of a tournament, earlier games on a board included."
+  def all(tournament_id, round) do
+    Game
+    |> where([g], g.tournament_id == ^tournament_id and g.round == ^round)
+    |> order_by([g], [g.board_no, g.game_no])
+    |> Repo.all()
   end
+
+  @doc "The rounds a tournament has games of."
+  def rounds(tournament_id) do
+    Game
+    |> where([g], g.tournament_id == ^tournament_id)
+    |> select([g], g.round)
+    |> distinct(true)
+    |> order_by([g], g.round)
+    |> Repo.all()
+  end
+
+  # The same, for the box's own tournament: what "round 3, board 2" means on
+  # a box that serves one.
+
+  @doc "`current/3` in the box's own tournament."
+  def get(round, board_no), do: current(Tournaments.default_id(), round, board_no)
+
+  @doc "`fetch/4` in the box's own tournament."
+  def get(round, board_no, game_no),
+    do: fetch(Tournaments.default_id(), round, board_no, game_no)
+
+  def history(round, board_no), do: history(Tournaments.default_id(), round, board_no)
+  def list(round), do: list(Tournaments.default_id(), round)
+  def all(round), do: all(Tournaments.default_id(), round)
+  def rounds, do: rounds(Tournaments.default_id())
+  def round_pgn(round), do: round_pgn(Tournaments.default_id(), round)
+
+  def ensure(round, board_no), do: ensure(Tournaments.default_id(), round, board_no, %{})
+
+  def ensure(round, board_no, %{} = attrs),
+    do: ensure(Tournaments.default_id(), round, board_no, attrs)
 
   @doc """
   A new game on the board of `game`: the next number, the same players, no
-  moves. The game before it is left as it is - finished, or not.
+  moves. The game before it is left as it is - finished, or not. The new
+  one stays on the box: the places games go to have room for one a board.
   """
   def next(%Game{} = game) do
-    %Game{round: game.round, board_no: game.board_no, game_no: game.game_no + 1}
-    |> Game.changeset(%{white: game.white, black: game.black})
+    %Game{
+      tournament_id: game.tournament_id,
+      round: game.round,
+      board_no: game.board_no,
+      game_no: game.game_no + 1
+    }
+    |> Game.changeset(%{white: game.white, black: game.black, local: true})
     |> Repo.insert!()
   end
 
-  def rounds do
-    Game |> select([g], g.round) |> distinct(true) |> order_by([g], g.round) |> Repo.all()
+  @doc """
+  What a pairing (`Alnasl.Tournaments.board/3`) says about a game: the names,
+  and - for a pairing program's - the game's id there and its two players.
+  """
+  def pairing_attrs(nil), do: %{}
+
+  def pairing_attrs(%{} = pairing) do
+    %{
+      white: pairing[:white],
+      black: pairing[:black],
+      remote_game: pairing[:game],
+      remote_white: pairing[:white_id],
+      remote_black: pairing[:black_id]
+    }
   end
 
-  @doc "The game of that board of that round, made if it is not there yet. Player names are refreshed."
-  def ensure(round, board_no, attrs \\ %{}) do
-    names = Map.take(Map.new(attrs), [:white, :black, :start_fen])
+  @doc """
+  The game of that board of that round, made if it is not there yet.
 
-    case get(round, board_no) do
+  Names given are filled in. What a pairing program says about the game
+  (`remote_game` and its players) is taken when the game is new or has
+  nothing to contradict it; a game that already belongs to another pairing
+  is left as it is - that is `Alnasl.OpenPairings.Sync`'s to judge, and
+  the arbiter's.
+  """
+  def ensure(tournament_id, round, board_no, attrs) do
+    attrs = Map.new(attrs)
+
+    case current(tournament_id, round, board_no) do
       nil ->
-        %Game{round: round, board_no: board_no}
-        |> Game.changeset(names)
+        %Game{tournament_id: tournament_id, round: round, board_no: board_no}
+        |> Game.changeset(
+          Map.take(attrs, [:white, :black, :start_fen, :remote_game, :remote_white, :remote_black])
+        )
         |> Repo.insert!()
 
       game ->
         names =
-          Map.reject(names, fn {key, value} ->
+          attrs
+          |> Map.take([:white, :black, :start_fen])
+          |> Map.reject(fn {key, value} ->
             value in [nil, ""] or (key == :start_fen and game.plies != "[]")
           end)
 
-        game |> Game.changeset(names) |> Repo.update!()
+        cond do
+          # A game kept on the box is nobody's pairing.
+          game.local ->
+            game
+
+          # Another pairing than the one this game was begun for.
+          attrs[:remote_game] != nil and game.remote_game != nil and
+              not same_pairing?(game, attrs) ->
+            game
+
+          attrs[:remote_game] != nil ->
+            game
+            |> Game.changeset(
+              Map.merge(names, Map.take(attrs, [:remote_game, :remote_white, :remote_black]))
+            )
+            |> Repo.update!()
+
+          true ->
+            game |> Game.changeset(names) |> Repo.update!()
+        end
     end
+  end
+
+  @doc "Is the game the one that pairing describes: the same id there, the same two players, the same colours?"
+  def same_pairing?(%Game{} = game, attrs) do
+    game.remote_game == attrs[:remote_game] and game.remote_white == attrs[:remote_white] and
+      game.remote_black == attrs[:remote_black]
+  end
+
+  @doc "Has anything been played in it?"
+  def begun?(%Game{plies: plies}), do: plies != "[]"
+
+  @doc """
+  The game is taken to be the one `pairing` describes: its names, its id at
+  the pairing program, its players. With `nil`, the game is nobody's.
+  Clears a pairing flag.
+  """
+  def adopt(%Game{} = game, pairing) do
+    attrs =
+      Map.merge(
+        %{white: nil, black: nil, remote_game: nil, remote_white: nil, remote_black: nil},
+        pairing_attrs(pairing)
+      )
+
+    game
+    |> Ecto.Changeset.change(Map.put(attrs, :pairing_flag, nil))
+    |> Repo.update!()
+    |> tap(&write_pgn/1)
+  end
+
+  @doc "Marks a game whose pairing changed under it (`\"changed\"`, `\"gone\"`), or clears the mark (`nil`)."
+  def flag(%Game{pairing_flag: flag} = game, flag), do: game
+
+  def flag(%Game{} = game, flag) when flag in [nil, "changed", "gone"],
+    do: game |> Ecto.Changeset.change(%{pairing_flag: flag}) |> Repo.update!()
+
+  @doc """
+  The game is set aside - kept on the box, closed without a result if it
+  had none - and a new one begins on its board for `pairing`, which is the
+  one that leaves the box from now on. `{set aside, new}`.
+  """
+  def set_aside(%Game{} = game, pairing) do
+    aside =
+      game
+      |> Ecto.Changeset.change(%{
+        local: true,
+        pairing_flag: nil,
+        status: "finished",
+        result: game.result || "*",
+        suggestion: nil,
+        finished_at: game.finished_at || DateTime.utc_now(:second)
+      })
+      |> Repo.update!()
+      |> tap(&write_pgn/1)
+
+    fresh =
+      %Game{
+        tournament_id: game.tournament_id,
+        round: game.round,
+        board_no: game.board_no,
+        game_no: game.game_no + 1
+      }
+      |> Game.changeset(pairing_attrs(pairing))
+      |> Repo.insert!()
+
+    {aside, fresh}
+  end
+
+  @doc """
+  Moves a game to another board of its round: the pairing program gave it
+  another number. A number below 1 is a place to wait while two games
+  change places.
+  """
+  def move(%Game{} = game, board_no) do
+    if game.board_no > 0, do: File.rm(pgn_path(game))
+    moved = game |> Ecto.Changeset.change(%{board_no: board_no}) |> Repo.update!()
+    if board_no > 0, do: write_pgn(moved)
+    moved
   end
 
   # --- moves -------------------------------------------------------------------
@@ -256,7 +428,7 @@ defmodule Alnasl.Games do
   @doc "The game as PGN, with the clock after a move as a `[%clk]` comment."
   def pgn(%Game{} = game) do
     plies = plies(game)
-    info = Tournament.info()
+    info = Tournaments.info(game.tournament_id)
 
     date =
       case List.first(plies) do
@@ -272,7 +444,7 @@ defmodule Alnasl.Games do
 
     Pgn.write(%{
       headers: [
-        {"Event", info.name || Settings.get("slug") || "?"},
+        {"Event", info.name || "?"},
         {"Site", info.city || "?"},
         {"Date", date},
         {"Round", Integer.to_string(game.round)},
@@ -296,12 +468,21 @@ defmodule Alnasl.Games do
     match?({:ok, %{turn: :b}}, Chess.parse_fen(fen))
   end
 
-  @doc "Every game of a round as one PGN file, earlier games on a board included."
-  def round_pgn(round), do: round |> all() |> Enum.map_join("\n", &pgn/1)
+  @doc "Every game of a round of a tournament as one PGN file, earlier games on a board included."
+  def round_pgn(tournament_id, round),
+    do: tournament_id |> all(round) |> Enum.map_join("\n", &pgn/1)
 
-  @doc "Where a game's PGN is kept on the box."
+  @doc """
+  Where a game's PGN is kept on the box: `round-3/board-2.pgn` for the
+  box's own tournament, as it always was, and under `t<id>/` for another.
+  """
   def pgn_path(%Game{} = game) do
-    dir = Path.join(Paths.pgn(), "round-#{game.round}")
+    base =
+      if game.tournament_id in [nil, Tournaments.default_id()],
+        do: Paths.pgn(),
+        else: Path.join(Paths.pgn(), "t#{game.tournament_id}")
+
+    dir = Path.join(base, "round-#{game.round}")
     File.mkdir_p!(dir)
     Path.join(dir, pgn_name(game))
   end

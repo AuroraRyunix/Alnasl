@@ -84,7 +84,7 @@ defmodule AlnaslWeb.Hall do
   # message goes on to the page, which may care too.
   defp info(:outbox_changed, socket), do: {:cont, assign(socket, link: Outbox.status())}
 
-  defp info({:setting, key}, socket) when key in ~w(box_name server_url slug relay_key) do
+  defp info({:setting, "box_name"}, socket) do
     {:cont, assign(socket, link: Outbox.status(), box: Settings.get("box_name") || "Alnasl")}
   end
 

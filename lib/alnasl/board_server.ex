@@ -47,7 +47,7 @@ defmodule Alnasl.BoardServer do
     Recorder,
     Session,
     Settings,
-    Tournament,
+    Tournaments,
     Tracker
   }
 
@@ -133,10 +133,10 @@ defmodule Alnasl.BoardServer do
   end
 
   # The game this board is linked to, and a session caught up with it.
-  defp load_game(%{board: %Board{round: round, board_no: no}} = state)
+  defp load_game(%{board: %Board{tournament_id: tournament, round: round, board_no: no}} = state)
        when is_integer(round) and is_integer(no) do
-    names = Tournament.board(round, no) || %{}
-    game = Games.ensure(round, no, %{white: names[:white], black: names[:black]})
+    pairing = Tournaments.board(tournament, round, no)
+    game = Games.ensure(tournament, round, no, Games.pairing_attrs(pairing))
 
     opts =
       Settings.tracker_opts()
@@ -386,7 +386,7 @@ defmodule Alnasl.BoardServer do
     case Settings.get("new_game_on_setup") do
       "always" -> true
       "never" -> false
-      _unpaired -> Tournament.board(board.round, board.board_no) == nil
+      _unpaired -> Tournaments.board(board.tournament_id, board.round, board.board_no) == nil
     end
   end
 
@@ -642,7 +642,9 @@ defmodule Alnasl.BoardServer do
   def handle_call(:snapshot, _from, state), do: {:reply, snapshot(state), state}
 
   def handle_call({:reload, %Board{} = board}, _from, state) do
-    relink? = {board.round, board.board_no} != {state.board.round, state.board.board_no}
+    relink? =
+      {board.tournament_id, board.round, board.board_no} !=
+        {state.board.tournament_id, state.board.round, state.board.board_no}
 
     state = %{
       state
@@ -653,6 +655,17 @@ defmodule Alnasl.BoardServer do
     state = if relink?, do: state |> load_game() |> refeed(), else: state
     {:reply, :ok, dirty(state)}
   end
+
+  # Somebody else wrote to the game's row - the names, a pairing flag: read
+  # it again. The moves are this process's and are in the row already.
+  def handle_call(:reload_game, _from, %{game: %{id: id}} = state) do
+    case Alnasl.Repo.get(Games.Game, id) do
+      nil -> {:reply, :ok, state |> load_game() |> refeed() |> dirty()}
+      game -> {:reply, :ok, dirty(%{state | game: game})}
+    end
+  end
+
+  def handle_call(:reload_game, _from, state), do: {:reply, :ok, state}
 
   def handle_call({:flip, flipped?}, _from, state) do
     board = state.board |> Board.changeset(%{flipped: flipped?}) |> Alnasl.Repo.update!()
@@ -790,6 +803,26 @@ defmodule Alnasl.BoardServer do
     {:ok, refeed(state)}
   end
 
+  # The pairing changed under this game and the arbiter says it is not the
+  # new pairing's: it is kept on the box, and the board begins again for
+  # whoever is paired here now. The new game is the one that leaves the box,
+  # so every destination is told to replace what it holds.
+  defp repair(state, :set_aside, _args, t) do
+    board = state.board
+    pairing = Tournaments.board(board.tournament_id, board.round, board.board_no)
+    {_aside, game} = Games.set_aside(state.game, pairing)
+    Log.add(:info, "pairing.set_aside", %{game: game.game_no}, ref(state))
+
+    opts =
+      Settings.tracker_opts()
+      |> Keyword.put(:start_fen, game.start_fen)
+      |> Keyword.put(:late_start, false)
+
+    Recorder.record(board.id, {:cfg, cfg(board, game)})
+    state = %{state | game: game, session: Session.new(opts), warning: nil, queued_at: nil}
+    {:ok, state |> enqueue(t, true) |> refeed()}
+  end
+
   defp repair(state, :reopen, _args, t) do
     Log.add(:info, "result.reopened", %{}, ref(state))
     state = %{state | game: Games.reopen(state.game)}
@@ -859,6 +892,7 @@ defmodule Alnasl.BoardServer do
       driver: board.driver,
       port: board.port,
       address: board.address,
+      tournament_id: board.tournament_id,
       round: board.round,
       board_no: board.board_no,
       table_no: board.table_no,
@@ -907,6 +941,7 @@ defmodule Alnasl.BoardServer do
         game_status: game.status,
         game_id: game.id,
         game_no: game.game_no,
+        pairing_flag: game.pairing_flag,
         problems:
           if(tracker.plies == [] and state.seen,
             do: Position.problems(start_board(tracker), state.seen),

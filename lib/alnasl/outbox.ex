@@ -34,6 +34,14 @@ defmodule Alnasl.Outbox do
   | 401, 403, 404 | the key or the tournament is wrong - nothing a retry of this row fixes, and nothing to throw moves away for: the queue **waits**, says why, and tries again every 30 s and when the settings change |
   | 429, 5xx, no answer | the same row again, after a pause that doubles up to a minute (`Retry-After` is obeyed) |
 
+  ## One queue a tournament
+
+  A row belongs to a tournament and goes to that tournament's results page,
+  with that tournament's relay key. The order that matters is the order
+  within a game, so each tournament's rows are sent oldest first and a
+  tournament whose key is refused, or which has no results page (yet),
+  holds up nobody else's.
+
   ## One destination among several
 
   The results server is one of the places games go (`Alnasl.Destination`);
@@ -49,7 +57,8 @@ defmodule Alnasl.Outbox do
 
   import Ecto.Query
 
-  alias Alnasl.{Games, Log, Repo, Settings, Tournament}
+  alias Alnasl.{Games, Log, Repo, Tournaments}
+  alias Alnasl.Tournaments.Tournament
   alias Alnasl.Games.Game
   alias Alnasl.Outbox.Entry
 
@@ -68,10 +77,10 @@ defmodule Alnasl.Outbox do
 
   def enqueue(%Game{paused: true} = game, _clock, _replace?), do: game
 
-  # A second game on the same board of the same round: the server knows a
-  # game by round and board, and sending this one would overwrite the
-  # first. It stays on the box.
-  def enqueue(%Game{game_no: game_no} = game, _clock, _replace?) when game_no > 1, do: game
+  # A second game on the same board of the same round, or a game set aside:
+  # the server knows a game by round and board, and sending this one would
+  # overwrite the other. It stays on the box.
+  def enqueue(%Game{local: true} = game, _clock, _replace?), do: game
 
   def enqueue(%Game{} = game, clock, replace?) do
     body = Games.body(game, clock, replace?)
@@ -82,6 +91,7 @@ defmodule Alnasl.Outbox do
 
         Repo.insert!(%Entry{
           game_id: game.id,
+          tournament_id: game.tournament_id,
           round: game.round,
           board_no: game.board_no,
           seq: game.seq,
@@ -130,7 +140,7 @@ defmodule Alnasl.Outbox do
       |> Map.put(:pending, pending_count())
 
     cond do
-      not Settings.connection_configured?() ->
+      not configured?() ->
         %{base | state: :unconfigured}
 
       not Alnasl.Destination.enabled?(Alnasl.Destination.OpenResults) ->
@@ -151,35 +161,50 @@ defmodule Alnasl.Outbox do
     |> elem(0)
   end
 
+  @doc "Has any tournament a results page to send to?"
+  def configured?, do: Enum.any?(Tournaments.list(), &Tournaments.openresults_configured?/1)
+
+  @doc "How many rows wait for each tournament: `%{tournament_id => count}`."
+  def pending_by_tournament do
+    Entry
+    |> where([e], e.state == "pending")
+    |> group_by([e], e.tournament_id)
+    |> select([e], {e.tournament_id, count(e.id)})
+    |> Repo.all()
+    |> Map.new()
+  end
+
   # --- one step of delivery (pure of process state; the tests call it) ---------
 
   @doc """
-  Tries to deliver the oldest pending row. Returns
+  Tries to deliver the oldest pending row of one tournament. Returns
 
   - `:empty` - nothing is waiting;
   - `{:sent, entry}`, `{:rejected, entry}`, `{:superseded, entry}` - that row
     is done with, call again;
   - `{:retry, reason, wait_ms | nil}` - the server could not take it now;
   - `{:blocked, reason}` - the key or the tournament is refused;
-  - `:unconfigured`.
+  - `:unconfigured` - the tournament has no results page to send to.
   """
-  def step do
-    settings = Settings.get_many(~w(server_url slug relay_key))
+  def step(%Tournament{} = tournament) do
+    if Tournaments.openresults_configured?(tournament) do
+      query =
+        from e in Entry,
+          where: e.state == "pending" and e.tournament_id == ^tournament.id,
+          order_by: e.id,
+          limit: 1
 
-    cond do
-      settings["server_url"] == "" or settings["slug"] == "" or settings["relay_key"] == "" ->
-        :unconfigured
+      case Repo.one(query) do
+        nil ->
+          :empty
 
-      true ->
-        case Repo.one(from e in Entry, where: e.state == "pending", order_by: e.id, limit: 1) do
-          nil ->
-            :empty
-
-          entry ->
-            if superseded?(entry),
-              do: {:superseded, mark(entry, "superseded")},
-              else: post(entry, settings)
-        end
+        entry ->
+          if superseded?(entry),
+            do: {:superseded, mark(entry, "superseded")},
+            else: post(entry, tournament)
+      end
+    else
+      :unconfigured
     end
   end
 
@@ -200,14 +225,14 @@ defmodule Alnasl.Outbox do
 
   defp finished?(%Entry{body: body}), do: String.contains?(body, ~s("status":"finished"))
 
-  defp post(%Entry{} = entry, settings) do
-    url = settings["server_url"] <> "/api/tournaments/" <> URI.encode(settings["slug"]) <> "/live"
+  defp post(%Entry{} = entry, %Tournament{} = tournament) do
+    url = tournament.server_url <> "/api/tournaments/" <> URI.encode(tournament.slug) <> "/live"
 
     request =
       [
         url: url,
         headers: [
-          {"authorization", "Bearer " <> settings["relay_key"]},
+          {"authorization", "Bearer " <> tournament.relay_key},
           {"content-type", "application/json"}
         ],
         body: entry.body,
@@ -217,7 +242,7 @@ defmodule Alnasl.Outbox do
         # minutes instead of a second.
         receive_timeout: 10_000
       ]
-      |> Keyword.merge(Tournament.req_options())
+      |> Keyword.merge(Alnasl.Http.req_options())
       |> Req.new()
 
     entry = entry |> Ecto.Changeset.change(%{attempts: entry.attempts + 1}) |> Repo.update!()
@@ -338,15 +363,58 @@ defmodule Alnasl.Outbox do
   @doc "One batch for the sender: `{last result, how many rows were sent}`."
   def deliver_batch(limit), do: drain_counting(limit)
 
+  # Every tournament that has something waiting, each in its own order. What
+  # comes back is the worst of how they went: one tournament's refused key
+  # is said, and the others' rows have gone out all the same.
   defp drain_counting(limit) do
+    waiting = pending_by_tournament()
+
+    results =
+      for tournament <- Tournaments.list(), is_map_key(waiting, tournament.id) do
+        {tournament, drain_tournament(tournament, limit)}
+      end
+
+    sent = results |> Enum.map(fn {_t, {_result, sent}} -> sent end) |> Enum.sum()
+    several? = length(results) > 1
+
+    result =
+      results
+      |> Enum.map(fn {tournament, {result, _sent}} -> {rank(result), tournament, result} end)
+      |> Enum.max_by(&elem(&1, 0), fn ->
+        {0, nil, if(configured?(), do: :empty, else: :unconfigured)}
+      end)
+      |> then(fn {_rank, tournament, result} ->
+        if several?, do: named(result, tournament), else: result
+      end)
+
+    {result, sent}
+  end
+
+  defp drain_tournament(tournament, limit) do
     Enum.reduce_while(1..limit, {:empty, 0}, fn _i, {_last, sent} ->
-      case step() do
+      case step(tournament) do
         {:sent, _entry} = done -> {:cont, {done, sent + 1}}
         {other, _entry} = done when other in [:rejected, :superseded] -> {:cont, {done, sent}}
         other -> {:halt, {other, sent}}
       end
     end)
   end
+
+  defp rank({:blocked, _reason}), do: 5
+  defp rank({:retry, _reason, _wait}), do: 4
+  defp rank(:unconfigured), do: 1
+  defp rank(:empty), do: 2
+  # The batch limit was reached with rows still waiting.
+  defp rank(_more), do: 3
+
+  # With several tournaments, a refusal says whose it is.
+  defp named({:blocked, reason}, tournament),
+    do: {:blocked, {:tournament, Tournaments.title(tournament), reason}}
+
+  defp named({:retry, reason, wait}, tournament),
+    do: {:retry, {:tournament, Tournaments.title(tournament), reason}, wait}
+
+  defp named(result, _tournament), do: result
 
   # --- the sender --------------------------------------------------------------
 

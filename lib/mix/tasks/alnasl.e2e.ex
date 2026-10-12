@@ -11,9 +11,10 @@ defmodule Mix.Tasks.Alnasl.E2e do
 
   It uses its own data directory (`data/e2e`, emptied first) and serves the
   management site on `--port` (4042) while it runs, so the round can be
-  watched. The boards of round `--round` (1) are taken from the server's
-  published snapshot; `--boards` (3) of them get a simulator playing a
-  bundled game with the hands of `--faults` (`none`, `mild`, `rough`).
+  watched. Boards 1 to `--boards` (3) of round `--round` (1) each get a
+  simulator playing a bundled game with the hands of `--faults` (`none`,
+  `mild`, `rough`); the tournament on the server must have that many boards
+  in that round, for the server takes moves only for a board it has.
 
   While it runs it prints a line every few seconds: how far each board is,
   and how the connection stands. **Stop and start the results server during
@@ -101,34 +102,27 @@ defmodule Mix.Tasks.Alnasl.E2e do
   end
 
   defp play(opts) do
-    alias Alnasl.{Boards, Pgn, Settings, Tournament}
+    alias Alnasl.{Boards, Pgn, Settings, Tournaments}
 
     round = opts[:round] || 1
     url = Settings.normalize_url(opts[:url])
+    Settings.put("box_name", "e2e")
 
-    Settings.put_many(%{
-      "server_url" => url,
-      "slug" => opts[:slug],
-      "relay_key" => opts[:key],
-      "round" => round,
-      "box_name" => "e2e"
+    Tournaments.default()
+    |> Tournaments.update!(%{
+      server_url: url,
+      slug: opts[:slug],
+      relay_key: opts[:key],
+      round: round
     })
 
     info("Test connection:")
 
-    for {step, result} <- Tournament.test(url, opts[:slug], opts[:key]) do
+    for {step, result} <- Alnasl.OpenResults.test(url, opts[:slug], opts[:key]) do
       info("  #{step}: #{inspect(result)}")
     end
 
-    case Tournament.refresh() do
-      {:ok, _snapshot} -> :ok
-      {:error, reason} -> Mix.raise("the tournament could not be fetched: #{inspect(reason)}")
-    end
-
-    numbers =
-      round |> Tournament.boards() |> Enum.map(& &1.board) |> Enum.take(opts[:boards] || 3)
-
-    if numbers == [], do: Mix.raise("round #{round} has no boards on the server")
+    numbers = Enum.to_list(1..(opts[:boards] || 3))
 
     games =
       Pgn.all_bundled()

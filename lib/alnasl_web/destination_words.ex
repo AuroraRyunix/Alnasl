@@ -10,6 +10,7 @@ defmodule AlnaslWeb.DestinationWords do
 
   def name("openresults"), do: gettext("Results server")
   def name("lichess"), do: gettext("Lichess broadcast")
+  def name("openpairings"), do: gettext("OpenPairings")
   def name(other), do: other
 
   @doc "What a destination is for, in a line."
@@ -18,6 +19,12 @@ defmodule AlnaslWeb.DestinationWords do
 
   def about("lichess"),
     do: gettext("A broadcast round on Lichess, fed with the PGN of each game as it changes.")
+
+  def about("openpairings"),
+    do:
+      gettext(
+        "The pairing program: each game goes back to the tournament it came from, with the result the board saw. Shown beside the pairings there; never entered as the result."
+      )
 
   def about(_other), do: nil
 
@@ -52,7 +59,39 @@ defmodule AlnaslWeb.DestinationWords do
   def error(:rate_limited),
     do: gettext("Asked to slow down. Sending goes on by itself after the pause.")
 
+  def error(:unauthorized),
+    do:
+      gettext(
+        "OpenPairings does not accept the connect code: it is wrong, or it was withdrawn there. Make a new code in OpenPairings (Settings, Live boards) and add it in Setup."
+      )
+
+  def error(:not_the_api),
+    do: gettext("That address answers, but not as OpenPairings' board link.")
+
+  def error({:tournament, name, reason}) when is_binary(name),
+    do: name <> ": " <> error(reason)
+
+  def error({:tournament, _unnamed, reason}), do: error(reason)
+
   def error(other), do: Words.link_error(other)
+
+  @doc "What the pairing program said about one game it did not take."
+  def report_error("stale"),
+    do:
+      gettext(
+        "OpenPairings holds a newer report of this game - from another box, or from this one before it was set up again."
+      )
+
+  def report_error("pairing_changed" <> _detail),
+    do: gettext("the pairing is no longer between these two players, or the colours changed.")
+
+  def report_error("pairing_gone" <> _detail),
+    do: gettext("the pairing is not there any more: the round was paired again.")
+
+  def report_error("not_a_game" <> _detail),
+    do: gettext("that pairing is a bye or an empty board.")
+
+  def report_error(other), do: other
 
   # --- the test ----------------------------------------------------------------
 

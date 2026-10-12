@@ -8,7 +8,7 @@ defmodule Alnasl.LichessTest do
 
   use Alnasl.DataCase, async: false
 
-  alias Alnasl.{Destination, FakeIngest, FakeLichess, Games, Outbox, Settings, Tournament}
+  alias Alnasl.{Destination, FakeIngest, FakeLichess, Games, Outbox, Settings}
   alias Alnasl.Destination.{LichessApi, LichessBroadcast, OpenResults, Sender}
 
   @game ~w(e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7)
@@ -16,7 +16,6 @@ defmodule Alnasl.LichessTest do
   setup do
     start_supervised!(FakeIngest)
     FakeIngest.install()
-    {:ok, _snapshot} = Tournament.refresh()
     start_supervised!(FakeLichess)
     FakeLichess.install()
 
@@ -30,7 +29,7 @@ defmodule Alnasl.LichessTest do
   end
 
   defp new_game(board \\ 1, round \\ 1) do
-    names = Tournament.board(round, board) || %{}
+    names = Alnasl.Tournaments.board(own().id, round, board) || %{}
     Games.ensure(round, board, %{white: names[:white], black: names[:black]})
   end
 
@@ -147,7 +146,7 @@ defmodule Alnasl.LichessTest do
       assert [{200, [game]}] = FakeLichess.pushes()
       assert game.headers["Round"] == "1"
 
-      Settings.put("lichess_round", 2)
+      own_put(lichess_round: 2)
       assert LichessBroadcast.pending_count() == 1
       assert {:empty, 1} = LichessBroadcast.deliver()
       assert [_first, {200, [second]}] = FakeLichess.pushes()
@@ -204,19 +203,19 @@ defmodule Alnasl.LichessTest do
     test "a bad token, a round that is not this token's, a round that is not there: wait and say so" do
       play(new_game(), ~w(e4))
 
-      Settings.put("lichess_token", "lip_wrong")
+      own_put(lichess_token: "lip_wrong")
       assert {{:blocked, {:lichess, 401, "No such token"}}, 0} = LichessBroadcast.deliver()
 
-      Settings.put("lichess_token", FakeLichess.token())
+      own_put(lichess_token: FakeLichess.token())
       FakeLichess.mode(:not_yours)
       assert {{:blocked, {:lichess, 403, _}}, 0} = LichessBroadcast.deliver()
 
       FakeLichess.mode(:ok)
-      Settings.put("lichess_round_id", "Zz999999")
+      own_put(lichess_round_id: "Zz999999")
       assert {{:blocked, {:lichess, 404, _}}, 0} = LichessBroadcast.deliver()
       assert LichessBroadcast.pending_count() == 1
 
-      Settings.put("lichess_round_id", FakeLichess.round_id())
+      own_put(lichess_round_id: FakeLichess.round_id())
       assert {:empty, 1} = LichessBroadcast.deliver()
     end
 
@@ -225,7 +224,7 @@ defmodule Alnasl.LichessTest do
       FakeLichess.mode({:status, 502})
       assert {{:retry, {:http, 502, nil}, nil}, 0} = LichessBroadcast.deliver()
 
-      Settings.put("lichess_token", "")
+      own_put(lichess_token: "")
       refute LichessBroadcast.configured?()
       assert {:unconfigured, 0} = LichessBroadcast.deliver()
       assert LichessBroadcast.pending_count() == 1
@@ -328,9 +327,14 @@ defmodule Alnasl.LichessTest do
       assert Destination.status(LichessBroadcast).state == :disabled
 
       Destination.set_enabled(LichessBroadcast, true)
-      Settings.put("lichess_round_id", "")
+      own_put(lichess_round_id: "")
       assert Destination.status(LichessBroadcast).state == :unconfigured
-      assert Enum.map(Destination.statuses(), & &1.id) == ["openresults", "lichess"]
+
+      assert Enum.map(Destination.statuses(), & &1.id) == [
+               "openresults",
+               "lichess",
+               "openpairings"
+             ]
     end
   end
 
@@ -443,10 +447,10 @@ defmodule Alnasl.LichessTest do
     end
 
     test "the token is never shown again in full" do
-      assert LichessBroadcast.token_hint() == "lip_...cdef"
-      refute LichessBroadcast.token_hint() =~ "0123456789"
-      Settings.put("lichess_token", "")
-      assert LichessBroadcast.token_hint() == nil
+      assert Alnasl.Tournaments.lichess_token_hint(own()) == "lip_...cdef"
+      refute Alnasl.Tournaments.lichess_token_hint(own()) =~ "0123456789"
+      own_put(lichess_token: "")
+      assert Alnasl.Tournaments.lichess_token_hint(own()) == nil
     end
   end
 end

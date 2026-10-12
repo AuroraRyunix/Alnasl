@@ -463,7 +463,7 @@ defmodule AlnaslWeb.TablesAndOutputsTest do
       assert has_element?(view, "#lichess-check-account", "belongs to Arbiter")
       assert has_element?(view, "#lichess-check-scope .state.ok")
       assert has_element?(view, "#lichess-check-round", "Round 1")
-      assert Settings.get("lichess_token") in [nil, ""]
+      assert own().lichess_token in [nil, ""]
       assert FakeLichess.pushes() == []
 
       form.(%{good | token: "lip_wrong"}) |> render_submit(%{"intent" => "test"})
@@ -484,11 +484,11 @@ defmodule AlnaslWeb.TablesAndOutputsTest do
       FakeLichess.scopes("study:write")
 
       assert form.(%{good | round: "round one"}) |> render_submit() =~ "not a Lichess round"
-      assert Settings.get("lichess_round_id") in [nil, ""]
+      assert own().lichess_round_id in [nil, ""]
 
       html = form.(good) |> render_submit()
-      assert Settings.get("lichess_round_id") == FakeLichess.round_id()
-      assert Settings.get("lichess_token") == FakeLichess.token()
+      assert own().lichess_round_id == FakeLichess.round_id()
+      assert own().lichess_token == FakeLichess.token()
       assert Destination.enabled?(LichessBroadcast)
       # Only the ends of the token are ever shown.
       assert html =~ "lip_...cdef"
@@ -498,11 +498,11 @@ defmodule AlnaslWeb.TablesAndOutputsTest do
 
       # An empty token field keeps the stored one.
       form.(%{good | token: "", enabled: "false"}) |> render_submit()
-      assert Settings.get("lichess_token") == FakeLichess.token()
+      assert own().lichess_token == FakeLichess.token()
       refute Destination.enabled?(LichessBroadcast)
 
       view |> element("#clear-lichess") |> render_click()
-      assert Settings.get("lichess_token") == ""
+      assert own().lichess_token == ""
       refute has_element?(view, "#clear-lichess")
     end
 
@@ -542,7 +542,7 @@ defmodule AlnaslWeb.TablesAndOutputsTest do
       assert has_element?(view, "#dest-state-openresults", "Switched off")
       view |> element("#dest-toggle-openresults") |> render_click()
 
-      Settings.put("lichess_token", "")
+      own_put(lichess_token: "")
       {:ok, view, _html} = live(conn, ~p"/outbox")
       assert has_element?(view, "#dest-state-lichess", "Not set up")
     end

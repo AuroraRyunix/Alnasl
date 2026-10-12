@@ -459,7 +459,7 @@ defmodule Alnasl.BoardServerTest do
       assert {Boards.get!(a.id).board_no, Boards.get!(b.id).board_no} == {3, 4}
       Boards.move_to_round(2)
       assert {Boards.get!(a.id).round, Boards.get!(b.id).round} == {2, 2}
-      assert Settings.get("round") == 2
+      assert own().round == 2
     end
 
     test "a game that was not captured is attached from a PGN and replaces what the server holds" do

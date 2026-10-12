@@ -8,7 +8,7 @@ defmodule Alnasl.TablesTest do
 
   use Alnasl.HallCase
 
-  alias Alnasl.{Finder, Tables, Tournament}
+  alias Alnasl.{Finder, Tables}
   alias Alnasl.Dgt.Emulator
   alias Alnasl.Transport.Fake
 
@@ -447,7 +447,7 @@ defmodule Alnasl.TablesTest do
     end
 
     test "everything that would feed the wrong game or none is listed, with the board" do
-      assert length(Tournament.boards(1)) == 4
+      assert length(Alnasl.Tournaments.boards(own().id, 1)) == 4
 
       a = dgt("FAKE-A", "00001", %{name: "A"})
       b = dgt("FAKE-B", "00002", %{name: "B"})

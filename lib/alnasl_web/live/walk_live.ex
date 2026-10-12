@@ -472,7 +472,9 @@ defmodule AlnaslWeb.WalkLive do
             <.button
               :if={board.board_no && board.round}
               id="walk-found-open"
-              navigate={~p"/round/#{board.round}/board/#{board.board_no}"}
+              navigate={
+                AlnaslWeb.Scope.game_path(Map.get(board, :tournament_id), board.round, board.board_no)
+              }
             >
               {gettext("Open this board")}
             </.button>

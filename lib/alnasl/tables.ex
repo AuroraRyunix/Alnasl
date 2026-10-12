@@ -18,6 +18,17 @@ defmodule Alnasl.Tables do
      swap two (`swap/2`), or put it back (`clear_remap/1`). The next round
      starts from the table numbers again.
 
+  ## Tables and tournaments
+
+  A hall with two tournaments has one row of tables and two sets of board
+  numbers. A tournament can be given a range of tables
+  (`Alnasl.Tournaments.assign_tables/3`): tables 5 to 8 are the under-twelves,
+  and table 5 is their board 1. So "the board its table stands for"
+  (`home_board/1`) is the table number counted from the first table of the
+  board's tournament. A board given a table number inside a tournament's
+  range joins that tournament; a single board can also be put in a
+  tournament by hand (`assign/2`).
+
   ## A board that comes back
 
   A board added on a port is a new row. When it then says who it is and the
@@ -38,10 +49,11 @@ defmodule Alnasl.Tables do
   a board feed the wrong game or none, each with the board it is about.
   """
 
-  alias Alnasl.{Boards, Log, Repo, Settings, Tournament}
+  alias Alnasl.{Boards, Log, Repo, Tournaments}
   alias Alnasl.Boards.Board
 
-  defp round, do: Settings.get("round") || 1
+  # The round in play in the board's tournament.
+  defp round_of(%{tournament_id: id}), do: Tournaments.round_in_play(id)
 
   # --- identity ----------------------------------------------------------------
 
@@ -68,11 +80,55 @@ defmodule Alnasl.Tables do
   def new?(%{table_no: nil, board_no: nil}), do: true
   def new?(_board), do: false
 
-  @doc "Does the board feed another board of the round than its table number says?"
-  def remapped?(%{table_no: table, board_no: board}) when table != nil and board != nil,
-    do: table != board
+  @doc """
+  The board of the round a board's table stands for: its table number,
+  counted from the first table of its tournament. `nil` without a table
+  number, or with one below its tournament's first table. Takes a board row
+  or a snapshot.
+  """
+  def home_board(%{table_no: nil}), do: nil
+
+  def home_board(%{table_no: table} = board) do
+    case Tournaments.get(Map.get(board, :tournament_id)) do
+      nil -> table
+      tournament -> Tournaments.board_of_table(tournament, table)
+    end
+  end
+
+  def home_board(_board), do: nil
+
+  @doc "Does the board feed another board of the round than its table says?"
+  def remapped?(%{table_no: table, board_no: board} = row) when table != nil and board != nil,
+    do: home_board(row) != board
 
   def remapped?(_board), do: false
+
+  @doc """
+  Puts a board in a tournament: it follows that tournament's round, on the
+  board its table stands for there (not linked, when it has no table
+  number). Its game in the tournament it leaves stays as it is.
+  """
+  def assign(%Board{} = board, %Tournaments.Tournament{} = tournament) do
+    if board.tournament_id == tournament.id and board.round == tournament.round and
+         board.board_no == Tournaments.board_of_table(tournament, board.table_no) do
+      {:ok, board}
+    else
+      Log.add(
+        :info,
+        "table.tournament",
+        %{name: board.name, tournament: Tournaments.title(tournament) || ""},
+        ref(board)
+      )
+
+      {:ok, board} =
+        Boards.update(board, %{tournament_id: tournament.id, round: nil, board_no: nil})
+
+      case home_board(board) do
+        nil -> {:ok, board}
+        number -> Boards.link(board, tournament.round, number)
+      end
+    end
+  end
 
   # --- the table number --------------------------------------------------------
 
@@ -87,8 +143,6 @@ defmodule Alnasl.Tables do
   end
 
   def set_table(%Board{} = board, number) when is_integer(number) and number > 0 do
-    round = round()
-
     for other <- Boards.list(), other.id != board.id, other.table_no == number do
       Log.add(
         :info,
@@ -100,15 +154,26 @@ defmodule Alnasl.Tables do
       Boards.update(other, %{table_no: nil})
     end
 
+    # A table inside a tournament's range plays in that tournament.
+    owner = Tournaments.for_table(number)
+    moves? = owner != nil and owner.id != board.tournament_id
+
     follows? =
-      board.board_no == nil or board.round != round or board.board_no == board.table_no or
-        board.table_no == nil
+      moves? or board.board_no == nil or board.round != round_of(board) or
+        board.board_no == home_board(board) or board.table_no == nil
 
-    with {:ok, board} <- Boards.update(board, %{table_no: number}) do
+    changes =
+      if moves?,
+        do: %{table_no: number, tournament_id: owner.id, round: nil, board_no: nil},
+        else: %{table_no: number}
+
+    with {:ok, board} <- Boards.update(board, changes) do
       Log.add(:info, "table.set", %{name: board.name, table: number}, ref(board))
+      round = round_of(board)
+      home = home_board(board)
 
-      if follows? and {board.round, board.board_no} != {round, number},
-        do: Boards.link(board, round, number),
+      if follows? and home != nil and {board.round, board.board_no} != {round, home},
+        do: Boards.link(board, round, home),
         else: {:ok, board}
     end
   end
@@ -138,32 +203,44 @@ defmodule Alnasl.Tables do
     if board.table_no && board.table_no != board_no do
       Log.add(:info, "table.remapped", %{name: board.name, table: board.table_no}, %{
         board_id: board.id,
-        round: round(),
+        round: round_of(board),
         board_no: board_no
       })
     end
 
-    Boards.link(board, round(), board_no)
+    Boards.link(board, round_of(board), board_no)
   end
 
-  @doc "Back to the board its table number says; not linked when it has none."
-  def clear_remap(%Board{table_no: nil} = board), do: Boards.unlink(board)
-  def clear_remap(%Board{table_no: table} = board), do: Boards.link(board, round(), table)
+  @doc "Back to the board its table says; not linked when it has none."
+  def clear_remap(%Board{} = board) do
+    case home_board(board) do
+      nil -> Boards.unlink(board)
+      number -> Boards.link(board, round_of(board), number)
+    end
+  end
 
-  @doc "Every board with a table number back to the board of that number."
+  @doc "Every board with a table number back to the board its table stands for."
   def clear_remaps do
     for board <- Boards.list(),
-        board.table_no != nil,
-        remapped?(board) or board.round != round() do
-      Boards.link(Boards.get!(board.id), round(), board.table_no)
+        home = home_board(board),
+        home != nil,
+        remapped?(board) or board.round != round_of(board) do
+      Boards.link(Boards.get!(board.id), round_of(board), home)
     end
 
     :ok
   end
 
-  @doc "Two boards change places for this round: each feeds the board the other fed."
+  @doc """
+  Two boards change places for this round: each feeds the board the other
+  fed. Within one tournament: two boards of different tournaments have no
+  board number to exchange.
+  """
+  def swap(%Board{tournament_id: one}, %Board{tournament_id: other}) when one != other,
+    do: {:error, :other_tournament}
+
   def swap(%Board{} = a, %Board{} = b) do
-    round = round()
+    round = round_of(a)
     {a_no, b_no} = {a.board_no, b.board_no}
     {:ok, a} = Boards.update(a, %{round: nil, board_no: nil})
     {:ok, b} = Boards.update(b, %{round: nil, board_no: nil})
@@ -282,8 +359,9 @@ defmodule Alnasl.Tables do
     end
   end
 
-  defp started?(%Board{round: round, board_no: no}) when is_integer(round) and is_integer(no) do
-    case Alnasl.Games.get(round, no) do
+  defp started?(%Board{tournament_id: tournament, round: round, board_no: no})
+       when is_integer(round) and is_integer(no) do
+    case Alnasl.Games.current(tournament, round, no) do
       %{plies: plies, status: "live"} -> plies != "[]"
       _none -> false
     end
@@ -376,7 +454,7 @@ defmodule Alnasl.Tables do
   # --- ready or not ------------------------------------------------------------
 
   @doc """
-  What stands between the boards and round `round`: a list of
+  What stands between a tournament's boards and its round `round`: a list of
   `%{level, what, board_id}` with `level` `:bad` (a board would feed the
   wrong game, or none), `:warn` (look at this) or `:info` (so you know), and
   `what` a tuple naming the trouble:
@@ -397,17 +475,22 @@ defmodule Alnasl.Tables do
   | `{:remapped, name, table, n}` | feeds another board than its sticker says, as asked |
   | `{:uncovered, count}` | boards of the round beyond the electronic ones |
   """
-  def checks(round) do
-    snaps = Boards.snapshots()
+  def checks(round), do: checks(Tournaments.default_id(), round)
+
+  def checks(tournament_id, round, snapshots \\ nil) do
+    all = snapshots || Boards.snapshots()
+    # A sticker is on one board and a serial is one board, whatever
+    # tournament; the rest is about this tournament's boards.
+    snaps = Enum.filter(all, &(&1[:tournament_id] == tournament_id))
     here = Enum.filter(snaps, &(&1.round == round and &1.board_no != nil))
     by_no = Enum.group_by(here, & &1.board_no)
-    paired = round |> Tournament.boards() |> Enum.map(& &1.board)
+    paired = tournament_id |> Tournaments.boards(round) |> Enum.map(& &1.board)
     top = here |> Enum.map(& &1.board_no) |> Enum.max(fn -> 0 end)
 
-    duplicates(snaps, & &1[:table_no], :duplicate_table) ++
+    duplicates(all, & &1[:table_no], :duplicate_table) ++
       duplicates(here, & &1.board_no, :duplicate_board) ++
       duplicates(
-        Enum.filter(snaps, &(&1.driver in ["dgt_serial", "dgt_bus"])),
+        Enum.filter(all, &(&1.driver in ["dgt_serial", "dgt_bus"])),
         &serial/1,
         :same_serial
       ) ++
@@ -464,7 +547,7 @@ defmodule Alnasl.Tables do
         else: []
       ),
       if(here? and s.flipped, do: issue(:info, {:turned, s.name, s.board_no}, s.id), else: []),
-      if(here? and s[:table_no] != nil and s[:table_no] != s.board_no,
+      if(here? and s[:table_no] != nil and home_board(s) != s.board_no,
         do: issue(:info, {:remapped, s.name, s[:table_no], s.board_no}, s.id),
         else: []
       )

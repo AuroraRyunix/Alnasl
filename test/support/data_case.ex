@@ -40,6 +40,12 @@ defmodule Alnasl.DataCase do
     on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
   end
 
+  @doc "The box's own tournament: where a test's results page, round and Lichess round are kept."
+  def own, do: Alnasl.Tournaments.default()
+
+  @doc "Changes the box's own tournament: `own_put(relay_key: \"orrk_wrong\")`."
+  def own_put(attrs), do: Alnasl.Tournaments.update!(own(), Map.new(attrs))
+
   @doc """
   A helper that transforms changeset errors into a map of messages.
 

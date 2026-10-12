@@ -35,26 +35,33 @@ defmodule Alnasl.Destination.LichessBroadcast do
   On `429` it stays silent for as long as Lichess asks, a minute if it does
   not say.
 
-  ## One round
+  ## One round, of one tournament
 
-  A Lichess round is one round. `lichess_round` says which round of the
-  tournament it is (the round in play when the card was saved); games of
-  other rounds are not for this destination and do not count as waiting.
-
-  ## Settings
-
+  A Lichess round is one round of one tournament. Each tournament the box
+  serves can have its own (`Alnasl.Tournaments.Tournament`):
   `lichess_round_id` (eight characters), `lichess_token` (a secret: stored
   as given because it must be sent, never logged, never shown again in
-  full), `lichess_round`, `lichess_url`.
+  full) and `lichess_round`, which says which round of the tournament it is
+  (the round in play when the card was saved). Games of other rounds, and
+  of tournaments without a Lichess round, are not for this destination and
+  do not count as waiting. A push carries the games of one tournament: a
+  tournament whose token is refused holds up nobody else's.
+
+  ## What is left out
+
+  The pairing program says which of rating, title and federation the
+  arbiter shows on the public pages (`display` in the tournament's
+  document). What is switched off there is not sent to Lichess either.
   """
 
   @behaviour Alnasl.Destination
 
   import Ecto.Query
 
-  alias Alnasl.{Games, Pgn, Repo, Settings, Tournament}
+  alias Alnasl.{Games, Pgn, Repo, Tournaments}
   alias Alnasl.Destination.{Cursor, LichessApi}
   alias Alnasl.Games.Game
+  alias Alnasl.Tournaments.Tournament
 
   @id "lichess"
   @batch 64
@@ -63,13 +70,10 @@ defmodule Alnasl.Destination.LichessBroadcast do
   def id, do: @id
 
   @impl true
-  def configured? do
-    s = Settings.get_many(~w(lichess_round_id lichess_token))
-    s["lichess_round_id"] not in [nil, ""] and s["lichess_token"] not in [nil, ""]
-  end
+  def configured?, do: Enum.any?(Tournaments.list(), &Tournaments.lichess_configured?/1)
 
   @impl true
-  def setting_keys, do: ~w(lichess_round_id lichess_token lichess_round lichess_url)
+  def setting_keys, do: ~w(lichess_url)
 
   @impl true
   def coalesce_ms, do: Application.get_env(:alnasl, :lichess_coalesce_ms, 2_000)
@@ -77,113 +81,148 @@ defmodule Alnasl.Destination.LichessBroadcast do
   @impl true
   def default_enabled?, do: false
 
-  @doc "The round of the tournament that goes to the Lichess round."
-  def round do
-    case Settings.get("lichess_round") do
-      n when is_integer(n) and n > 0 -> n
-      _unset -> Settings.get("round") || 1
-    end
-  end
+  @doc "The round of the box's own tournament that goes to its Lichess round."
+  def round, do: Tournaments.lichess_round(Tournaments.default())
 
-  @doc "`\"lip_...9f2c\"`: enough to tell two tokens apart, not enough to use."
-  def token_hint do
-    case Settings.get("lichess_token") do
-      token when is_binary(token) and byte_size(token) > 12 ->
-        String.slice(token, 0, 4) <> "..." <> String.slice(token, -4, 4)
-
-      token when is_binary(token) and token != "" ->
-        "..."
-
-      _none ->
-        nil
-    end
+  # The tournaments this destination has anything to do with: those with a
+  # Lichess round - and the box's own, so that a box with nothing set up
+  # still says what would be waiting.
+  defp tournaments do
+    Enum.filter(
+      Tournaments.list(),
+      &(&1.kind == "local" or &1.lichess_round_id not in [nil, ""])
+    )
   end
 
   # --- what waits --------------------------------------------------------------
 
-  defp waiting_query(round) do
+  defp waiting_query(%Tournament{id: id} = tournament) do
+    round = Tournaments.lichess_round(tournament)
+
     from g in Game,
       left_join: c in Cursor,
       on: c.game_id == g.id and c.destination == @id,
-      # Game 1 of a board only: see `Alnasl.Outbox.enqueue/3`.
-      where: g.round == ^round and g.game_no == 1 and g.seq > coalesce(c.acked_seq, 0),
+      # Not a game that stays on the box: see `Alnasl.Outbox.enqueue/3`.
+      where:
+        g.tournament_id == ^id and g.round == ^round and not g.local and
+          g.seq > coalesce(c.acked_seq, 0),
       order_by: g.board_no
   end
 
   @impl true
-  def pending_count, do: Repo.aggregate(waiting_query(round()), :count)
+  def pending_count,
+    do: tournaments() |> Enum.map(&Repo.aggregate(waiting_query(&1), :count)) |> Enum.sum()
+
+  @doc "How many games wait for each tournament's Lichess round: `%{tournament_id => count}`."
+  def pending_by_tournament,
+    do: Map.new(tournaments(), &{&1.id, Repo.aggregate(waiting_query(&1), :count)})
 
   @doc "The games waiting for Lichess, lowest board first."
-  def waiting, do: Repo.all(waiting_query(round()))
+  def waiting, do: Enum.flat_map(tournaments(), &Repo.all(waiting_query(&1)))
 
   @doc "What Lichess said about the games it refused: `[{game, message}]`."
   def refused do
-    Repo.all(
-      from c in Cursor,
-        join: g in Game,
-        on: g.id == c.game_id,
-        where: c.destination == @id and not is_nil(c.error) and g.round == ^round(),
-        order_by: g.board_no,
-        select: {g, c.error}
-    )
+    Enum.flat_map(tournaments(), fn tournament ->
+      round = Tournaments.lichess_round(tournament)
+
+      Repo.all(
+        from c in Cursor,
+          join: g in Game,
+          on: g.id == c.game_id,
+          where:
+            c.destination == @id and not is_nil(c.error) and g.round == ^round and
+              g.tournament_id == ^tournament.id,
+          order_by: g.board_no,
+          select: {g, c.error}
+      )
+    end)
   end
 
   # --- sending -----------------------------------------------------------------
 
   @impl true
   def deliver do
-    s = Settings.get_many(~w(lichess_round_id lichess_token))
+    case Enum.filter(Tournaments.list(), &Tournaments.lichess_configured?/1) do
+      [] ->
+        {:unconfigured, 0}
 
-    if s["lichess_round_id"] in [nil, ""] or s["lichess_token"] in [nil, ""] do
-      {:unconfigured, 0}
-    else
-      round = round()
-      games = waiting_query(round) |> limit(@batch) |> Repo.all()
-      cursors = cursors(games)
+      configured ->
+        results = Enum.map(configured, &{&1, deliver_tournament(&1)})
+        sent = results |> Enum.map(fn {_t, {_result, sent}} -> sent end) |> Enum.sum()
 
-      # A game whose PGN is what Lichess already has is done without a word.
-      {same, changed} =
-        games
-        |> Enum.map(&{&1, pgn(&1)})
-        |> Enum.split_with(fn {game, pgn} ->
-          cursor = cursors[game.id]
-          cursor != nil and cursor.error == nil and cursor.digest == digest(pgn)
-        end)
+        {_rank, tournament, result} =
+          results
+          |> Enum.map(fn {tournament, {result, _sent}} -> {rank(result), tournament, result} end)
+          |> Enum.max_by(&elem(&1, 0))
 
-      for {game, pgn} <- same, do: ack(cursors[game.id], game, pgn, nil, false)
-
-      case changed do
-        [] ->
-          {if(more?(round), do: :more, else: :empty), 0}
-
-        changed ->
-          body = Enum.map_join(changed, "\n", &elem(&1, 1))
-
-          case LichessApi.push(LichessApi.base(), s["lichess_round_id"], s["lichess_token"], body) do
-            {:ok, answers} ->
-              changed
-              |> Enum.with_index()
-              |> Enum.each(fn {{game, pgn}, index} ->
-                error =
-                  case Enum.at(answers, index) do
-                    {:error, message} -> String.slice(message, 0, 500)
-                    _taken -> nil
-                  end
-
-                ack(cursors[game.id], game, pgn, error, true)
-              end)
-
-              Phoenix.PubSub.broadcast(Alnasl.PubSub, "outbox", :outbox_changed)
-              {if(more?(round), do: :more, else: :empty), length(changed)}
-
-            other ->
-              {other, 0}
-          end
-      end
+        {if(length(configured) > 1, do: named(result, tournament), else: result), sent}
     end
   end
 
-  defp more?(round), do: Repo.exists?(waiting_query(round))
+  defp rank({:blocked, _reason}), do: 4
+  defp rank({:retry, _reason, _wait}), do: 3
+  defp rank(:more), do: 2
+  defp rank(_empty), do: 1
+
+  defp named({:blocked, reason}, tournament),
+    do: {:blocked, {:tournament, Tournaments.title(tournament), reason}}
+
+  defp named({:retry, reason, wait}, tournament),
+    do: {:retry, {:tournament, Tournaments.title(tournament), reason}, wait}
+
+  defp named(result, _tournament), do: result
+
+  defp deliver_tournament(%Tournament{} = tournament) do
+    games = tournament |> waiting_query() |> limit(@batch) |> Repo.all()
+    cursors = cursors(games)
+
+    # A game whose PGN is what Lichess already has is done without a word.
+    {same, changed} =
+      games
+      |> Enum.map(&{&1, pgn(&1)})
+      |> Enum.split_with(fn {game, pgn} ->
+        cursor = cursors[game.id]
+        cursor != nil and cursor.error == nil and cursor.digest == digest(pgn)
+      end)
+
+    for {game, pgn} <- same, do: ack(cursors[game.id], game, pgn, nil, false)
+
+    case changed do
+      [] ->
+        {if(more?(tournament), do: :more, else: :empty), 0}
+
+      changed ->
+        body = Enum.map_join(changed, "\n", &elem(&1, 1))
+
+        case LichessApi.push(
+               LichessApi.base(),
+               tournament.lichess_round_id,
+               tournament.lichess_token,
+               body
+             ) do
+          {:ok, answers} ->
+            changed
+            |> Enum.with_index()
+            |> Enum.each(fn {{game, pgn}, index} ->
+              error =
+                case Enum.at(answers, index) do
+                  {:error, message} -> String.slice(message, 0, 500)
+                  _taken -> nil
+                end
+
+              ack(cursors[game.id], game, pgn, error, true)
+            end)
+
+            Phoenix.PubSub.broadcast(Alnasl.PubSub, "outbox", :outbox_changed)
+            {if(more?(tournament), do: :more, else: :empty), length(changed)}
+
+          other ->
+            {other, 0}
+        end
+    end
+  end
+
+  defp more?(tournament), do: Repo.exists?(waiting_query(tournament))
 
   defp cursors([]), do: %{}
 
@@ -222,8 +261,9 @@ defmodule Alnasl.Destination.LichessBroadcast do
   and not in front of the name, which is where Lichess looks for them.
   """
   def pgn(%Game{} = game) do
-    players = Tournament.players(game.round, game.board_no)
-    info = Tournament.info()
+    players = Tournaments.players(game.tournament_id, game.round, game.board_no)
+    info = Tournaments.info(game.tournament_id)
+    shown = fn key -> info.display[key] != false end
     plies = Games.plies(game)
 
     date =
@@ -250,14 +290,14 @@ defmodule Alnasl.Destination.LichessBroadcast do
     Pgn.write(%{
       headers:
         [
-          {"Event", info.name || Settings.get("slug") || "?"},
+          {"Event", info.name || "?"},
           {"Site", info.city || "?"},
           {"Date", date},
           {"Round", Integer.to_string(game.round)},
           {"White", name(players.white, game.white)},
           {"Black", name(players.black, game.black)},
           {"Board", Integer.to_string(game.board_no)}
-        ] ++ extra("White", players.white) ++ extra("Black", players.black),
+        ] ++ extra("White", players.white, shown) ++ extra("Black", players.black, shown),
       moves: Enum.map(plies, & &1.san),
       clocks: clocks,
       result: if(game.status == "finished", do: game.result || "*", else: "*"),
@@ -268,15 +308,15 @@ defmodule Alnasl.Destination.LichessBroadcast do
   defp name(%{name: name}, _stored) when is_binary(name) and name != "", do: name
   defp name(_none, stored), do: stored || "?"
 
-  defp extra(_side, nil), do: []
+  defp extra(_side, nil, _shown), do: []
 
-  defp extra(side, player) do
+  defp extra(side, player, shown) do
     for {suffix, value} <- [
-          {"Title", player.title},
-          {"Elo", player.rating},
+          {"Title", shown.("title") && player.title},
+          {"Elo", shown.("rating") && player.rating},
           {"FideId", player.fide_id}
         ],
-        value != nil,
+        value not in [nil, false],
         do: {side <> suffix, to_string(value)}
   end
 end

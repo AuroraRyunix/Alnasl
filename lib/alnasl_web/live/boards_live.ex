@@ -10,8 +10,8 @@ defmodule AlnaslWeb.BoardsLive do
 
   use AlnaslWeb, :live_view
 
-  alias Alnasl.{Boards, Finder, Settings, Tables, Tournament}
-  alias AlnaslWeb.{Access, TableWords, Words}
+  alias Alnasl.{Boards, Finder, Tables, Tournaments}
+  alias AlnaslWeb.{Access, Scope, TableWords, Words}
 
   # How long a touched board stays lit.
   @found_ms 6_000
@@ -38,12 +38,17 @@ defmodule AlnaslWeb.BoardsLive do
       Finder.subscribe()
     end
 
+    # The page is about one tournament at a time: the first one shown, until
+    # the arbiter picks another.
+    first = hd(Tournaments.active())
+
     {:ok,
      socket
      |> assign(
        page_title: gettext("Boards"),
        refresh_due?: false,
-       round: Settings.get("round") || 1,
+       tid: first.id,
+       round: first.round,
        find?: false,
        lit: nil,
        seeking: nil,
@@ -69,9 +74,10 @@ defmodule AlnaslWeb.BoardsLive do
   end
 
   defp load(socket) do
-    round = socket.assigns.round
+    %{tid: tid, round: round} = socket.assigns
     snapshots = Boards.snapshots()
-    checks = Tables.checks(round)
+    checks = Tables.checks(tid, round)
+    tournaments = Tournaments.list() |> Enum.reject(& &1.gone)
 
     assign(socket,
       snapshots: snapshots,
@@ -79,8 +85,11 @@ defmodule AlnaslWeb.BoardsLive do
       ready?: Tables.ready?(checks),
       wizard?: Finder.state().wizard != nil,
       found: Boards.discover(),
-      numbers: round |> Tournament.boards() |> Enum.map(& &1.board),
-      rounds: Enum.uniq(Tournament.rounds() ++ [round]) |> Enum.sort(),
+      numbers: tid |> Tournaments.boards(round) |> Enum.map(& &1.board),
+      rounds: Enum.uniq(Tournaments.rounds(tid) ++ [round]) |> Enum.sort(),
+      tournaments: tournaments,
+      shown: Tournaments.active(),
+      names: Map.new(tournaments, &{&1.id, Tournaments.title(&1) || gettext("This box")}),
       refresh_due?: false
     )
   end
@@ -202,6 +211,26 @@ defmodule AlnaslWeb.BoardsLive do
     end
 
     {:noreply, load(socket)}
+  end
+
+  # Which tournament this board plays in: one board, by hand. A range of
+  # tables is given to a tournament on the Setup page.
+  def handle_event("tournament", %{"board_id" => id, "tournament_id" => value}, socket) do
+    with %{} = board <- Boards.get(id),
+         {tid, ""} <- Integer.parse(value),
+         %{} = tournament <- Tournaments.get(tid) do
+      Tables.assign(board, tournament)
+    end
+
+    {:noreply, load(socket)}
+  end
+
+  def handle_event("pick_tournament", %{"tournament_id" => value}, socket) do
+    with {tid, ""} <- Integer.parse(value), %{} = tournament <- Tournaments.get(tid) do
+      {:noreply, socket |> assign(tid: tournament.id, round: tournament.round) |> load()}
+    else
+      _none -> {:noreply, socket}
+    end
   end
 
   def handle_event("link_in_order", %{"order" => %{"first" => first}}, socket) do
@@ -377,6 +406,17 @@ defmodule AlnaslWeb.BoardsLive do
       subtitle={gettext("%{n} known", n: length(@snapshots))}
     >
       <:actions>
+        <form
+          :if={length(@shown) > 1}
+          id="boards-tournament-form"
+          phx-change="pick_tournament"
+          class="row"
+        >
+          <label for="boards-tournament" class="note">{gettext("Tournament")}</label>
+          <select id="boards-tournament" name="tournament_id" class="input" style="width:auto">
+            <option :for={t <- @shown} value={t.id} selected={t.id == @tid}>{@names[t.id]}</option>
+          </select>
+        </form>
         <form id="boards-round-form" phx-change="round" class="row">
           <label for="boards-round" class="note">{gettext("Linking for round")}</label>
           <select id="boards-round" name="round" class="input" style="width:auto">
@@ -678,8 +718,46 @@ defmodule AlnaslWeb.BoardsLive do
                       phx-debounce="blur"
                     />
                   </form>
+                  <form
+                    :if={length(@tournaments) > 1}
+                    id={"tournament-form-#{s.id}"}
+                    phx-change="tournament"
+                  >
+                    <input type="hidden" name="board_id" value={s.id} />
+                    <label class="sr-only" for={"tournament-#{s.id}"}>{gettext(
+                      "Tournament of %{name}",
+                      name: s.name
+                    )}</label>
+                    <select
+                      id={"tournament-#{s.id}"}
+                      name="tournament_id"
+                      class="input"
+                      style="width:auto;max-width:11rem"
+                    >
+                      <option
+                        :for={t <- @tournaments}
+                        value={t.id}
+                        selected={t.id == s[:tournament_id]}
+                      >
+                        {@names[t.id]}
+                      </option>
+                    </select>
+                  </form>
                 </td>
-                <td>
+                <td :if={s[:tournament_id] != @tid} id={"elsewhere-#{s.id}"}>
+                  <span class="note">
+                    <%= if s.board_no && s.round do %>
+                      {gettext("%{name}: round %{r}, board %{n}",
+                        name: @names[s[:tournament_id]] || "?",
+                        r: s.round,
+                        n: s.board_no
+                      )}
+                    <% else %>
+                      {gettext("%{name}: not linked", name: @names[s[:tournament_id]] || "?")}
+                    <% end %>
+                  </span>
+                </td>
+                <td :if={s[:tournament_id] == @tid}>
                   <form id={"link-form-#{s.id}"} phx-change="link">
                     <input type="hidden" name="board_id" value={s.id} />
                     <label class="sr-only" for={"link-#{s.id}"}>{gettext("Board number for %{name}",
@@ -714,7 +792,7 @@ defmodule AlnaslWeb.BoardsLive do
                       phx-click="back_to_table"
                       phx-value-id={s.id}
                     >
-                      {gettext("Back to board %{n}", n: s.table_no)}
+                      {gettext("Back to board %{n}", n: Tables.home_board(s) || s.table_no)}
                     </.button>
                   </div>
                   <div :if={s.board_no && s.round != @round} class="note">
@@ -726,7 +804,7 @@ defmodule AlnaslWeb.BoardsLive do
                     :if={s.board_no && s.round}
                     id={"open-#{s.id}"}
                     small
-                    navigate={~p"/round/#{s.round}/board/#{s.board_no}"}
+                    navigate={Scope.game_path(s[:tournament_id], s.round, s.board_no)}
                   >{gettext("Open")}</.button>
                   <.button id={"show-me-#{s.id}"} small phx-click="show_me" phx-value-id={s.id}>
                     {gettext("Show me")}

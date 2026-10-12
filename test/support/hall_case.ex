@@ -10,7 +10,7 @@ defmodule Alnasl.HallCase do
 
   use ExUnit.CaseTemplate
 
-  alias Alnasl.{Boards, Chess, FakeIngest, Position, Settings, Tournament}
+  alias Alnasl.{Boards, Chess, FakeIngest, Position, Settings}
   alias Alnasl.Dgt.Emulator
   alias Alnasl.Transport.Fake
 
@@ -18,6 +18,7 @@ defmodule Alnasl.HallCase do
     quote do
       import Ecto.Query
       import Alnasl.HallCase
+      import Alnasl.DataCase, only: [own: 0, own_put: 1]
       alias Alnasl.Repo
       alias Alnasl.{Boards, FakeIngest, Games, Outbox, Position, Recorder, Settings}
     end
@@ -33,7 +34,6 @@ defmodule Alnasl.HallCase do
     File.rm_rf!(Alnasl.Paths.pgn())
     start_supervised!(FakeIngest)
     FakeIngest.install()
-    {:ok, _snapshot} = Tournament.refresh()
 
     # A tracker that makes up its mind quickly: these tests run in real time.
     Settings.put("tracker", %{

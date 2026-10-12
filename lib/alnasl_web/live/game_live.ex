@@ -24,23 +24,33 @@ defmodule AlnaslWeb.GameLive do
 
   use AlnaslWeb, :live_view
 
-  alias Alnasl.{Boards, Chess, Games, Position, Tournament}
+  alias Alnasl.{Boards, Chess, Games, Position, Tournaments}
+  alias AlnaslWeb.Scope
   alias AlnaslWeb.{Choice, Words}
 
   @impl true
-  def mount(%{"round" => round, "board" => board}, _session, socket) do
+  def mount(%{"round" => round, "board" => board} = params, _session, socket) do
     with {round, ""} <- Integer.parse(round), {board, ""} <- Integer.parse(board) do
       if connected?(socket), do: Boards.subscribe()
+      tournament = Scope.tournament(params)
 
       {:ok,
        socket
        |> assign(round: round, no: board, refresh_due?: false, notice: nil, compare: nil)
+       |> assign(tid: tournament.id, tournament: tournament)
        |> assign(at: nil, choice: nil)
        |> assign(page_title: gettext("Board %{n}", n: board))
        |> assign(forms())
        |> load()}
     else
       _bad -> {:ok, push_navigate(socket, to: ~p"/")}
+    end
+  end
+
+  defp blank(text) do
+    case String.trim(text || "") do
+      "" -> nil
+      name -> name
     end
   end
 
@@ -53,10 +63,16 @@ defmodule AlnaslWeb.GameLive do
   end
 
   defp load(socket) do
-    %{round: round, no: no} = socket.assigns
-    board = Enum.find(Boards.list(), &(&1.round == round and &1.board_no == no))
-    game = Games.get(round, no)
-    pairing = Tournament.board(round, no) || %{}
+    %{tid: tid, round: round, no: no} = socket.assigns
+
+    board =
+      Enum.find(
+        Boards.list(),
+        &(&1.tournament_id == tid and &1.round == round and &1.board_no == no)
+      )
+
+    game = Games.current(tid, round, no)
+    pairing = Tournaments.board(tid, round, no) || %{}
 
     snap =
       cond do
@@ -94,8 +110,18 @@ defmodule AlnaslWeb.GameLive do
     fresh? = socket.assigns[:game] != nil and game != nil and socket.assigns.game.id != game.id
 
     socket
-    |> assign(board: board, game: game, view: view, refresh_due?: false)
-    |> assign(at: if(fresh?, do: nil, else: at), history: Games.history(round, no))
+    |> assign(board: board, game: game, view: view, refresh_due?: false, pairing: pairing)
+    |> assign(at: if(fresh?, do: nil, else: at), history: Games.history(tid, round, no))
+    |> assign(
+      names_form:
+        to_form(
+          %{
+            "white" => (game && game.white) || pairing[:white] || "",
+            "black" => (game && game.black) || pairing[:black] || ""
+          },
+          as: :names
+        )
+    )
     |> then(&if(fresh?, do: assign(&1, choice: nil), else: &1))
   end
 
@@ -376,9 +402,9 @@ defmodule AlnaslWeb.GameLive do
   end
 
   def handle_event("result", %{"result" => result}, socket) do
-    %{round: round, no: no} = socket.assigns
+    %{tid: tid, round: round, no: no} = socket.assigns
 
-    case Boards.set_game_result(round, no, result) do
+    case Boards.set_game_result(tid, round, no, result) do
       :ok when result == "*" ->
         {:noreply,
          socket |> put_flash(:info, gettext("The game is closed without a result.")) |> load()}
@@ -388,6 +414,66 @@ defmodule AlnaslWeb.GameLive do
 
       _error ->
         {:noreply, put_flash(socket, :error, gettext("The result could not be set."))}
+    end
+  end
+
+  # The pairing changed under this game: it is the new pairing's game after
+  # all, or it is set aside and the board begins again.
+  def handle_event("adopt_pairing", _params, %{assigns: %{game: %{} = game}} = socket) do
+    Boards.adopt_pairing(Games.get!(game.id))
+
+    {:noreply,
+     socket
+     |> put_flash(
+       :info,
+       gettext(
+         "The moves stand. The game now carries the names of the pairing as it is, and is sent again."
+       )
+     )
+     |> load()}
+  end
+
+  def handle_event("set_aside", _params, %{assigns: %{game: %{} = game}} = socket) do
+    case Boards.set_aside(Games.get!(game.id)) do
+      {:error, _reason} ->
+        {:noreply, put_flash(socket, :error, gettext("That could not be done."))}
+
+      _done ->
+        {:noreply,
+         socket
+         |> put_flash(
+           :info,
+           gettext(
+             "The game is set aside and kept below. Set up the pieces: the board begins again for the pairing as it is now."
+           )
+         )
+         |> load()}
+    end
+  end
+
+  # Who plays here, said by hand: only the box's own tournament has nobody
+  # else to ask.
+  def handle_event("save_names", %{"names" => %{"white" => white, "black" => black}}, socket) do
+    %{tid: tid, round: round, no: no, tournament: tournament} = socket.assigns
+
+    case Tournaments.set_names(tournament, round, no, white, black) do
+      {:ok, _tournament} ->
+        if game = Games.current(tid, round, no) do
+          game
+          |> Ecto.Changeset.change(%{white: blank(white), black: blank(black)})
+          |> Alnasl.Repo.update!()
+        end
+
+        Boards.refresh_games(tid)
+        {:noreply, socket |> put_flash(:info, gettext("Saved.")) |> load()}
+
+      _error ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           gettext("The names of this tournament come from the pairing program.")
+         )}
     end
   end
 
@@ -582,17 +668,21 @@ defmodule AlnaslWeb.GameLive do
       box={@box}
       locale={@locale}
       title={gettext("Board %{n}", n: @no)}
-      subtitle={gettext("Round %{n}", n: @round)}
+      subtitle={
+        if Tournaments.many?() and Tournaments.title(@tournament),
+          do: gettext("Round %{n}", n: @round) <> " - " <> Tournaments.title(@tournament),
+          else: gettext("Round %{n}", n: @round)
+      }
     >
       <:actions>
-        <.button id="back-to-round" small icon="back" navigate={~p"/round/#{@round}"}>{gettext(
+        <.button id="back-to-round" small icon="back" navigate={Scope.round_path(@tid, @round)}>{gettext(
           "All boards"
         )}</.button>
         <.button
           :if={@game}
           id="download-pgn"
           small
-          href={~p"/files/round/#{@round}/board/#{@no}"}
+          href={Scope.game_file(@tid, @round, @no)}
           download
         >
           PGN
@@ -606,6 +696,54 @@ defmodule AlnaslWeb.GameLive do
           <.button id="game-empty-boards" navigate={~p"/boards"} variant="primary">{gettext(
             "Go to Boards"
           )}</.button>
+        </div>
+      </div>
+
+      <div :if={@game && @game.pairing_flag} id="pairing-changed" class="callout bad" role="alert">
+        <b>{gettext("The pairing changed in OpenPairings")}</b>
+        <p>
+          <%= if @pairing[:game] do %>
+            {gettext(
+              "This game was begun as %{white} - %{black}. The pairing program now has %{new_white} - %{new_black} on this board.",
+              white: @game.white || "?",
+              black: @game.black || "?",
+              new_white: @pairing[:white] || "?",
+              new_black: @pairing[:black] || "?"
+            )}
+          <% else %>
+            {gettext(
+              "This game was begun as %{white} - %{black}. The pairing program no longer has a game on this board.",
+              white: @game.white || "?",
+              black: @game.black || "?"
+            )}
+          <% end %>
+        </p>
+        <p class="note">
+          {gettext(
+            "Nothing was thrown away: the game is kept as it is, and is not reported to the pairing program until you say what it is. The results site and Lichess still get its moves, under the names it had."
+          )}
+        </p>
+        <div class="row">
+          <.button
+            :if={@pairing[:game]}
+            id="pairing-adopt"
+            variant="primary"
+            phx-click="adopt_pairing"
+            data-confirm={
+              gettext(
+                "Keep the moves and give the game the names of the pairing as it is now? Use this when the players are the ones in the new pairing - a colour switch, a corrected name."
+              )
+            }
+          >{gettext("These moves are that game")}</.button>
+          <.button
+            id="pairing-set-aside"
+            phx-click="set_aside"
+            data-confirm={
+              gettext(
+                "Set this game aside (it is kept, with its PGN) and begin a new one on this board for the pairing as it is now?"
+              )
+            }
+          >{gettext("Set it aside, begin again")}</.button>
         </div>
       </div>
 
@@ -978,6 +1116,28 @@ defmodule AlnaslWeb.GameLive do
                 phx-click="reopen"
               >{gettext("Reopen the game")}</.button>
             </div>
+            <.form
+              :if={@tournament.kind == "local"}
+              for={@names_form}
+              id="names-form"
+              phx-submit="save_names"
+              class="stack"
+              style="margin-top:0.8rem"
+            >
+              <b>{gettext("Players")}</b>
+              <div class="form-grid">
+                <.input field={@names_form[:white]} id="names-white" label={gettext("White")} />
+                <.input field={@names_form[:black]} id="names-black" label={gettext("Black")} />
+              </div>
+              <p class="note">
+                {gettext(
+                  "This tournament has no pairing program to ask: say here who plays, or attach a PGN that says it."
+                )}
+              </p>
+              <div class="row">
+                <.button id="save-names" type="submit">{gettext("Save the names")}</.button>
+              </div>
+            </.form>
             <div :if={length(@history) > 1} id="games-here" class="games-here">
               <b>{gettext("Games on this board this round")}</b>
               <ol>
@@ -989,14 +1149,14 @@ defmodule AlnaslWeb.GameLive do
                   </span>
                   <.link
                     id={"game-here-pgn-#{game.game_no}"}
-                    href={~p"/files/round/#{@round}/board/#{@no}?game=#{game.game_no}"}
+                    href={Scope.game_file(@tid, @round, @no, game.game_no)}
                     download
                   >PGN</.link>
                 </li>
               </ol>
               <p class="note">
                 {gettext(
-                  "Only the first game of a board goes to the results site and to Lichess: they know a game by its round and board. The others are kept here."
+                  "One game of a board goes to the results site, to Lichess and to the pairing program: they know a game by its round and board, or by its pairing. The others are kept here."
                 )}
               </p>
             </div>

@@ -1,7 +1,8 @@
 defmodule Alnasl.Boards.Board do
   @moduledoc """
   A physical board on a port or bus address - or a simulator slot standing in
-  for one - and the game of the round it is linked to (`round`, `board_no`).
+  for one - and the game of the round it is linked to (`round`, `board_no`),
+  in the tournament its table plays in (`tournament_id`).
 
   `options` is JSON for the driver: the simulator's game and faults, a replay's
   file. `flipped` says the board is plugged in turned round, so what it calls
@@ -20,6 +21,7 @@ defmodule Alnasl.Boards.Board do
     field :options, :string
     field :flipped, :boolean, default: false
     field :enabled, :boolean, default: true
+    field :tournament_id, :integer
     field :round, :integer
     field :board_no, :integer
     field :table_no, :integer
@@ -40,6 +42,7 @@ defmodule Alnasl.Boards.Board do
       :options,
       :flipped,
       :enabled,
+      :tournament_id,
       :round,
       :board_no,
       :table_no,

@@ -8,13 +8,13 @@ defmodule Alnasl.Destination.OpenResults do
 
   @behaviour Alnasl.Destination
 
-  alias Alnasl.{Outbox, Settings}
+  alias Alnasl.Outbox
 
   @impl true
   def id, do: "openresults"
 
   @impl true
-  def configured?, do: Settings.connection_configured?()
+  def configured?, do: Outbox.configured?()
 
   @impl true
   def pending_count, do: Outbox.pending_count()
@@ -23,7 +23,9 @@ defmodule Alnasl.Destination.OpenResults do
   def deliver, do: Outbox.deliver_batch(25)
 
   @impl true
-  def setting_keys, do: ~w(server_url slug relay_key)
+  # Where a tournament's games go is the tournament's, not a setting:
+  # `Alnasl.Destination.settings_changed/0` wakes the sender for those.
+  def setting_keys, do: []
 
   @impl true
   def coalesce_ms, do: 0

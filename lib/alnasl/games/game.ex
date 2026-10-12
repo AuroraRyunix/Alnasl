@@ -9,14 +9,25 @@ defmodule Alnasl.Games.Game do
 
   A board of a round usually sees one game. When it sees more - "New game
   on this board" - they are numbered by `game_no`, from 1, and the highest
-  is the one being played. The results server knows a game by round and
-  board and has room for one: only game 1 is sent anywhere
-  (`Alnasl.Outbox`); the others are kept here, with their PGN.
+  is the one being played. Every place a game goes to knows it by round and
+  board, or by the pairing, and has room for one: a game marked `local`
+  stays on the box, with its PGN (`Alnasl.Outbox`).
+
+  `tournament_id` says whose round and board these are: board 1 of round 3
+  exists once per tournament.
+
+  For a game of a pairing program: `remote_game` is the game's id there and
+  `remote_white` / `remote_black` the player ids the box believes are
+  playing it. `pairing_flag` is set when the pairing changed under a game
+  that had begun: `"changed"` (other players, or the colours the other way
+  round) or `"gone"` (no such game any more). The game is kept; the arbiter
+  says what becomes of it.
   """
   use Ecto.Schema
   import Ecto.Changeset
 
   schema "games" do
+    field :tournament_id, :integer
     field :round, :integer
     field :board_no, :integer
     field :game_no, :integer, default: 1
@@ -31,6 +42,11 @@ defmodule Alnasl.Games.Game do
     field :source, :string, default: "board"
     field :clock, :string
     field :seq, :integer, default: 0
+    field :remote_game, :string
+    field :remote_white, :integer
+    field :remote_black, :integer
+    field :pairing_flag, :string
+    field :local, :boolean, default: false
     field :finished_at, :utc_datetime
     timestamps(type: :utc_datetime)
   end
@@ -52,10 +68,15 @@ defmodule Alnasl.Games.Game do
       :source,
       :clock,
       :seq,
+      :remote_game,
+      :remote_white,
+      :remote_black,
+      :pairing_flag,
+      :local,
       :finished_at
     ])
     |> validate_inclusion(:status, ~w(live finished))
     |> validate_inclusion(:result, @results)
-    |> unique_constraint([:round, :board_no, :game_no])
+    |> unique_constraint([:tournament_id, :round, :board_no, :game_no])
   end
 end

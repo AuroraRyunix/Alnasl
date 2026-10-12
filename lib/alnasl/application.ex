@@ -31,7 +31,9 @@ defmodule Alnasl.Application do
       ] ++
         [Alnasl.Finder] ++
         if(autostart?,
-          do: Alnasl.Destination.child_specs() ++ [{Task, &Alnasl.Boards.start_all/0}],
+          do:
+            Alnasl.Destination.child_specs() ++
+              [Alnasl.OpenPairings.Poller, {Task, &Alnasl.Boards.start_all/0}],
           else: []
         ) ++
         [AlnaslWeb.Endpoint]

@@ -9,6 +9,7 @@ defmodule Alnasl.Outbox.Entry do
 
   schema "outbox" do
     field :game_id, :integer
+    field :tournament_id, :integer
     field :round, :integer
     field :board_no, :integer
     field :seq, :integer

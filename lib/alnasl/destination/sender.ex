@@ -46,6 +46,10 @@ defmodule Alnasl.Destination.Sender do
 
   @impl true
   def init(destination) do
+    # Stopped between two things, not in the middle of one: this process
+    # writes to the log, and a writer killed mid-statement leaves SQLite
+    # locked for everybody else. See `terminate/2` for the batch that is out.
+    Process.flag(:trap_exit, true)
     Settings.subscribe()
     send(self(), :send_now)
 
@@ -112,6 +116,21 @@ defmodule Alnasl.Destination.Sender do
   end
 
   def handle_info(_other, s), do: {:noreply, s}
+
+  # A batch that is out is waited for, not abandoned: what it writes when
+  # the destination answers (a row marked sent, a place in the queue) should
+  # not be cut in two by the sender being stopped under it.
+  @impl true
+  def terminate(_reason, %{task: ref}) when is_reference(ref) do
+    receive do
+      {^ref, _result} -> :ok
+      {:DOWN, ^ref, :process, _pid, _reason} -> :ok
+    after
+      4_000 -> :ok
+    end
+  end
+
+  def terminate(_reason, _state), do: :ok
 
   defp cancel(%{timer: nil} = s), do: s
 

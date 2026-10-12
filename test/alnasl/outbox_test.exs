@@ -9,7 +9,7 @@ defmodule Alnasl.OutboxTest do
 
   use Alnasl.DataCase, async: false
 
-  alias Alnasl.{FakeIngest, Games, Outbox, Settings}
+  alias Alnasl.{FakeIngest, Games, Outbox}
   alias Alnasl.Outbox.Entry
 
   @game ~w(e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7)
@@ -223,18 +223,18 @@ defmodule Alnasl.OutboxTest do
   end
 
   test "a refused key holds the queue instead of throwing moves away" do
-    Settings.put("relay_key", "orrk_wrong")
+    own_put(relay_key: "orrk_wrong")
     play(new_game(), ~w(e4 e5))
     assert {:blocked, {401, "unauthorized"}} = Outbox.drain()
     assert Outbox.pending_count() == 2
 
-    Settings.put("relay_key", FakeIngest.key())
+    own_put(relay_key: FakeIngest.key())
     assert Outbox.drain() == :empty
     assert FakeIngest.game(1, 1).moves == ~w(e4 e5)
   end
 
   test "nothing is sent, and nothing lost, while the server is not set up" do
-    Settings.put("server_url", "")
+    own_put(server_url: "")
     play(new_game(), ~w(e4))
     assert Outbox.drain() == :unconfigured
     assert Outbox.pending_count() == 1

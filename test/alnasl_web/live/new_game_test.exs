@@ -235,7 +235,7 @@ defmodule AlnaslWeb.NewGameTest do
     board = fake_dgt("FAKE1", %{round: 1, board_no: 1})
     assert :ok = Boards.start_round(2)
     assert Boards.get!(board.id).round == 2
-    assert Settings.get("round") == 2
+    assert own().round == 2
   end
 
   test "Setup has the choice, 'where no pairing names the board' by default", %{conn: conn} do
