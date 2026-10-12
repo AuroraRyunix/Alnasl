@@ -1,0 +1,13 @@
+# The workflows pin every action to a commit; this keeps the pins moving.
+# Major versions are raised by hand, after reading what changed: a major of
+# an action that publishes releases is not something to take on a Monday
+# morning because a robot proposed it.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]

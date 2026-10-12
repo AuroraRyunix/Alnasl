@@ -1,0 +1,495 @@
+name: Build and release
+
+# Builds what people download - the Windows installer and its update feed,
+# the Windows portable zip, the Linux archives for x86_64 and arm64 - on
+# every push to main, each on its own kind of machine, and starts each one
+# to see that it answers. A release that is only built on the day it is
+# published is only tested on that day.
+#
+# It PUBLISHES when two things are true on main at once:
+#
+#   1. mix.exs names a version that has no GitHub release yet, and
+#   2. CHANGELOG.md has a section for exactly that version.
+#
+# So cutting a release is one commit: the version in mix.exs and the heading
+# in the changelog (docs/releasing.md). A version without notes publishes
+# nothing; neither does a push that changes neither. A tag `vX.Y.Z` pushed
+# by hand publishes too, under the same two conditions.
+#
+# The whole file follows OpenPairings' binaries.yml, which has published
+# some fifty releases this way; where it differs, the comment says why.
+
+on:
+  push:
+    branches: ["main"]
+    tags: ["v*"]
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+# Read-only everywhere but in the one job that publishes.
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux on Ubuntu 22.04, not 24.04, and that is the point: the
+          # Erlang runtime inside the archive is linked against the C library
+          # of the machine that built it, and runs on that version or newer.
+          # 22.04 has glibc 2.35; Debian 12 and Raspberry Pi OS "Bookworm"
+          # have 2.36. An archive built on 24.04 (2.39) would not start on
+          # the Pi it is meant for. install.sh checks for 2.35 and says so.
+          - { runner: ubuntu-22.04, target: linux-x86_64 }
+          # GitHub's own arm64 runners, free for public repositories. A Pi
+          # is arm64 (with the 64-bit system; there is no 32-bit build).
+          - { runner: ubuntu-22.04-arm, target: linux-aarch64 }
+          - { runner: windows-latest, target: windows-x86_64 }
+          # No Windows on ARM: Erlang publishes no build for it. It runs
+          # the x86_64 one under Windows' own emulation.
+
+    env:
+      MIX_ENV: prod
+      # The serial library, on every system: a box that cannot open a
+      # serial port is a simulator. (On Linux it is on anyway.)
+      ALNASL_UART: "1"
+
+    steps:
+      # Pinned to commits; see ci.yml.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
+        with:
+          otp-version: "29.0.5"
+          elixir-version: "1.20"
+
+      # `_build/prod/lib` only - never `rel`, which is this run's output and
+      # must not come from an earlier commit.
+      - name: Cache deps and compiled dependencies
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            deps
+            _build/prod/lib
+          key: release-${{ matrix.target }}-${{ matrix.runner }}-otp29.0.5-ex1.20-${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            release-${{ matrix.target }}-${{ matrix.runner }}-otp29.0.5-ex1.20-
+
+      # The launcher (rel/windows/launcher.c) is compiled with `zig cc`.
+      - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+        if: runner.os == 'Windows'
+        with:
+          version: 0.15.2
+
+      - name: Check the C toolchain (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          gcc --version | Select-Object -First 1
+          mingw32-make --version | Select-Object -First 1
+
+      # Velopack's own library, which the launcher loads when the arbiter
+      # has said yes to an update. The same version as `vpk` below, and held
+      # to the checksum of that exact file: a different file fails here,
+      # loudly, and does not ship. (Version, address and checksum are the
+      # ones OpenPairings' workflow uses.)
+      - name: Fetch velopack_libc (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $version = "1.2.0"
+          $url = "https://github.com/velopack/velopack/releases/download/$version/velopack_libc_$version.zip"
+          $expected = "547262ed7a1ab1ff62f580aa53851ede2f1a451ac61b8974eb7bc01117488835"
+          $zip = Join-Path $env:RUNNER_TEMP "velopack_libc.zip"
+          $dir = Join-Path $env:RUNNER_TEMP "velopack_libc"
+
+          Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing
+
+          $actual = (Get-FileHash -Path $zip -Algorithm SHA256).Hash.ToLower()
+          if ($actual -ne $expected) {
+            throw "velopack_libc_$version.zip: expected $expected, got $actual"
+          }
+
+          Expand-Archive -Path $zip -DestinationPath $dir -Force
+
+          # Under the name in the DLL's own export table, which is not the
+          # name of the file in the zip.
+          $dll = Join-Path $dir "lib\velopack_libc_win_x64_msvc.dll"
+          if (-not (Test-Path $dll)) { throw "No lib\velopack_libc_win_x64_msvc.dll in the zip." }
+          Copy-Item -Path $dll -Destination "rel\windows\velopack_libc.dll" -Force
+
+      - run: mix deps.get --only prod --check-locked
+
+      # Colocated JavaScript is generated by the compiler, before the assets.
+      - run: mix compile
+      - run: mix assets.deploy
+      - run: mix release alnasl --overwrite
+
+      # What must be in it, per system. A step that skipped itself in
+      # mix.exs (no zig, no DLL) is a warning there and a failure here.
+      - name: Check the release is whole (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $rel = "_build\prod\rel\alnasl"
+
+          foreach ($needed in @("Alnasl.exe", "Alnasl.bat", "velopack_libc.dll", "VERSION", "bin\alnasl.bat")) {
+            if (-not (Test-Path (Join-Path $rel $needed))) { throw "The release has no $needed." }
+          }
+
+          if (-not (Get-ChildItem "$rel\lib\circuits_uart-*\priv\circuits_uart.exe")) {
+            throw "The release has no serial program (circuits_uart.exe)."
+          }
+
+          if (-not (Get-ChildItem "$rel\erts-*\bin\vcruntime140.dll")) {
+            throw "The release has no C runtime beside erl.exe."
+          }
+
+          # Subsystem 2 is "Windows": no console window. One linker flag,
+          # invisible in the source, and a black window on an arbiter's
+          # screen when it is lost.
+          $bytes = [System.IO.File]::ReadAllBytes((Join-Path $rel "Alnasl.exe"))
+          $pe = [BitConverter]::ToInt32($bytes, 0x3C)
+          $subsystem = [BitConverter]::ToUInt16($bytes, $pe + 92)
+          if ($subsystem -ne 2) { throw "Alnasl.exe has subsystem $subsystem, not 2: it would show a console window." }
+
+          $version = [System.Diagnostics.FileVersionInfo]::GetVersionInfo((Resolve-Path "$rel\Alnasl.exe")).FileVersion
+          Write-Host "Alnasl.exe $version"
+
+      - name: Check the release is whole (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          set -eu
+          rel=_build/prod/rel/alnasl
+
+          for needed in bin/alnasl VERSION alnasl.sh install.sh update.sh uninstall.sh \
+            alnasl.service alnasl-update.service alnasl-update.path; do
+            [ -e "$rel/$needed" ] || { echo "::error::the release has no $needed"; exit 1; }
+          done
+
+          ls "$rel"/lib/circuits_uart-*/priv/circuits_uart >/dev/null ||
+            { echo "::error::the release has no serial program"; exit 1; }
+
+          # What the runtime needs from the system it will run on.
+          ldd "$rel"/erts-*/bin/beam.smp | sed 's/^/  /'
+          echo "built against: $(getconf GNU_LIBC_VERSION)"
+
+      # Started the way a person starts it: no configuration but a place for
+      # the data and a spare port. It must answer, on loopback and nowhere
+      # else, without Erlang distribution, and the serial library must be
+      # there. RELEASE_TMP is outside the release: what a start writes there
+      # (the cookie secret among it) must not be packed below.
+      - name: Start it and see that it answers (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          export ALNASL_DATA="$RUNNER_TEMP/alnasl-data"
+          export RELEASE_TMP="$RUNNER_TEMP/alnasl-tmp"
+          export PORT=4046
+          mkdir -p "$RELEASE_TMP"
+          rel=_build/prod/rel/alnasl
+
+          serial=$("$rel/bin/alnasl" eval 'IO.puts(Alnasl.Transport.Uart.available?())' | tail -n 1)
+          [ "$serial" = true ] || { echo "::error::the serial library does not load: $serial"; exit 1; }
+
+          "$rel/alnasl.sh" >"$RUNNER_TEMP/alnasl.log" 2>&1 &
+          pid=$!
+
+          body=""
+          for _ in $(seq 1 60); do
+            if body=$(curl -fsS --max-time 5 "http://127.0.0.1:$PORT/help" 2>/dev/null); then break; fi
+            kill -0 "$pid" 2>/dev/null || break
+            sleep 2
+          done
+
+          status=0
+          if [ -n "$body" ]; then
+            listeners=$(ss -ltnp)
+            echo "$listeners"
+            if echo "$listeners" | awk '$1=="LISTEN"{print $4}' | grep -q ':4369$'; then
+              echo "::error::epmd is listening: Erlang distribution is on"
+              status=1
+            fi
+            beam=$(echo "$listeners" | awk '$1=="LISTEN" && $NF ~ /beam/ {print $4}' | sort -u)
+            if [ "$beam" != "127.0.0.1:$PORT" ]; then
+              echo "::error::the program listens on '$beam', not on 127.0.0.1:$PORT alone"
+              status=1
+            fi
+          fi
+
+          kill "$pid" 2>/dev/null || true
+
+          case "$body" in
+            *'id="help"'*) echo "the release serves its help page" ;;
+            *) echo "::error::the release did not serve a page"; cat "$RUNNER_TEMP/alnasl.log" || true; exit 1 ;;
+          esac
+
+          [ -f "$ALNASL_DATA/alnasl.db" ] || { echo "::error::no database in the data directory"; exit 1; }
+          [ ! -e "$rel/tmp" ] || [ -z "$(ls -A "$rel/tmp")" ] || { echo "::error::the start wrote into the release"; exit 1; }
+          exit "$status"
+
+      - name: Start it and see that it answers (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $env:ALNASL_DATA = Join-Path $env:RUNNER_TEMP "alnasl-data"
+          $env:RELEASE_TMP = Join-Path $env:RUNNER_TEMP "alnasl-tmp"
+          $env:PORT = "4046"
+          New-Item -ItemType Directory -Force -Path $env:RELEASE_TMP | Out-Null
+          $rel = "_build\prod\rel\alnasl"
+          $log = Join-Path $env:RUNNER_TEMP "alnasl.log"
+
+          $serial = (& "$rel\bin\alnasl.bat" eval "IO.puts(Alnasl.Transport.Uart.available?())" | Select-Object -Last 1)
+          if ("$serial".Trim() -ne "true") { throw "The serial library does not load: $serial" }
+
+          # Through Alnasl.bat, not Alnasl.exe: the same release, and a
+          # window on a machine without a desktop tests nothing.
+          $proc = Start-Process -FilePath "cmd.exe" -ArgumentList "/c", "$rel\Alnasl.bat" -PassThru `
+                    -RedirectStandardOutput $log -RedirectStandardError "$log.err" -NoNewWindow
+
+          $body = $null
+          foreach ($i in 1..60) {
+            try {
+              $body = (Invoke-WebRequest -Uri "http://127.0.0.1:4046/help" -TimeoutSec 5 -UseBasicParsing).Content
+              break
+            } catch {
+              if ($proc.HasExited) { break }
+              Start-Sleep -Seconds 2
+            }
+          }
+
+          $epmd = Get-NetTCPConnection -State Listen -LocalPort 4369 -ErrorAction SilentlyContinue
+          $wide = Get-NetTCPConnection -State Listen -LocalPort 4046 -ErrorAction SilentlyContinue |
+            Where-Object { $_.LocalAddress -ne "127.0.0.1" }
+
+          & taskkill /T /F /PID $proc.Id | Out-Null
+
+          if (-not $body -or $body -notmatch 'id="help"') {
+            Write-Host "::error::the release did not serve a page"
+            if (Test-Path $log) { Get-Content $log }
+            if (Test-Path "$log.err") { Get-Content "$log.err" }
+            exit 1
+          }
+          if ($epmd) { throw "epmd is listening: Erlang distribution is on." }
+          if ($wide) { throw "The program listens beyond 127.0.0.1." }
+          if (Test-Path "$rel\tmp") {
+            if (Get-ChildItem "$rel\tmp" -Recurse -File) { throw "The start wrote into the release." }
+          }
+          Write-Host "the release serves its help page"
+
+      # --- the downloads ---------------------------------------------------
+      # File names without a version, all of them: the download page links
+      # to github.com/.../releases/latest/download/<name>, which only works
+      # for a name that is the same in every release. The version is inside
+      # (VERSION, the window's title, Setup's Properties page).
+
+      - name: Pack the Linux archive
+        if: runner.os == 'Linux'
+        run: |
+          set -eu
+          mkdir -p dist
+          # One folder, "alnasl", at the top: update.sh and install.sh look
+          # for exactly that.
+          tar -czf "dist/alnasl-${{ matrix.target }}.tar.gz" -C _build/prod/rel alnasl
+          ls -lh dist
+
+      # The three scripts, also as files of their own: install.sh is what
+      # the one-line install fetches before there is an archive to unpack.
+      # Once, from the x86_64 job - they are the same text on both.
+      - name: Add the installer scripts
+        if: matrix.target == 'linux-x86_64'
+        run: cp rel/linux/install.sh rel/linux/update.sh rel/linux/uninstall.sh dist/
+
+      - name: Pack the Windows portable zip
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Compress-Archive -Path "_build\prod\rel\alnasl" -DestinationPath "dist\alnasl-${{ matrix.target }}-portable.zip"
+          Get-ChildItem dist | Select-Object Name, Length
+
+      - name: Install vpk (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: dotnet tool install -g vpk --version 1.2.0
+
+      # For the delta package: `vpk pack` makes one only when the previous
+      # version's package is already in the output folder. Best effort: the
+      # first release has no previous one, and a network hiccup here must
+      # not cost a release - without it the update is the full package.
+      - name: Fetch the previous Windows release for delta packages
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $env:Path = "$env:USERPROFILE\.dotnet\tools;$env:Path"
+          vpk download github --repoUrl "https://github.com/${{ github.repository }}" --channel win --outputDir installer_out --token $env:GH_TOKEN
+
+          # On a re-run of a published version, "the latest release" is this
+          # one, and `vpk pack` refuses to pack over it.
+          $match = Select-String -Path mix.exs -Pattern 'version:\s*"([0-9]+\.[0-9]+\.[0-9]+)"' | Select-Object -First 1
+          $version = $match.Matches[0].Groups[1].Value
+          if (Test-Path installer_out) {
+            Get-ChildItem installer_out -Filter "*$version*.nupkg" -ErrorAction SilentlyContinue |
+              ForEach-Object { Remove-Item $_.FullName -Force }
+          }
+          exit 0
+
+      - name: Pack the Windows installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $env:Path = "$env:USERPROFILE\.dotnet\tools;$env:Path"
+          .\rel\windows\build_installer.ps1 -PayloadDir "_build\prod\rel\alnasl" -OutputDir installer_out
+
+          # Named, not globbed: the folder also holds Velopack's own notes
+          # (assets.win.json, RELEASES) and, after the download above, the
+          # previous version's package, which is already on its own release.
+          $version = (Get-Content "_build\prod\rel\alnasl\VERSION" -Raw).Trim()
+          Copy-Item "installer_out\Alnasl-Setup.exe" dist\
+          Copy-Item "installer_out\releases.win.json" dist\
+          Copy-Item "installer_out\AlnaslApp-$version-*.nupkg" dist\
+          Get-ChildItem dist | Select-Object Name, Length
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release_assets_${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14
+
+  # The only job that can write to the repository. `needs: build`: nothing
+  # is published unless every target built and answered.
+  release:
+    name: Publish the release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Work out which version this is, and whether to publish it
+        id: ver
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          version=$(grep -m1 "version:" mix.exs | cut -d'"' -f2)
+          if ! printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Could not read a version out of mix.exs" >&2
+            exit 1
+          fi
+          tag="v${version}"
+
+          # A tag pushed by hand must be the version the code says it is:
+          # the assets were built from mix.exs, not from the tag's name.
+          if [ "${GITHUB_REF_TYPE}" = "tag" ] && [ "${GITHUB_REF_NAME}" != "$tag" ]; then
+            echo "::error::tag ${GITHUB_REF_NAME} was pushed, but mix.exs says ${version}"
+            exit 1
+          fi
+
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+          publish=true
+
+          if gh release view "${tag}" >/dev/null 2>&1; then
+            echo "Release ${tag} already exists - nothing to publish."
+            publish=false
+          fi
+
+          # The notes are the changelog's section for this version, and a
+          # version without one is not released: "## [Unreleased]" is work
+          # in progress, whatever mix.exs says.
+          sh tools/release_notes.sh "$version" > release_notes.md || true
+          if [ "$publish" = true ] && [ ! -s release_notes.md ]; then
+            echo "::notice::CHANGELOG.md has no section '## [${version}]' - not publishing. Name the section and push."
+            publish=false
+          fi
+
+          echo "publish=${publish}" >> "$GITHUB_OUTPUT"
+
+      - name: Collect every target's files
+        if: steps.ver.outputs.publish == 'true'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: release_assets_*
+          merge-multiple: true
+          path: dist
+
+      # Everything the download page and the two updaters will ask for by
+      # name. One missing is a release that half works; better none.
+      - name: Check the set is complete, and sum it
+        if: steps.ver.outputs.publish == 'true'
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          set -euo pipefail
+          cd dist
+
+          for needed in \
+            Alnasl-Setup.exe \
+            alnasl-windows-x86_64-portable.zip \
+            alnasl-linux-x86_64.tar.gz \
+            alnasl-linux-aarch64.tar.gz \
+            install.sh update.sh uninstall.sh \
+            releases.win.json \
+            "AlnaslApp-${VERSION}-full.nupkg"; do
+            [ -s "$needed" ] || { echo "::error::missing from the release: $needed"; exit 1; }
+          done
+
+          # update.sh and install.sh check their download against this file.
+          sha256sum -- * > ../SHA256SUMS
+          mv ../SHA256SUMS .
+          cat SHA256SUMS
+          ls -lh
+
+      - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        if: steps.ver.outputs.publish == 'true'
+        with:
+          # Named, because on a push to main there is no tag to infer: the
+          # action makes this one, at the commit that was built.
+          tag_name: ${{ steps.ver.outputs.tag }}
+          name: Alnasl ${{ steps.ver.outputs.version }}
+          body_path: release_notes.md
+          files: dist/*
+          fail_on_unmatched_files: true
+
+      # GitHub has answered "500" to a release it then created anyway; the
+      # action tried again and left empty drafts with the same tag. Only
+      # drafts, only this tag, only without files, and only once a published
+      # release exists.
+      - name: Remove empty duplicate drafts for this tag
+        if: steps.ver.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.ver.outputs.tag }}
+        run: |
+          set -euo pipefail
+          releases=$(gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100")
+          published=$(echo "$releases" | jq --arg tag "$TAG" '[.[] | select(.tag_name == $tag and (.draft | not))] | length')
+          if [ "$published" -lt 1 ]; then
+            echo "No published release for ${TAG} - leaving every draft alone."
+            exit 0
+          fi
+          echo "$releases" |
+            jq -r --arg tag "$TAG" '.[] | select(.draft and .tag_name == $tag and (.assets | length) == 0) | .id' |
+            while read -r id; do
+              echo "Deleting empty duplicate draft ${id} for ${TAG}"
+              gh api -X DELETE "repos/${GITHUB_REPOSITORY}/releases/${id}" ||
+                echo "::warning::could not delete empty draft ${id} for ${TAG}"
+            done
