@@ -4,12 +4,12 @@ For whoever maintains the public website. You have not seen this code and
 do not need to: everything the page may say is here, and so is what it may
 not.
 
-> **Status when this was written (2026-10-12): no release exists yet.** The
-> download links below are correct and permanent, and return "404 Not
-> Found" until the first release is published. Anything marked
-> **[after first release]** must not go live before then. Check
-> <https://github.com/AuroraRyunix/Alnasl/releases>: if it lists a release,
-> the links work.
+> **Status (2026-10-12): version 0.1.0 is released.** The download links
+> below are permanent and were checked after the release: the Windows
+> installer, the Linux install script and the checksum file all download.
+> Lines marked **[not yet watched]** describe something that is built but
+> that nobody has yet seen work on a real machine; word them as
+> "available", not as "tested".
 
 ## What it is
 
@@ -60,10 +60,9 @@ download page unless you fetch it (the releases page's API,
 `https://api.github.com/repos/AuroraRyunix/Alnasl/releases/latest`, field
 `tag_name`) - a number typed into the page will be wrong within a month.
 
-The same holds for the file sizes: roughly 25 MB for the Windows installer
-and 20-50 MB for the others, measured on a build without the final
-contents. **[after first release]** take the real sizes from the API
-(`assets[].size`) or say nothing.
+The same holds for the file sizes. In 0.1.0: Windows installer 27 MB,
+portable zip 21 MB, Linux x86_64 33 MB, Linux arm64 31 MB. They will
+change; take them from the API (`assets[].size`) or say nothing.
 
 ## Instructions, three lines each
 
@@ -159,9 +158,11 @@ print, and do not use DGT's logo.
 - Install, update, where the data is, in full: the README's "Install"
   section, <https://github.com/AuroraRyunix/Alnasl#install>
 - The arbiter's guide to setting up electronic boards is a chapter of the
-  OpenPairings manual: `/help/setting-up-boards` on an OpenPairings site
-  (and `/help/live-boards` for what live boards are). **Ask the owner for
-  the public host** before linking; this brief was written without it.
+  OpenPairings manual, which is public (no login):
+  <https://pairings.zerotwo.cloud/help>, chapter "Setting up electronic
+  boards" (`/help/setting-up-boards`; and `/help/live-boards` for what
+  live boards are). Open the chapter's address once before linking to it:
+  it appears with the OpenPairings deploy that follows this release.
 - On the box itself: the Help page of the management site, in English and
   Dutch.
 
@@ -169,19 +170,22 @@ print, and do not use DGT's logo.
 
 This is the part to read twice. As of this writing:
 
-- **It has not been used at a tournament.** One real DGT board with a clock
-  has been connected and read at a desk: about twenty moves. No complete
-  game has been played on a real board through Alnasl.
-- **Only that one board model was tried**, on its own cable. Several boards
-  on one cable (DGT's "loop" / bus) are implemented from a description and
-  have never met hardware. Bluetooth boards, and boards from Millennium or
-  Chessnut, are not supported at all.
+- **It has not been used at a tournament.** Real DGT boards have been
+  connected and read at a desk: a few short games on one board with a
+  clock. No tournament game has been played through Alnasl.
+- **Two boards were tried**, an older serial board (firmware 1.9) and a
+  newer USB-C board (firmware 4.0): one alone on its cable, and both
+  together on one cable (DGT's "loop"), where both were found and read.
+  A move played live on a loop, a clock on a loop, and more than two
+  boards on a loop have not been seen. Bluetooth boards, and boards from
+  Millennium or Chessnut, are not supported at all.
 - **No number of boards is proven.** Do not write "up to N boards".
   Everything about many boards at once comes from a simulator.
-- **The installers have been built, not used.** Nobody has yet installed,
-  updated or uninstalled Alnasl with them. **[after first release]** ask the
-  owner which lines of `docs/releasing.md`'s checklist have been struck
-  before describing installation as anything more than "available".
+- **The installers have been built and published, not used.** **[not yet
+  watched]** Nobody has yet installed, updated or uninstalled Alnasl with
+  them. Ask the owner which lines of `docs/releasing.md`'s checklist have
+  been struck before describing installation as anything more than
+  "available".
 - **Lichess broadcasting** is built against Lichess's documentation and has
   not been run against lichess.org. Do not advertise it.
 - **Raspberry Pi**: the arm64 build exists for it; no Pi has run it. Say
@@ -196,8 +200,9 @@ This is the part to read twice. As of this writing:
 
 Honest words that are true today: "new", "first release", "built for
 OpenPairings", "keeps working offline", "nothing is installed without
-asking", "your data survives an uninstall" (the last one only **[after
-first release]**, once the owner has watched it do so).
+asking". "Your data survives an uninstall" is how it is built and
+tested in code, **[not yet watched]** on a real machine: leave it out
+until the owner says he has seen it.
 
 ## Suggested text
 
@@ -211,8 +216,8 @@ English:
 > beside the boards, and loses nothing when the hall's internet drops:
 > moves are kept and sent when the line is back.
 >
-> It is new. One real board has been read with it; no tournament has been
-> played on it yet. If you try it at an event, keep scoresheets as you
+> It is new. Real boards have been read with it at a desk; no tournament
+> has been played on it yet. If you try it at an event, keep scoresheets as you
 > always do, and tell us how it went.
 >
 > Free and open source (Apache 2.0). For DGT boards with a serial or USB
@@ -229,8 +234,8 @@ Dutch:
 > wegvalt: de zetten worden bewaard en verstuurd zodra de verbinding terug
 > is.
 >
-> Het is nieuw. Er is één echt bord mee gelezen; er is nog geen toernooi op
-> gespeeld. Probeer je het op een evenement, hou dan notatieformulieren bij
+> Het is nieuw. Er zijn echte borden mee gelezen aan een bureau; er is nog
+> geen toernooi op gespeeld. Probeer je het op een evenement, hou dan notatieformulieren bij
 > zoals altijd, en laat ons weten hoe het ging.
 >
 > Gratis en open source (Apache 2.0). Voor DGT-borden met een seriële of
@@ -238,7 +243,8 @@ Dutch:
 
 ## When this brief goes out of date
 
-When the first release is out; when a tournament has been played on it;
+When the installers have been watched on real machines; when a tournament
+has been played on it;
 when a second board model has been tried; when anything is signed. Each of
 those changes a sentence above. The file lives at
 `docs/download-page-brief.md` in the Alnasl repository; if the copy you
