@@ -274,8 +274,12 @@ defmodule Alnasl.BoardServer do
   defp driver_event(state, {:info, info}, _t) do
     state = %{state | info: Map.merge(state.info, info)}
 
+    # A board alone on its port says which number it answers to on a loop:
+    # kept with the row, so that it is known again when it is on one.
+    alone = if state.board.driver == "dgt_serial", do: info[:bus_address]
+
     changes =
-      %{serial: info[:serial], firmware: info[:firmware]}
+      %{serial: info[:serial], firmware: info[:firmware], address: alone}
       |> Map.reject(fn {key, value} -> value == nil or Map.get(state.board, key) == value end)
       # A row that has a serial is that board; another serial on its port
       # is another board, not a new name for this one.

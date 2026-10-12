@@ -273,7 +273,7 @@ defmodule Alnasl.Boards do
   """
   def link_in_order(round, first \\ 1) do
     list()
-    |> Enum.sort_by(&{&1.address || 0, &1.id})
+    |> Enum.sort_by(& &1.id)
     |> Enum.with_index(first)
     |> Enum.each(fn {board, number} -> link(board, round, number) end)
   end

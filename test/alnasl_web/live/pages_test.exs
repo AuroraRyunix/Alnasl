@@ -66,7 +66,7 @@ defmodule AlnaslWeb.PagesTest do
       assert has_element?(view, "#boards-empty")
     end
 
-    test "a real board needs a port, a board on a loop its address, and the loop says it is not verified",
+    test "a real board needs a port and nothing else: no address is asked for, anywhere",
          %{conn: conn} do
       start_supervised!(
         {Alnasl.Transport.Fake,
@@ -77,19 +77,14 @@ defmodule AlnaslWeb.PagesTest do
       assert has_element?(view, "#ports-table", "FAKE7")
 
       view |> form("#add-board-form", board: %{driver: "dgt_serial"}) |> render_change()
+      assert has_element?(view, "#add-loop-note")
+      refute has_element?(view, "#add-address")
+      refute has_element?(view, "#bus-warning")
+      refute render(view) =~ "not verified"
 
       assert view
              |> form("#add-board-form", board: %{driver: "dgt_serial", port: ""})
              |> render_submit() =~ "Choose the serial port"
-
-      view |> form("#add-board-form", board: %{driver: "dgt_bus"}) |> render_change()
-      assert has_element?(view, "#bus-warning")
-
-      assert view
-             |> form("#add-board-form", board: %{driver: "dgt_bus", port: "FAKE7", address: ""})
-             |> render_submit() =~ "bus address"
-
-      view |> form("#add-board-form", board: %{driver: "dgt_serial"}) |> render_change()
 
       view
       |> form("#add-board-form", board: %{driver: "dgt_serial", port: "FAKE7", name: "Top board"})
@@ -104,6 +99,68 @@ defmodule AlnaslWeb.PagesTest do
 
       eventually_html(view, fn _ -> has_element?(view, "#start-ok-#{board.id}") end)
       eventually_html(view, fn html -> html =~ "serial 12345" end)
+    end
+
+    test "a port with two boards on it is a loop: one Add, a row for each, and their numbers in small print",
+         %{conn: conn} do
+      loop = [
+        Alnasl.Dgt.Emulator.new(serial: "06310", version: "1.9"),
+        Alnasl.Dgt.Emulator.new(serial: "40730", version: "4.0", address: 12_799)
+      ]
+
+      start_supervised!(
+        {Alnasl.Transport.Fake, port: "FAKE8", device: {Alnasl.Dgt.Emulator, loop}}
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/boards")
+      view |> form("#add-board-form", board: %{driver: "dgt_serial"}) |> render_change()
+
+      html =
+        view
+        |> form("#add-board-form", board: %{driver: "dgt_serial", port: "FAKE8"})
+        |> render_submit()
+
+      assert html =~ "That port is a loop"
+      assert [old, new] = Enum.sort_by(Boards.list(), & &1.address)
+      assert {old.driver, old.address, new.address} == {"dgt_bus", 6310, 12_799}
+
+      assert has_element?(view, "#loop-number-#{old.id}", "06310")
+      assert has_element?(view, "#loop-number-#{new.id}", "12799")
+
+      # The old board is known by its serial number, as a single board is.
+      eventually_html(view, fn _ -> has_element?(view, "#identity-#{old.id}", "serial 06310") end)
+      # The new one says no serial number on a loop, and the page says what to do.
+      eventually_html(view, fn _ -> has_element?(view, "#loop-no-serial-#{new.id}") end)
+      refute has_element?(view, "#loop-no-serial-#{old.id}")
+
+      # One of them is taken off the loop: said in words, on its own row.
+      Alnasl.Transport.Fake.update("FAKE8", fn [first, _second] -> {<<>>, [first]} end)
+      eventually_html(view, fn _ -> has_element?(view, "#loop-absent-#{new.id}") end)
+      refute has_element?(view, "#loop-absent-#{old.id}")
+    end
+
+    test "a loop added as one board says so, and one tap reads it as a loop", %{conn: conn} do
+      loop = [
+        Alnasl.Dgt.Emulator.new(serial: "06310", version: "1.9"),
+        Alnasl.Dgt.Emulator.new(serial: "40730", version: "4.0", address: 12_799)
+      ]
+
+      start_supervised!(
+        {Alnasl.Transport.Fake, port: "FAKE9", device: {Alnasl.Dgt.Emulator, loop}}
+      )
+
+      {:ok, row} =
+        Boards.create(%{name: "Board 1", driver: "dgt_serial", port: "FAKE9", options: %{}})
+
+      {:ok, view, _html} = live(conn, ~p"/boards")
+
+      eventually_html(view, fn _ -> has_element?(view, "#is-a-loop-#{row.id}") end)
+      assert has_element?(view, "#is-a-loop-#{row.id}", "it is a loop")
+
+      html = view |> element("#read-as-loop-#{row.id}") |> render_click()
+      assert html =~ "That port is a loop"
+      refute has_element?(view, "#board-#{row.id}")
+      assert Enum.map(Boards.list(), & &1.address) |> Enum.sort() == [6310, 12_799]
     end
 
     test "the start-position check takes the clock in: right is pieces and clock, and a clock the wrong way is said in words",
@@ -604,7 +661,7 @@ defmodule AlnaslWeb.PagesTest do
            link.added link.removed link.ok link.unreachable link.unauthorized link.unsupported
            tournament.added tournament.back tournament.gone tournament.tables table.tournament
            round.started pairing.changed pairing.gone pairing.board_moved pairing.adopted
-           pairing.set_aside destination.forced)
+           pairing.set_aside destination.forced loop.read loop.joined)
 
       for kind <- kinds do
         sentence = AlnaslWeb.Words.log(%Alnasl.Log.Event{kind: kind, data: "{}"})

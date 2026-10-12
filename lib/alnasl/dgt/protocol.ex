@@ -211,9 +211,15 @@ defmodule Alnasl.Dgt.Protocol do
   defp parse(<<_garbage, rest::binary>>, acc), do: parse(rest, acc)
   defp parse(<<>>, acc), do: {Enum.reverse(acc), <<>>}
 
-  defp decode(@msg_board_dump, <<squares::binary-size(64)>>) do
-    {:board,
-     squares |> :binary.bin_to_list() |> Enum.map(&Map.get(@pieces, &1)) |> List.to_tuple()}
+  # A square holds 0x00-0x0F and nothing else. A "dump" with any other byte
+  # in it is not a board speaking: it is two of them at once (a loop read
+  # as one board), or a line that garbles.
+  defp decode(@msg_board_dump, <<squares::binary-size(64)>> = data) do
+    codes = :binary.bin_to_list(squares)
+
+    if Enum.all?(codes, &(&1 <= 0x0F)),
+      do: {:board, codes |> Enum.map(&Map.get(@pieces, &1)) |> List.to_tuple()},
+      else: {:unknown, @msg_board_dump, data}
   end
 
   defp decode(@msg_field_update, <<square, code>>) when square < 64,
@@ -427,8 +433,12 @@ defmodule Alnasl.Dgt.Protocol do
 
   defp to_bcd(n), do: div(n, 10) <<< 4 ||| rem(n, 10)
 
-  defp code(nil), do: 0x00
-  defp code(piece), do: Map.fetch!(@codes, piece)
+  @doc "The byte a board has for a piece (`nil`: an empty square)."
+  def code(nil), do: 0x00
+  def code(piece), do: Map.fetch!(@codes, piece)
+
+  @doc "The piece a board means by a byte; `nil` for an empty square and for the three special pieces."
+  def piece(code), do: Map.get(@pieces, code)
 
   @doc "The sizes the published description gives, for the tests."
   def sizes do

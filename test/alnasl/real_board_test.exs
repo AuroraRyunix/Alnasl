@@ -58,14 +58,25 @@ defmodule Alnasl.RealBoardTest do
         id: {:driver, port}
       )
 
-    # The driver has opened the line and said its piece before the board speaks.
-    _ = :sys.get_state(driver)
-    written = Fake.written(port)
+    # The driver has opened the line, asked who is on it (nobody answers a
+    # ping here: the recordings are of a single board) and said its piece
+    # before the board speaks.
+    written = handshake(port)
 
     for bytes <- rx(name), do: Fake.push(port, bytes)
     _ = :sys.get_state(driver)
 
     {collect([]), written}
+  end
+
+  # What the driver writes before it listens: the bus-mode byte, a ping to
+  # everybody twice, "end bus mode" - and then the handshake, which is what
+  # is returned.
+  defp handshake(port) do
+    case Fake.written(port) do
+      <<0x4A, 0x87, 0, 0, 0x07, 0x87, 0, 0, 0x07, 0x88, 0, 0, 0x08, said::binary-size(5)>> -> said
+      _not_yet -> handshake(port)
+    end
   end
 
   defp collect(acc) do
@@ -94,6 +105,8 @@ defmodule Alnasl.RealBoardTest do
       assert written == <<0x40, 0x45, 0x4D, 0x42, 0x4B>>
 
       assert [
+               # Nobody answered the ping: one board at most, and not a loop.
+               {:info, %{loop: nil, bus_address: nil}},
                :connected,
                {:info, %{serial: "06310"}},
                {:info, %{firmware: "1.9"}},

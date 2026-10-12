@@ -64,7 +64,6 @@ defmodule AlnaslWeb.BoardsLive do
       "driver" => "simulator",
       "name" => "",
       "port" => "",
-      "address" => "",
       "game" => "1",
       "speed" => "20",
       "faults" => "mild"
@@ -94,6 +93,42 @@ defmodule AlnaslWeb.BoardsLive do
     )
   end
 
+  # A real port: the box asks the line who is on it. One board is a board; two
+  # or more are a loop, and each gets a row. Nobody has to know which it is.
+  defp add_port(socket, "", _name),
+    do: {:noreply, put_flash(socket, :error, gettext("Choose the serial port the board is on."))}
+
+  defp add_port(socket, port, name) do
+    case Alnasl.Loops.add(port, name) do
+      {:ok, :loop, boards} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, loop_added(boards))
+         |> assign(add_form: add_form(%{"driver" => "dgt_serial"}))
+         |> load()}
+
+      {:ok, :single, [board]} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, gettext("\"%{name}\" added and connected.", name: board.name))
+         |> assign(add_form: add_form(%{"driver" => "dgt_serial"}))
+         |> load()}
+
+      {:error, %Ecto.Changeset{}} ->
+        {:noreply,
+         put_flash(socket, :error, gettext("That board could not be added. Check the fields."))}
+    end
+  end
+
+  defp loop_added(boards) do
+    ngettext(
+      "That port is a loop. %{count} board answers on it: %{names}.",
+      "That port is a loop. %{count} boards answer on it, each with its own row: %{names}.",
+      length(boards),
+      names: Enum.map_join(boards, ", ", & &1.name)
+    )
+  end
+
   # --- events ------------------------------------------------------------------
 
   @impl true
@@ -116,64 +151,58 @@ defmodule AlnaslWeb.BoardsLive do
           name
       end
 
-    address =
-      case Integer.parse(params["address"] || "") do
-        {n, ""} -> n
-        _none -> nil
+    if driver == "simulator" do
+      attrs = %{
+        name: name,
+        driver: "simulator",
+        port: "sim-#{System.unique_integer([:positive])}",
+        options: %{
+          "game" => int(params["game"], 1),
+          "speed" => int(params["speed"], 20),
+          "faults" => Map.get(@presets, params["faults"], %{}),
+          # Fast play is more than faults: it is also how quickly the
+          # hands move and how late the clock reports.
+          "profile" => if(params["faults"] == "bullet", do: "bullet"),
+          "seed" => count + 1
+        }
+      }
+
+      case Boards.create(attrs) do
+        {:ok, board} ->
+          {:noreply,
+           socket
+           |> put_flash(:info, gettext("\"%{name}\" added and connected.", name: board.name))
+           |> assign(add_form: add_form(%{"driver" => driver}))
+           |> load()}
+
+        {:error, _changeset} ->
+          {:noreply,
+           put_flash(socket, :error, gettext("That board could not be added. Check the fields."))}
       end
+    else
+      add_port(socket, String.trim(params["port"] || ""), name)
+    end
+  end
 
-    attrs =
-      case driver do
-        "simulator" ->
-          %{
-            name: name,
-            driver: "simulator",
-            port: "sim-#{System.unique_integer([:positive])}",
-            options: %{
-              "game" => int(params["game"], 1),
-              "speed" => int(params["speed"], 20),
-              "faults" => Map.get(@presets, params["faults"], %{}),
-              # Fast play is more than faults: it is also how quickly the
-              # hands move and how late the clock reports.
-              "profile" => if(params["faults"] == "bullet", do: "bullet"),
-              "seed" => count + 1
-            }
-          }
+  def handle_event("read_as_loop", %{"id" => id}, socket) do
+    case Alnasl.Loops.read_as_loop(Boards.get!(id)) do
+      {:ok, boards} ->
+        {:noreply, socket |> put_flash(:info, loop_added(boards)) |> load()}
 
-        driver when driver in ["dgt_serial", "dgt_bus"] ->
-          %{
-            name: name,
-            driver: driver,
-            port: String.trim(params["port"] || ""),
-            address: address,
-            options: %{}
-          }
-      end
+      {:error, :not_a_loop} ->
+        {:noreply,
+         socket
+         |> put_flash(
+           :error,
+           gettext("Only one board answers on that port now. It is read as one board again.")
+         )
+         |> load()}
 
-    cond do
-      driver in ["dgt_serial", "dgt_bus"] and attrs.port == "" ->
-        {:noreply, put_flash(socket, :error, gettext("Choose the serial port the board is on."))}
-
-      driver == "dgt_bus" and address == nil ->
-        {:noreply, put_flash(socket, :error, gettext("A board on a loop needs its bus address."))}
-
-      true ->
-        case Boards.create(attrs) do
-          {:ok, board} ->
-            {:noreply,
-             socket
-             |> put_flash(:info, gettext("\"%{name}\" added and connected.", name: board.name))
-             |> assign(add_form: add_form(%{"driver" => driver}))
-             |> load()}
-
-          {:error, _changeset} ->
-            {:noreply,
-             put_flash(
-               socket,
-               :error,
-               gettext("That board could not be added. Check the fields.")
-             )}
-        end
+      {:error, _reason} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, gettext("The port could not be opened. Try again in a moment."))
+         |> load()}
     end
   end
 
@@ -602,7 +631,18 @@ defmodule AlnaslWeb.BoardsLive do
                   <div class="note">
                     {Words.driver(s.driver)}
                     <span :if={s.driver != "simulator" && s.port}> · {s.port}</span>
-                    <span :if={s.address}> · {gettext("address %{a}", a: s.address)}</span>
+                    <span :if={s.driver == "dgt_bus" && s.address} id={"loop-number-#{s.id}"}>
+                      · {gettext("answers as %{a}", a: Alnasl.Dgt.Bus.number(s.address))}
+                    </span>
+                  </div>
+                  <div
+                    :if={s.driver == "dgt_bus" && s.serial in [nil, ""] && s.firmware}
+                    id={"loop-no-serial-#{s.id}"}
+                    class="note"
+                  >
+                    {gettext(
+                      "This board does not say its serial number on a loop. Plug it into a port of its own once, and the box knows it by its serial number from then on."
+                    )}
                   </div>
                   <div :if={s.serial || s.firmware} id={"identity-#{s.id}"} class="note">
                     <span :if={s.serial}>{gettext("serial %{s}", s: s.serial)}</span>
@@ -623,6 +663,36 @@ defmodule AlnaslWeb.BoardsLive do
                   <div :if={!s.running?} class="note">{gettext("Disconnected here")}</div>
                   <div :if={s.info[:error] && !s.connected?} class="note">
                     {gettext("Cannot open the port")}
+                  </div>
+                  <div
+                    :if={s.driver == "dgt_bus" && s.running? && !s.connected? && !s.info[:error]}
+                    id={"loop-absent-#{s.id}"}
+                    class="note"
+                  >
+                    {gettext(
+                      "Does not answer on the loop: taken off it, switched off, or the cable before it is out. It is back by itself when it answers."
+                    )}
+                  </div>
+                  <div :if={s.info[:loop] && !s.connected?} id={"is-a-loop-#{s.id}"} class="stack">
+                    <.badge tone="warn" icon="warning">
+                      {ngettext(
+                        "More than one board answers on this port: it is a loop.",
+                        "More than one board answers on this port (%{count}): it is a loop.",
+                        length(s.info[:loop])
+                      )}
+                    </.badge>
+                    <div class="note">
+                      {gettext(
+                        "Read as one board, a loop gives nonsense: every board answers at once. Nothing is read from it until you say so."
+                      )}
+                    </div>
+                    <.button
+                      id={"read-as-loop-#{s.id}"}
+                      variant="primary"
+                      phx-click="read_as_loop"
+                      phx-value-id={s.id}
+                      phx-disable-with={gettext("Asking the port...")}
+                    >{gettext("Read it as a loop")}</.button>
                   </div>
                 </td>
                 <td>
@@ -875,8 +945,7 @@ defmodule AlnaslWeb.BoardsLive do
                 label={gettext("Kind")}
                 options={[
                   {gettext("Simulator (no hardware)"), "simulator"},
-                  {gettext("DGT board on its own serial port"), "dgt_serial"},
-                  {gettext("DGT board on a loop (bus) - not verified"), "dgt_bus"}
+                  {gettext("DGT board, or several on a loop (serial port)"), "dgt_serial"}
                 ]}
               />
               <.input
@@ -928,19 +997,11 @@ defmodule AlnaslWeb.BoardsLive do
                            p.port}
                   }
                 />
-                <.input
-                  :if={@add_form[:driver].value == "dgt_bus"}
-                  field={@add_form[:address]}
-                  id="add-address"
-                  type="number"
-                  min="1"
-                  label={gettext("Bus address")}
-                />
               <% end %>
             </div>
-            <p :if={@add_form[:driver].value == "dgt_bus"} id="bus-warning" class="note">
+            <p :if={@add_form[:driver].value != "simulator"} id="add-loop-note" class="note">
               {gettext(
-                "The loop's wire format has not been checked against real boards yet. See docs/tomorrow.md."
+                "One board or a loop of them: the box asks the port who is on it, which takes a few seconds, and gives every board that answers a row of its own."
               )}
             </p>
             <p :if={@add_form[:driver].value != "simulator"} id="add-known-note" class="note">
@@ -949,9 +1010,12 @@ defmodule AlnaslWeb.BoardsLive do
               )}
             </p>
             <div class="row">
-              <.button id="add-board-submit" variant="primary" type="submit">{gettext(
-                "Add and connect"
-              )}</.button>
+              <.button
+                id="add-board-submit"
+                variant="primary"
+                type="submit"
+                phx-disable-with={gettext("Asking the port...")}
+              >{gettext("Add and connect")}</.button>
             </div>
           </.form>
         </.panel>

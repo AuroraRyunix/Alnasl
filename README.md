@@ -7,13 +7,16 @@ with the clock times, to the live results site as it is played. It runs on a
 small box beside the boards - a Raspberry Pi with a screen, keyboard and mouse
 for the arbiter - and keeps working when the hall's internet does not.
 
-> Status: **first build. Everything runs on simulated boards, and one real
-> board has been read.** The tracker, the outbox and the management site are
-> written and tested without hardware. The DGT serial driver met a real
-> board and clock on 2026-10-12: handshake, position, piece movements and the
-> clock are confirmed ([docs/real-board-2026-10-12.md](docs/real-board-2026-10-12.md));
-> a whole game on it has not been played yet, and the wire format of a DGT
-> *loop* is still assumed, not verified. See
+> Status: **first build. Everything runs on simulated boards, one real
+> board has been read, and so has a real loop of two.** The tracker, the
+> outbox and the management site are written and tested without hardware.
+> The DGT serial driver met a real board and clock on 2026-10-12: handshake,
+> position, piece movements and the clock are confirmed
+> ([docs/real-board-2026-10-12.md](docs/real-board-2026-10-12.md)). The same
+> day two boards on one cable were found, named and read as a loop
+> ([docs/real-loop-2026-10-12.md](docs/real-loop-2026-10-12.md)) - with
+> nobody at the boards: a move on a loop, a clock on a loop and a whole
+> game on any real board have not been seen yet. See
 > [What is not done](#what-is-not-done) and [docs/tomorrow.md](docs/tomorrow.md).
 
 ## The name
@@ -144,9 +147,8 @@ apart, and the Boards page shows all three:
    the board that carries the sticker. And when a board the box does not
    know sits on a known board's cable, it gets a row of its own and the
    known board waits for its own to turn up; except mid-game, where nothing
-   is touched and the mismatch is listed. (A board on a loop
-   that reports no serial is known by its bus address; a simulator by its
-   slot.)
+   is touched and the mismatch is listed. (A simulator is known by its
+   slot. A board on a loop: see [Boards on a loop](#boards-on-a-loop).)
 2. **Its table number.** The sticker on the board: "this is table 7". Set
    once for a hall. *Labels* prints a sheet of them, with the serial under
    the number, so a sticker that has come off goes back on the right board.
@@ -178,6 +180,29 @@ loop), a board that does not answer, a starting position that is wrong
 position ("Clock not in starting position: Black's side would run first..."
 - only for a board that has a clock), a board plugged in turned round
 (noticed and read the other way up - mentioned, not held against you).
+
+### Boards on a loop
+
+Several DGT boards chained on one serial cable are one port to the box.
+**Add a board, choose the port, press Add**: the box asks the port who is
+on it (some three seconds) and every board that answers gets a row of its
+own. There is no "bus address" to type and no kind to choose - one board
+is read as one board, two or more as a loop.
+
+- A board plugged into the chain later gets its row within ten seconds,
+  and the log says so. A board taken off keeps its row, which says "No
+  signal" and why, and is back when the board is.
+- A port that was added when one board was on it, and has several now,
+  says so on its row - "More than one board answers on this port: it is a
+  loop" - with one button, "Read it as a loop". Until then nothing is read
+  from it: every board would answer every question at once.
+- The older boards (firmware 1.x) are known by their serial number on a
+  loop like anywhere else, with their table numbers. A newer one is shown
+  by the number it answers to ("answers as 12799", small print) until it
+  has been plugged into a port of its own once; from then on the box knows
+  its serial number on a loop too.
+- `mix alnasl.loop --port COM5 --discover` does the asking from a command
+  line and prints every byte; `--watch` reads the loop for a minute.
 
 ### With your phone
 
@@ -382,6 +407,7 @@ The serial library (`circuits_uart`) is C code built with `make`:
   set MIX_BUILD_ROOT=C:\alnasl-build\_build
   mix deps.get
   mix alnasl.dgt --list
+  mix alnasl.loop --port COM5 --discover
   ```
 
   (PowerShell: `$env:ALNASL_UART = "1"` and so on.) Verified on this
@@ -391,6 +417,11 @@ The serial library (`circuits_uart`) is C code built with `make`:
 Without the library everything works except opening a real port: the Boards
 page says so, and simulator boards are unaffected.
 
+One program at a time can have a port. DGT LiveChess holds the ports of
+the boards it shows: close it before the box reads them, and stop the box
+before LiveChess does. The box leaves the boards as LiveChess expects them
+("end bus mode" is the last thing it says on a loop).
+
 ## How it works, in short
 
 [docs/design.md](docs/design.md) is the long version.
@@ -398,7 +429,8 @@ page says so, and simulator boards are unaffected.
 - **A driver delivers whole positions**, not moves: 64 squares, each a piece
   or empty, every time anything changes. `Simulator` (PGN games played by an
   invisible hand, with faults), `Replay` (a capture file), `DgtSerial` (one
-  DGT board), `DgtBus` (a loop of them).
+  DGT board), `DgtBus` (a loop of them). Which of the two a port needs is
+  found out by asking the port.
 - **The tracker turns positions into moves.** It keeps the last *certain*
   position. A board one legal move away is that move, once it has stood
   still for a moment (or at once on a clock press).
@@ -447,7 +479,8 @@ page says so, and simulator boards are unaffected.
 
 ## What is proven, and how
 
-By `mix test` (471 tests), three tools, and three sessions with a real board:
+By `mix test` (509 tests), three tools, three sessions with a real board and
+one with a real loop:
 
 **The link, end to end against the real OpenPairings** (`mix
 alnasl.link_e2e`, run on 2026-10-12 against a scratch copy of OpenPairings
@@ -581,6 +614,33 @@ driver (`test/alnasl/real_board_test.exs`, fixtures `real-06310-*.jsonl`):
 - that a clock turned round and started on the wrong side is seen as
   exactly that. The recording ends with one.
 
+**A loop of two real boards** (06310 and a newer board with firmware 4.0
+on one serial line, no clocks, nobody at the boards; recorded 2026-10-12,
+[docs/real-loop-2026-10-12.md](docs/real-loop-2026-10-12.md), fixtures
+`real-loop-*.jsonl`, `test/alnasl/real_loop_test.exs`). Confirmed by those
+recordings:
+
+- the frames: a four-byte command with the board's address, an answer with
+  its size, the address and a checksum; every command the driver sends;
+- finding the boards with no prior knowledge: a ping to everybody, each
+  board answering after a wait of its own (26 to 1020 ms), told to sit out
+  the next one so that the others are heard; one real collision, and what
+  it looks like;
+- who they are: firmware 1.9 and 4.0, and that 06310 answers as 6310 - its
+  serial number - while the newer board's address is not its serial number;
+- what stands on each: the 64 squares of both, and that the squares each
+  board wrote in its own memory add up to that position;
+- that a loop treated as one board answers every command twice at once -
+  what the owner saw - and that the single-board driver now sees a loop
+  for what it is before it asks anything;
+- the pace: 16 ms for a question that has "nothing changed" for an answer,
+  3553 of them in 64 seconds through the real driver, none unanswered; the
+  site reading both boards for four minutes without losing either.
+
+NOT seen on a real loop, because nobody was there: a move as it is played,
+a clock, more than two boards. The driver's handling of those is tested
+against an emulator that answers as the two real boards did.
+
 **The tracker, against a game on that board** (2026-10-11, fixtures
 `real-06310-unseen-knight.jsonl`, `real-06310-castling-after-set.jsonl`,
 and from the day after `real-06310-misread-pawn.jsonl`):
@@ -612,10 +672,10 @@ Two things the first recording corrected: the lever is up on the side whose time
 reached), and a "no clock" message was dropped when a recording was
 replayed from its bytes.
 
-The same driver is also run, byte for byte, against an emulated board built
-from the protocol description - which proves driver and emulator agree
-with each other, and is how the clock check and the clock alarm are tested
-with the pieces in the starting position.
+The same drivers are also run, byte for byte, against emulated boards built
+from the protocol description and from those recordings - which proves
+driver and emulator agree with each other, and is how the clock check and
+the clock alarm are tested with the pieces in the starting position.
 
 **The site**: LiveView tests of every page's main actions; an accessibility
 pass that computes the contrast of every text pairing of the colour tokens
@@ -658,11 +718,23 @@ and names on every page in both languages.
   export and on the board's page.
   The reconstruction, the choice of line and "New game" have been used in
   the simulator and in tests, not yet by a person at a real board.
-- **The bus (loop) wire format is assumed.** `lib/alnasl/dgt/bus.ex` holds
-  every byte of it, each marked `ASSUMED`, with a TODO list. The polling
-  scheduler and the per-address board model are built and tested against an
-  emulator that makes the same assumptions. The Boards page says "not
-  verified" beside every bus board.
+- **A loop has been read, not played on.** Two real boards on one cable
+  were found, named and read (see above); nobody moved a piece and no clock
+  was attached. That a move comes out of the next "what changed?" is what
+  DGT's text and the boards' own memories say, and the driver asks for the
+  whole board every few seconds besides, so that a move on a loop can be
+  late but not wrong. Help says so; nothing on the Boards page calls a loop
+  "not verified" any more.
+- **A newer DGT board does not say its serial number on a loop.** Board
+  06310 (firmware 1.9) answers as 6310, which is its serial number. The
+  board with firmware 4.0 answers as 12799, which is not: it is known by
+  that number until it has been plugged in alone once. Whether two such
+  boards on one loop answer to different numbers is not known.
+- **Reading a serial number on a loop is not attempted.** A single-board
+  command on a loop is answered by every board at once; one sent into the
+  middle of a bus answer made the newer board restart itself (it wrote that
+  in its memory, and went on). The drivers send none where more than one
+  board answered.
 - **The result gesture** (kings in the centre: both on light squares = 1-0,
   both on dark = 0-1, one on each = draw) is how DGT LiveChess is understood
   to work, not something read in a specification. It is only ever a
@@ -710,7 +782,10 @@ and names on every page in both languages.
   words, which the tests check exist and differ, not on anybody looking.
 - **No installer, no systemd unit, no Pi image.** `mix phx.server` it is.
 - **One loop per port is modelled; several ports work** (each port is its
-  own bus), but more than one has only been run against the emulator.
+  own bus), but more than one has only been run against the emulator. More
+  than two boards on a loop likewise: twelve would each be asked what
+  changed some four times a second (counted from the two that were
+  measured, not measured).
 - **Bluetooth DGT, Millennium, Chessnut**: not started. A driver is one
   module behind `Alnasl.Driver`.
 

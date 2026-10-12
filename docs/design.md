@@ -624,7 +624,7 @@ object a line:
 | `rx`, `tx` | raw serial bytes, hex (real boards only) |
 | `st` | `connected` / `disconnected` |
 | `note` | something a person typed |
-| `a` (on any line) | the bus address, in a capture of a loop made by `mix alnasl.dgt --bus` |
+| `a` (on any line) | the address of the board on its loop, in a capture made by `mix alnasl.loop --watch` |
 
 `t` is wall-clock milliseconds. Files are
 `<data>/captures/board-<id>/<start>.jsonl`, closed at 8 MB; when all
@@ -820,7 +820,7 @@ Alnasl.Supervisor
 │   └─ BoardServer (per board) driver + session + persistence; ticks every 100 ms
 │       └─ its driver          Simulator / Replay player, DgtSerial, or an attachment to...
 ├─ BusSupervisor
-│   └─ DgtBus (per port)       the polling scheduler for a loop
+│   └─ DgtBus (per port)       a loop: one question at a time, to each board in turn; gone when its last board is
 ├─ Finder                      who was touched last; the numbering run
 ├─ Outbox                      the results server's sender; each batch runs in a task so it can always answer
 ├─ LichessBroadcast.Sender     the same process, for Lichess
@@ -831,4 +831,66 @@ Alnasl.Supervisor
 
 A board process that crashes is restarted and picks its game up from the
 database; a driver that dies is restarted by its board after three seconds;
-neither can take the outbox or another board with it.
+neither can take the outbox or another board with it. A bus that dies takes
+the drivers of its boards with it, and the first of them to come back
+starts it again.
+
+## 8. A loop
+
+Several DGT boards on one serial line. `docs/real-loop-2026-10-12.md` is
+what a real one sent; this is what the box does with it.
+
+**Who is on a line** (`Alnasl.Dgt.Loop`) is asked whenever a port is opened
+by somebody who does not know: when a port is added, and each time the
+single-board driver opens one. The bus-mode byte, then a ping to
+everybody; each board answers with its address after a wait of its own
+choosing, is told to sit out the next ping, and the ping is repeated until
+two rounds bring nobody new. One board or none: the port is a single
+board's, and that driver goes on as it always did. Two or more: a loop.
+
+**Why the single-board driver asks first.** A single-board command on a
+loop is answered by every board at once. What arrives is no answer, now
+and then looks like one, and on the day it was tried one such command in
+the wrong moment made a board restart itself. So on a line where more than
+one board answered the ping, nothing else is sent: the row says "it is a
+loop", holds no port, and looks again every ten seconds.
+
+**Rows** (`Alnasl.Loops`). The arbiter never sees a bus address as
+something to fill in. Each board that answers gets a row with the address
+it answered with; which row is decided in this order: the row that has
+that address on that port; a row with that address on another port, not
+connected (the loop moved to another adapter); a row that learned the
+address when its board was alone on a port; a new row. A board with
+firmware 1.x then reports its serial number - its address is its serial
+number - and the usual recognition (`Alnasl.Tables.recognise/4`) hands the
+place to the row the box already has for that serial. A newer board's
+address says nothing of its serial number, so its identity on a loop is
+`{:address, n}` ("no. 12799 on the loop") until a row knows both.
+
+**The questions** (`Alnasl.Driver.DgtBus`), one at a time, no pause
+between an answer and the next question:
+
+| Question | When | Costs |
+|---|---|---|
+| what changed? | every turn | 16 ms when nothing did |
+| your whole board | every 3 s (0.5 s per board on a loop of more than six), and after every missed answer | 80 ms |
+| your clock | every second (0.25 s per board on a loop of more than four), and at once when the board wrote down a lever | 31 ms |
+| sit out the next ping + a ping to everybody | every 10 s | 16 ms a board; nobody is waited for |
+
+A board met for the first time, or back, is asked what changed (its whole
+memory since it was switched on: thrown away), its version, its whole
+board. A board that misses five answers in a row is reported gone and
+asked every two seconds, so that the others do not wait for it.
+
+The whole board is asked for although the changes should suffice, because
+the changes were not seen live on a real loop and a dump cannot be misread:
+where the two disagree the dump wins.
+
+**A board nobody told the box about** answers the ten-second ping - the
+others were told to sit it out - and gets a row. Its answer may fall on
+another board's and spoil one poll; the next thing that board is asked is
+its whole board.
+
+**The capture** of a board on a loop holds the questions that had
+something for an answer. Sixty times "nothing changed" a second are not
+written down.

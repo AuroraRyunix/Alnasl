@@ -37,3 +37,12 @@ config :phoenix_live_view,
 # Sort query params output of verified routes for robust url comparisons
 config :phoenix,
   sort_verified_routes_query_params: true
+
+# A real loop is listened to for a second after a ping to everybody, asked
+# again a millisecond after each answer and looked over for new boards every
+# ten seconds. The emulated ones answer at once.
+config :alnasl,
+  loop_ping_window_ms: 30,
+  loop_reply_ms: 80,
+  loop_gap_ms: 5,
+  loop_discover_ms: 400

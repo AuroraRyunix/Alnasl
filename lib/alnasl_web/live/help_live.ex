@@ -176,6 +176,28 @@ defmodule AlnaslWeb.HelpLive do
             )}
           </p>
 
+          <h2 id="help-loop">{gettext("Several boards on one cable (a loop)")}</h2>
+          <p>
+            {gettext(
+              "DGT boards can be chained on one serial cable, as in DGT LiveChess. For the box that is one port. Boards, Add a board: choose the port and press Add. The box asks the port who is on it - a few seconds - and every board that answers gets a row of its own. There is nothing to type and nothing to choose: one board is read as one board, two or more as a loop."
+            )}
+          </p>
+          <p id="help-loop-later">
+            {gettext(
+              "A board plugged into the chain later gets its row by itself within some ten seconds, and the log says so. A board taken off the chain keeps its row, which says \"No signal\" and why; it is back when the board is. Close DGT LiveChess first: a port can be read by one program at a time."
+            )}
+          </p>
+          <p id="help-loop-identity">
+            {gettext(
+              "The older boards say their serial number on a loop and are known by it, like any board. The newer ones (firmware 4) do not: such a board is shown by the number it answers to on the loop, in small print, and keeps its table number under that. Plug it into a port of its own once and the box knows its serial number from then on, on a loop too."
+            )}
+          </p>
+          <p id="help-loop-limits">
+            {gettext(
+              "What has been checked on real boards: finding the boards, who they are, and what stands on each, with two boards on one cable. Not yet seen on a real loop: a move as it is played, a clock, and more than two boards. The box reads the whole board every few seconds as well, so a move can be late there but not wrong."
+            )}
+          </p>
+
           <h2 id="help-phone">{gettext("Number the boards with your phone")}</h2>
           <ol>
             <li>
@@ -405,6 +427,18 @@ defmodule AlnaslWeb.HelpLive do
             <dd>
               {gettext(
                 "It is not published from OpenPairings, or no relay key is saved there (Settings, Live boards). Setup says which. Until then its moves go to OpenPairings only; the address and the key arrive by themselves once they are there."
+              )}
+            </dd>
+            <dt>{gettext("\"More than one board answers on this port: it is a loop\"")}</dt>
+            <dd>
+              {gettext(
+                "The port was added while one board was on it, or before this version, and several are on it now. Read as one board they all answer at once and nothing of it makes sense, so the box reads nothing. Press \"Read it as a loop\" on that row: each board gets its own row. A board that had a table number keeps it when the box can tell which one it is."
+              )}
+            </dd>
+            <dt>{gettext("A board on a loop says \"No signal\" and the others do not")}</dt>
+            <dd>
+              {gettext(
+                "That board does not answer: its cable in the chain is out, or it has no power. The boards before it in the chain go on. Nothing has to be done on the box when it is back."
               )}
             </dd>
             <dt>{gettext("The results site shows nothing")}</dt>

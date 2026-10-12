@@ -24,7 +24,7 @@ defmodule Alnasl.Driver do
   The drivers: `Alnasl.Driver.Simulator` (PGN games played by an invisible
   hand, with faults), `Alnasl.Driver.Replay` (a capture file played back),
   `Alnasl.Driver.DgtSerial` (one DGT board on a serial port) and
-  `Alnasl.Driver.DgtBus` (a loop of DGT boards; wire format not verified).
+  `Alnasl.Driver.DgtBus` (a loop of DGT boards).
   """
 
   @callback start_link(keyword()) :: GenServer.on_start()

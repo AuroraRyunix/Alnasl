@@ -8,11 +8,11 @@ defmodule AlnaslWeb.TableWords do
 
   alias Alnasl.Tables
 
-  @doc "\"serial 06310\", \"address 5\", \"slot sim-3\", \"port COM7\"."
+  @doc "\"serial 06310\", \"no. 12799 on the loop\", \"slot sim-3\", \"port COM7\"."
   def identity(board) do
     case Tables.identity(board) do
       {:serial, serial} -> gettext("serial %{s}", s: serial)
-      {:address, address} -> gettext("address %{a}", a: address)
+      {:address, address} -> gettext("no. %{a} on the loop", a: Alnasl.Dgt.Bus.number(address))
       {:slot, slot} -> gettext("slot %{s}", s: slot)
       {:port, nil} -> gettext("no port")
       {:port, port} -> gettext("port %{p}", p: port)

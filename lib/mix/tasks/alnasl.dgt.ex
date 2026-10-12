@@ -7,7 +7,6 @@ defmodule Mix.Tasks.Alnasl.Dgt do
       mix alnasl.dgt --list
       mix alnasl.dgt --port COM3
       mix alnasl.dgt --port /dev/ttyUSB0 --out captures/board-a.jsonl --seconds 120
-      mix alnasl.dgt --port COM3 --bus 1,2,3
 
   It starts nothing but the driver - no site, no database, no sending. For
   `--seconds` (60; 0 = until Ctrl+C) it prints
@@ -25,9 +24,8 @@ defmodule Mix.Tasks.Alnasl.Dgt do
   Type a line and press Enter to put a note in the capture ("lifted the
   knight on g1"); the note is timestamped like everything else.
 
-  `--bus 1,2,3` polls those addresses on a loop instead (the UNVERIFIED bus
-  driver): the output then shows what the loop answers to what is ASSUMED to
-  be a poll, which is exactly what is needed to correct `Alnasl.Dgt.Bus`.
+  Several boards on one line are `mix alnasl.loop`. (This task says so
+  when it meets them: `info %{loop: [...]}`.)
 
   Needs the serial library: on Windows start with `ALNASL_UART=1` from a
   checkout whose path has no space in it (see the README).
@@ -46,7 +44,6 @@ defmodule Mix.Tasks.Alnasl.Dgt do
           out: :string,
           seconds: :integer,
           list: :boolean,
-          bus: :string,
           notes: :boolean
         ]
       )
@@ -93,7 +90,7 @@ defmodule Mix.Tasks.Alnasl.Dgt do
 
     write(file, %{
       "k" => "cfg",
-      "driver" => if(opts[:bus], do: "dgt_bus", else: "dgt_serial"),
+      "driver" => "dgt_serial",
       "port" => port,
       "flipped" => false
     })
@@ -101,24 +98,7 @@ defmodule Mix.Tasks.Alnasl.Dgt do
     Process.flag(:trap_exit, true)
     Logger.configure(level: :warning)
 
-    if opts[:bus] do
-      {:ok, _} = Registry.start_link(keys: :unique, name: Alnasl.BusRegistry)
-      {:ok, _} = DynamicSupervisor.start_link(name: Alnasl.BusSupervisor, strategy: :one_for_one)
-
-      for text <- String.split(opts[:bus], ",", trim: true) do
-        address = String.to_integer(String.trim(text))
-
-        {:ok, _} =
-          Alnasl.Driver.DgtBus.start_link(
-            owner: self(),
-            id: address,
-            port: port,
-            address: address
-          )
-      end
-    else
-      {:ok, _} = Alnasl.Driver.DgtSerial.start_link(owner: self(), id: 0, port: port)
-    end
+    {:ok, _} = Alnasl.Driver.DgtSerial.start_link(owner: self(), id: 0, port: port)
 
     seconds = if opts[:seconds] == nil, do: 60, else: opts[:seconds]
     if seconds > 0, do: Process.send_after(self(), :stop, seconds * 1000)

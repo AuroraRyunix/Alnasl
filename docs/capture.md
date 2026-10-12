@@ -1,9 +1,13 @@
 # Capturing the DGT bus
 
-The driver is written against a recording of a real loop first. This is how
-to make one on Windows with a single serial adapter: DGT LiveChess drives the
-boards as usual, and a small proxy in between passes every byte through and
-writes it down.
+How to record what DGT LiveChess says to a loop, on Windows with a single
+serial adapter: LiveChess drives the boards as usual, and a small proxy in
+between passes every byte through and writes it down.
+
+**It has not been needed.** The bus driver was corrected against a real
+loop directly on 2026-10-12 (`docs/real-loop-2026-10-12.md`,
+`mix alnasl.loop`). This stays as the way to find out what LiveChess does
+differently, should Alnasl ever misread a loop that LiveChess reads.
 
 ```
 LiveChess --> COM10 (virtual) <==com0com==> COM11 (virtual) --> serial_proxy.py --> COM3 (adapter) --> DGT loop

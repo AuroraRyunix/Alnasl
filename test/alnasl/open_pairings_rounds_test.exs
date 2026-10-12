@@ -30,6 +30,8 @@ defmodule Alnasl.OpenPairingsRoundsTest do
 
     {:ok, _} = Tournaments.assign_tables(open, 1, 2)
     {:ok, _} = Tournaments.assign_tables(u12, 3, 4)
+    # A board is asked who is on its line before it is read: a moment.
+    for board <- boards, do: eventually(fn -> Boards.snapshot(board.id).connected? end)
     Enum.map(boards, &Boards.get!(&1.id))
   end
 

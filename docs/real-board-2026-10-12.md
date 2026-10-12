@@ -51,7 +51,7 @@ whole, the last message complete).
 | Flag bits in the high nibble of the hours | PUBLISHED | still unverified | never set (the `7` in `71 3F 7F` is a dead clock, not a flag) |
 | Battery message id 0x20, long serial number id 0x22 | ASSUMED | still unverified | not sent by this board |
 | Bus address, trademark, EEPROM moves | PUBLISHED | still unverified | never asked for |
-| Everything in `lib/alnasl/dgt/bus.ex` | ASSUMED | still ASSUMED | one board on its own cable says nothing about a loop |
+| Everything in `lib/alnasl/dgt/bus.ex` | ASSUMED | still ASSUMED that morning; a loop was read the same afternoon: `docs/real-loop-2026-10-12.md` | one board on its own cable says nothing about a loop |
 
 ## Every message, with its bytes
 

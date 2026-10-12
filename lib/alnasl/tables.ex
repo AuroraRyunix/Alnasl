@@ -7,8 +7,8 @@ defmodule Alnasl.Tables do
 
   1. **Which board it is.** A DGT board reports a serial number, and that is
      its identity: it survives a reboot, another cable, another USB port. A
-     board on a loop without a serial is its bus address; a simulator is its
-     slot. The serial port is only where a board happens to be plugged in
+     board on a loop that has not said its serial is the number it answers
+     to there (`Alnasl.Loops`); a simulator is its slot. The serial port is only where a board happens to be plugged in
      today (`identity/1`).
   2. **Its table number.** The sticker on the board: "this is table 7". Set
      once for a hall (`set_table/2`, or by touching the boards in order -

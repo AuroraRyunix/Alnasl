@@ -410,7 +410,7 @@ defmodule AlnaslWeb.Words do
   def driver("simulator"), do: gettext("Simulator")
   def driver("replay"), do: gettext("Replay of a capture")
   def driver("dgt_serial"), do: gettext("DGT board, serial")
-  def driver("dgt_bus"), do: gettext("DGT board on a loop (not verified)")
+  def driver("dgt_bus"), do: gettext("DGT board on a loop")
   def driver(other), do: other
 
   # --- the log -----------------------------------------------------------------
@@ -677,6 +677,22 @@ defmodule AlnaslWeb.Words do
         "Board %{serial} is back on another port (%{to}): recognised as \"%{name}\", it keeps its number.",
         serial: d["serial"],
         to: d["to"],
+        name: d["name"]
+      )
+
+  defp log("loop.read", d),
+    do:
+      ngettext(
+        "%{port} is a loop: %{count} board answers on it. Each has its own row now.",
+        "%{port} is a loop: %{count} boards answer on it. Each has its own row now.",
+        d["boards"] || 0,
+        port: d["port"]
+      )
+
+  defp log("loop.joined", d),
+    do:
+      gettext("A board was plugged into the loop on %{port}: added as \"%{name}\".",
+        port: d["port"],
         name: d["name"]
       )
 
