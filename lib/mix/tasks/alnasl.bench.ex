@@ -12,7 +12,8 @@ defmodule Mix.Tasks.Alnasl.Bench do
   of `Alnasl.Bench`, a game each: `silent` is the one that must stay zero,
   and `rec WRONG` / `guess WRONG` are the games that ended as a game that
   was not played, marked orange or red where they leave it. `rec plies`
-  and `guess plies` count the marked moves, right or wrong; `alarms` every
+  and `guess plies` are the marked moves: how many are not the move the
+  game has at that place, of how many; `alarms` every
   time a board went out of sync, also when it found its way back; `gave
   up` the searches that ran out of budget.
 
@@ -37,7 +38,7 @@ defmodule Mix.Tasks.Alnasl.Bench do
 
     header =
       String.pad_trailing("fault mix", 46) <>
-        "  exact  rec ok  rec WRONG  guess ok  guess WRONG  flagged  alarm  silent   faults  rec plies  guess plies  alarms  worst search  gave up"
+        "  exact  rec ok  rec WRONG  guess ok  guess WRONG  flagged  alarm  silent   faults    rec plies  guess plies  alarms  worst search  gave up"
 
     Mix.shell().info(header)
 
@@ -61,8 +62,8 @@ defmodule Mix.Tasks.Alnasl.Bench do
           v.(:alarm, 7) <>
           v.(:silent, 8) <>
           n.(m.faults, 9) <>
-          n.(m.recovered, 11) <>
-          n.(m.guessed, 13) <>
+          String.pad_leading("#{m.recovered_wrong}/#{m.recovered}", 13) <>
+          String.pad_leading("#{m.guessed_wrong}/#{m.guessed}", 13) <>
           n.(m.alarms, 8) <>
           String.pad_leading("#{Float.round(m.max_search_ms, 1)} ms", 14) <>
           n.(m.budget_hits, 9)

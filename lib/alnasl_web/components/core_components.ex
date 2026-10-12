@@ -116,7 +116,7 @@ defmodule AlnaslWeb.CoreComponents do
   def state_word(:waiting_start), do: gettext("Waiting for start")
   def state_word(:settling), do: gettext("Settling")
   def state_word(:ambiguous), do: gettext("Settling")
-  def state_word(:recovered), do: gettext("Recovered a move")
+  def state_word(:recovered), do: gettext("Reconstructed")
   def state_word(:out_of_sync), do: gettext("Out of sync")
   def state_word(:no_signal), do: gettext("No signal")
   def state_word(:clock_alarm), do: gettext("Clock wrong way")

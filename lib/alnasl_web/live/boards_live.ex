@@ -610,6 +610,20 @@ defmodule AlnaslWeb.BoardsLive do
                       <span class="note">-</span>
                     <% s.plies != [] -> %>
                       <span class="note">{gettext("game under way")}</span>
+                      <span
+                        :if={Enum.any?(s.plies, &(:guessed in &1.flags))}
+                        id={"guessed-#{s.id}"}
+                        class="flag guess"
+                      >
+                        {Words.marks(:guessed, Enum.count(s.plies, &(:guessed in &1.flags)))}
+                      </span>
+                      <span
+                        :if={Enum.any?(s.plies, &(:recovered in &1.flags))}
+                        id={"reconstructed-#{s.id}"}
+                        class="flag rec"
+                      >
+                        {Words.marks(:recovered, Enum.count(s.plies, &(:recovered in &1.flags)))}
+                      </span>
                       <.badge
                         :for={piece <- s[:unseen] || []}
                         id={"unseen-#{s.id}"}

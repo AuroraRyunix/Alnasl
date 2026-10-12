@@ -638,6 +638,7 @@ defmodule Alnasl.BoardServer do
       case outcome do
         {:accepted, sans} -> {"accepted", sans}
         {:guessed, sans, _others} -> {"guessed", sans}
+        {:rejected, sans} -> {"rejected", sans}
         other -> {to_string(other), []}
       end
 

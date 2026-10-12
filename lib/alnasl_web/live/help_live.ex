@@ -161,7 +161,7 @@ defmodule AlnaslWeb.HelpLive do
             <dt><.state state={:recovered} /></dt>
             <dd>
               {gettext(
-                "Moves were not seen one by one and were worked out from the position. Worth a glance; nothing is wrong."
+                "Moves were not seen one by one and were worked out from the position, so that the board keeps up. Each such move is marked in the list: \"reconstructed\" (orange, a diamond) when only one line of moves fits, \"guessed\" (red, a question mark) when several did and the box took one. The tile and the Boards list count them. Tap a guessed move, or \"Check them\" on the board's page, and the box asks which move it was, one question at a time, each option on a small board; \"Keep it as it stands\" is one tap. The results site and Lichess get these moves like any other, without the mark; a correction replaces the game there."
               )}
             </dd>
             <dt><.state state={:out_of_sync} /></dt>
@@ -199,7 +199,7 @@ defmodule AlnaslWeb.HelpLive do
           <ul>
             <li>
               <b>{gettext("The board is right - resync from here")}</b>: {gettext(
-                "searches deeper for the moves that were missed. If several sequences fit, it lists them and you pick."
+                "searches deeper and longer for the moves that were missed, and says which it added. If several lines fit, one is taken and marked as a guess for you to check. Moves you have just taken back with Undo are not put back by it."
               )}
             </li>
             <li>

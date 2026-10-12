@@ -78,6 +78,8 @@ defmodule AlnaslWeb.RoundLive do
           paused: (snap && snap[:paused]) || (game && game.paused) || false,
           warning: snap && snap[:warning],
           unseen: (snap && snap[:unseen]) || [],
+          reconstructed: Enum.count(plies, &(:recovered in &1.flags)),
+          guessed: Enum.count(plies, &(:guessed in &1.flags)),
           # The clock's part of the start check, while no move has been made.
           clock_problem:
             if(snap && plies == [], do: AlnaslWeb.Words.clock_problem(snap[:clock_check])),
@@ -267,6 +269,18 @@ defmodule AlnaslWeb.RoundLive do
               piece
             )}</span>
             <.state state={tile.state} />
+          </div>
+          <div :if={tile.reconstructed + tile.guessed > 0} class="tile-marks">
+            <span :if={tile.guessed > 0} id={"tile-guessed-#{tile.no}"} class="flag guess">
+              {AlnaslWeb.Words.marks(:guessed, tile.guessed)}
+            </span>
+            <span
+              :if={tile.reconstructed > 0}
+              id={"tile-reconstructed-#{tile.no}"}
+              class="flag rec"
+            >
+              {AlnaslWeb.Words.marks(:recovered, tile.reconstructed)}
+            </span>
           </div>
           <div class="side">
             <span class="dot black"></span>

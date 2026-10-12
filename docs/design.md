@@ -55,7 +55,7 @@ For every board reported, the first of these that fits:
 | 2 | one legal move away | that move - once it has stood for `settle_ms` (250), or at once on **its own clock press** (the press that stops the mover's clock; the press of the move before, told late by the clock, confirms nothing) |
 | 3 | an earlier certain position (1-2 plies back) | a **takeback**: a correction, after `takeback_settle_ms` (1500) |
 | 4 | one move away from the position *before* the last move | the last move is **replaced**: a rook that rested on a square on its way, a hand that let go and took hold again |
-| 5 | two or more legal moves away | the **recovery search** (§3) |
+| 5 | two or more legal moves away | the **reconstruction** (§3): the moves are found, taken and marked |
 | 6 | what was one legal move in the reading before, with one or two *other* pieces now in the air | that move, at once: **the next hand is on the board** |
 | 7 | none of these | nothing. A hand, half a capture, a knocked piece. Status "Settling" |
 
@@ -162,26 +162,125 @@ Undo and "change a move" make the game disagree with the board on purpose.
 The board is then left alone until it next changes - re-reading it at once
 would put the undone move straight back.
 
-## 3. The recovery search
+## 3. The reconstruction
 
-`Alnasl.Tracker.Search`: which sequences of legal moves turn the certain
-position into the board we see?
+A board that has stopped following its game is worse than a board that
+follows it with a caveat. So when the board is a position the game as it
+stands does not lead to by rules 1-4 and 6, the tracker does not stop: it
+looks for the moves in between (`reconstruct/4`), takes what it finds, and
+**marks every move it did not see**:
 
-Depth-first, iterative deepening: every sequence of 2 plies, then 3, up to
-`search_depth` (2 by default, up to 6 in Setup; see "What the search cannot
-see" for why it is not more). It stops at the first depth with an answer and returns
-every answer of that length - **the shortest explanation wins**.
+- **reconstructed** (`recovered` in the data; orange, a diamond): exactly
+  one line of legal moves leads from the game to the board, and a search of
+  every legal move agrees it is the only one;
+- **guessed** (red, a question mark): more than one line did, and one was
+  taken - or one was found by a search that cannot vouch for it being the
+  only one (deeper than the blind search reaches, or resting on a piece
+  taken to be unseen).
 
-- exactly one → accepted, every ply flagged `recovered` (three or more at
-  once also `long_gap`, logged as a warning, and only after the board has
-  stood for `deep_settle_ms`, 5 s, or the next move confirms it);
-- several → kept as **candidates**. Nothing is emitted. Each board that
-  follows is tried against every candidate, and those that cannot explain
-  it fall away; one left is accepted. If they are still several after
-  `transient_ms`, the status is out of sync with reason *ambiguous* - and
-  the candidates go on following the game, so when the arbiter picks one,
-  the moves since are already there;
-- none → rule 7.
+No line at all, within the budget: rule 7 and, in time, the alarm, as
+before. The marks are on the move in the list, counted on the Round tile
+and the Boards list, and written in the log. Nothing found this way is
+silent, which is what makes searching deeper than two plies defensible:
+the old stance ("two, because at four, 11 of 207 illegal moves were read
+as games never played") was about wrong games nobody was told about.
+
+### Where it looks
+
+`Alnasl.Tracker.Search` walks sequences of legal moves, depth-first with
+iterative deepening, and returns every sequence of the first length that
+has one - **the shortest explanation wins**. It is asked, in this order:
+
+1. **Guided by what was seen**, up to `search_depth` plies (8; 2-12 in
+   Setup). The tracker keeps the readings since the game last matched the
+   board (`trail`). A move made while the board was being read changed both
+   its squares in some reading, so only moves that start and end on a
+   square that read differently at some moment are tried: a handful a ply
+   instead of thirty. This is the search that follows a game that got
+   ahead of the box move by move - six plies in the recording that began
+   all this - and it costs milliseconds.
+2. **Blind** - every legal move - for what nobody read anything of: a
+   cable out, a ply that fell between two scans. Two plies at once; up to
+   `blind_depth` (4) once the board has stood for `deep_settle_ms` (5 s).
+   What the guided search finds is checked against this one wherever it
+   reaches: a pawn that went two squares and was taken in passing while
+   nobody read the board never stood on its square, and only the blind
+   search knows there were two ways.
+3. **With the absent piece taken to be unseen** (§2), two plies. Guessed.
+4. **From before the last reconstructed moves**, when the board has stood
+   unexplained for `transient_ms` and the alarm is next: those moves
+   explained the board then, and do not explain this one, so the question
+   is asked again from before them. The game is corrected, not extended.
+
+Before the first move, a board that is not the starting position is
+pieces being set up, and is not read as an opening: two plies (a board
+plugged in late), no more, until the clock has been pressed or the arbiter
+says "the board is right".
+
+### Which line, when there are several
+
+`rank/3`, in this order:
+
+1. **The clock.** More presses than moves means the board has run further
+   ahead than the shortest line says (one press of slack: the lever that
+   starts the clock is a press, and "Move missing?" waits for two as well).
+   Longer lines are then looked for and go first. A press tells late, never
+   early, so fewer presses than moves prove nothing - which is why only the
+   count is used and not "whose clock runs": at the moment a move has just
+   landed, the clock still shows the side that made it.
+2. **The order of the readings.** Each move of a line is first shown by
+   some reading (both its squares as the move leaves them); a move first
+   shown before the move the line plays ahead of it is out of order. Moves
+   played one by one in front of the board score 0 in the order they were
+   played, and the same moves in another order score more. This is what
+   picks `Nc6 Be3 e6 Qc1 Bb4 Ne5` out of nine legal orders of those six
+   moves. Moves nobody read are all first shown by the same reading, and
+   their order stays a guess.
+3. The line that assumes least about a promotion; a queen before any
+   other piece nobody saw.
+4. The moves' names, so the same board always gives the same game.
+
+### What it does not believe
+
+- **A hand.** A board with only a piece or two missing is not searched:
+  the only legal explanation is a capture by a piece that then went home.
+  (After `lifted_ms`, before the alarm, the guided search is asked once.)
+  One exception, as before: two pieces gone, one of each colour, neither
+  able to take the other - an unseen capture and recapture.
+- **A hand beside an unseen move.** A queen lifted off d3 beside a rook
+  that went to e3 unseen reads exactly like "the rook went to e3, the queen
+  came there by way of e4 and was taken": five legal plies. So a line that
+  takes a piece is not believed while the same board *with one missing
+  piece put back* is explained by fewer moves or none - until the board has
+  stood for `deep_settle_ms`.
+- **The moves the arbiter has just taken back.** Undo remembers them for
+  the position it leaves (`rejected`), and no search from there returns
+  exactly them: "the board is right" after an Undo used to find the one
+  line there was - the moves just undone - and put them back without a
+  word. Any move accepted ends that, and so does the game going on over
+  them.
+
+### The arbiter's part
+
+A tap on a red move, or "Check them", asks which line it was
+(`AlnaslWeb.Choice`): the position before and after, and one question at a
+time - the first move on which the remaining lines differ, each option on
+a small board with its squares marked, the line as it stands first. Moves
+every remaining line has are not asked about. The last answer leaves one
+line; using it, or "Keep it as it stands" at any point, rewrites the game
+from there (`Tracker.choose/4`), marks those moves as the arbiter's and
+sends the game again. The alternatives are not stored: they are searched
+for again from the game itself (`Tracker.alternatives/2`), so a red move
+can be settled after a restart too.
+
+### What goes out
+
+Reconstructed and guessed moves are sent like any others. Both
+destinations take the whole game every time, so a correction replaces
+what they hold. The mark stays on the box: the results server's ingest
+takes `moves` as a list of SAN and has no place for it (anything else in
+a move is `invalid_moves`), and a PGN comment on Lichess would be shown
+to every spectator as part of the game.
 
 ### What keeps it bounded
 
@@ -205,11 +304,24 @@ piece of the same kind leave behind when neither was seen (hxg6 hxg6: a
 pawn on g6 as before, both h-pawns gone). It is searched once it has stood
 for `settle_ms` - a third move on top of it would be out of reach.
 
-Measured: the worst case over 400 scrambled positions (nothing explains
-them, so every depth is exhausted) is about 0.1 s and 3259 nodes at depth 4
-on a desktop; a Pi is several times slower. There is a node budget
-(`max_nodes`, 200 000) after which the search gives up and says so. The
-arbiter's "Resync from here" searches to depth 6 with ten times the budget.
+Measured on a desktop, positions k plies apart in the bundled games
+(a Pi is several times slower):
+
+| plies | guided: mean / worst | blind: mean / worst |
+|---|---|---|
+| 2 | 0.1 ms / 1 ms | 0.05 ms / 0.3 ms |
+| 4 | 0.2 ms / 0.6 ms | 20 ms / 260 ms |
+| 5 | 1 ms / 4 ms | 200-370 ms / over 1 s |
+| 6 | 4 ms / 23 ms | over 1 s |
+| 8 | 90-145 ms / 0.7-2 s | - |
+| 10 | over the budget, 4 times in 10 | - |
+
+Hence 8 and 4. A search is cut off at `max_nodes` (4 000) or `max_ms`
+(500 - the worst single search in the fault matrix, with every core
+busy), gives up and says so; the same question is not asked twice of the same board. The
+arbiter's "the board is right" searches 6 plies blind with a hundred
+times the nodes and ten times the time, because somebody asked and is
+waiting.
 
 ### What the search cannot see
 
@@ -218,7 +330,7 @@ discovered.
 
 **Two unseen plies are safe.** If White and Black each made one move unseen,
 every pair that gives this board is found; if there is one, it is the truth;
-if there are several, the tracker stops and asks. The classic: a pawn that
+if there are several, one is taken and marked as a guess. The classic: a pawn that
 advanced one square or two and was then captured (plainly, or en passant)
 leaves the same board. So does a pawn promoting and being taken at once -
 to what did it promote? Over 207 games with 10% of plies unseen, this
@@ -227,23 +339,28 @@ happened in 3-6.
 **Three or more unseen plies are not.** Two things go wrong:
 
 - *Order.* Unseen `1.d4 Nf6 2.c4` and `1.c4 Nf6 2.d4` are the same board.
-  The tracker stops and asks (about half of all 3-ply gaps).
+  One is taken, marked as a guess, and it is the wrong one about as often
+  as not: nothing was read that could say. (When the moves *were* read
+  one by one, the readings say - see "Which line".)
 - *The shortest explanation is not the true one.* A rook that went a1-b1,
   then b1-c1 with a black move between, reads as Ra1-c1 and one black move:
-  two plies explain what three made. The tracker accepts the two, flagged
-  `recovered`. It is then one ply out in whose turn it is, and the next
-  move usually exposes it (out of sync); in constructed cases it does not.
+  two plies explain what three made. The tracker accepts the two, marked
+  reconstructed - orange, and wrong. It is then one ply out in whose turn
+  it is, and the next move usually exposes it; the clock's press count
+  catches it when the presses were heard, and nothing does when the cable
+  was out. This is the one way an orange move is wrong: 3 games in 207
+  with the board unplugged for three plies, 6 in 207 with a quarter of all
+  plies unseen.
   The same goes for a position repeated during the gap, which reads as a
   takeback.
 
 The same reasoning is why an **illegal move** is not always an alarm: a
 piece set down on a square it could have reached in two legal hops, with
 the opponent's knight imagined out and back, *is* explained by four legal
-moves. In the fault matrix, searching 4 plies deep, 11 of 207 illegal moves
-were read that way (flagged `recovered`); at 3 plies, 9; at 2, none. That
-is why `search_depth` is **2** unless Setup says otherwise: the price is
-that every gap of three unseen plies is an alarm, to be repaired with
-"Resync from here" (which searches to depth 6 because somebody asked).
+moves. In the fault matrix, of 207 games with an illegal move at ply 12
+and played on, 185 end in the alarm and 22 as a game that was not played,
+its moves marked from the illegal one on (21 red, 1 orange). None
+unmarked.
 
 ## 3a. Fast play
 

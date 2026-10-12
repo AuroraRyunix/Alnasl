@@ -272,7 +272,7 @@ defmodule AlnaslWeb.SetupLive do
            params[field],
            default,
            if(field == "search_depth", do: 2, else: 0),
-           if(field == "search_depth", do: 6, else: 600_000)
+           if(field == "search_depth", do: 12, else: 600_000)
          )}
       end
       |> Map.put("takeback", params["takeback"] == "true")
@@ -295,7 +295,8 @@ defmodule AlnaslWeb.SetupLive do
   end
 
   # "Bullet / fast play": what `Alnasl.Tracker.preset(:bullet)` changes, on
-  # top of whatever else was set (the search depth is left as it is).
+  # top of whatever else was set (how far the box reconstructs is left as
+  # it is).
   def handle_event("preset_tracker", %{"preset" => "bullet"}, socket) do
     preset = Map.new(Tracker.preset(:bullet), fn {key, value} -> {Atom.to_string(key), value} end)
     Settings.put("tracker", Map.merge(Settings.get("tracker") || %{}, preset))
@@ -694,7 +695,7 @@ defmodule AlnaslWeb.SetupLive do
             </div>
             <p class="note">
               {gettext(
-                "For games of a few minutes or less. It changes two things: a move must stand for %{settle} ms instead of %{settle_default}, and a board put back to the position before the last move is not read as a takeback - at that speed it is a piece going to and fro. Nothing else is touched, the number of unseen moves searched for included. \"Back to the defaults\" undoes it.",
+                "For games of a few minutes or less. It changes two things: a move must stand for %{settle} ms instead of %{settle_default}, and a board put back to the position before the last move is not read as a takeback - at that speed it is a piece going to and fro. Nothing else is touched, how many moves the box reconstructs included. \"Back to the defaults\" undoes it.",
                 settle: @preset.settle_ms,
                 settle_default: @defaults.settle_ms
               )}
@@ -749,12 +750,13 @@ defmodule AlnaslWeb.SetupLive do
                 id="tracker-depth"
                 type="number"
                 min="2"
-                max="6"
-                label={gettext("Unseen moves searched for (half-moves)")}
+                max="12"
+                label={gettext("Reconstruct up to (half-moves)")}
               />
               <p id="tracker-depth-note" class="note">
                 {gettext(
-                  "2 by default: the box works out up to two moves it did not see, and raises the alarm beyond that. Higher finds more by itself, and is more often wrong when a move on the board was illegal. \"Resync\" on a board's page searches deeper whatever is set here."
+                  "When the board has run ahead of the game, the box looks for the moves in between rather than stop: up to this many (%{default} by default) over the squares it saw change, and up to 4 when it saw nothing of them. Every move found that way is marked: \"reconstructed\" when one line of moves fits, \"guessed\" when several did and one was taken. 2 is the least: one move missed and the next one seen.",
+                  default: @defaults.search_depth
                 )}
               </p>
               <.input

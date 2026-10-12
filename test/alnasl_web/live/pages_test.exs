@@ -311,7 +311,7 @@ defmodule AlnaslWeb.PagesTest do
 
       opts = Settings.tracker_opts()
 
-      assert opts[:settle_ms] == 250 and opts[:search_depth] == 6 and
+      assert opts[:settle_ms] == 250 and opts[:search_depth] == 12 and
                opts[:promotion_default] == :n and opts[:takeback] == false
 
       view |> element("#reset-tracker") |> render_click()
@@ -320,7 +320,7 @@ defmodule AlnaslWeb.PagesTest do
 
     test "\"Bullet / fast play\" moves the settings that belong together, and leaves the search depth alone",
          %{conn: conn} do
-      assert Alnasl.Tracker.defaults().search_depth == 2
+      assert Alnasl.Tracker.defaults().search_depth == 8
       {:ok, view, _html} = live(conn, ~p"/setup")
       refute has_element?(view, "#preset-bullet-on")
       assert has_element?(view, "#tracker-depth-note")
@@ -550,7 +550,7 @@ defmodule AlnaslWeb.PagesTest do
       Log.add(:info, "repair.undo", %{move: "Nf3", by: "arbiter"}, %{round: 1, board_no: 2})
 
       {:ok, view, html} = live(conn, ~p"/log")
-      assert html =~ "Recovered without seeing them one by one: Nf3 Nc6"
+      assert html =~ "Reconstructed, not seen one by one (one line fits): Nf3 Nc6"
       assert html =~ "Arbiter at the box: last move (Nf3) taken back."
       assert has_element?(view, "#log-lines li.error", "Out of sync")
       assert has_element?(view, "#log-lines .where", "R1 board 7")
@@ -560,7 +560,7 @@ defmodule AlnaslWeb.PagesTest do
         |> form("#log-filter", filter: %{level: "error", kind: "", board: ""})
         |> render_change()
 
-      assert html =~ "Out of sync" and not (html =~ "Recovered without")
+      assert html =~ "Out of sync" and not (html =~ "Reconstructed, not seen")
 
       html =
         view
@@ -586,7 +586,7 @@ defmodule AlnaslWeb.PagesTest do
     test "every kind the box writes has a sentence" do
       kinds =
         ~w(board.added board.removed board.connected board.disconnected board.driver_failed board.linked board.unlinked
-           board.moved board.flipped board.out_of_sync board.resumed move.recovered move.assumed move.corrected
+           board.moved board.flipped board.out_of_sync board.resumed move.recovered move.guessed move.assumed move.corrected
            clock.move_missing clock.wrong_side clock.side_ok result.suggested result.set result.reopened repair.undo repair.append repair.edit
            repair.set_fen repair.resync repair.choose repair.paused repair.resumed pgn.attached outbox.offline
            outbox.online outbox.blocked outbox.conflict outbox.server_ahead door.unlocked door.refused setup.saved

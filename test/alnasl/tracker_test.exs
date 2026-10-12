@@ -294,22 +294,112 @@ defmodule Alnasl.TrackerTest do
     assert Enum.all?(tr.plies, &(:recovered in &1.flags))
   end
 
-  test "three moves in is more than the box works out by itself, unless Setup says so or the arbiter asks" do
+  test "three moves in, before any move was seen, is pieces being set up - until the clock or the arbiter says a game is on" do
     {:ok, plies} = Chess.replay(Chess.start_fen(), ~w(e4 e5 Qh5))
     seen = board(List.last(plies).fen)
-    assert Tracker.defaults().search_depth == 2
+    assert Tracker.defaults().search_depth == 8
 
     {tr, out} = feed(Tracker.new(), [{0, seen}], 6_000)
     assert Tracker.sans(tr) == []
     assert alarms(out) == []
 
-    # "Resync from the board" on the board's page.
-    {tr, _events, :accepted} = Tracker.resync(tr, 7_000, 6)
-    assert Tracker.sans(tr) == ~w(e4 e5 Qh5)
+    # "Resync from the board" on the board's page: one path, and it is told.
+    {resynced, _events, {:accepted, ~w(e4 e5 Qh5)}} = Tracker.resync(tr, 7_000, 6)
+    assert Tracker.sans(resynced) == ~w(e4 e5 Qh5)
+    assert Enum.all?(resynced.plies, &(:recovered in &1.flags and :arbiter in &1.flags))
 
-    {tr, _} = feed(Tracker.new(search_depth: 4), [{0, seen}], 6_000)
+    # A clock pressed over a board that stood ready: the game is on, and
+    # the three moves are worked out.
+    {tr, out} = feed(started(), [{1_000, seen}, {1_500, :press}], 10_000)
     assert Tracker.sans(tr) == ~w(e4 e5 Qh5)
     assert Enum.all?(tr.plies, &(:recovered in &1.flags and :long_gap in &1.flags))
+    assert alarms(out) == []
+  end
+
+  test "moves that went by unseen while the game was on are reconstructed, one path orange" do
+    {tr, _b, t} = after_moves(~w(e4 e5))
+    {:ok, plies} = Chess.replay(Chess.start_fen(), ~w(e4 e5 Nf3 Nc6 Nxe5))
+    # Nothing was seen of them (f3 never read as anything but empty), so
+    # the board must stand before three moves are believed of it.
+    {early, _} = feed(tr, [{t, board(List.last(plies).fen)}], 4_000)
+    assert Tracker.sans(early) == ~w(e4 e5)
+    {tr, out} = feed(tr, [{t, board(List.last(plies).fen)}], 6_000)
+
+    assert Tracker.sans(tr) == ~w(e4 e5 Nf3 Nc6 Nxe5)
+    assert alarms(out) == []
+    assert tr.status == :live
+
+    assert [[:recovered, :long_gap], [:recovered, :long_gap], [:recovered, :long_gap]] =
+             tr.plies |> Enum.take(-3) |> Enum.map(& &1.flags)
+
+    # Switched down to nothing in Setup, the board waits and is the alarm.
+    {tr, _b, t} = after_moves(~w(e4 e5))
+    tr = %{tr | opts: %{tr.opts | search_depth: 2, blind_depth: 2}}
+    {tr, out} = feed(tr, [{t, board(List.last(plies).fen)}], 10_000)
+    assert Tracker.sans(tr) == ~w(e4 e5)
+    assert alarms(out) == [:unexplained]
+  end
+
+  test "moves that were seen one by one, but not believed in time, are put in the order they were seen" do
+    # After 1. e4 e5 somebody lifts the a2 pawn off the board and keeps it
+    # (the unseen-piece rule switched off, so that the board is stuck):
+    # 2. Nf3 Nc6 3. Bc4 Nf6 are played, each read as it lands, and the pawn
+    # is put back. Four moves to find; White's two could have been played
+    # in either order and so could Black's - the readings say which.
+    {tr, b, t} = after_moves(~w(e4 e5))
+    tr = %{tr | opts: %{tr.opts | unseen_piece: false}}
+    gone = lift(b, "a2")
+    n1 = move(gone, "g1", "f3")
+    n2 = move(n1, "b8", "c6")
+    n3 = move(n2, "f1", "c4")
+    n4 = move(n3, "g8", "f6")
+    back = put(n4, "a2", {:w, :p})
+
+    steps = [{t, gone}, {t + 3_000, n1}, {t + 6_000, n2}, {t + 9_000, n3}, {t + 12_000, n4}]
+    {tr, out} = feed(tr, steps ++ [{t + 15_000, back}], 1_000)
+
+    assert Enum.drop(Tracker.sans(tr), 2) == ~w(Nf3 Nc6 Bc4 Nf6)
+    assert alarms(out) == []
+    # More than one order is legal: a guess, marked as one - and the right one.
+    assert Enum.all?(Enum.take(tr.plies, -4), &(:guessed in &1.flags))
+
+    %{options: [current | others]} = Tracker.alternatives(tr, 4)
+    assert current == ~w(Nf3 Nc6 Bc4 Nf6)
+    assert ~w(Nf3 Nf6 Bc4 Nc6) in others
+  end
+
+  test "a piece in a hand beside a move that went by unseen is not a capture" do
+    # 1. e4 e5 2. Nf3 went by unseen, and Black has the knight from b8 in
+    # his hand: the board reads "knight on f3, b8 empty". Nothing takes on
+    # b8 in a game of chess that early, but Ng1-f3-e5-c6xb8 and back is
+    # legal with a few black moves in between. It is waited for.
+    {tr, b, t} = after_moves(~w(e4 e5))
+    unseen = move(b, "g1", "f3")
+    {tr, out} = feed(tr, [{t, lift(unseen, "b8")}, {t + 900, move(unseen, "b8", "c6")}], 1_000)
+    assert Tracker.sans(tr) == ~w(e4 e5 Nf3 Nc6)
+    assert [[:recovered], [:recovered]] = tr.plies |> Enum.take(-2) |> Enum.map(& &1.flags)
+    assert length(for({_, {:moves, _}} <- out, do: 1)) == 1
+  end
+
+  test "more clock presses than moves: the shortest path is not the whole story" do
+    # 1. e4 e5, then unseen: 2. Bc4 a6 3. Bb5. The board reads as if the
+    # bishop went to b5 in one move and Black played ...a6: two plies. The
+    # clock was pressed six times (one may be the lever that started it).
+    {tr, _b, t} = after_moves(~w(e4 e5))
+    {:ok, plies} = Chess.replay(Chess.start_fen(), ~w(e4 e5 Bc4 a6 Bb5))
+    seen = board(List.last(plies).fen)
+
+    {short, _} = feed(tr, [{t, seen}], 1_000)
+    assert Enum.drop(Tracker.sans(short), 2) == ~w(Bb5 a6)
+
+    {same, _} = feed(Tracker.presses(tr, 5), [{t, seen}], 1_000)
+    assert Tracker.sans(same) == Tracker.sans(short)
+
+    {long, _} = feed(Tracker.presses(tr, 6), [{t, seen}], 1_000)
+    assert length(Tracker.sans(long)) == 5
+    assert Enum.all?(Enum.take(long.plies, -3), &(:guessed in &1.flags))
+    assert %{options: options} = Tracker.alternatives(long, 3)
+    assert ~w(Bc4 a6 Bb5) in options
   end
 
   # --- fast play ---------------------------------------------------------------
@@ -409,8 +499,21 @@ defmodule Alnasl.TrackerTest do
     {tr, out} = feed(started(), [{1_000, seen}], 60_000)
     assert tr.status == :waiting_start and alarms(out) == []
 
-    # With one: the game is on, and the box did not see how.
+    # With one: the game is on, and the box did not see how. What the
+    # board shows is three legal moves from the start, so those are them.
     {tr, out} = feed(started(), [{1_000, seen}, {1_500, :press}], 60_000)
+    assert tr.status == :live and alarms(out) == []
+    # ...in one of the orders they can have been played in: nobody saw.
+    assert Enum.sort(Tracker.sans(tr)) == Enum.sort(~w(e4 e5 Nf3))
+    assert Enum.all?(tr.plies, &(:guessed in &1.flags))
+    assert %{options: options} = Tracker.alternatives(tr, 1)
+    assert ~w(e4 e5 Nf3) in options
+
+    # A board that left the start for something no game leads to: the alarm.
+    mess =
+      Position.start() |> lift("e2") |> lift("d2") |> put("e5", {:w, :p}) |> put("d6", {:w, :p})
+
+    {tr, out} = feed(started(), [{1_000, mess}, {1_500, :press}], 60_000)
     assert tr.status == :out_of_sync and alarms(out) == [:unexplained]
     assert Tracker.sans(tr) == []
 
@@ -463,39 +566,50 @@ defmodule Alnasl.TrackerTest do
     assert Tracker.preset(:bullet) == %{settle_ms: 150, takeback: false}
 
     assert Tracker.preset(:classical) == %{}
-    assert Tracker.defaults().search_depth == 2 and Tracker.defaults().settle_ms == 250
+    assert Tracker.defaults().search_depth == 8 and Tracker.defaults().settle_ms == 250
   end
 
-  test "when two sequences explain the board nothing is emitted, the alarm names it, and the arbiter picks" do
+  test "when two sequences explain the board one is taken, marked as a guess, and the arbiter can pick the other" do
     # f-pawn one square or two, then taken en passant or not: the board is the same.
     {tr, b, t} = after_moves(~w(e4 a6 e5))
     seen = b |> lift("f7") |> move("e5", "f6")
     {tr, out} = feed(tr, [{t, seen}], 10_000)
-    assert Tracker.sans(tr) == ~w(e4 a6 e5)
-    assert tr.status == :out_of_sync
-    assert alarms(out) == [:ambiguous]
-    assert Enum.sort(Tracker.candidates(tr)) == [~w(f5 exf6), ~w(f6 exf6)]
+    assert Tracker.sans(tr) == ~w(e4 a6 e5 f5 exf6)
+    assert tr.status == :live
+    assert alarms(out) == []
+    assert [[:guessed], [:guessed]] = tr.plies |> Enum.take(-2) |> Enum.map(& &1.flags)
 
-    # The game goes on underneath: the candidates follow it.
+    # The game goes on, and the moves after the guess are plain moves.
     next = move(seen, "g8", "f6")
     {tr, _} = feed(tr, [{t + 12_000, next}], 2_000)
-    assert Enum.sort(Tracker.candidates(tr)) == [~w(f5 exf6 Nxf6), ~w(f6 exf6 Nxf6)]
-
-    index = Enum.find_index(Tracker.candidates(tr), &(hd(&1) == "f5"))
-    {tr, events} = Tracker.choose(tr, t + 20_000, index)
     assert Tracker.sans(tr) == ~w(e4 a6 e5 f5 exf6 Nxf6)
+    assert List.last(tr.plies).flags == []
+
+    # Either of the two guessed moves leads to the same question.
+    assert %{from: 4, to: 5, current: ~w(f5 exf6), options: [~w(f5 exf6), ~w(f6 exf6)]} =
+             Tracker.alternatives(tr, 5)
+
+    assert Tracker.alternatives(tr, 4) == Tracker.alternatives(tr, 5)
+    assert Tracker.alternatives(tr, 6) == nil
+    assert Tracker.alternatives(tr, 1) == nil
+
+    assert {:error, _} = Tracker.choose(tr, t + 20_000, 4, ~w(f6 Nf3))
+
+    {:ok, {tr, events}, 0} = Tracker.choose(tr, t + 20_000, 4, ~w(f6 exf6))
+    assert Tracker.sans(tr) == ~w(e4 a6 e5 f6 exf6 Nxf6)
     assert tr.status == :live
-    assert [{:moves, plies} | _] = events
-    assert Enum.all?(plies, &(:arbiter in &1.flags))
+    assert [{:correction, 3, plies, :arbiter} | _] = events
+    assert Enum.map(plies, & &1.san) == ~w(f6 exf6 Nxf6)
+    # The arbiter has said so: no longer a guess, and not asked again.
+    assert [[:arbiter], [:arbiter], []] = Enum.map(plies, & &1.flags)
+    assert Tracker.alternatives(tr, 4) == nil
   end
 
   # --- what cannot be explained ------------------------------------------------
 
   test "an illegal move raises the alarm after the patience runs out, and clears when undone" do
     {tr, b, t} = after_moves(~w(e4 e5))
-    # A rook through its own pawn. (A knight to g3 would not do: Ne2-g3 with
-    # a black knight out and back is four legal moves, and the tracker says
-    # "ambiguous" - also an alarm, a different word.)
+    # A rook through its own pawn: no number of legal moves does that.
     illegal = move(b, "a1", "a3")
     {tr, out} = feed(tr, [{t, illegal}], 9_000)
     assert Tracker.sans(tr) == ~w(e4 e5)
@@ -587,11 +701,15 @@ defmodule Alnasl.TrackerTest do
     assert alarms(out) == []
 
     {tr, _events, outcome} = Tracker.resync(tr, 30_000, 6)
-    # Six plies, and White's three commute with each other only where legal:
-    # there is more than one order, so the arbiter is asked.
-    assert {:candidates, n} = outcome
-    assert n > 1
-    assert ~w(e4 e5 Nf3 Nc6 Bb5 a6) in Tracker.candidates(tr)
+    # Six plies, and more than one order of them is legal: one is taken,
+    # marked as a guess, and the others are there for the arbiter.
+    assert {:guessed, sans, others} = outcome
+    assert others > 0
+    assert Tracker.sans(tr) == sans and length(sans) == 6
+    assert Enum.all?(tr.plies, &(:guessed in &1.flags))
+    assert %{from: 1, to: 6, options: options} = Tracker.alternatives(tr, 3)
+    assert ~w(e4 e5 Nf3 Nc6 Bb5 a6) in options
+    assert length(options) == others + 1
   end
 
   test "a stored game is restored move for move" do

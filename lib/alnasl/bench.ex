@@ -82,10 +82,21 @@ defmodule Alnasl.Bench do
       takebacks: Enum.count(out, &match?({_t, {:correction, _, _, :takeback}}, &1)),
       recovered: Enum.count(tr.plies, &(:recovered in &1.flags)),
       guessed: Enum.count(tr.plies, &(:guessed in &1.flags)),
+      # Marked moves that are not the move the game has at that place.
+      recovered_wrong: marked_wrong(tr.plies, truth, :recovered),
+      guessed_wrong: marked_wrong(tr.plies, truth, :guessed),
       assumed: Enum.count(tr.plies, &(:assumed in &1.flags)),
       warnings: Enum.count(out, &match?({_t, {:warning, _, _, _}}, &1)),
       stats: tr.stats
     }
+  end
+
+  defp marked_wrong(plies, truth, mark) do
+    plies
+    |> Enum.zip(truth ++ List.duplicate(nil, length(plies)))
+    |> Enum.count(fn {ply, san} ->
+      mark in ply.flags and Pgn.first_difference([ply.san], [san || ""]) != :same
+    end)
   end
 
   defp prefix?(short, long),
@@ -145,6 +156,8 @@ defmodule Alnasl.Bench do
       corrections: results |> Enum.map(& &1.corrections) |> Enum.sum(),
       recovered: results |> Enum.map(& &1.recovered) |> Enum.sum(),
       guessed: results |> Enum.map(& &1.guessed) |> Enum.sum(),
+      recovered_wrong: results |> Enum.map(& &1.recovered_wrong) |> Enum.sum(),
+      guessed_wrong: results |> Enum.map(& &1.guessed_wrong) |> Enum.sum(),
       faults: results |> Enum.map(&length(&1.log)) |> Enum.sum(),
       searches: results |> Enum.map(& &1.stats.searches) |> Enum.sum(),
       max_nodes: results |> Enum.map(& &1.stats.max_nodes) |> Enum.max(fn -> 0 end),

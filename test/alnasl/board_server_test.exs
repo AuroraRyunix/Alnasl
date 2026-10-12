@@ -269,9 +269,10 @@ defmodule Alnasl.BoardServerTest do
       {:ok, board: board, played: played}
     end
 
-    test "out of sync: the raw board beside the certain one, resync, candidates, typed moves", %{
-      board: board
-    } do
+    test "out of sync: the raw board beside the certain one, resync, a guess and the arbiter's pick",
+         %{
+           board: board
+         } do
       # A rook through its own pawn: nothing explains that.
       now = List.last(boards_after(~w(e4 e5)))
       illegal = now |> put_elem(40, {:w, :r}) |> put_elem(56, nil)
@@ -294,14 +295,25 @@ defmodule Alnasl.BoardServerTest do
       later = List.last(boards_after(~w(e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6)))
       set_pieces("FAKE1", later)
       eventually(fn -> Boards.snapshot(board.id).raw == Position.to_text(later) end)
-      assert {:ok, {:candidates, n}} = Boards.resync(board.id, 6)
-      assert n > 1
-      candidates = Boards.snapshot(board.id).candidates
-      index = Enum.find_index(candidates, &(&1 == ~w(Nf3 Nc6 Bb5 a6 Ba4 Nf6)))
-      assert index != nil
-      assert :ok = Boards.choose(board.id, index)
-      assert sans(board.id) == ~w(e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6)
+      assert {:ok, {:guessed, taken, others}} = Boards.resync(board.id, 6)
+      assert others > 0
+      # One line was taken at once, marked as a guess - and sent, like any move.
+      assert sans(board.id) == ~w(e4 e5) ++ taken
       assert Boards.snapshot(board.id).status == :recovered
+      assert Enum.all?(Enum.drop(Boards.snapshot(board.id).plies, 2), &(:guessed in &1.flags))
+      assert Outbox.drain() == :empty
+      assert FakeIngest.game(1, 3).moves == ~w(e4 e5) ++ taken
+
+      # The arbiter knows better: the others are there to pick from.
+      line = ~w(Nf3 Nc6 Bb5 a6 Ba4 Nf6)
+      assert %{from: 3, to: 8, options: options} = Boards.alternatives(board.id, 5)
+      assert line in options and length(options) == others + 1
+      assert {:error, _} = Boards.choose(board.id, 5, ~w(Nf3 Nc6))
+      assert {:ok, 0} = Boards.choose(board.id, 5, line)
+      assert sans(board.id) == ~w(e4 e5) ++ line
+      # His word: no longer a guess.
+      assert Boards.snapshot(board.id).status == :live
+      assert Boards.alternatives(board.id, 5) == nil
 
       assert Outbox.drain() == :empty
       assert FakeIngest.game(1, 3).moves == ~w(e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6)
@@ -420,7 +432,7 @@ defmodule Alnasl.BoardServerTest do
       assert "board.moved" in Enum.map(Alnasl.Log.list(), & &1.kind)
     end
 
-    test "a late board is caught up when it is two moves in; further in, the arbiter asks" do
+    test "a late board is caught up when it is two moves in, and moves that go by unseen after that are reconstructed" do
       late = fake_dgt("FAKE1")
       eventually(fn -> Boards.snapshot(late.id).connected? end)
       set_pieces("FAKE1", List.last(boards_after(~w(e4 e5))))
@@ -428,13 +440,16 @@ defmodule Alnasl.BoardServerTest do
       eventually(fn -> sans(late.id) == ~w(e4 e5) end)
       assert Enum.all?(Boards.snapshot(late.id).plies, &(:recovered in &1.flags))
 
-      # Three more went by unseen: more than the box works out by itself
-      # (search depth 2). "Resync from the board" searches deeper.
+      # Three more went by unseen. Nothing was read of them, so the board
+      # must stand a while; then they are found - one line fits - and
+      # marked, and the board never stops.
       set_pieces("FAKE1", List.last(boards_after(~w(e4 e5 Nf3 Nc6 Nxe5))))
-      eventually(fn -> Boards.snapshot(late.id).status == :out_of_sync end)
-      assert sans(late.id) == ~w(e4 e5)
-      Boards.resync(late.id)
       eventually(fn -> sans(late.id) == ~w(e4 e5 Nf3 Nc6 Nxe5) end)
+      snapshot = Boards.snapshot(late.id)
+      assert snapshot.status == :recovered
+      assert Enum.all?(Enum.take(snapshot.plies, -3), &(:recovered in &1.flags))
+      refute "board.out_of_sync" in log_kinds()
+      assert "move.recovered" in log_kinds()
     end
 
     test "boards are linked in order with one call, and move on to the next round together" do

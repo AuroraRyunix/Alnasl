@@ -13,12 +13,19 @@ defmodule AlnaslWeb.GameLive do
   of plies shown, and moves that arrive meanwhile are added to the list
   without moving the board. End, the "Live" button, or stepping forward
   onto the last move goes back to following (`@at == nil`).
+
+  ## Guessed moves
+
+  Moves the box took from several that fit are marked, and a tap on one -
+  or "Check them" in the notice above the tools - asks which line it was,
+  a move at a time (`AlnaslWeb.Choice`). `@choice` is that conversation:
+  the ply it started from, the alternatives, the answers so far.
   """
 
   use AlnaslWeb, :live_view
 
   alias Alnasl.{Boards, Chess, Games, Position, Tournament}
-  alias AlnaslWeb.Words
+  alias AlnaslWeb.{Choice, Words}
 
   @impl true
   def mount(%{"round" => round, "board" => board}, _session, socket) do
@@ -28,7 +35,7 @@ defmodule AlnaslWeb.GameLive do
       {:ok,
        socket
        |> assign(round: round, no: board, refresh_due?: false, notice: nil, compare: nil)
-       |> assign(at: nil)
+       |> assign(at: nil, choice: nil)
        |> assign(page_title: gettext("Board %{n}", n: board))
        |> assign(forms())
        |> load()}
@@ -186,19 +193,62 @@ defmodule AlnaslWeb.GameLive do
     count = if socket.assigns.view, do: length(socket.assigns.view.snap.plies), else: 0
 
     case Integer.parse(ply) do
-      {at, ""} when at >= 0 and at < count -> {:noreply, assign(socket, at: at)}
-      _last_or_bad -> {:noreply, assign(socket, at: nil)}
+      {at, ""} when at >= 0 and at <= count ->
+        socket = assign(socket, at: if(at < count, do: at))
+        # A guessed move: the question that goes with it.
+        {:noreply, if(guessed?(socket, at), do: review(socket, at), else: socket)}
+
+      _bad ->
+        {:noreply, assign(socket, at: nil)}
     end
   end
+
+  def handle_event("review", %{"ply" => ply}, socket),
+    do: {:noreply, review(socket, String.to_integer(ply))}
+
+  def handle_event("pick", %{"san" => san}, %{assigns: %{choice: %{} = choice}} = socket),
+    do: {:noreply, assign(socket, choice: %{choice | picked: choice.picked ++ [san]})}
+
+  def handle_event("choice_back", _params, %{assigns: %{choice: %{} = choice}} = socket),
+    do: {:noreply, assign(socket, choice: %{choice | picked: Enum.drop(choice.picked, -1)})}
+
+  def handle_event("choice_close", _params, socket), do: {:noreply, assign(socket, choice: nil)}
+
+  # "Keep it": the line as it stands is the arbiter's now, and no longer a guess.
+  def handle_event("choice_keep", _params, %{assigns: %{choice: %{} = choice}} = socket),
+    do: decide(socket, choice, choice.alt.current)
+
+  def handle_event("choice_apply", _params, %{assigns: %{choice: %{} = choice}} = socket) do
+    case Choice.ask(choice.alt, choice.picked) do
+      %{line: line} when is_list(line) -> decide(socket, choice, line)
+      _not_yet -> {:noreply, socket}
+    end
+  end
+
+  def handle_event(event, _params, socket)
+      when event in ~w(pick choice_back choice_keep choice_apply),
+      do: {:noreply, socket}
 
   def handle_event("resync", _params, socket) do
     with_board(socket, fn board ->
       case Boards.resync(board.id, 6) do
-        {:ok, :accepted} ->
-          {:info, gettext("The moves were found and added.")}
+        {:ok, {:accepted, sans}} ->
+          {:info, gettext("Found and added: %{moves}", moves: Enum.join(sans, " "))}
 
-        {:ok, {:candidates, n}} ->
-          {:info, gettext("%{n} sequences fit the board. Pick the right one.", n: n)}
+        {:ok, {:guessed, sans, others}} ->
+          {:info,
+           gettext(
+             "Added: %{moves}. %{n} other line(s) lead to the same board, so these are marked as a guess - check them.",
+             moves: Enum.join(sans, " "),
+             n: others
+           )}
+
+        {:ok, {:rejected, sans}} ->
+          {:error,
+           gettext(
+             "The board still shows the moves you took back (%{moves}), and nothing else leads to what it reads. Put the pieces right, type the moves, or set the position.",
+             moves: Enum.join(sans, " ")
+           )}
 
         {:ok, :none} ->
           {:error,
@@ -215,13 +265,6 @@ defmodule AlnaslWeb.GameLive do
         other ->
           other
       end
-    end)
-  end
-
-  def handle_event("choose", %{"index" => index}, socket) do
-    with_board(socket, fn board ->
-      Boards.choose(board.id, String.to_integer(index))
-      {:info, gettext("Those moves were added.")}
     end)
   end
 
@@ -361,6 +404,52 @@ defmodule AlnaslWeb.GameLive do
       end
 
     {:noreply, assign(socket, fen_form: to_form(%{"fen" => fen}, as: :position))}
+  end
+
+  defp guessed?(socket, number) do
+    case socket.assigns.view do
+      %{snap: %{plies: plies}} when number >= 1 ->
+        match?(%{flags: flags} when is_list(flags), Enum.at(plies, number - 1)) and
+          :guessed in Enum.at(plies, number - 1).flags
+
+      _none ->
+        false
+    end
+  end
+
+  # Opens the question about the guessed moves around ply `number`.
+  defp review(%{assigns: %{board: %{id: id}}} = socket, number) do
+    case Boards.alternatives(id, number) do
+      %{options: [_, _ | _]} = alt ->
+        assign(socket, choice: %{ply: number, alt: alt, picked: []})
+
+      # Nothing else fits after all (or the board is not running): the
+      # line as it stands is the only one.
+      _one_or_none ->
+        assign(socket, choice: nil)
+    end
+  end
+
+  defp review(socket, _number), do: socket
+
+  defp decide(socket, choice, line) do
+    with_board(assign(socket, choice: nil), fn board ->
+      case Boards.choose(board.id, choice.ply, line) do
+        {:ok, 0} ->
+          {:info, gettext("Settled: %{moves}", moves: Enum.join(line, " "))}
+
+        {:ok, dropped} ->
+          {:info,
+           gettext(
+             "Settled: %{moves}. %{dropped} later move(s) no longer fit and were removed.",
+             moves: Enum.join(line, " "),
+             dropped: dropped
+           )}
+
+        _error ->
+          {:error, gettext("Those moves no longer fit the game. Nothing was changed.")}
+      end
+    end)
   end
 
   defp with_board(socket, fun) do
@@ -692,29 +781,41 @@ defmodule AlnaslWeb.GameLive do
             </script>
           </.panel>
 
-          <.panel
-            :if={@view.snap[:candidates] not in [nil, []]}
-            id="candidates"
-            title={gettext("Which moves were played?")}
+          <div
+            :if={marked(@view.snap.plies, :guessed) > 0 and @choice == nil}
+            id="guess-notice"
+            class="alarm mark-guess"
+            role="status"
           >
-            <p class="note">
-              {gettext(
-                "Each of these leads to what the board reads. Compare with a scoresheet and pick one."
-              )}
-            </p>
-            <div class="cands">
-              <button
-                :for={{sans, index} <- Enum.with_index(Enum.take(@view.snap.candidates, 64))}
-                id={"candidate-#{index}"}
-                type="button"
-                class="btn"
-                phx-click="choose"
-                phx-value-index={index}
-              >
-                <span :for={san <- sans} style="margin-right:0.5rem"><.figurine san={san} /></span>
-              </button>
+            <.icon name="warning" />
+            <div>
+              <b>{Words.marks(:guessed, marked(@view.snap.plies, :guessed))}</b>
+              <p>
+                {gettext(
+                  "More than one line of moves led to what the board showed. The box took one and went on. Compare with a scoresheet when there is a moment."
+                )}
+              </p>
+              <.button
+                id="review-guess"
+                small
+                phx-click="review"
+                phx-value-ply={first_marked(@view.snap.plies, :guessed)}
+                style="margin-top:0.4rem"
+              >{gettext("Check them")}</.button>
             </div>
-          </.panel>
+          </div>
+          <div
+            :if={marked(@view.snap.plies, :recovered) > 0}
+            id="reconstructed-notice"
+            class="note mark-rec"
+          >
+            <span class="flag rec">{Words.flag(:recovered)}</span>
+            {Words.marks(:recovered, marked(@view.snap.plies, :recovered))}: {gettext(
+              "not seen one by one, and only one line of moves fits."
+            )}
+          </div>
+
+          <.choice :if={@choice} choice={@choice} line={@view.line} />
 
           <.panel id="tools" title={gettext("Repair")}>
             <div class="tools">
@@ -881,7 +982,13 @@ defmodule AlnaslWeb.GameLive do
     {ply, index} = assigns.ply
     # `:unseen` is said once, above the board, not beside every move made
     # while it lasted.
-    assigns = assign(assigns, move: ply, index: index, flags: ply.flags -- [:long_gap, :unseen])
+    assigns =
+      assign(assigns,
+        move: ply,
+        index: index,
+        flags: ply.flags -- [:long_gap, :unseen],
+        mark: Enum.find([:guessed, :recovered], &(&1 in ply.flags))
+      )
 
     ~H"""
     <button
@@ -891,15 +998,155 @@ defmodule AlnaslWeb.GameLive do
         "ply",
         @index == @last && "last",
         @index == @at && "at",
-        @flags != [] && "flagged"
+        @flags != [] && "flagged",
+        @mark == :guessed && "guess",
+        @mark == :recovered && "rec"
       ]}
       phx-click="goto"
       phx-value-ply={@index}
       aria-current={if @index == (@at || @last), do: "true"}
     >
       <.figurine san={@move.san} />
-      <span :for={flag <- @flags} class="flag">{Words.flag(flag)}</span>
+      <span
+        :for={flag <- @flags}
+        class={["flag", flag == :guessed && "guess", flag == :recovered && "rec"]}
+      >{Words.flag(flag)}</span>
     </button>
+    """
+  end
+
+  defp marked(plies, mark), do: Enum.count(plies, &(mark in &1.flags))
+
+  defp first_marked(plies, mark),
+    do: (Enum.find_index(plies, &(mark in &1.flags)) || 0) + 1
+
+  # The question about guessed moves: the position before them, the
+  # position after, and one move at a time.
+  attr :choice, :map, required: true
+  attr :line, :list, required: true
+
+  defp choice(assigns) do
+    %{alt: alt, picked: picked} = assigns.choice
+    ask = Choice.ask(alt, picked)
+    before = alt.fen |> Position.from_fen() |> Position.to_text()
+
+    after_them =
+      case Enum.at(assigns.line, alt.to) do
+        {position, _squares} -> position
+        nil -> nil
+      end
+
+    assigns =
+      assign(assigns,
+        alt: alt,
+        ask: ask,
+        picked: picked,
+        before: before,
+        after_them: after_them,
+        total: length(alt.options)
+      )
+
+    ~H"""
+    <.panel id="choice" title={gettext("Which moves were played?")}>
+      <p id="choice-what" class="note">
+        {gettext(
+          "Moves %{from} to %{to} in the list were not seen one by one, and %{n} lines of moves lead from the first board to the second. One question at a time; moves that every line has are not asked about.",
+          from: @alt.from,
+          to: @alt.to,
+          n: @total
+        )}
+      </p>
+      <div class="choice-ends">
+        <figure>
+          <figcaption>{gettext("Before them")}</figcaption>
+          <.board
+            id="choice-before"
+            position={@before}
+            label={gettext("The position before those moves")}
+          />
+        </figure>
+        <figure>
+          <figcaption>{gettext("After them")}</figcaption>
+          <.board
+            id="choice-after"
+            position={@after_them}
+            label={gettext("The position after those moves")}
+          />
+        </figure>
+      </div>
+
+      <p :if={@ask.settled != []} id="choice-settled" class="choice-line">
+        <span class="note">{gettext("So far")}:</span>
+        <span :for={san <- @ask.settled} class="choice-san"><.figurine san={san} /></span>
+      </p>
+
+      <div :if={@ask.line == nil} id="choice-question">
+        <b id="choice-ask">
+          {if @ask.white?,
+            do:
+              gettext("Move %{n} in the list, White: which was it?",
+                n: @ask.number
+              ),
+            else:
+              gettext("Move %{n} in the list, Black: which was it?",
+                n: @ask.number
+              )}
+        </b>
+        <div class="choice-options">
+          <button
+            :for={{option, index} <- Enum.with_index(@ask.options)}
+            id={"choice-option-#{index}"}
+            type="button"
+            class={["choice-option", option.standing? && "standing"]}
+            phx-click="pick"
+            phx-value-san={option.san}
+          >
+            <.board
+              position={option.position}
+              last={option.squares}
+              label={gettext("The board after %{move}", move: option.san)}
+            />
+            <span class="choice-san"><.figurine san={option.san} /></span>
+            <span :if={option.standing?} class="flag plain">{gettext("as it stands")}</span>
+            <span class="note">
+              {ngettext("%{count} line left", "%{count} lines left", option.left)}
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <div :if={@ask.line} id="choice-answer">
+        <b>{gettext("That leaves one line:")}</b>
+        <p class="choice-line">
+          <span
+            :for={{san, changed?} <- Enum.zip(@ask.line, @ask.changed)}
+            class={["choice-san", changed? && "changed"]}
+          ><.figurine san={san} /></span>
+        </p>
+        <p :if={Enum.any?(@ask.changed)} class="note">
+          {gettext("The outlined moves differ from the game as it stands.")}
+        </p>
+      </div>
+
+      <div class="row" style="margin-top:0.6rem">
+        <.button :if={@ask.line} id="choice-apply" variant="primary" phx-click="choice_apply">
+          {gettext("Use this line")}
+        </.button>
+        <.button
+          id="choice-keep"
+          variant={if @ask.line, do: nil, else: "primary"}
+          phx-click="choice_keep"
+        >
+          {gettext("Keep it as it stands")}
+        </.button>
+        <.button :if={@picked != []} id="choice-back" phx-click="choice_back">
+          {gettext("One question back")}
+        </.button>
+        <.button id="choice-close" variant="ghost" phx-click="choice_close">
+          {gettext("Not now")}
+        </.button>
+      </div>
+    </.panel>
     """
   end
 

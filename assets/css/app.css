@@ -2164,3 +2164,115 @@ tr.sought td:first-child {
 .theme-grid .theme-picker-item[aria-pressed="true"] {
   border: 2px solid var(--accent);
 }
+
+/* --- moves the box worked out: orange for one line, red for a guess ---------
+ * Always with the word beside it and a shape before it: a diamond for
+ * "reconstructed", a question mark for "guessed". */
+
+.flag.rec {
+  background: var(--reconstructed-bg);
+  color: var(--reconstructed);
+}
+
+.flag.rec::before {
+  content: "\25C7\00a0";
+}
+
+.flag.guess {
+  background: var(--guessed-bg);
+  color: var(--guessed);
+}
+
+.flag.guess::before {
+  content: "?\00a0";
+  font-weight: 800;
+}
+
+.moves .ply.rec {
+  box-shadow: inset 3px 0 0 var(--reconstructed);
+}
+
+.moves .ply.guess {
+  box-shadow: inset 3px 0 0 var(--guessed);
+}
+
+.alarm.mark-guess {
+  border-color: var(--guessed);
+  background: var(--guessed-bg);
+}
+
+.alarm.mark-guess > svg {
+  color: var(--guessed);
+}
+
+.tile-marks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0.15rem 0;
+}
+
+.choice-ends {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  max-width: 26rem;
+  margin: 0.5rem 0;
+}
+
+.choice-ends figure {
+  margin: 0;
+}
+
+.choice-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.6rem;
+  align-items: baseline;
+  margin: 0.4rem 0;
+}
+
+.choice-san {
+  font-weight: 650;
+}
+
+.choice-san.changed {
+  outline: 2px solid var(--guessed);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+.choice-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+}
+
+.choice-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.choice-option:hover,
+.choice-option:focus-visible {
+  border-color: var(--accent);
+}
+
+.choice-option.standing {
+  border: 2px solid var(--accent);
+}
+
+.choice-option .board {
+  width: 100%;
+}

@@ -148,13 +148,12 @@ defmodule AlnaslWeb.RoundAndGameTest do
           Position.to_text(List.last(boards_after(~w(e4 e5) ++ line)))
       end)
 
-      view |> element("#tool-resync") |> render_click()
-      assert has_element?(view, "#candidates #candidate-0")
-
-      index = Enum.find_index(Boards.snapshot(board.id).candidates, &(&1 == line))
-      view |> element("#candidate-#{index}") |> render_click()
-      assert sans(board.id) == ~w(e4 e5) ++ line
-      assert has_element?(view, "#ply-8 .flag")
+      # More than one order of them is legal: one is taken, the page says
+      # so, and every move of it is marked.
+      assert view |> element("#tool-resync") |> render_click() =~ "marked as a guess"
+      assert length(sans(board.id)) == 8
+      assert has_element?(view, "#ply-8.guess .flag.guess")
+      assert has_element?(view, "#guess-notice", "6 moves guessed")
       eventually_html(view, fn _ -> not has_element?(view, "#twin") end)
     end
 

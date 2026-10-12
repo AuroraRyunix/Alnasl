@@ -333,12 +333,19 @@ page says so, and simulator boards are unaffected.
   DGT board), `DgtBus` (a loop of them).
 - **The tracker turns positions into moves.** It keeps the last *certain*
   position. A board one legal move away is that move, once it has stood
-  still for a moment (or at once on a clock press). A board that is not is
-  searched for: the shortest sequence of legal moves that explains it. One
-  answer is accepted and flagged; several are kept as candidates; none is a
-  hand over the board - and only if it stays unexplained does the board go
-  "Out of sync", raised to the arbiter, and it comes back by itself the
-  moment the pieces make sense again.
+  still for a moment (or at once on a clock press).
+- **A board that has run ahead is caught up, not stopped.** When the board
+  is further from the game than one move, the box looks for the legal moves
+  in between - first among the squares it saw change, then among all of
+  them - takes what it finds and marks it: **reconstructed** (orange, a
+  diamond) when one line of moves fits, **guessed** (red, a question mark)
+  when several did and one was taken, by the clock's press count, the order
+  the readings show, and a fixed tie-break. The marks are on the moves, on
+  the Round tile and in the Boards list, and in the log. A tap on a red
+  move asks which line it was, one move at a time, each option on a small
+  board. Only when no line of legal moves leads to the board does it go
+  "Out of sync" - and it comes back by itself the moment the pieces make
+  sense again.
 - **A piece that leaves the board is not a reason to stop.** A player parks
   a knight beside the board, or a sensor loses a piece: when one piece (never
   a king) is gone from its square and the game goes on around it, it is
@@ -361,44 +368,51 @@ page says so, and simulator boards are unaffected.
 
 ## What is proven, and how
 
-By `mix test` (330 tests), three tools, and two evenings with a real board:
+By `mix test` (348 tests), three tools, and two evenings with a real board:
 
 **The tracker**, against 69 games (59 classics before 1930, 7 constructed
 for underpromotion and en passant, 3 more; 4599 plies) played through the
 simulator under each fault mix, three passes each (`mix alnasl.bench
 --passes 3`, 207 games a row):
 
-| fault mix | exact | stopped, asked | wrong but flagged | **wrong, silent** |
-|---|---|---|---|---|
-| clean; hover, lift, knock, swap, missing clock presses, pawn left for a queen, takebacks, slides - each alone at 20-30%, and all together | 207 of 207, every row; **no alarm ever raised** | 0 | 0 | **0** |
-| a piece not seen where it stands for 1-5 plies (5% of plies): alone, without a clock, and with the benign faults at 5% each | 207 of 207, every row; no alarm | 0 | 0 | **0** |
-| one ply at a time unseen (10%), alone and with the others | 198-204 | 3-9 | 0 | **0** |
-| unplugged for 2 plies, twice | 204 | 3 | 0 | **0** |
-| up to 3 plies in a row unseen (25%) | 15 | 192 | 0 | **0** |
-| unplugged for 3 plies | 0 | 204 | 3 | **0** |
-| unplugged for 8 plies (beyond the search) | 0 | 207 | 0 | **0** |
-| an illegal move at ply 12, played on | - | 207 | 0 | **0** |
-| bullet speed (a move every 0.3-2 s, the clock a second late), no faults; defaults, and "Bullet / fast play" | 207 of 207, both | 0 | 0 | **0** |
-| bullet with slammed and knocked-over pieces, 6% of plies unseen, 10% of presses unreported; "Bullet / fast play" | 204 | 3 | 0 | **0** |
+| fault mix | every move seen | reconstructed (orange): right / wrong | guessed (red): right / wrong | alarm | **wrong, unmarked** |
+|---|---|---|---|---|---|
+| clean; hover, lift, knock, swap, missing clock presses, pawn left for a queen, takebacks, slides - each alone at 20-30%, and all together | 207 of 207, every row; **no alarm, no mark** | - | - | 0 | **0** |
+| a piece not seen where it stands for 1-5 plies (5% of plies): alone, without a clock, and with the benign faults at 5% each | 207 of 207, every row | - | - | 0 | **0** |
+| one ply at a time unseen (10%) | 6 | 194 / 0 | 5 / 2 | 0 | **0** |
+| the same, with the other faults at 5% | 11 | 188 / 0 | 6 / 2 | 0 | **0** |
+| unplugged for 2 plies, twice | 0 | 204 / 0 | 0 / 3 | 0 | **0** |
+| up to 3 plies in a row unseen (25%) | 0 | 46 / 6 | 67 / 83 (and 1 wrong at a move marked otherwise) | 4 | **0** |
+| unplugged for 3 plies | 0 | 107 / 3 | 55 / 41 | 1 | **0** |
+| unplugged for 8 plies | 0 | 3 / 0 | 6 / 72 | 126 | **0** |
+| an illegal move at ply 12, played on | - | 0 / 1 | 0 / 21 | 185 | **0** |
+| bullet speed (a move every 0.3-2 s, the clock a second late), no faults; defaults, and "Bullet / fast play" | 206, both | 1 / 0, both | - | 0 | **0** |
+| bullet with slammed and knocked-over pieces, 6% of plies unseen, 10% of presses unreported; "Bullet / fast play" | 24 | 180 / 0 | 2 / 1 | 0 | **0** |
 
-The box works out up to **two** unseen plies by itself (`search_depth`, 2;
-Setup can raise it). That is why three unseen plies are now always an alarm
-and an illegal move always is: searching four plies deep, 11 of 207 illegal
-moves were "recovered" into games that were never played.
+A game is counted once, by the worst thing in it: "guessed, wrong" is a
+game in which the first move that differs from the game played is a red
+one. Read the hard rows for what they are. With one ply at a time unseen,
+or the cable out for two, the box now finishes 201-204 games in 207 by
+itself, where it used to stop and ask in 3-9; the 2-3 it gets wrong are
+the positions two different pairs of moves lead to, marked red. With
+three plies or more unseen and nothing read of them, a red move is wrong
+about as often as it is right - per move 71% right with a quarter of all
+plies unseen, 62% with the cable out for three - because the order of two
+moves nobody read is a coin toss; and an orange one is wrong in 3-6 games
+in 207, where two moves explain a board that three made. That is the
+limit of reading a game from positions, `docs/design.md` says exactly
+where it lies, and the marks are how the box says it too. After eight
+unseen plies or an illegal move the alarm is still the usual end.
 
-"Stopped, asked" is the tracker raising the board to the arbiter with what it
-emitted until then correct - mostly a genuine ambiguity (a pawn that went one
-square or two and was then taken leaves the same board), with the true
-continuation among the candidates it keeps following. "Wrong but flagged" is
-where three or more unseen plies had a shorter legal explanation than the
-truth; the moves are marked *recovered*. That is the limit of reading a game
-from positions, and `docs/design.md` says exactly where it lies. The tests
-assert the last column and the first row.
+The tests assert the last column on every row, the first on the first two
+rows, and that no orange move is wrong where at most two plies went by
+unseen.
 
-The search for unseen moves is bounded: worst case over 400 scrambled
-positions at depth 4 is about 0.1 s on a desktop (mean 15 ms, 3259 nodes);
-inside the fault matrix, at the default depth of 2, the worst single search
-was 6 ms.
+The search is bounded: 8 plies among the squares that were seen to change
+(4 ms on average at six plies, about 0.1 s at eight), 4 plies among all
+moves (20 ms on average), and a budget of nodes and of time after which it
+gives up and says so: half a second at most by itself, which is also the
+worst single search in the fault matrix.
 
 **The outbox**, against a server that speaks the real contract in tests:
 order across outages, a restart mid-queue, 500 / 503 / 429, duplicates,
@@ -503,9 +517,15 @@ and names on every page in both languages.
   with the pieces in the starting position. A clock swapped or re-set
   wrongly in the middle of a game is not looked for.
 - **Chess960** is not supported (neither is it by the server's checker).
-- **Three or more moves unseen in a row** are an alarm, not a guess, at the
-  default search depth of 2; raised in Setup they can be reconstructed
-  wrongly in constructed cases (flagged, never silent).
+- **Three or more moves unseen in a row**, with nothing read of them, are
+  reconstructed with a mark that is wrong about as often as right where
+  two moves could have been played in either order (see the table). The
+  clock's press count is used against the other failure - two moves
+  explaining what three made - but the simulator does not press for a
+  move it hides, so that rule is tested by hand, not by the matrix.
+- **Marks are not kept across a choice of line forever**: the alternatives
+  for a red move are searched for again when asked, from the game as
+  stored, without the readings that ranked them the first time.
 - **Bullet on a real board has not been played.** The fast-play rules and
   numbers come from the simulator (`docs/design.md`, "Fast play"). How a
   real board's scan reads a slammed or toppled piece is not known; the

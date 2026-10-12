@@ -28,9 +28,10 @@ defmodule Alnasl.Tracker do
   4. it is one move away from the position before the last move - the last
      move is replaced (a rook sliding through a square, a hand that let go
      and took hold again);
-  5. it is two or more legal moves away - `Alnasl.Tracker.Search`. One answer
-     is accepted and flagged `:recovered`; several are kept as candidates and
-     narrowed by the boards that follow;
+  5. it is two or more legal moves away - the moves are looked for
+     (`reconstruct/4`, `Alnasl.Tracker.Search`), taken, and marked: one line
+     `:recovered`, one of several `:guessed`. The board keeps up; the mark
+     says how sure that is;
   6. the reading before this one was one legal move, and now one or two
      other pieces are in the air - the next hand is already on the board.
      The move is accepted at once: in fast play nothing stands still for
@@ -49,13 +50,17 @@ defmodule Alnasl.Tracker do
     :arbiter`;
   - `{:restart, fen}` - the game starts over from this position;
   - `{:status, status, detail}` - `:waiting_start | :live | :settling |
-    :ambiguous | :out_of_sync`;
+    :out_of_sync`;
+  - `{:unseen, [%{square, piece}]}` - the pieces taken to stand where the
+    board does not show them, whenever that list changes;
   - `{:result_suggestion, result, why}` - mate, stalemate, bare kings, or the
     kings set in the centre. A suggestion: the arbiter decides.
 
   A ply is `%{san, from, to, promo, flags, at, fen}`; `flags` may hold
-  `:recovered` (found by the search), `:long_gap` (three or more at once),
-  `:assumed` (promotion piece not seen), `:arbiter` (entered by hand).
+  `:recovered` (reconstructed: not seen, and one line of moves fits),
+  `:guessed` (not seen, and one of several lines was taken), `:long_gap`
+  (three or more at once), `:assumed` (promotion piece not seen), `:unseen`
+  (made while a piece was out of sight), `:arbiter` (entered by hand).
   """
 
   alias Alnasl.{Chess, Position}
@@ -78,10 +83,13 @@ defmodule Alnasl.Tracker do
     # than two of those only once the board has stood for `deep_settle_ms`).
     # Nothing found this way is silent: one path is marked `:recovered`,
     # one of several `:guessed`.
-    search_depth: 10,
+    search_depth: 8,
     blind_depth: 4,
-    max_nodes: 60_000,
-    max_ms: nil,
+    # More clock presses than moves: look for a longer path than the
+    # shortest (`pressed_for/3`).
+    press_count: true,
+    max_nodes: 4_000,
+    max_ms: 500,
     transient_ms: 8_000,
     lifted_ms: 60_000,
     promotion_default: :q,
@@ -117,6 +125,7 @@ defmodule Alnasl.Tracker do
             detail: nil,
             trail: [],
             presses: nil,
+            rejected: nil,
             memo: nil,
             gesture: nil,
             held: nil,
@@ -257,12 +266,29 @@ defmodule Alnasl.Tracker do
   Takes back the last `n` plies. The board, which usually still shows them,
   is not read again until it changes: the arbiter has just said what it
   shows is not the game, and re-reading it at once would put the move back.
+
+  Nor are they found again later. The moves taken back are remembered as
+  `rejected` for the position they were taken back to, and no search from
+  there - the tracker's own, or "The board is right" - returns exactly
+  them: an arbiter who takes six moves back and asks what the board shows
+  wants another answer, not the same six. Any move accepted, by the board
+  or by hand, ends that - and so does the game going on: those moves with
+  another played on top are found like any others.
   """
   def undo(%__MODULE__{} = tr, t, n \\ 1) do
     keep = max(length(tr.plies) - n, 0)
     was = tr
+    undone = tr.plies |> Enum.drop(keep) |> Enum.map(& &1.san)
+
+    earlier =
+      case tr.rejected do
+        %{count: count, sans: sans} when count == length(tr.plies) -> sans
+        _other -> []
+      end
+
     {tr, events} = correct(tr, t, keep, [], :arbiter)
-    noting({%{tr | held: tr.raw}, events}, was)
+    tr = %{tr | held: tr.raw, rejected: %{count: keep, sans: undone ++ earlier}}
+    noting({tr, events}, was)
   end
 
   @doc "Adds moves typed in SAN. `{:error, {index, message}}` names the first that is not legal."
@@ -270,7 +296,7 @@ defmodule Alnasl.Tracker do
     with {:ok, steps} <- parse_sans(tr.pos, sans) do
       was = tr
       {tr, plies} = push(tr, steps, [:arbiter], t, nil)
-      tr = %{tr | memo: nil}
+      tr = %{tr | memo: nil, rejected: nil}
       {:ok, {tr, [{:moves, plies}]} |> and_then(&evaluate(&1, t, false)) |> noting(was)}
     end
   end
@@ -323,47 +349,63 @@ defmodule Alnasl.Tracker do
   tracker does by itself (`depth` plies even where nothing was seen of
   them). `{tracker, events, outcome}` with `outcome` one of
   `{:accepted, sans}` (one path), `{:guessed, sans, others}` (one of
-  several, taken; `others` is how many more), `:none`, `:budget`.
+  several, taken; `others` is how many more), `{:rejected, sans}` (nothing
+  explains the board but the moves the arbiter has just taken back),
+  `:none`, `:budget`.
   """
   def resync(%__MODULE__{raw: nil} = tr, _t, _depth), do: {tr, [], :none}
 
   def resync(%__MODULE__{} = tr, t, depth) do
     o = tr.opts
 
+    # The arbiter says the board is a game: not pieces being set up.
     wide = %{
       tr
       | memo: nil,
+        begun?: true,
         opts: %{
           o
           | search_depth: max(depth, o.search_depth),
             blind_depth: depth,
-            max_nodes: o.max_nodes * 10,
+            # The arbiter asked and is waiting: seconds, not a fraction of one.
+            max_nodes: o.max_nodes * 100,
             max_ms: o.max_ms && o.max_ms * 10
         }
     }
 
-    {found, hit?, wide} = paths(wide, here(wide), o.deep_settle_ms, :all, 1)
+    {found, sure?, hit?, wide} = paths(wide, here(wide), o.deep_settle_ms, :all, 1)
 
     case found do
       [] ->
-        {tr, [], if(hit?, do: :budget, else: :none)}
+        # Nothing - or nothing but the moves that were just taken back.
+        {again, _sure?, _hit?, _wide} =
+          paths(%{wide | rejected: nil}, here(wide), o.deep_settle_ms, :all, 1)
+
+        outcome =
+          cond do
+            again != [] -> {:rejected, tr.rejected.sans}
+            hit? -> :budget
+            true -> :none
+          end
+
+        {tr, [], outcome}
 
       [best | rest] ->
-        flags = if rest == [], do: [:recovered, :arbiter], else: [:guessed]
+        flags = if rest == [] and sure?, do: [:recovered, :arbiter], else: [:guessed]
         {done, events} = wide |> accept(t, best.steps, flags) |> noting(tr)
         sans = done.plies |> Enum.drop(length(tr.plies)) |> Enum.map(& &1.san)
-        done = %{done | opts: o, memo: nil}
+        done = %{done | opts: o, memo: nil, begun?: tr.begun?}
 
         {done, events,
-         if(rest == [], do: {:accepted, sans}, else: {:guessed, sans, length(rest)})}
+         if(:guessed in flags, do: {:guessed, sans, length(rest)}, else: {:accepted, sans})}
     end
   end
 
   @doc """
   The other ways the reconstructed moves around ply `number` (1-based)
-  could have gone: every legal sequence of the same length (or shorter)
-  from the position before that run of marked moves to the position after
-  it, over the squares its moves used.
+  could have gone: every legal sequence of the same length from the
+  position before that run of marked moves to the position after it, over
+  the squares its moves used.
 
   `%{from: first_ply, to: last_ply, fen: fen_before, current: [san],
   options: [[san]]}` - `options` has `current` first - or `nil` when that
@@ -380,10 +422,9 @@ defmodule Alnasl.Tracker do
         Position.diff(before.phys, target) ++ Enum.flat_map(run, &[&1.from, &1.to])
 
       found =
-        for depth <- Enum.uniq([1, length(run)]),
-            {:ok, found, _nodes} <- [
+        for {:ok, found, _nodes} <- [
               Search.find(before.pos, before.phys, target,
-                min_depth: depth,
+                min_depth: length(run),
                 max_depth: length(run),
                 max_nodes: tr.opts.max_nodes,
                 promotion_default: tr.opts.promotion_default,
@@ -716,37 +757,86 @@ defmodule Alnasl.Tracker do
   # 2. the same without that guide, for moves nobody saw anything of: two
   #    plies, `blind_depth` once the board has stood for `deep_settle_ms`;
   # 3. with the absent piece taken to be unseen (two plies);
-  # 4. from before the last moves that were themselves reconstructed: they
-  #    explained the board then, and do not explain this one.
+  # 4. once the board has stood unexplained for `transient_ms`: from before
+  #    the last moves that were themselves reconstructed. They explained
+  #    the board then, and do not explain this one.
   #
   # One path is accepted and marked `:recovered`. Of several, the first by
   # `rank/3` is accepted and marked `:guessed`; `alternatives/2` lists the
   # others for the arbiter. None: the alarm, as before.
   defp reconstruct(tr, t, stable, scope) do
-    {found, hit?, tr} = paths(tr, here(tr), stable, scope, 2)
+    {found, sure?, hit?, tr} = paths(tr, here(tr), stable, scope, 2)
     why = if hit?, do: :search_gave_up, else: :unexplained
+
+    found =
+      if stable >= tr.opts.deep_settle_ms or not in_hand?(tr, found), do: found, else: []
 
     cond do
       found != [] ->
-        accept(tr, t, hd(found).steps, mark(found))
+        accept(tr, t, hd(found).steps, mark(found, sure?))
 
       (result = unseen_search(tr, t, stable)) != nil ->
         result
 
-      (from = anchor(tr)) != nil ->
-        {found, _hit?, tr} = paths(tr, from, stable, :guided, 1)
+      # Only when the alarm is next: a king on g8 with its rook still on h8
+      # is half a castle for a second, and a king's walk if one insists.
+      (from = stable >= tr.opts.transient_ms && anchor(tr)) not in [nil, false] ->
+        {found, sure?, _hit?, tr} = paths(tr, from, stable, :guided, 1)
 
         if found == [],
           do: unexplained(tr, stable, why),
-          else: correct(tr, t, from.count, marked(hd(found).steps, mark(found)), :revised)
+          else:
+            correct(
+              tr,
+              t,
+              from.count,
+              marked(hd(found).steps, mark(found, sure?)),
+              :revised
+            )
 
       true ->
         unexplained(tr, stable, why)
     end
   end
 
-  defp mark([_one]), do: [:recovered]
-  defp mark(_several), do: [:guessed]
+  # The paths take a piece - and the same board with one missing piece put
+  # back is explained by fewer moves (or by none). Then it is that, and a
+  # piece in a hand: a queen lifted off d3 beside a rook that went to e3
+  # unseen reads exactly like "the rook went to e3, the queen came to e3
+  # by way of e4, and was taken there". Hands are over the board a hundred
+  # times a game and queens are lost that way never, so such paths are
+  # believed only of a board that has stood for `deep_settle_ms`.
+  defp in_hand?(_tr, []), do: false
+
+  defp in_hand?(tr, [one | _]) do
+    from = here(tr)
+    gone = for sq <- Position.diff(from.phys, tr.raw), elem(tr.raw, sq) == nil, do: sq
+    takes? = Position.count(tr.raw) < Position.count(from.phys)
+
+    takes? and
+      Enum.any?(gone, fn sq ->
+        board = put_elem(tr.raw, sq, elem(from.phys, sq))
+
+        board == from.phys or
+          match?(
+            {:ok, [_ | _], _nodes},
+            Search.find(from.pos, from.phys, board,
+              min_depth: 1,
+              max_depth: length(one.steps) - 1,
+              max_nodes: tr.opts.max_nodes,
+              max_ms: tr.opts.max_ms,
+              promotion_default: tr.opts.promotion_default,
+              unseen: Enum.map(from.unseen, & &1.square),
+              touch: touched(tr, from)
+            )
+          )
+      end)
+  end
+
+  # One path, and a search of every move (not only the ones that were
+  # seen) agrees it is the only one: orange. Anything less sure: red.
+  defp mark([_one], true), do: [:recovered]
+  defp mark(_found, _sure?), do: [:guessed]
 
   defp marked(steps, flags) do
     flags = if length(steps) >= 3, do: flags ++ [:long_gap], else: flags
@@ -773,31 +863,59 @@ defmodule Alnasl.Tracker do
     end
   end
 
-  # The paths from `from` to the board, best first: `{found, budget_hit?, tr}`.
+  # The paths from `from` to the board, best first: `{found, sure?,
+  # budget_hit?, tr}`. `sure?` when the search that found them looked at
+  # every move, so that one path found is the one path there is: the
+  # guided search leaves out a move that left no trace (a pawn that went
+  # two squares and was taken in passing while nobody read the board never
+  # stood on its square), and what it finds is checked against the blind
+  # one wherever that reaches.
   defp paths(tr, from, stable, scope, min) do
     o = tr.opts
-    {guided, tr} = search(tr, from, min, o.search_depth, touched(tr, from))
 
-    {found, hit?, tr} =
+    # Before the first move a board is pieces being set up, and a board
+    # half set up is not to be read as an opening: two plies, as a board
+    # that was plugged in late has always been caught up, and no more -
+    # until the clock says a game is on.
+    far = if tr.plies == [] and not tr.begun?, do: min(o.search_depth, 2), else: o.search_depth
+    reach = min(far, if(stable >= o.deep_settle_ms, do: o.blind_depth, else: 2))
+    {guided, tr} = search(tr, from, min, far, touched(tr, from))
+
+    {found, sure?, hit?, tr} =
       case guided do
-        {:ok, [_ | _] = found} ->
-          {found, false, tr}
+        {:ok, [one | _] = found} ->
+          depth = length(one.steps)
+
+          if depth <= o.blind_depth do
+            case search(tr, from, min, depth, nil) do
+              {{:ok, blind}, tr} -> {found ++ blind, true, false, tr}
+              {:budget, tr} -> {found, false, true, tr}
+            end
+          else
+            {found, false, false, tr}
+          end
 
         guided when scope == :guided ->
-          {[], guided == :budget, tr}
+          {[], false, guided == :budget, tr}
 
         guided ->
-          depth = min(o.search_depth, if(stable >= o.deep_settle_ms, do: o.blind_depth, else: 2))
-
-          case search(tr, from, min, depth, nil) do
-            {{:ok, found}, tr} -> {found, guided == :budget, tr}
-            {:budget, tr} -> {[], true, tr}
+          case search(tr, from, min, reach, nil) do
+            {{:ok, found}, tr} -> {found, true, guided == :budget, tr}
+            {:budget, tr} -> {[], false, true, tr}
           end
       end
 
     {found, tr} = pressed_for(tr, from, distinct(found))
-    {rank(tr, from, found), hit?, tr}
+    {rank(tr, from, allowed(tr, from, found)), sure?, hit?, tr}
   end
+
+  # Not the moves the arbiter has just taken back from this position
+  # (`undo/3`). Those moves and another on top are a different matter: the
+  # game has gone on over them, and the board keeps up.
+  defp allowed(%{rejected: %{count: count, sans: sans}}, %{count: count} = from, found),
+    do: Enum.reject(found, &(sans_of(from.pos, &1.steps) == sans))
+
+  defp allowed(_tr, _from, found), do: found
 
   # The clock has been pressed more often than these paths have moves: they
   # are too short to be the whole story. Longer ones are looked for, and
@@ -805,16 +923,21 @@ defmodule Alnasl.Tracker do
   # proves nothing, more does.)
   defp pressed_for(tr, _from, [] = found), do: {found, tr}
   defp pressed_for(%{presses: nil} = tr, _from, found), do: {found, tr}
+  defp pressed_for(%{opts: %{press_count: false}} = tr, _from, found), do: {found, tr}
 
   defp pressed_for(tr, from, [one | _] = found) do
     have = length(one.steps)
-    want = tr.presses - from.count
+    # One press is allowed for: the lever that started the clock is a
+    # press too on some clocks, and "Move missing?" waits for two as well.
+    want = tr.presses - 1 - from.count
 
     if want > have and have < tr.opts.search_depth do
-      case search(tr, from, have + 1, min(want + 1, tr.opts.search_depth), touched(tr, from)) do
-        {{:ok, longer}, tr} -> {distinct(longer) ++ found, tr}
-        {:budget, tr} -> {found, tr}
-      end
+      o = tr.opts
+      {guided, tr} = search(tr, from, have + 1, min(want + 1, o.search_depth), touched(tr, from))
+      # The presses are all there is to go on when the moves left no trace.
+      {blind, tr} = search(tr, from, have + 1, min(want + 1, o.blind_depth), nil)
+      longer = for {:ok, more} <- [guided, blind], one <- more, do: one
+      {distinct(longer) ++ found, tr}
     else
       {found, tr}
     end
@@ -833,8 +956,8 @@ defmodule Alnasl.Tracker do
   # Which of several paths to take. In this order: the longer ones the
   # clock asked for stay ahead of the shorter (the sort is stable and they
   # came first); then the one whose moves the readings show in that order
-  # (`out_of_order/3`); then the one that assumes least about a promotion;
-  # then by the moves' names, so that the same board always gives the same
+  # (`out_of_order/3`); then the one that assumes least about a promotion,
+  # and a queen before any other piece nobody saw; then by the moves' names, so that the same board always gives the same
   # game.
   defp rank(_tr, _from, [] = found), do: found
   defp rank(_tr, _from, [_one] = found), do: found
@@ -848,36 +971,42 @@ defmodule Alnasl.Tracker do
     Enum.sort_by(found, fn one ->
       {longest - length(one.steps), out_of_order(from, one.steps, boards),
        Enum.count(one.steps, fn {_move, flags} -> :assumed in flags end),
+       Enum.count(one.steps, fn {move, _flags} -> move.promo not in [nil, :q] end),
        sans_of(from.pos, one.steps)}
     end)
   end
 
-  # How many of the moves are not seen in the readings in the order the
-  # path has them: each move is looked for - both its squares reading as
-  # the move leaves them - from the reading where the move before it was
-  # found. A game played move by move in front of the board scores 0 for
-  # the order it was played in, and more for the same moves in another.
+  # How many of the moves the readings show in another order than the path
+  # has them. Each move is first shown by some reading - both its squares
+  # reading as the move leaves them - and a move first shown before the
+  # move that the path plays ahead of it is out of order. A game played
+  # move by move in front of the board scores 0 for the order it was
+  # played in and more for the same moves in another; moves nobody read
+  # one by one are all first shown by the same reading, and score 0
+  # whatever their order.
   defp out_of_order(from, steps, boards) do
-    {_phys, _pos, _rest, missed} =
-      Enum.reduce(steps, {from.phys, from.pos, boards, 0}, fn {move, flags},
-                                                              {phys, pos, rest, missed} ->
+    indexed = Enum.with_index(boards)
+
+    {_phys, _pos, _last, wrong} =
+      Enum.reduce(steps, {from.phys, from.pos, 0, 0}, fn {move, flags},
+                                                         {phys, pos, last, wrong} ->
         {board, _} =
           phys
           |> Search.outcomes(move, pos.turn, tr_default(flags))
           |> Enum.find(fn {_board, f} -> :assumed in f == :assumed in flags end)
 
-        shows? = fn seen ->
-          elem(seen, move.from) == elem(board, move.from) and
-            elem(seen, move.to) == elem(board, move.to)
-        end
+        shown =
+          Enum.find_value(indexed, length(boards), fn {seen, index} ->
+            if elem(seen, move.from) == elem(board, move.from) and
+                 elem(seen, move.to) == elem(board, move.to),
+               do: index
+          end)
 
-        case Enum.drop_while(rest, &(not shows?.(&1))) do
-          [] -> {board, Chess.apply_move(pos, move), rest, missed + 1}
-          found -> {board, Chess.apply_move(pos, move), found, missed}
-        end
+        next = Chess.apply_move(pos, move)
+        if shown < last, do: {board, next, last, wrong + 1}, else: {board, next, shown, wrong}
       end)
 
-    missed
+    wrong
   end
 
   # A step flagged `:assumed` was found with the promotion default in
@@ -892,7 +1021,8 @@ defmodule Alnasl.Tracker do
          true <- stable >= tr.opts.unseen_hold_ms,
          {{:ok, found}, supposed} <- search(supposed, here(supposed), 2, 2, nil),
          [one] <- distinct(found) do
-      supposed |> accept(t, one.steps, [:recovered]) |> since(tr)
+      # A supposition on top of a search: red, not orange.
+      supposed |> accept(t, one.steps, [:guessed]) |> since(tr)
     else
       _no -> nil
     end
@@ -995,7 +1125,7 @@ defmodule Alnasl.Tracker do
 
   defp accept_under_hand(tr, t, {move, board}) do
     {tr, plies} = push(tr, [{move, []}], [], t, board)
-    tr = %{tr | memo: nil}
+    tr = %{tr | memo: nil, rejected: nil}
     {tr, [{:moves, plies}] ++ suggestion(tr)} |> and_then(&evaluate(&1, t, false))
   end
 
@@ -1184,7 +1314,7 @@ defmodule Alnasl.Tracker do
     extra = if length(steps) >= 3, do: extra ++ [:long_gap], else: extra
     {tr, plies} = push(tr, steps, extra, t, tr.raw)
 
-    tr = %{tr | memo: nil, gesture: nil}
+    tr = %{tr | memo: nil, gesture: nil, rejected: nil}
     {tr, status} = set_status(tr, :live, nil)
     {tr, [{:moves, plies}] ++ status ++ suggestion(tr)}
   end
@@ -1200,6 +1330,9 @@ defmodule Alnasl.Tracker do
           tr
           | plies: Enum.take(tr.plies, keep),
             history: Enum.drop(tr.history, back),
+            # What was read while the game stood further on was read of
+            # another game: the moves just taken off it.
+            trail: Enum.reject(tr.trail, fn {count, _board} -> count > keep end),
             pos: before.pos,
             phys: before.phys,
             unseen: before.unseen
@@ -1210,7 +1343,7 @@ defmodule Alnasl.Tracker do
 
     final = if reason in [:takeback, :revised, :promotion], do: tr.raw
     {tr, plies} = push(tr, steps, [], t, final)
-    tr = %{tr | memo: nil}
+    tr = %{tr | memo: nil, rejected: nil}
 
     {tr, status} =
       if tr.plies == [],

@@ -213,9 +213,9 @@ defmodule AlnaslWeb.Words do
 
   def state_help(:recovered, _detail),
     do:
-      {gettext("Moves were recovered"),
+      {gettext("Moves were reconstructed"),
        gettext(
-         "The last moves were not seen one by one; they were worked out from the position. Worth a glance at the scoresheet."
+         "The last moves were not seen one by one; they were worked out from the position. Orange: only one line of moves fits. Red: more than one did, and the box took one - check those against a scoresheet."
        )}
 
   def state_help(:clock_alarm, side),
@@ -346,8 +346,19 @@ defmodule AlnaslWeb.Words do
   defp kind(text) when text in ~w(k q r b n p), do: kind(String.to_existing_atom(text))
   defp kind(_other), do: gettext("piece")
 
+  @doc """
+  How many moves of a game carry a mark, in words: "3 moves reconstructed",
+  "1 move guessed".
+  """
+  def marks(:recovered, count),
+    do: ngettext("%{count} move reconstructed", "%{count} moves reconstructed", count)
+
+  def marks(:guessed, count),
+    do: ngettext("%{count} move guessed", "%{count} moves guessed", count)
+
   @doc "A flag on a move, as the small word shown beside it."
-  def flag(:recovered), do: gettext("recovered")
+  def flag(:recovered), do: gettext("reconstructed")
+  def flag(:guessed), do: gettext("guessed")
   def flag(:long_gap), do: gettext("3+ at once")
   def flag(:assumed), do: gettext("queen assumed")
   def flag(:unseen), do: gettext("a piece not seen")
@@ -396,7 +407,13 @@ defmodule AlnaslWeb.Words do
   defp log("board.resumed", _d), do: gettext("Back in sync.")
 
   defp log("move.recovered", d),
-    do: gettext("Recovered without seeing them one by one: %{moves}", moves: moves(d))
+    do: gettext("Reconstructed, not seen one by one (one line fits): %{moves}", moves: moves(d))
+
+  defp log("move.guessed", d),
+    do:
+      gettext("Guessed: more than one line of moves fits, this one was taken: %{moves}",
+        moves: moves(d)
+      )
 
   defp log("move.assumed", d),
     do: gettext("Promotion piece not seen, a queen assumed: %{moves}", moves: moves(d))
@@ -479,10 +496,32 @@ defmodule AlnaslWeb.Words do
 
   defp log("repair.set_fen", _d), do: gettext("Arbiter at the box: a position was set by hand.")
 
-  defp log("repair.resync", _d),
-    do: gettext("Arbiter at the box: asked for a deeper search from the board.")
+  defp log("repair.resync", %{"outcome" => "accepted"} = d),
+    do:
+      gettext("Arbiter at the box: \"the board is right\" - found and added %{moves}",
+        moves: moves(d)
+      )
 
-  defp log("repair.choose", d), do: gettext("Arbiter at the box: chose %{moves}", moves: moves(d))
+  defp log("repair.resync", %{"outcome" => "guessed"} = d),
+    do:
+      gettext(
+        "Arbiter at the box: \"the board is right\" - several lines fit, %{moves} was taken",
+        moves: moves(d)
+      )
+
+  defp log("repair.resync", %{"outcome" => "rejected"} = d),
+    do:
+      gettext(
+        "Arbiter at the box: \"the board is right\" - only the moves just taken back fit (%{moves}); not put back.",
+        moves: moves(d)
+      )
+
+  defp log("repair.resync", _d),
+    do: gettext("Arbiter at the box: \"the board is right\" - nothing was found.")
+
+  defp log("repair.choose", d),
+    do: gettext("Arbiter at the box: said which moves were played: %{moves}", moves: moves(d))
+
   defp log("repair.paused", _d), do: gettext("Arbiter at the box: sending paused for this board.")
 
   defp log("repair.resumed", _d),

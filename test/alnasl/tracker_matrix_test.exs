@@ -16,19 +16,24 @@ defmodule Alnasl.TrackerMatrixTest do
     plies (parked beside the board, a weak sensor), alone and among the
     other survivable faults: every game whole, no alarm.
   - `:gap2` - one ply at a time goes by unseen, so two moves must be found at
-    once. Either they are found, or more than one pair fits and the tracker
-    stops, says so, and keeps the true continuation among its candidates
-    (the classic: a pawn that went one square or two and was then taken en
-    passant or plainly). Never a wrong move.
+    once. They are, and marked: "reconstructed" when one pair fits,
+    "guessed" when more than one does (the classic: a pawn that went one
+    square or two and was then taken en passant or plainly) and the box
+    took one. Nine games in ten whole and right; never an orange move
+    that is wrong, never a wrong move without a mark.
   - `:long` - three or more unseen plies. Here a board alone is not enough
     (docs/design.md, "What the search cannot see"): the shortest explanation
-    can be the wrong one. Asserted: whenever the tracker's game differs from
-    the real one, it flagged the place. Nothing silent.
-  - `:lost` - eight unseen plies, more than the search depth: the alarm.
+    can be the wrong one, and the order of two moves nobody read is a
+    guess. Asserted: whenever the tracker's game differs from the real
+    one, the place is marked. Nothing silent.
+  - `:lost` - eight unseen plies: found and marked, or the alarm. Nothing
+    silent.
   - `:fast_default`, `:fast_clean`, `:bullet` - fast play: see the cases
     below.
-  - `:illegal` - an illegal move played on: the alarm, before any further
-    move is emitted, and everything emitted until then is right.
+  - `:illegal` - an illegal move played on. No game leads to that board, so
+    whatever the box makes of it is wrong: the alarm, or moves marked as
+    reconstructed or guessed. Everything before the illegal move is right,
+    and nothing after it is unmarked.
   """
 
   use ExUnit.Case, async: true
@@ -60,14 +65,16 @@ defmodule Alnasl.TrackerMatrixTest do
       m = Bench.matrix(games, @sim, @tracker)
       v = fn key -> Map.get(m.verdicts, key, 0) end
       assert m.bad == [], "silently wrong or incomplete: #{inspect(m.bad, limit: 20)}"
-      assert m.budget_hits == 0
+      assert v.(:silent) == 0
       assert m.max_search_ms < 2_000
+      right = v.(:exact) + v.(:reconstructed_right) + v.(:guessed_right)
 
       case @kind do
         :exact ->
           assert m.verdicts == %{exact: m.games}
           assert m.alarms == 0
-          assert m.recovered == 0
+          assert m.recovered == 0 and m.guessed == 0
+          assert m.budget_hits == 0
 
         # A piece out of sight for a few plies (`:unseen`): the game is
         # followed through it, whole, and nobody is called.
@@ -78,44 +85,50 @@ defmodule Alnasl.TrackerMatrixTest do
 
         :gap2 ->
           assert v.(:flagged) == 0
-          assert v.(:exact) + v.(:ambiguous) + v.(:alarm) == m.games
-          assert v.(:exact) >= m.games * 0.9
+          assert v.(:reconstructed_wrong) == 0
+          assert right >= m.games * 0.9
           assert m.recovered > 0
 
         :long ->
-          assert v.(:silent) == 0
+          assert right > 0
 
         :lost ->
-          long = Enum.count(games, &(length(&1.moves) > 24))
-          assert v.(:alarm) >= long
+          assert v.(:alarm) > 0
+          assert v.(:exact) == 0
 
         # Fast play (`Script.profile(:bullet)`): a move every 0.3-2 s, the
         # clock a second late. At speed alone, with the tracker as it
-        # comes, a game may end in an alarm - never in a wrong move.
+        # comes, a move may have to be reconstructed - never wrongly.
         :fast_default ->
-          assert v.(:flagged) == 0
-          assert v.(:exact) + v.(:ambiguous) + v.(:alarm) == m.games
-          assert v.(:exact) >= m.games * 0.9
-
-        # With "Bullet / fast play" from the Setup page: every game, whole.
-        :fast_clean ->
-          assert m.verdicts == %{exact: m.games}
+          assert right == m.games
           assert m.alarms == 0
+
+        # With "Bullet / fast play" from the Setup page: the same.
+        :fast_clean ->
+          assert right == m.games
+          assert m.alarms == 0
+          assert m.guessed == 0
 
         # And with the hands of a time scramble - slammed pieces, pieces
         # knocked over, plies that went by unseen, presses the clock never
-        # reported: nothing wrong, nothing silent, and nearly every game whole.
+        # reported: nothing silent, and nearly every game whole and right.
         :bullet ->
           assert v.(:flagged) == 0
-          assert v.(:exact) + v.(:ambiguous) + v.(:alarm) == m.games
-          assert v.(:exact) >= m.games * 0.9
+          assert v.(:reconstructed_wrong) == 0
+          assert right >= m.games * 0.9
           assert m.faults > 2_000
 
         :illegal ->
-          for {index, run} <- m.runs, length(Enum.at(games, index - 1).moves) > 14 do
-            assert run.verdict == :alarm
-            assert length(run.session.tracker.plies) == 11
-            assert run.alarms >= 1
+          for {index, run} <- m.runs, game = Enum.at(games, index - 1), length(game.moves) > 14 do
+            assert run.verdict in [:alarm, :guessed_wrong, :reconstructed_wrong]
+            plies = run.session.tracker.plies
+            assert plies |> Enum.take(11) |> Enum.map(& &1.san) == Enum.take(game.moves, 11)
+            assert Enum.all?(Enum.take(plies, 11), &(&1.flags == []))
+
+            # Whatever came after is marked, every move of it that the box
+            # worked out rather than read.
+            assert run.verdict == :alarm or
+                     Enum.any?(Enum.drop(plies, 11), &(&1.flags != []))
           end
       end
     end
