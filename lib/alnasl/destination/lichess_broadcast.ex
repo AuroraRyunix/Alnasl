@@ -105,7 +105,8 @@ defmodule Alnasl.Destination.LichessBroadcast do
     from g in Game,
       left_join: c in Cursor,
       on: c.game_id == g.id and c.destination == @id,
-      where: g.round == ^round and g.seq > coalesce(c.acked_seq, 0),
+      # Game 1 of a board only: see `Alnasl.Outbox.enqueue/3`.
+      where: g.round == ^round and g.game_no == 1 and g.seq > coalesce(c.acked_seq, 0),
       order_by: g.board_no
   end
 

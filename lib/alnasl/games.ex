@@ -24,11 +24,45 @@ defmodule Alnasl.Games do
     "imported" => :imported
   }
 
-  def get(round, board_no), do: Repo.get_by(Game, round: round, board_no: board_no)
+  @doc "The game being played on that board of that round: the last one begun there."
+  def get(round, board_no), do: round |> history(board_no) |> List.last()
+
+  @doc "One particular game of that board of that round, by its number (from 1)."
+  def get(round, board_no, game_no),
+    do: Repo.get_by(Game, round: round, board_no: board_no, game_no: game_no)
+
   def get!(id), do: Repo.get!(Game, id)
 
+  @doc "Every game that board of that round has seen, in the order they were played."
+  def history(round, board_no) do
+    Game
+    |> where([g], g.round == ^round and g.board_no == ^board_no)
+    |> order_by([g], g.game_no)
+    |> Repo.all()
+  end
+
+  @doc "The games of a round, one a board: the one being played there."
   def list(round) do
-    Game |> where([g], g.round == ^round) |> order_by([g], g.board_no) |> Repo.all()
+    round
+    |> all()
+    |> Enum.group_by(& &1.board_no)
+    |> Enum.map(fn {_board_no, games} -> List.last(games) end)
+    |> Enum.sort_by(& &1.board_no)
+  end
+
+  @doc "Every game of a round, earlier games on a board included."
+  def all(round) do
+    Game |> where([g], g.round == ^round) |> order_by([g], [g.board_no, g.game_no]) |> Repo.all()
+  end
+
+  @doc """
+  A new game on the board of `game`: the next number, the same players, no
+  moves. The game before it is left as it is - finished, or not.
+  """
+  def next(%Game{} = game) do
+    %Game{round: game.round, board_no: game.board_no, game_no: game.game_no + 1}
+    |> Game.changeset(%{white: game.white, black: game.black})
+    |> Repo.insert!()
   end
 
   def rounds do
@@ -250,15 +284,19 @@ defmodule Alnasl.Games do
     match?({:ok, %{turn: :b}}, Chess.parse_fen(fen))
   end
 
-  @doc "Every game of a round as one PGN file."
-  def round_pgn(round), do: round |> list() |> Enum.map_join("\n", &pgn/1)
+  @doc "Every game of a round as one PGN file, earlier games on a board included."
+  def round_pgn(round), do: round |> all() |> Enum.map_join("\n", &pgn/1)
 
   @doc "Where a game's PGN is kept on the box."
   def pgn_path(%Game{} = game) do
     dir = Path.join(Paths.pgn(), "round-#{game.round}")
     File.mkdir_p!(dir)
-    Path.join(dir, "board-#{game.board_no}.pgn")
+    Path.join(dir, pgn_name(game))
   end
+
+  @doc "`board-3.pgn`, and `board-3-game-2.pgn` for the games after the first."
+  def pgn_name(%Game{game_no: 1} = game), do: "board-#{game.board_no}.pgn"
+  def pgn_name(%Game{} = game), do: "board-#{game.board_no}-game-#{game.game_no}.pgn"
 
   # Written on every change, through a temporary file: a power cut leaves
   # the old PGN or the new one, never half of one.

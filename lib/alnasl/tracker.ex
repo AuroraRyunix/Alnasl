@@ -98,7 +98,12 @@ defmodule Alnasl.Tracker do
     # is taken to be standing there unseen (see "A piece not seen"). A move
     # that would make it so must stand this long, or be pressed on the clock.
     unseen_piece: true,
-    unseen_hold_ms: 2_000
+    unseen_hold_ms: 2_000,
+    # A board plugged in a move or two into its game is caught up from the
+    # starting position. Not a game begun on a board that still shows the
+    # last one ("New game on this board"): that one waits for the pieces
+    # to be set up.
+    late_start: true
   }
 
   # How many pieces may be unseen at once. One: a second piece gone is more
@@ -877,7 +882,13 @@ defmodule Alnasl.Tracker do
     # half set up is not to be read as an opening: two plies, as a board
     # that was plugged in late has always been caught up, and no more -
     # until the clock says a game is on.
-    far = if tr.plies == [] and not tr.begun?, do: min(o.search_depth, 2), else: o.search_depth
+    far =
+      cond do
+        tr.plies != [] or tr.begun? -> o.search_depth
+        o.late_start or tr.ready? -> min(o.search_depth, 2)
+        true -> 0
+      end
+
     reach = min(far, if(stable >= o.deep_settle_ms, do: o.blind_depth, else: 2))
     {guided, tr} = search(tr, from, min, far, touched(tr, from))
 

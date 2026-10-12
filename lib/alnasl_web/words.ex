@@ -473,6 +473,9 @@ defmodule AlnaslWeb.Words do
   defp log("result.suggested", d),
     do: gettext("The position is decided: %{result}?", result: d["result"])
 
+  defp log("result.set", %{"result" => "*"}),
+    do: gettext("The game was closed without a result.")
+
   defp log("result.set", %{"by" => "board"} = d),
     do: gettext("Result %{result}, from the position.", result: d["result"])
 
@@ -480,6 +483,12 @@ defmodule AlnaslWeb.Words do
     do: gettext("Result %{result}, set by the arbiter at the box.", result: d["result"])
 
   defp log("result.reopened", _d), do: gettext("The game was reopened by the arbiter at the box.")
+
+  defp log("game.new", %{"by" => "pieces"} = d),
+    do: gettext("The pieces are set up again: game %{n} on this board begins.", n: d["game"])
+
+  defp log("game.new", d),
+    do: gettext("Arbiter at the box: a new game on this board, game %{n}.", n: d["game"])
 
   defp log("repair.undo", d),
     do: gettext("Arbiter at the box: last move (%{move}) taken back.", move: d["move"] || "-")

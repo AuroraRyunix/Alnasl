@@ -590,6 +590,28 @@ still comes out whole.
   number in that round (a board without a table number keeps the board
   number it had): a remap is for a round. The games of the round before
   stay as they are.
+- **More than one game on a board.** The game of a board is
+  `(R, N, game_no)`, and the highest number is the one being played. A
+  new one begins when the arbiter says "New game on this board" (the game
+  there is closed without a result if it had none), or by itself when the
+  starting position is back on the board over a game that is finished or
+  more than two moves old - two moves in, the same board is a takeback.
+  By itself only where Setup allows: by default on a board no pairing
+  names, because friends playing game after game want it and a paired
+  round has one game a board (a board set up early for the next round is
+  not a second game of this one). The new game gets a fresh tracker, a
+  line in the recording (`cfg` with `game`), its own PGN file, and reads
+  nothing until the starting position has stood on the board: the pieces
+  of the game before are not its first moves.
+- **Only game 1 of a board leaves the box.** The results server knows a
+  game by round and board (`round` + `board` in the ingest, nothing else)
+  and Lichess by its headers; a second game sent there would overwrite the
+  first. So `Outbox.enqueue/3` and the Lichess push skip `game_no > 1`:
+  those games are on the board's page with their PGN, in the round's PGN,
+  and in the recordings.
+- **Starting a round** is `Alnasl.Boards.start_round/1` - pairings fetched,
+  boards moved - so that something other than the Round page can ask for
+  it.
 - **Ready or not** (`Alnasl.Tables.checks/1`): duplicate table numbers,
   two boards on one board of the round, one serial seen twice, a numbered
   board that does not answer, a wrong starting position, a connected board

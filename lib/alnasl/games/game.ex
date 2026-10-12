@@ -6,6 +6,12 @@ defmodule Alnasl.Games.Game do
   `status` is `"live"` or `"finished"`; `result` is what the arbiter set (or
   confirmed), `suggestion` what the board suggested and nobody has confirmed.
   `seq` counts what was queued for the server for this game.
+
+  A board of a round usually sees one game. When it sees more - "New game
+  on this board" - they are numbered by `game_no`, from 1, and the highest
+  is the one being played. The results server knows a game by round and
+  board and has room for one: only game 1 is sent anywhere
+  (`Alnasl.Outbox`); the others are kept here, with their PGN.
   """
   use Ecto.Schema
   import Ecto.Changeset
@@ -13,6 +19,7 @@ defmodule Alnasl.Games.Game do
   schema "games" do
     field :round, :integer
     field :board_no, :integer
+    field :game_no, :integer, default: 1
     field :white, :string
     field :black, :string
     field :start_fen, :string
@@ -49,6 +56,6 @@ defmodule Alnasl.Games.Game do
     ])
     |> validate_inclusion(:status, ~w(live finished))
     |> validate_inclusion(:result, @results)
-    |> unique_constraint([:round, :board_no])
+    |> unique_constraint([:round, :board_no, :game_no])
   end
 end

@@ -5,14 +5,14 @@ defmodule AlnaslWeb.FileController do
 
   alias Alnasl.{Games, Recorder}
 
-  def game(conn, %{"round" => round, "board" => board}) do
+  def game(conn, %{"round" => round, "board" => board} = params) do
     with {round, ""} <- Integer.parse(round),
          {board, ""} <- Integer.parse(board),
-         %{} = game <- Games.get(round, board) do
+         %{} = game <- one(round, board, params["game"]) do
       download(
         conn,
         Games.pgn(game),
-        "round-#{round}-board-#{board}.pgn",
+        "round-#{round}-" <> Games.pgn_name(game),
         "application/x-chess-pgn"
       )
     else
@@ -41,6 +41,17 @@ defmodule AlnaslWeb.FileController do
       |> send_file(200, path)
     else
       _missing -> send_resp(conn, 404, "no such capture")
+    end
+  end
+
+  # `?game=2`: an earlier (or later) game on that board; without it, the
+  # one being played.
+  defp one(round, board, nil), do: Games.get(round, board)
+
+  defp one(round, board, number) do
+    case Integer.parse(number) do
+      {game_no, ""} -> Games.get(round, board, game_no)
+      _bad -> nil
     end
   end
 

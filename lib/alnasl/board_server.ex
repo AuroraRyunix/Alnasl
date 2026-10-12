@@ -137,7 +137,13 @@ defmodule Alnasl.BoardServer do
        when is_integer(round) and is_integer(no) do
     names = Tournament.board(round, no) || %{}
     game = Games.ensure(round, no, %{white: names[:white], black: names[:black]})
-    opts = Settings.tracker_opts() |> Keyword.put(:start_fen, game.start_fen)
+
+    opts =
+      Settings.tracker_opts()
+      |> Keyword.put(:start_fen, game.start_fen)
+      # A second game on a board began on a board that showed the first.
+      |> Keyword.put(:late_start, game.game_no == 1)
+
     session = Session.restore(opts, Games.plies(game))
     Recorder.record(state.board.id, {:cfg, cfg(state.board, game)})
     %{state | game: game, session: session, warning: nil}
@@ -156,6 +162,7 @@ defmodule Alnasl.BoardServer do
       flipped: board.flipped,
       round: board.round,
       board: board.board_no,
+      game: game && game.game_no,
       start_fen: game && game.start_fen
     }
   end
@@ -204,7 +211,11 @@ defmodule Alnasl.BoardServer do
   # Setup changed the tracker's settings ("Bullet / fast play", or a number
   # by hand): the game under way goes on with them, from its next reading.
   def handle_info({:setting, "tracker"}, %{session: %{tracker: tracker} = session} = state) do
-    opts = Map.merge(Tracker.defaults(), Map.new(Settings.tracker_opts()))
+    opts =
+      Tracker.defaults()
+      |> Map.merge(Map.new(Settings.tracker_opts()))
+      |> Map.put(:late_start, tracker.opts.late_start)
+
     {:noreply, %{state | session: %{session | tracker: %{tracker | opts: opts}}}}
   end
 
@@ -334,9 +345,73 @@ defmodule Alnasl.BoardServer do
   end
 
   defp feed(%{session: nil} = state, _t, _event), do: state
-  defp feed(%{game: %{status: "finished"}} = state, _t, {:position, _board}), do: state
 
-  defp feed(state, t, event) do
+  # The pieces are set up again: the next game, if the box is to begin one
+  # by itself (`begin_again?/1`). Otherwise a finished game is finished,
+  # whatever the board shows.
+  defp feed(state, t, {:position, board} = event) do
+    cond do
+      set_up_again?(state, board) and begin_again?(state) ->
+        state |> new_game(:pieces) |> play(t, event)
+
+      state.game.status == "finished" ->
+        state
+
+      true ->
+        play(state, t, event)
+    end
+  end
+
+  defp feed(state, t, event), do: play(state, t, event)
+
+  # The starting position on the board, over a game that is finished - or
+  # one that has gone far enough for it to be nothing else: two moves in,
+  # the same board is a takeback.
+  defp set_up_again?(%{game: game, session: %{tracker: tracker}}, board) do
+    board == start_board(tracker) and
+      (game.status == "finished" or length(tracker.plies) > tracker.opts.takeback_plies)
+  end
+
+  # "Start a new game when the pieces are set up again" (Setup): yes, no,
+  # or - the default - only where no pairing says who plays this board in
+  # this round. Friends playing game after game want it; a paired round
+  # has one game a board, and a board set up early for the next round is
+  # not a second game of this one.
+  defp begin_again?(%{board: board}) do
+    case Settings.get("new_game_on_setup") do
+      "always" -> true
+      "never" -> false
+      _unpaired -> Tournament.board(board.round, board.board_no) == nil
+    end
+  end
+
+  # A fresh game on this board: the next number, a new tracker, a line in
+  # the recording so that a capture can be cut where the games part. A
+  # game left unfinished is closed without a result first.
+  defp new_game(state, by) do
+    state =
+      if state.game.status == "finished" do
+        state
+      else
+        Log.add(:info, "result.set", %{result: "*", by: to_string(by)}, ref(state))
+        t = now(state)
+        enqueue(%{state | game: Games.finish(state.game, "*")}, t, false)
+      end
+
+    game = Games.next(state.game)
+    Log.add(:info, "game.new", %{game: game.game_no, by: to_string(by)}, ref(state))
+    # The board may still show the game before: nothing is read into this
+    # one until the starting position has stood on it.
+    opts =
+      Settings.tracker_opts()
+      |> Keyword.put(:start_fen, game.start_fen)
+      |> Keyword.put(:late_start, false)
+
+    Recorder.record(state.board.id, {:cfg, cfg(state.board, game)})
+    %{state | game: game, session: Session.new(opts), warning: nil, queued_at: nil}
+  end
+
+  defp play(state, t, event) do
     state = advance(state, t)
     t = max(t, state.last_t)
     {session, events} = Session.handle(state.session, t, event)
@@ -681,6 +756,12 @@ defmodule Alnasl.BoardServer do
     end
   end
 
+  # "New game on this board": the arbiter's word, whatever the board shows.
+  defp repair(state, :new_game, _args, _t) do
+    state = new_game(state, :arbiter)
+    {:ok, refeed(state)}
+  end
+
   defp repair(state, :reopen, _args, t) do
     Log.add(:info, "result.reopened", %{}, ref(state))
     state = %{state | game: Games.reopen(state.game)}
@@ -793,6 +874,7 @@ defmodule Alnasl.BoardServer do
         paused: game.paused,
         game_status: game.status,
         game_id: game.id,
+        game_no: game.game_no,
         problems:
           if(tracker.plies == [] and state.seen,
             do: Position.problems(start_board(tracker), state.seen),

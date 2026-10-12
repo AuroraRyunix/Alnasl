@@ -89,7 +89,14 @@ defmodule AlnaslWeb.GameLive do
     at = socket.assigns.at
     at = if at && view && at < length(view.snap.plies), do: at
 
-    assign(socket, board: board, game: game, view: view, refresh_due?: false, at: at)
+    # The game shown is the one being played; a new one begun on the board
+    # is another game, and whatever was being asked about the old is void.
+    fresh? = socket.assigns[:game] != nil and game != nil and socket.assigns.game.id != game.id
+
+    socket
+    |> assign(board: board, game: game, view: view, refresh_due?: false)
+    |> assign(at: if(fresh?, do: nil, else: at), history: Games.history(round, no))
+    |> then(&if(fresh?, do: assign(&1, choice: nil), else: &1))
   end
 
   # The position after each ply, the start included, as what the board
@@ -345,12 +352,31 @@ defmodule AlnaslWeb.GameLive do
     %{round: round, no: no} = socket.assigns
 
     case Boards.set_game_result(round, no, result) do
+      :ok when result == "*" ->
+        {:noreply,
+         socket |> put_flash(:info, gettext("The game is closed without a result.")) |> load()}
+
       :ok ->
         {:noreply, socket |> put_flash(:info, gettext("Result set: %{r}", r: result)) |> load()}
 
       _error ->
         {:noreply, put_flash(socket, :error, gettext("The result could not be set."))}
     end
+  end
+
+  def handle_event("new_game", _params, socket) do
+    with_board(socket, fn board ->
+      case Boards.new_game(board.id) do
+        :ok ->
+          {:info,
+           gettext(
+             "A new game on this board. Set up the pieces; the first move starts it. The game before it is kept below."
+           )}
+
+        other ->
+          other
+      end
+    end)
   end
 
   def handle_event("reopen", _params, socket) do
@@ -817,6 +843,85 @@ defmodule AlnaslWeb.GameLive do
 
           <.choice :if={@choice} choice={@choice} line={@view.line} />
 
+          <.panel id="finish" title={gettext("This game")}>
+            <:actions>
+              <span :if={length(@history) > 1} id="game-no" class="note">
+                {gettext("game %{n} on this board", n: @view.snap[:game_no] || length(@history))}
+              </span>
+            </:actions>
+            <p :if={@view.snap[:game_status] == "finished"} id="finish-done">
+              <b>{finished_word(@view.snap[:result])}</b>
+            </p>
+            <b>
+              {if @view.snap[:game_status] == "finished",
+                do: gettext("Change the result"),
+                else: gettext("Finish game")}
+            </b>
+            <div class="row finish-row">
+              <.button
+                :for={result <- ["1-0", "1/2-1/2", "0-1"]}
+                id={"result-#{String.replace(result, "/", "")}"}
+                phx-click="result"
+                phx-value-result={result}
+              >
+                {result}
+              </.button>
+              <.button
+                :if={@view.snap[:game_status] != "finished"}
+                id="result-none"
+                phx-click="result"
+                phx-value-result="*"
+                data-confirm={gettext("Close this game without a result?")}
+              >
+                {gettext("No result")}
+              </.button>
+            </div>
+            <p class="note">
+              {gettext(
+                "Sent to the results site as provisional; the published result comes from the pairing program."
+              )}
+            </p>
+            <div class="row" style="margin-top:0.5rem">
+              <.button
+                :if={@board}
+                id="new-game"
+                variant={if @view.snap[:game_status] == "finished", do: "primary"}
+                phx-click="new_game"
+                data-confirm={
+                  if @view.snap[:game_status] != "finished",
+                    do: gettext("Close this game without a result and start a new one on this board?")
+                }
+              >{gettext("New game on this board")}</.button>
+              <.button
+                :if={@view.snap[:game_status] == "finished"}
+                id="tool-reopen"
+                phx-click="reopen"
+              >{gettext("Reopen the game")}</.button>
+            </div>
+            <div :if={length(@history) > 1} id="games-here" class="games-here">
+              <b>{gettext("Games on this board this round")}</b>
+              <ol>
+                <li :for={game <- @history} id={"game-here-#{game.game_no}"}>
+                  <span>{gettext("Game %{n}", n: game.game_no)}</span>
+                  <span>{game.result || gettext("in play")}</span>
+                  <span class="note">
+                    {gettext("%{n} played", n: length(Games.sans(game)))}
+                  </span>
+                  <.link
+                    id={"game-here-pgn-#{game.game_no}"}
+                    href={~p"/files/round/#{@round}/board/#{@no}?game=#{game.game_no}"}
+                    download
+                  >PGN</.link>
+                </li>
+              </ol>
+              <p class="note">
+                {gettext(
+                  "Only the first game of a board goes to the results site and to Lichess: they know a game by its round and board. The others are kept here."
+                )}
+              </p>
+            </div>
+          </.panel>
+
           <.panel id="tools" title={gettext("Repair")}>
             <div class="tools">
               <div class="tool">
@@ -872,30 +977,6 @@ defmodule AlnaslWeb.GameLive do
                   </div>
                   <.button id="tool-edit" type="submit">{gettext("Change that move")}</.button>
                 </.form>
-              </div>
-
-              <div class="tool">
-                <b>{gettext("Result")}</b>
-                <p>
-                  {gettext(
-                    "Sent to the results site as provisional; the published result comes from the pairing program."
-                  )}
-                </p>
-                <div class="row">
-                  <.button
-                    :for={result <- ["1-0", "1/2-1/2", "0-1"]}
-                    id={"result-#{String.replace(result, "/", "")}"}
-                    phx-click="result"
-                    phx-value-result={result}
-                  >
-                    {result}
-                  </.button>
-                </div>
-                <.button
-                  :if={@view.snap[:game_status] == "finished"}
-                  id="tool-reopen"
-                  phx-click="reopen"
-                >{gettext("Reopen the game")}</.button>
               </div>
 
               <div class="tool">
@@ -1014,6 +1095,10 @@ defmodule AlnaslWeb.GameLive do
     </button>
     """
   end
+
+  defp finished_word("*"), do: gettext("Closed without a result")
+  defp finished_word(nil), do: gettext("Finished")
+  defp finished_word(result), do: gettext("Finished: %{r}", r: result)
 
   defp marked(plies, mark), do: Enum.count(plies, &(mark in &1.flags))
 

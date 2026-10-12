@@ -190,6 +190,7 @@ defmodule Alnasl.Boards do
       paused: game && game.paused,
       game_status: game && game.status,
       game_id: game && game.id,
+      game_no: game && game.game_no,
       fen: game && elem(Games.position(game), 0),
       certain: nil,
       last_move: game && elem(Games.position(game), 1)
@@ -295,6 +296,23 @@ defmodule Alnasl.Boards do
   def choose(id, number, sans), do: call(id, {:repair, :choose, {number, sans}})
   def pause(id, paused?), do: call(id, {:repair, :pause, paused?})
   def reopen(id), do: call(id, {:repair, :reopen, nil})
+
+  @doc """
+  A new game on that board, in the same round: the game there is closed
+  (without a result, if it had none) and kept, and the board begins again.
+  """
+  def new_game(id), do: call(id, {:repair, :new_game, nil})
+
+  @doc """
+  Starts round `round`: the pairings are fetched again and every linked
+  board moves to that round (`move_to_round/1`). What "Start round N" on
+  the Round page does, and what a pairing program will ask for.
+  """
+  def start_round(round) when is_integer(round) and round >= 1 do
+    move_to_round(round)
+    Tournament.refresh()
+    :ok
+  end
 
   @doc "Sets the result of the game on a board. The arbiter's word."
   def set_result(id, result), do: call(id, {:repair, :result, result})

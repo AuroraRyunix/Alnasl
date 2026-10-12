@@ -74,6 +74,7 @@ defmodule AlnaslWeb.RoundLive do
           count: length(plies),
           last_san: plies |> List.last() |> then(&(&1 && &1.san)),
           result: (game && game.result) || (snap && snap[:result]),
+          finished?: tile_state(snap, game) == :finished,
           suggestion: snap && snap[:suggestion],
           paused: (snap && snap[:paused]) || (game && game.paused) || false,
           warning: snap && snap[:warning],
@@ -128,13 +129,51 @@ defmodule AlnaslWeb.RoundLive do
 
   def handle_event("next_round", _params, socket) do
     next = socket.assigns.round + 1
-    Boards.move_to_round(next)
-    Tournament.refresh()
+    Boards.start_round(next)
 
     {:noreply,
      socket
      |> put_flash(:info, gettext("The boards now follow round %{n}.", n: next))
      |> push_patch(to: ~p"/round/#{next}")}
+  end
+
+  # The tile's own menu: a result, or the next game, without opening the board.
+  def handle_event("result", %{"board" => no, "result" => result}, socket) do
+    case Boards.set_game_result(socket.assigns.round, String.to_integer(no), result) do
+      :ok ->
+        {:noreply,
+         socket
+         |> put_flash(
+           :info,
+           if(result == "*",
+             do: gettext("Board %{n}: closed without a result.", n: no),
+             else: gettext("Board %{n}: %{r}", n: no, r: result)
+           )
+         )
+         |> load()}
+
+      _error ->
+        {:noreply, put_flash(socket, :error, gettext("The result could not be set."))}
+    end
+  end
+
+  def handle_event("new_game", %{"board" => no}, socket) do
+    no = String.to_integer(no)
+    board = Enum.find(Boards.list(), &(&1.round == socket.assigns.round and &1.board_no == no))
+
+    case board && Boards.new_game(board.id) do
+      :ok ->
+        {:noreply,
+         socket |> put_flash(:info, gettext("Board %{n}: a new game.", n: no)) |> load()}
+
+      _not_running ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           gettext("No connected board is linked to board %{n}.", n: no)
+         )}
+    end
   end
 
   def handle_event("make_current", _params, socket) do
@@ -254,79 +293,128 @@ defmodule AlnaslWeb.RoundLive do
         id="tiles"
         class={["tiles", length(@tiles) <= 4 && "few", length(@tiles) > 12 && "many"]}
       >
-        <.link
-          :for={tile <- @tiles}
-          id={"tile-#{tile.no}"}
-          navigate={~p"/round/#{@round}/board/#{tile.no}"}
-          class={["tile", tone(tile.state)]}
-          aria-label={gettext("Board %{n}: %{state}", n: tile.no, state: state_word(tile.state))}
-        >
-          <div class="tile-head">
-            <span class="tile-no">{tile.no}</span>
-            <span :if={tile.paused} class="flag plain">{gettext("Not sending")}</span>
-            <span :if={tile.warning} class="flag">{gettext("Move missing?")}</span>
-            <span :for={piece <- tile.unseen} id={"tile-unseen-#{tile.no}"} class="flag">{AlnaslWeb.Words.unseen(
-              piece
-            )}</span>
-            <.state state={tile.state} />
-          </div>
-          <div :if={tile.reconstructed + tile.guessed > 0} class="tile-marks">
-            <span :if={tile.guessed > 0} id={"tile-guessed-#{tile.no}"} class="flag guess">
-              {AlnaslWeb.Words.marks(:guessed, tile.guessed)}
-            </span>
-            <span
-              :if={tile.reconstructed > 0}
-              id={"tile-reconstructed-#{tile.no}"}
-              class="flag rec"
-            >
-              {AlnaslWeb.Words.marks(:recovered, tile.reconstructed)}
-            </span>
-          </div>
-          <div class="side">
-            <span class="dot black"></span>
-            <span class="name">{tile.black || gettext("Black")}</span>
-            <.clock :if={tile.clock} ms={tile.clock.black_ms} running={tile.clock.running == :black} />
-          </div>
-          <div class="tile-board">
-            <.board
-              position={tile.position}
-              last={tile.last}
-              label={gettext("Position on board %{n}", n: tile.no)}
-            />
-          </div>
-          <div class="side">
-            <span class="dot white"></span>
-            <span class="name">{tile.white || gettext("White")}</span>
-            <.clock :if={tile.clock} ms={tile.clock.white_ms} running={tile.clock.running == :white} />
-          </div>
-          <div
-            :if={tile.clock_problem && tile.state != :clock_alarm}
-            id={"tile-clock-#{tile.no}"}
-            class="tile-note"
+        <div :for={tile <- @tiles} id={"tile-wrap-#{tile.no}"} class="tile-wrap">
+          <.link
+            id={"tile-#{tile.no}"}
+            navigate={~p"/round/#{@round}/board/#{tile.no}"}
+            class={["tile", tone(tile.state)]}
+            aria-label={gettext("Board %{n}: %{state}", n: tile.no, state: state_word(tile.state))}
           >
-            <.icon name="warning" />{tile.clock_problem}
-          </div>
-          <div class="tile-foot">
-            <%= cond do %>
-              <% tile.result -> %>
-                <span class="last">{tile.result}</span>
-              <% tile.last_san -> %>
-                <span>{div(tile.count + 1, 2)}{if rem(tile.count, 2) == 1, do: ".", else: "..."}</span>
-                <span class="last"><.figurine san={tile.last_san} /></span>
-              <% true -> %>
-                <span>{gettext("No moves")}</span>
-            <% end %>
-            <span :if={tile.suggestion && !tile.result} class="flag">{gettext("Result? %{r}",
-              r: tile.suggestion
-            )}</span>
-            <span
-              :if={tile.board_name}
-              id={"tile-sticker-#{tile.no}"}
-              class="right"
-              title={tile.board_name}
-            >{tile.sticker}</span>
-          </div>
-        </.link>
+            <div class="tile-head">
+              <span class="tile-no">{tile.no}</span>
+              <span :if={tile.paused} class="flag plain">{gettext("Not sending")}</span>
+              <span :if={tile.warning} class="flag">{gettext("Move missing?")}</span>
+              <span :for={piece <- tile.unseen} id={"tile-unseen-#{tile.no}"} class="flag">{AlnaslWeb.Words.unseen(
+                piece
+              )}</span>
+              <.state state={tile.state} />
+            </div>
+            <div :if={tile.reconstructed + tile.guessed > 0} class="tile-marks">
+              <span :if={tile.guessed > 0} id={"tile-guessed-#{tile.no}"} class="flag guess">
+                {AlnaslWeb.Words.marks(:guessed, tile.guessed)}
+              </span>
+              <span
+                :if={tile.reconstructed > 0}
+                id={"tile-reconstructed-#{tile.no}"}
+                class="flag rec"
+              >
+                {AlnaslWeb.Words.marks(:recovered, tile.reconstructed)}
+              </span>
+            </div>
+            <div class="side">
+              <span class="dot black"></span>
+              <span class="name">{tile.black || gettext("Black")}</span>
+              <.clock
+                :if={tile.clock}
+                ms={tile.clock.black_ms}
+                running={tile.clock.running == :black}
+              />
+            </div>
+            <div class="tile-board">
+              <.board
+                position={tile.position}
+                last={tile.last}
+                label={gettext("Position on board %{n}", n: tile.no)}
+              />
+            </div>
+            <div class="side">
+              <span class="dot white"></span>
+              <span class="name">{tile.white || gettext("White")}</span>
+              <.clock
+                :if={tile.clock}
+                ms={tile.clock.white_ms}
+                running={tile.clock.running == :white}
+              />
+            </div>
+            <div
+              :if={tile.clock_problem && tile.state != :clock_alarm}
+              id={"tile-clock-#{tile.no}"}
+              class="tile-note"
+            >
+              <.icon name="warning" />{tile.clock_problem}
+            </div>
+            <div class="tile-foot">
+              <%= cond do %>
+                <% tile.result -> %>
+                  <span class="last">{tile.result}</span>
+                <% tile.last_san -> %>
+                  <span>{div(tile.count + 1, 2)}{if rem(tile.count, 2) == 1, do: ".", else: "..."}</span>
+                  <span class="last"><.figurine san={tile.last_san} /></span>
+                <% true -> %>
+                  <span>{gettext("No moves")}</span>
+              <% end %>
+              <span :if={tile.suggestion && !tile.result} class="flag">{gettext("Result? %{r}",
+                r: tile.suggestion
+              )}</span>
+              <span
+                :if={tile.board_name}
+                id={"tile-sticker-#{tile.no}"}
+                class="right"
+                title={tile.board_name}
+              >{tile.sticker}</span>
+            </div>
+          </.link>
+          <details
+            :if={tile.state != :unlinked or tile.count > 0}
+            id={"tile-menu-#{tile.no}"}
+            class="tile-menu"
+          >
+            <summary>
+              {if tile.finished?, do: gettext("Next game"), else: gettext("Finish game")}
+            </summary>
+            <div class="row">
+              <.button
+                :for={result <- ["1-0", "1/2-1/2", "0-1"]}
+                :if={!tile.finished?}
+                id={"tile-result-#{tile.no}-#{String.replace(result, "/", "")}"}
+                small
+                phx-click="result"
+                phx-value-board={tile.no}
+                phx-value-result={result}
+              >{result}</.button>
+              <.button
+                :if={!tile.finished?}
+                id={"tile-result-#{tile.no}-none"}
+                small
+                phx-click="result"
+                phx-value-board={tile.no}
+                phx-value-result="*"
+                data-confirm={gettext("Close this game without a result?")}
+              >{gettext("No result")}</.button>
+              <.button
+                id={"tile-new-game-#{tile.no}"}
+                small
+                variant={if tile.finished?, do: "primary"}
+                phx-click="new_game"
+                phx-value-board={tile.no}
+                data-confirm={
+                  if !tile.finished?,
+                    do: gettext("Close this game without a result and start a new one on this board?")
+                }
+              >{gettext("New game")}</.button>
+            </div>
+          </details>
+        </div>
       </div>
     </Layouts.app>
     """

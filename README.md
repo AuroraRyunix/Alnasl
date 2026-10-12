@@ -79,8 +79,8 @@ plus "match device", chosen per device (rail, or Setup on a phone).
 
 | Page | What it is for |
 |---|---|
-| **Round** | The screen during play. A tile per board: players, the position the box is sure of, clocks, last move, and the state as a shape and a word - Live, Waiting for start, Settling, Recovered a move, Out of sync, No signal, Clock wrong way, Finished. Before the first move a tile also says, in words, when the clock is not set for White. A tile is the way to the board's own page. Fetch the pairings, start the next round |
-| **A board** | The position large, the move list, and - when board and game have parted ways - what the board reads beside what is certain. The repair tools: resync from the board (search deeper, or pick from the candidates), type moves, undo, change a move, set the result, start from a FEN, pause and resume sending, turn the board round |
+| **Round** | The screen during play. A tile per board: players, the position the box is sure of, clocks, last move, and the state as a shape and a word - Live, Waiting for start, Settling, Reconstructed, Out of sync, No signal, Clock wrong way, Finished - with a count of the moves that were reconstructed or guessed, and a warning for a piece that is not seen. Before the first move a tile also says, in words, when the clock is not set for White. A tile is the way to the board's own page; under it, "Finish game" (the three results, or none) and "New game". Fetch the pairings, start the next round |
+| **A board** | The position large, the move list - Left and Right step through it - and, when board and game have parted ways, what the board reads beside what is certain. Moves the box worked out are marked, and a tap on a guessed one asks which line it was. "This game": finish it with a result or without, start a new game on the board, and the games the board has seen this round with their PGN. The repair tools: "the board is right" (search deeper), type moves, undo, change a move, start from a FEN, pause and resume sending, turn the board round |
 | **Boards** | What is plugged in. Add a DGT board or a simulator; connect and disconnect; each board's live picture, signal quality, serial number and firmware; the start-position check, pieces and clock ("black queen and black king are swapped (d8, e8)", "Clock not in starting position: Black's side would run first - the clock is turned or the lever is the wrong way"); each board's **table number** and its board of the round; "Which board is this?"; "Ready for round N?" with the reasons when it is not (the clock among them); the address and QR code for a phone; a printable sheet of labels. See [Which board is which](#which-board-is-which) |
 | **Number / Find** | Two phone-sized pages under Boards: number the boards of a hall by touching them in order (a piece lifted or put down counts, a clock lever does not), and find out which board the one in front of you is |
 | **Outbox** | The connections, honestly: for the results server and for every other destination, connected or not, last success, how much is waiting and why it is not going, in words; each with its own switch and its own "Send now". What waits, what the server refused, what went out |
@@ -368,7 +368,7 @@ page says so, and simulator boards are unaffected.
 
 ## What is proven, and how
 
-By `mix test` (348 tests), three tools, and two evenings with a real board:
+By `mix test` (362 tests), three tools, and two evenings with a real board:
 
 **The tracker**, against 69 games (59 classics before 1930, 7 constructed
 for underpromotion and en passant, 3 more; 4599 plies) played through the
@@ -482,12 +482,16 @@ and names on every page in both languages.
 
 ## What is not done
 
-- **No game has been played on a real board.** One board has been read
-  (see above), with one knight on it: eleven of the twelve piece codes, a
-  capture, castling, a promotion and a whole game through the tracker with
-  real hands are still to come. The clock's battery-low bit and the flag
-  bits beside the hours were never set; a board lying the other way round
-  was not tried. Next session: [docs/tomorrow.md](docs/tomorrow.md).
+- **Thirteen moves have been played on a real board**, not a game: no
+  capture, no promotion, no en passant, and castling only after a
+  position set by hand. The clock's battery-low bit and the flag bits
+  beside the hours were never set; a board lying the other way round was
+  not tried. Next session: [docs/tomorrow.md](docs/tomorrow.md).
+- **A second game on a board stays on the box.** The results server and
+  Lichess know a game by round and board, so only the first game of a
+  board is sent; the others are in the PGN export and on the board's page.
+  The reconstruction, the choice of line and "New game" have been used in
+  the simulator and in tests, not yet by a person at a real board.
 - **The bus (loop) wire format is assumed.** `lib/alnasl/dgt/bus.ex` holds
   every byte of it, each marked `ASSUMED`, with a TODO list. The polling
   scheduler and the per-address board model are built and tested against an

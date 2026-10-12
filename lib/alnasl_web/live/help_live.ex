@@ -225,7 +225,16 @@ defmodule AlnaslWeb.HelpLive do
 
           <h2 id="help-after">{gettext("After the round")}</h2>
           <ol>
-            <li>{gettext("Set the result on every board (or confirm the suggestion).")}</li>
+            <li>
+              {gettext(
+                "Set the result on every board (or confirm the suggestion): \"Finish game\" on the board's page, or under its tile on the Round page - the three results, or \"No result\" for a game that was abandoned."
+              )}
+            </li>
+            <li id="help-new-game">
+              {gettext(
+                "Another game on the same board: \"New game on this board\". The game before it is kept and listed with its PGN. On a board no pairing names, setting up the pieces again starts the next game by itself (Setup can make that always, or never). Only the first game of a board goes to the results site and Lichess; the others stay on the box."
+              )}
+            </li>
             <li>
               {gettext(
                 "A game that was not captured: PGN page, read the scoresheet's moves, \"Attach\" to its board."

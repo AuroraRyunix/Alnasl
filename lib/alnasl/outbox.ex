@@ -68,6 +68,11 @@ defmodule Alnasl.Outbox do
 
   def enqueue(%Game{paused: true} = game, _clock, _replace?), do: game
 
+  # A second game on the same board of the same round: the server knows a
+  # game by round and board, and sending this one would overwrite the
+  # first. It stays on the box.
+  def enqueue(%Game{game_no: game_no} = game, _clock, _replace?) when game_no > 1, do: game
+
   def enqueue(%Game{} = game, clock, replace?) do
     body = Games.body(game, clock, replace?)
 

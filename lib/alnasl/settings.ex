@@ -25,6 +25,7 @@ defmodule Alnasl.Settings do
     "snapshot" => nil,
     "snapshot_at" => nil,
     "auto_suggest" => false,
+    "new_game_on_setup" => "unpaired",
     "clock_heartbeat_s" => 20,
     "capture_cap_mb" => 500,
     "tracker" => %{}

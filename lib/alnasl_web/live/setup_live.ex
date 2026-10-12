@@ -31,7 +31,7 @@ defmodule AlnaslWeb.SetupLive do
   defp load(socket) do
     s =
       Settings.get_many(
-        ~w(server_url slug box_name locale round auto_suggest capture_cap_mb clock_heartbeat_s tracker)
+        ~w(server_url slug box_name locale round auto_suggest new_game_on_setup capture_cap_mb clock_heartbeat_s tracker)
       )
 
     tracker =
@@ -58,6 +58,7 @@ defmodule AlnaslWeb.SetupLive do
             "locale" => s["locale"],
             "round" => s["round"],
             "auto_suggest" => s["auto_suggest"],
+            "new_game_on_setup" => s["new_game_on_setup"],
             "capture_cap_mb" => s["capture_cap_mb"],
             "clock_heartbeat_s" => s["clock_heartbeat_s"]
           },
@@ -223,6 +224,11 @@ defmodule AlnaslWeb.SetupLive do
       "locale" => if(params["locale"] in ["en", "nl"], do: params["locale"], else: "en"),
       "round" => int(params["round"], 1, 1, 999),
       "auto_suggest" => params["auto_suggest"] == "true",
+      "new_game_on_setup" =>
+        if(params["new_game_on_setup"] in ~w(always never),
+          do: params["new_game_on_setup"],
+          else: "unpaired"
+        ),
       "capture_cap_mb" => int(params["capture_cap_mb"], 500, 10, 100_000),
       "clock_heartbeat_s" => int(params["clock_heartbeat_s"], 20, 5, 600)
     })
@@ -620,6 +626,22 @@ defmodule AlnaslWeb.SetupLive do
               hint={
                 gettext(
                   "Off: every result waits for the arbiter. On: a game that ends in mate or stalemate on the board is sent as finished at once - still provisional on the site."
+                )
+              }
+            />
+            <.input
+              field={@box_form[:new_game_on_setup]}
+              id="box-new-game"
+              type="select"
+              label={gettext("Start a new game when the pieces are set up again")}
+              options={[
+                {gettext("On boards no pairing names (the default)"), "unpaired"},
+                {gettext("Always"), "always"},
+                {gettext("Never: only \"New game\" on the board's page"), "never"}
+              ]}
+              hint={
+                gettext(
+                  "For game after game on one board: when the starting position is back on a board whose game is over - or is more than two moves old - the box closes that game and begins the next. In a paired round a board has one game, so by default this is left to the arbiter there."
                 )
               }
             />
