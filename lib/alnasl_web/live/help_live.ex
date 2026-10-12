@@ -256,6 +256,11 @@ defmodule AlnaslWeb.HelpLive do
               )}
             </dd>
           </dl>
+          <p id="help-named-alarms">
+            {gettext(
+              "\"Black moved (Nc6), but it is White's turn\" and \"A move that is not legal: white bishop c1-g5\" are alarms that say what the board shows: somebody moved out of turn, or made a move the rules do not allow. The box adds nothing to the game for it and invents no moves to make it fit. Put the piece back and the alarm is gone. If the board missed a move before it, \"A move is missing before this\" takes you to where moves are typed."
+            )}
+          </p>
           <p id="help-rewritten">
             {gettext(
               "\"read as d3\" beside a move means the board read that move one square off - a piece set down between two squares - and a later move showed where it really went. The box has put it right and says so above the moves; \"Check it\" has the move as it was read, if you know better. The box never adds more moves than the clock was pressed for: when it would have to, the board goes out of sync instead, and \"the board is right\" is yours to press."

@@ -159,6 +159,8 @@ defmodule AlnaslWeb.RoundLive do
       paused: (snap && snap[:paused]) || (game && game.paused) || false,
       warning: snap && snap[:warning],
       unseen: (snap && snap[:unseen]) || [],
+      # An alarm that has a name: a move out of turn, a move that is not one.
+      alarm: snap && snap[:status] == :out_of_sync && AlnaslWeb.Words.alarm(snap[:detail]),
       reconstructed: Enum.count(plies, &(:recovered in &1.flags)),
       guessed: Enum.count(plies, &(:guessed in &1.flags)),
       # The pairing changed under a game that had begun: the arbiter's to settle.
@@ -550,6 +552,9 @@ defmodule AlnaslWeb.RoundLive do
               </div>
               <div :if={tile.pairing_flag} id={"tile-pairing-#{tile.dom}"} class="tile-note">
                 <.icon name="warning" />{gettext("Pairing changed in OpenPairings")}
+              </div>
+              <div :if={tile.alarm} id={"tile-alarm-#{tile.dom}"} class="tile-note tile-alarm">
+                <.icon name="error" />{tile.alarm}
               </div>
               <div :if={tile.reconstructed + tile.guessed > 0} class="tile-marks">
                 <span :if={tile.guessed > 0} id={"tile-guessed-#{tile.dom}"} class="flag guess">

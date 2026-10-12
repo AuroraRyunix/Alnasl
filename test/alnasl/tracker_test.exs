@@ -248,7 +248,8 @@ defmodule Alnasl.TrackerTest do
     {tr, out} = feed(tr, [{1_000, b1}, {5_000, Position.start()}], 20_000)
     assert Tracker.sans(tr) == ["e4"]
     refute Enum.any?(out, &match?({_, {:correction, _, _, _}}, &1))
-    assert alarms(out) == [:unexplained]
+    # A pawn that goes backwards is a move that is not one.
+    assert [{:illegal, %{piece: {:w, :p}, why: :shape}}] = alarms(out)
   end
 
   test "a piece that rests on a square on its way replaces its own move" do
@@ -312,7 +313,8 @@ defmodule Alnasl.TrackerTest do
     # the three moves are worked out.
     {tr, out} = feed(started(), [{1_000, seen}, {1_500, :press}], 10_000)
     assert Tracker.sans(tr) == ~w(e4 e5 Qh5)
-    assert Enum.all?(tr.plies, &(:recovered in &1.flags and :long_gap in &1.flags))
+    # Three at once, and no hole in contact: nothing says "gap".
+    assert Enum.all?(tr.plies, &(&1.flags == [:recovered]))
     assert alarms(out) == []
   end
 
@@ -329,7 +331,7 @@ defmodule Alnasl.TrackerTest do
     assert alarms(out) == []
     assert tr.status == :live
 
-    assert [[:recovered, :long_gap], [:recovered, :long_gap], [:recovered, :long_gap]] =
+    assert [[:recovered], [:recovered], [:recovered]] =
              tr.plies |> Enum.take(-3) |> Enum.map(& &1.flags)
 
     # Switched down to nothing in Setup, the board waits and is the alarm.
@@ -615,10 +617,11 @@ defmodule Alnasl.TrackerTest do
     assert Tracker.sans(tr) == ~w(e4 e5)
     assert tr.status == :out_of_sync
 
-    assert [{at, {:status, :out_of_sync, :unexplained}}] =
+    # Named, and as soon as it has stood like any claim about a piece.
+    assert [{at, {:status, :out_of_sync, {:illegal, %{piece: {:w, :r}, why: :blocked}}}}] =
              Enum.filter(out, &match?({_, {:status, :out_of_sync, _}}, &1))
 
-    assert at == t + tr.opts.transient_ms
+    assert at == t + tr.opts.unseen_hold_ms
 
     {tr, _} = feed(tr, [{t + 20_000, b}, {t + 25_000, move(b, "g1", "f3")}], 1_000)
     assert tr.status == :live

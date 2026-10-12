@@ -29,9 +29,31 @@ defmodule Alnasl.Tracker.Search do
   the board was being read changed both its squares in some reading, so
   nothing that was seen is left out - and the walk becomes a handful of
   moves a ply instead of thirty, which is what lets it go ten plies deep.
-  What it cannot find is a move that left no trace: a knight out and back
-  while the cable was out. The tracker asks again without `:touch`, less
-  deep, when the guided walk finds nothing.
+  What it cannot find is a move one of whose squares was never read
+  differently: a capture and its recapture on one square between two scans.
+
+  ## Evidence
+
+  With `:evidence` (a list of squares) a move is tried only when the piece
+  that makes it LEFT a square the readings saw change - its square is in
+  the list - or has already moved earlier in the same line. A piece that
+  stood on its square in every reading did not move: a bishop that never
+  left f1 does not go to a6 and back to let the other side move twice.
+  This is the widest search the tracker makes of a board it was connected
+  to. Without `:touch` and without `:evidence` every legal move is tried:
+  only for a stretch in which the board was not heard at all.
+
+  ## Never out and back
+
+  One side moving a piece from A to B and, with its very next move, from B
+  back to A, taking nothing either way, is not a line: it is two tempi
+  spent on nothing, which is what a search reaches for when the truth is
+  that somebody moved out of turn. No walk returns one.
+
+  (`out_and_back: true` asks for them all the same. The tracker does, once,
+  to count: a game may really have a king stepping aside and back, and when
+  such a line exists beside the one line found, that one is not the only
+  explanation and must not be marked as if it were.)
 
   The board compared is the PHYSICAL one (`phys`): what the sensors should
   show, which differs from the position only where a pawn was left standing
@@ -49,7 +71,8 @@ defmodule Alnasl.Tracker.Search do
   there is none), or `{:budget, nodes}` when the node budget ran out first.
 
   Options: `:min_depth` (1), `:max_depth` (4), `:max_nodes` (200_000),
-  `:max_ms` (no limit), `:touch` (see above; `nil` for every move),
+  `:max_ms` (no limit), `:touch` and `:evidence` (see above; `nil` for
+  no such limit),
   `:unseen` (squares whose piece the board does not show),
   `:promotion_default` (`:q`, the piece assumed when a pawn is left on its
   last rank; `nil` to never assume).
@@ -67,6 +90,8 @@ defmodule Alnasl.Tracker.Search do
       # Squares on which the position has a piece the board does not show.
       unseen: Keyword.get(opts, :unseen, []),
       touch: touch(Keyword.get(opts, :touch)),
+      evidence: Keyword.get(opts, :evidence),
+      out_and_back: Keyword.get(opts, :out_and_back, false),
       until:
         case Keyword.get(opts, :max_ms) do
           nil -> nil
@@ -80,7 +105,7 @@ defmodule Alnasl.Tracker.Search do
       found =
         Enum.find_value(min..max//1, [], fn depth ->
           if feasible?(pos.turn, phys, depth, target) do
-            case dfs(pos, phys, depth, [], ctx) do
+            case dfs(pos, phys, depth, [], [], ctx) do
               [] -> nil
               found -> found
             end
@@ -145,12 +170,13 @@ defmodule Alnasl.Tracker.Search do
 
   # --- the walk ----------------------------------------------------------------
 
-  defp dfs(pos, phys, remaining, acc, ctx) do
+  # `moved`: where the pieces that have moved in this line now stand.
+  defp dfs(pos, phys, remaining, acc, moved, ctx) do
     count_node(ctx)
     squares = differing(phys, ctx.target)
 
     if remaining == 1 do
-      if length(squares) > 4, do: [], else: last_ply(pos, phys, squares, acc, ctx)
+      if length(squares) > 4, do: [], else: last_ply(pos, phys, squares, acc, moved, ctx)
     else
       moves =
         cond do
@@ -162,9 +188,13 @@ defmodule Alnasl.Tracker.Search do
           ctx.touch ->
             pos |> Chess.moves_from(Tuple.to_list(ctx.touch)) |> touching(ctx)
 
+          ctx.evidence ->
+            Chess.moves_from(pos, Enum.uniq(ctx.evidence ++ moved))
+
           true ->
             Chess.pseudo_legal_moves(pos)
         end
+        |> admissible(acc, moved, ctx)
 
       them = if pos.turn == :w, do: :b, else: :w
 
@@ -182,7 +212,14 @@ defmodule Alnasl.Tracker.Search do
           next = Chess.apply_move(pos, move)
 
           Enum.flat_map(alive, fn {board, flags} ->
-            dfs(next, board, remaining - 1, [{move, flags} | acc], ctx)
+            dfs(
+              next,
+              board,
+              remaining - 1,
+              [{move, flags} | acc],
+              [move.to | List.delete(moved, move.from)],
+              ctx
+            )
           end)
         else
           []
@@ -191,11 +228,12 @@ defmodule Alnasl.Tracker.Search do
     end
   end
 
-  defp last_ply(pos, phys, squares, acc, ctx) do
+  defp last_ply(pos, phys, squares, acc, moved, ctx) do
     for move <-
           pos
           |> Chess.moves_from(own(squares, phys, pos.turn) ++ unseen(pos, phys, ctx))
-          |> touching(ctx),
+          |> touching(ctx)
+          |> admissible(acc, moved, ctx),
         move.to in squares,
         {board, flags} <- outcomes(phys, move, pos.turn, ctx.default),
         board == ctx.target,
@@ -215,6 +253,25 @@ defmodule Alnasl.Tracker.Search do
   # reads empty before and after, so it is not among those that differ.
   defp unseen(pos, phys, ctx),
     do: for(sq <- ctx.unseen, elem(phys, sq) == nil, elem(pos.board, sq) != nil, do: sq)
+
+  # The moves a line may go on with: by a piece the readings saw leave its
+  # square (or one that has moved in this line already), and not the
+  # mover's last move undone.
+  defp admissible(moves, acc, moved, ctx) do
+    moves =
+      case ctx.evidence do
+        nil -> moves
+        squares -> Enum.filter(moves, &(&1.from in squares or &1.from in moved))
+      end
+
+    case acc do
+      [_theirs, {mine, _flags} | _] when mine.capture == nil and not ctx.out_and_back ->
+        Enum.reject(moves, &(&1.from == mine.to and &1.to == mine.from and &1.capture == nil))
+
+      _first_move ->
+        moves
+    end
+  end
 
   defp touching(moves, %{touch: nil}), do: moves
 

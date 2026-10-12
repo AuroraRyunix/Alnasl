@@ -99,7 +99,8 @@ defmodule Alnasl.TrackerMatrixTest do
           assert v.(:flagged) == 0
           assert v.(:reconstructed_wrong) == 0
           assert right >= m.games * 0.9
-          assert m.recovered > 0
+          # Marked: orange, or red where the cable was out.
+          assert m.recovered + m.guessed > 0
 
         :long ->
           assert right > 0
@@ -130,9 +131,20 @@ defmodule Alnasl.TrackerMatrixTest do
           assert right >= m.games * 0.9
           assert m.faults > 2_000
 
+        # A move out of turn, or a move no rule allows, left standing and
+        # taken back: said by name, nothing added to the game, and the
+        # game whole afterwards. (A move out of turn that undoes the move
+        # just made reads as that move taken back, and is.)
+        :named ->
+          assert right == m.games
+          assert m.guessed == 0
+          assert m.named_games >= m.games * 0.9
+
         :illegal ->
           for {index, run} <- m.runs, game = Enum.at(games, index - 1), length(game.moves) > 14 do
             assert run.verdict in [:alarm, :guessed_wrong, :reconstructed_wrong]
+            # Whatever became of it later, the box first said what it saw.
+            assert run.named >= 1
             plies = run.session.tracker.plies
 
             # The moves before it are right - or, among the last few, a

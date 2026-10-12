@@ -19,6 +19,11 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+- [Fix] **The box no longer invents moves for pieces that did not move.** On a board that stayed connected, a second black move in a row was explained by sending White's bishop to a6 and back, marked as a guess. A reconstructed line may now only move pieces the readings saw leave their squares; a piece going out and straight back is not a line at all, anywhere; and moves without that evidence are considered only when the board really was gone (disconnected, or three polls missed in a row on a loop), and are then red.
+- [Feature] **An alarm that says what the board shows.** "Black moved (Nc6), but it is White's turn" and "A move that is not legal: white bishop c1-g5" (with why: something in the way, not how that piece moves, its own piece there, its king left in check) - on the board's page, the Round tile and in the log, after two seconds instead of eight of "does not match". Nothing is added to the game, and it is gone when the piece is back. "A move is missing before this" goes to where moves are typed.
+- [Change] **"Gap" on a move means the board was gone**, not that three moves were found at once or that somebody thought for twenty minutes. Moves found across a disconnection are red, whatever else is true of them.
+- [Change] **"The board is right" and "Check them" offer no line the readings do not support** either.
+
 ## [0.1.0] - 2026-10-12
 
 The first release. This is everything so far, in the order it

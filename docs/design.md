@@ -200,15 +200,23 @@ has one - **the shortest explanation wins**. It is asked, in this order:
    instead of thirty. This is the search that follows a game that got
    ahead of the box move by move - six plies in the recording that began
    all this - and it costs milliseconds.
-2. **Blind** - every legal move - for what nobody read anything of: a
-   cable out, a ply that fell between two scans. Two plies at once; up to
+2. **By evidence** - any move of a piece that was seen to *leave* its
+   square (or that has already moved earlier in the line) - for what fell
+   between two readings: a capture and its recapture on one square, a pawn
+   that went two squares and was taken in passing. Two plies at once; up to
    `blind_depth` (4) once the board has stood for `deep_settle_ms` (5 s).
    What the guided search finds is checked against this one wherever it
-   reaches: a pawn that went two squares and was taken in passing while
-   nobody read the board never stood on its square, and only the blind
-   search knows there were two ways.
-3. **With the absent piece taken to be unseen** (§2), two plies. Guessed.
-4. **From before the last reconstructed moves**, when the board has stood
+   reaches, and one line found by it is the one line the readings allow.
+   **This is the widest search of a board the box was connected to.** A
+   piece that stood on its square in every reading did not move, however
+   much a move of it would help (see "No phantoms").
+3. **Blind** - every legal move - only across a hole in what the box
+   knows: the driver said the board was gone (`Tracker.deaf/1`: a
+   disconnection, or three polls in a row missed on a loop). Whatever is
+   found across a hole is a guess, marked red and `long_gap`, and held to
+   the clock where a clock was heard.
+4. **With the absent piece taken to be unseen** (§2), two plies. Guessed.
+5. **From before the last reconstructed moves**, when the board has stood
    unexplained for `transient_ms` and the alarm is next: those moves
    explained the board then, and do not explain this one, so the question
    is asked again from before them. The game is corrected, not extended.
@@ -217,6 +225,61 @@ Before the first move, a board that is not the starting position is
 pieces being set up, and is not read as an opening: two plies (a board
 plugged in late), no more, until the clock has been pressed or the arbiter
 says "the board is right".
+
+### No phantoms
+
+A real board, connected throughout: 1. e4, twenty-four minutes of
+nothing, 1...e5 - and then Black's knight to c6, a second black move in a
+row. The blind search made that legal by sending White's bishop to a6 and
+back: `2. Ba6 Nc6 3. Bf1`, marked as a guess. The bishop stood on f1 in
+every reading.
+
+Three things came of it.
+
+- **Evidence.** The rule above: connected, a line may only move pieces the
+  readings saw leave their squares. It is a rule about the *from* square
+  on purpose - a move's destination can go unread (taken there a moment
+  later), its origin cannot stay as it was. It is also why the simulator's
+  "missed ply" rows hardly move: a ply the box did not read still leaves
+  its origin square empty in the next reading, which is what a real board
+  that failed to report gives too. What the rule forbids is exactly the
+  move that left no trace at all.
+- **Never out and back.** A piece from A to B and, with its side's next
+  move, from B to A, taking nothing, is two tempi spent on nothing. It was
+  ranked last; it is now not a line at all (`Search`, "Never out and
+  back"): no walk returns one, not for the tracker, not for "the board is
+  right", not on the choice screen.
+- **`long_gap` means a hole.** It used to be put on any three moves found
+  at once, and exempted nothing - but the name promised a reason, and a
+  long think is not one. A serial board pushes every change and is read
+  whole every few seconds; a loop is polled all the time. Quiet is a
+  player thinking. `long_gap` is now only on moves found while the box was
+  `deaf?`, which only a driver's "disconnected" (or three missed polls in a
+  row) sets, and which ends when the board is explained again or comes
+  back as it was. The same flag is what lets the blind search run, lets
+  the press count be ignored (a board that was not heard, its clock was
+  not either), and lets the choice screen offer lines without evidence.
+
+### What the board plainly shows
+
+When nothing explains the board, it may still say one thing clearly, and
+then the alarm has a name (`named/1`), raised once that has stood for
+`unseen_hold_ms` (2 s) rather than after eight seconds of "unexplained":
+
+- **A move out of turn** - `{:out_of_turn, move}`: the board is the game
+  plus one legal move by the side that is not to move. "Black moved (Nc6),
+  but it is White's turn."
+- **A move that is not legal** - `{:illegal, %{piece, from, to, why}}`: one
+  piece went from one square to another and that is not a move it has:
+  something stands in its way, that piece does not move like that, a piece
+  of its own side stands there, or it leaves its own king in check. "A
+  move that is not legal: white bishop c1-g5."
+
+Neither adds anything to the game and neither is given a mark: nothing was
+played. Both are gone the moment the piece is back, like any alarm. The
+board's page offers "A move is missing before this", which goes to where
+moves are typed, for the arbiter who knows the board missed one. There is
+no "accept as played": an illegal move is taken back.
 
 ### A move misread
 
@@ -301,10 +364,8 @@ Across kinds first (`reconstruct/4`, `usable/3`):
   anyway. A board that was not heard for a while (`Tracker.deaf/1`: the
   cable was out) is not measured against a clock that was not heard
   either, and a clock switched off says nothing.
-- **No piece going out and straight back** (`null_trip?/1`): one side
-  moving a piece from A to B and, with its next move, back to A, taking
-  nothing. Never taken while another line exists; alone, only when the
-  clock says the moves were made; without a clock, not at all.
+- **No piece going out and straight back.** Not ranked: not a line (see
+  "No phantoms").
 
 Then, among lines of one kind, `rank/3`, in this order:
 

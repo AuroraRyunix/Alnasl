@@ -595,9 +595,13 @@ before LiveChess does. The box leaves the boards as LiveChess expects them
   already has was misread - a pawn set down between d3 and d4, read on d3,
   that then takes on e5 - and rewrites that move ("read as d3" beside it)
   rather than invent moves to make the board fit. It never adds more moves
-  than the clock was pressed for, and never sends a piece out and straight
-  back to pass the time: then the board is out of sync, and the arbiter
-  asked. The marks are on the moves, on
+  than the clock was pressed for. And it never moves a piece the readings
+  did not see leave its square, nor one out and straight back: a board
+  that stayed connected is not explained by moves nobody saw. When what
+  it shows is one move by the side that is not to move, or one piece gone
+  where it cannot go, the alarm says exactly that - "Black moved (Nc6),
+  but it is White's turn", "A move that is not legal: white bishop c1-g5"
+  - adds nothing to the game, and is gone when the piece is back. The marks are on the moves, on
   the Round tile and in the Boards list, and in the log. A tap on a red
   move asks which line it was, one move at a time, each option on a small
   board. Only when no line of legal moves leads to the board does it go
@@ -630,7 +634,7 @@ before LiveChess does. The box leaves the boards as LiveChess expects them
 
 ## What is proven, and how
 
-By `mix test` (583 tests), three tools, three sessions with a real board and
+By `mix test` (611 tests), three tools, three sessions with a real board and
 one with a real loop:
 
 **The link, end to end against the real OpenPairings** (`mix
@@ -675,13 +679,15 @@ simulator under each fault mix, three passes each (`mix alnasl.bench
 | a piece not seen where it stands for 1-5 plies (5% of plies): alone, without a clock, and with the benign faults at 5% each | 207 of 207, every row | - | - | 0 | **0** |
 | a piece set down between two squares and read on the wrong one (5% of quiet moves) | 77 (it never happened) | 80 / 5 | 18 / 9 | 2 | **0**, and 16 where the board never contradicted itself (see below) |
 | the same, no clock | 77 | - | 98 / 14 | 2 | **0**, and 16 |
-| one ply at a time unseen (10%) | 6 | 196 / 0 | 4 / 1 | 0 | **0** |
+| one ply at a time unseen (10%) | 6 | 195 / 1 | 4 / 1 | 0 | **0** |
 | the same, with the other faults at 5% | 11 | 193 / 0 | 3 / 0 | 0 | **0** |
-| unplugged for 2 plies, twice | 0 | 204 / 0 | 0 / 3 | 0 | **0** |
-| up to 3 plies in a row unseen (25%) | 0 | 39 / 1 | 41 / 22 | 104 | **0** |
-| unplugged for 3 plies | 0 | 107 / 3 | 55 / 41 | 1 | **0** |
-| unplugged for 8 plies | 0 | 3 / 0 | 6 / 72 | 126 | **0** |
-| an illegal move at ply 12, played on | - | 0 / 13 | 0 / 9 | 185 | **0** |
+| unplugged for 2 plies, twice | 0 | - | 204 / 3 | 0 | **0** |
+| up to 3 plies in a row unseen (25%) | 0 | 37 / 2 | 41 / 18 | 109 | **0** |
+| unplugged for 3 plies | 0 | 0 / 3 | 162 / 41 | 1 | **0** |
+| unplugged for 8 plies | 0 | - | 9 / 75 | 123 | **0** |
+| a move out of turn at ply 12, left standing 4-10 s and taken back | 207, the alarm named in 195 | - | - | 0 at the end | **0** |
+| an illegal move at ply 12, taken back the same way | 207, the alarm named in 203 | - | - | 0 at the end | **0** |
+| an illegal move at ply 12, played on | - | 0 / 12 | 0 / 10 | 185; named first in 206 | **0** |
 | bullet speed (a move every 0.3-2 s, the clock a second late), no faults; defaults, and "Bullet / fast play" | 206, both | 1 / 0, both | - | 0 | **0** |
 | bullet with slammed and knocked-over pieces, 6% of plies unseen, 10% of presses unreported; "Bullet / fast play" | 24 | 180 / 0 | 2 / 1 | 0 | **0** |
 
@@ -690,7 +696,7 @@ game in which the first move that differs from the game played is a red
 one. Read the hard rows for what they are.
 
 - With one ply at a time unseen, or the cable out for two, the box
-  finishes 200-204 games in 207 by itself; the 1-3 it gets wrong are the
+  finishes 199-204 games in 207 by itself; the 1-3 it gets wrong are the
   positions two different pairs of moves lead to, marked red.
 - **A move misread** is found out when a later move makes no sense with
   the piece where it was read, and rewritten: 98 of the 130 games it
@@ -711,11 +717,29 @@ one. Read the hard rows for what they are.
   still wrong about as often as right, because the order of two moves
   nobody read is a coin toss; and an orange one is wrong in 1-3 games in
   207, where two moves explain a board that three made.
-- **An illegal move played on** is the alarm in 185 games of 207. In 13
-  it is read as "the move before was one square off" and marked orange:
-  a piece that moved a moment ago and now moves as it could only from the
-  square beside is, to a board, the same thing as a misread - and a
-  misread is the likelier of the two. In 9, red.
+- **A move out of turn, or a move no rule allows, taken back** is said by
+  name ("Black moved (Nc6), but it is White's turn", "A move that is not
+  legal: white bishop c1-g5") while it stands, adds nothing to the game,
+  and leaves the game whole when the piece is back: 207 of 207, both rows.
+  (The few games where the alarm is not named are a "move out of turn"
+  that undoes the move just made, which is a takeback and read as one, and
+  an illegal move that a neighbouring-square misread explains for the
+  seconds it stands - put right the moment the piece goes back.)
+- **An illegal move played on** is named first in 206 games of 207 and is
+  the alarm at the end in 185. In 22 the game that follows is still
+  explained: 12 as "the move before was one square off" (orange), 10 red.
+  A piece that moved a moment ago and now moves as it could only from the
+  square beside is, to a board, the same thing as a misread; the rewrite
+  that reads the real misread on board 06310 is what reads these. Not
+  fixed, and counted.
+- **No phantoms.** A reconstructed line only moves pieces the readings saw
+  leave their squares, and never a piece out and straight back. For the
+  rows where plies go unread this changes little - a ply nobody read
+  still empties its square - and costs one game in 621: a king stepping
+  out of a check and back (Torre's windmill), where the true line *is* an
+  out-and-back and the box takes another, marked orange. Where the cable
+  was out, everything found is now red, right or not (204 and 162 games
+  that were orange): across a hole in contact nothing is vouched for.
 
 That is the limit of reading a game from positions, `docs/design.md` says
 exactly where it lies, and the marks are how the box says it too.
@@ -809,6 +833,13 @@ and from the day after `real-06310-misread-pawn.jsonl`):
   offers every right whose king and rook stand at home, and the side to
   move from the clock (`test/alnasl/position_set_by_hand_test.exs`).
 
+- 1. e4, a twenty-four minute think, 1...e5, and then Black's knight to c6
+  as well, taken back, and a bishop put through its own pawn to g5, taken
+  back (`real-06310-out-of-turn.jsonl`). As recorded, the box made
+  `2. Ba6 Nc6 3. Bf1` of the knight: a bishop that never left f1, out and
+  back, so that Black could move twice. It now reads `1. e4 e5`, no mark
+  on either, with the two things it saw in the log by name
+  (`test/alnasl/no_phantoms_test.exs`);
 - a pawn set down between d3 and d4 on purpose, read on d3, that then
   took on e5. As recorded, the reconstruction made `3. d3 e5 4. d4 Ba3
   5. dxe5 Bf8` of it - ten moves to seven presses of the clock, and a

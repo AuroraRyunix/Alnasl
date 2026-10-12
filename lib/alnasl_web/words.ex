@@ -192,6 +192,22 @@ defmodule AlnaslWeb.Words do
          "Moves went by unseen and the board cannot say which they were. Pick the right ones below; the box has kept following the game underneath."
        )}
 
+  def state_help(:out_of_sync, {:out_of_turn, _move} = named),
+    do:
+      {alarm(named),
+       gettext(
+         "The board shows a legal move by the side that is not to move. Nothing was added to the game. Put the piece back and the board carries on by itself. If a move was made before it that the board did not see, add that move below."
+       )}
+
+  def state_help(:out_of_sync, {:illegal, %{why: why}} = named),
+    do:
+      {alarm(named),
+       why(why) <>
+         " " <>
+         gettext(
+           "Nothing was added to the game. Put the piece back and the board carries on by itself. If a move was made before it that the board did not see, add that move below."
+         )}
+
   def state_help(:out_of_sync, :piece_missing),
     do:
       {gettext("A piece is missing from the board"),
@@ -264,6 +280,36 @@ defmodule AlnaslWeb.Words do
        gettext("Link a board to it on the Boards page.")}
 
   def state_help(_state, _detail), do: {nil, nil}
+
+  @doc """
+  What a board plainly shows that is not a move of the game, in one line:
+  "Black moved (Nc6), but it is White's turn", "A move that is not legal:
+  white bishop c1-g5". `nil` for an alarm that has no such name.
+  """
+  def alarm({:out_of_turn, %{colour: :b, san: san}}),
+    do: gettext("Black moved (%{move}), but it is White's turn", move: san)
+
+  def alarm({:out_of_turn, %{san: san}}),
+    do: gettext("White moved (%{move}), but it is Black's turn", move: san)
+
+  def alarm({:illegal, %{piece: piece, from: from, to: to}}),
+    do:
+      gettext("A move that is not legal: %{piece} %{from}-%{to}",
+        piece: piece(piece),
+        from: Position.square_name(from),
+        to: Position.square_name(to)
+      )
+
+  def alarm(_other), do: nil
+
+  @doc "Why a move is not legal, as a sentence."
+  def why(:blocked), do: gettext("Something stands in its way.")
+  def why(:own_piece), do: gettext("A piece of its own side stands there.")
+  def why(:check), do: gettext("It leaves its own king in check.")
+  def why("blocked"), do: why(:blocked)
+  def why("own_piece"), do: why(:own_piece)
+  def why("check"), do: why(:check)
+  def why(_shape), do: gettext("That piece does not move like that.")
 
   @doc "A finding of the start-position check, in pieces and squares."
   def problem({:swapped, a, sq_a, b, sq_b}) do
@@ -400,7 +446,7 @@ defmodule AlnaslWeb.Words do
   def flag(:guessed), do: gettext("guessed")
   def flag(:rewritten), do: gettext("rewritten")
   def flag(:alone), do: gettext("one line found")
-  def flag(:long_gap), do: gettext("3+ at once")
+  def flag(:long_gap), do: gettext("after a gap in contact")
   def flag(:assumed), do: gettext("queen assumed")
   def flag(:unseen), do: gettext("a piece not seen")
   def flag(:arbiter), do: gettext("by hand")
@@ -446,6 +492,42 @@ defmodule AlnaslWeb.Words do
     do: gettext("Out of sync: the board does not match the game.")
 
   defp log("board.resumed", _d), do: gettext("Back in sync.")
+
+  defp log("move.out_of_turn", %{"colour" => "b"} = d),
+    do:
+      gettext(
+        "Out of turn: Black moved %{move} (%{from}-%{to}) with White to move. Not added to the game.",
+        move: d["move"],
+        from: d["from"],
+        to: d["to"]
+      )
+
+  defp log("move.out_of_turn", d),
+    do:
+      gettext(
+        "Out of turn: White moved %{move} (%{from}-%{to}) with Black to move. Not added to the game.",
+        move: d["move"],
+        from: d["from"],
+        to: d["to"]
+      )
+
+  defp log("move.illegal", %{"colour" => "w"} = d),
+    do:
+      gettext("Not a legal move: white %{piece} %{from}-%{to}. %{why} Not added to the game.",
+        piece: kind(d["piece"]),
+        from: d["from"],
+        to: d["to"],
+        why: why(d["why"])
+      )
+
+  defp log("move.illegal", d),
+    do:
+      gettext("Not a legal move: black %{piece} %{from}-%{to}. %{why} Not added to the game.",
+        piece: kind(d["piece"]),
+        from: d["from"],
+        to: d["to"],
+        why: why(d["why"])
+      )
 
   defp log("move.recovered", d),
     do: gettext("Reconstructed, not seen one by one (one line fits): %{moves}", moves: moves(d))

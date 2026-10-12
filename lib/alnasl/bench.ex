@@ -109,6 +109,9 @@ defmodule Alnasl.Bench do
       takebacks: Enum.count(out, &match?({_t, {:correction, _, _, :takeback}}, &1)),
       recovered: Enum.count(tr.plies, &(:recovered in &1.flags)),
       guessed: Enum.count(tr.plies, &(:guessed in &1.flags)),
+      # Alarms that say what the board shows: a move out of turn, a move
+      # that is not one.
+      named: Enum.count(out, &match?({_t, {:status, :out_of_sync, {_kind, %{}}}}, &1)),
       # Marked moves that are not the move the game has at that place.
       recovered_wrong: marked_wrong(tr.plies, truth, :recovered),
       guessed_wrong: marked_wrong(tr.plies, truth, :guessed),
@@ -183,6 +186,8 @@ defmodule Alnasl.Bench do
       corrections: results |> Enum.map(& &1.corrections) |> Enum.sum(),
       recovered: results |> Enum.map(& &1.recovered) |> Enum.sum(),
       guessed: results |> Enum.map(& &1.guessed) |> Enum.sum(),
+      named: results |> Enum.map(& &1.named) |> Enum.sum(),
+      named_games: Enum.count(results, &(&1.named > 0)),
       recovered_wrong: results |> Enum.map(& &1.recovered_wrong) |> Enum.sum(),
       guessed_wrong: results |> Enum.map(& &1.guessed_wrong) |> Enum.sum(),
       faults: results |> Enum.map(&length(&1.log)) |> Enum.sum(),
@@ -241,6 +246,8 @@ defmodule Alnasl.Bench do
          %{faults: %{missed: 0.25}, missed_streak: 3}},
         {"unplugged for 3 plies", :long, %{unplug: [{11, 3}]}},
         {"unplugged for 8 plies", :lost, %{unplug: [{11, 8}]}},
+        {"a move out of turn at ply 12, taken back", :named, %{out_of_turn_at: 12}},
+        {"an illegal move at ply 12, taken back", :named, %{illegal_back_at: 12}},
         {"an illegal move at ply 12, played on", :illegal, %{illegal_at: 12}}
       ]
   end

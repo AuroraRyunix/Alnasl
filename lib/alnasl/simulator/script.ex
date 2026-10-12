@@ -35,7 +35,10 @@ defmodule Alnasl.Simulator.Script do
   | `:unseen` | a piece (never a king) stops being seen where it stands, for `:unseen_plies` plies or until it moves or is taken: parked beside the board, or standing where the sensor loses it. The game goes on |
 
   Besides those: `:unplug` (`[{ply, plies}]` - the board is gone from before
-  `ply` for that many plies, then back), `:illegal_at` (a ply at which the
+  `ply` for that many plies, then back), `:out_of_turn_at` and
+  `:illegal_back_at` (a ply before which a move is made out of turn, or a
+  move no rule allows, left standing a few seconds and taken back),
+  `:illegal_at` (a ply at which the
   player makes a move that is not legal, after which the game is played on as
   if nothing happened) and `:gesture` (the kings set in the centre for the
   result once the game is over).
@@ -68,6 +71,12 @@ defmodule Alnasl.Simulator.Script do
     missed_streak: 1,
     unplug: [],
     illegal_at: nil,
+    # A ply before which the side that has just moved moves again - a legal
+    # move, out of turn - leaves it standing a while and takes it back.
+    out_of_turn_at: nil,
+    # A ply before which the side to move makes a move no rule allows,
+    # leaves it standing a while and takes it back.
+    illegal_back_at: nil,
     gesture: nil,
     clock: true,
     initial_ms: 5_400_000,
@@ -193,6 +202,13 @@ defmodule Alnasl.Simulator.Script do
         else: between(st, o.think_ms)
 
     st = wait(st, think)
+
+    st =
+      cond do
+        o.out_of_turn_at == number -> st |> note(number, :out_of_turn) |> out_of_turn(pos)
+        o.illegal_back_at == number -> st |> note(number, :illegal_back) |> illegal(pos, :back)
+        true -> st
+      end
 
     cond do
       st.derailed ->
@@ -457,7 +473,7 @@ defmodule Alnasl.Simulator.Script do
 
   # A move no rule allows: a piece of the side to move set down on an empty
   # square it cannot reach, such that no legal move gives the same board.
-  defp illegal(st, pos) do
+  defp illegal(st, pos, back \\ nil) do
     us = pos.turn
     legal_boards = for m <- Chess.legal_moves(pos), do: Chess.apply_move(pos, m).board
 
@@ -474,7 +490,39 @@ defmodule Alnasl.Simulator.Script do
           do: {from, to, piece}
 
     {{from, to, piece}, st} = pick(st, options)
-    steps(st, [{:lift, from}, {:put, to, piece}])
+    st = steps(st, [{:lift, from}, {:put, to, piece}])
+
+    if back do
+      # Long enough to be noticed, and then put right: FIDE takes an
+      # illegal move back.
+      st |> pause({4_000, 10_000}) |> steps([{:lift, to}, {:put, from, piece}]) |> pause()
+    else
+      st
+    end
+  end
+
+  # A legal move by the side that is NOT to move: the player who has just
+  # moved moves again. It stands a while and is taken back.
+  defp out_of_turn(st, pos) do
+    theirs = %{pos | turn: other(pos.turn), ep: nil}
+
+    quiet =
+      for m <- Chess.legal_moves(theirs), m.kind in [:normal, :double], m.capture == nil, do: m
+
+    case quiet do
+      [] ->
+        st
+
+      moves ->
+        {move, st} = pick(st, moves)
+        piece = elem(st.b, move.from)
+
+        st
+        |> steps([{:lift, move.from}, {:put, move.to, piece}])
+        |> pause({4_000, 10_000})
+        |> steps([{:lift, move.to}, {:put, move.from, piece}])
+        |> pause()
+    end
   end
 
   # --- what hands do besides moving --------------------------------------------

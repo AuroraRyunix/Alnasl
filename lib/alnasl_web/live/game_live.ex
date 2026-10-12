@@ -258,6 +258,11 @@ defmodule AlnaslWeb.GameLive do
     end
   end
 
+  # "A move is missing before this", under an alarm that names what the
+  # board shows: to the tool where moves are typed.
+  def handle_event("missing_move", _params, socket),
+    do: {:noreply, push_event(socket, "alnasl:go", %{to: "type-moves-form"})}
+
   # "Take them back": the marked moves, when they are the last of the game.
   def handle_event("choice_undo", _params, %{assigns: %{choice: %{alt: alt}}} = socket) do
     with_board(assign(socket, choice: nil), fn board ->
@@ -1193,13 +1198,15 @@ defmodule AlnaslWeb.GameLive do
               <div class="tool" id="edit-tool" phx-hook=".GoTo">
                 <b>{gettext("Undo or change a move")}</b>
                 <script :type={Phoenix.LiveView.ColocatedHook} name=".GoTo">
-                  // "Type the right moves" in the question above: brought here,
-                  // with the move number filled in and the cursor in the field.
+                  // "Type the right moves" in the question above, "A move is
+                  // missing before this" under an alarm: brought to the tool,
+                  // with the cursor in its field.
                   export default {
                     mounted() {
-                      this.handleEvent("alnasl:go", () => {
-                        this.el.scrollIntoView({block: "center"})
-                        const field = this.el.querySelector("#edit-san")
+                      this.handleEvent("alnasl:go", ({to}) => {
+                        const target = document.getElementById(to) || this.el
+                        target.scrollIntoView({block: "center"})
+                        const field = target.querySelector("input[type=text], input:not([type])")
                         if (field) field.focus({preventScroll: true})
                       })
                     }
@@ -1572,6 +1579,13 @@ defmodule AlnaslWeb.GameLive do
       <div>
         <b>{@headline}</b>
         <p>{@text}</p>
+        <.button
+          :if={match?({kind, _} when kind in [:out_of_turn, :illegal], @detail)}
+          id="alarm-missing-move"
+          small
+          phx-click="missing_move"
+          style="margin-top:0.4rem"
+        >{gettext("A move is missing before this")}</.button>
       </div>
     </div>
     <p

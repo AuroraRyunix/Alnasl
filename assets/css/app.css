@@ -2444,3 +2444,9 @@ tr.sought td:first-child {
 .callout p {
   margin: 0;
 }
+
+/* An alarm with a name, on a tile: what the board shows, in words. */
+.tile-note.tile-alarm {
+  background: var(--bad-bg);
+  color: var(--bad);
+}

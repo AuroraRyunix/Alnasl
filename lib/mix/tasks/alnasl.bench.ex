@@ -17,6 +17,8 @@ defmodule Mix.Tasks.Alnasl.Bench do
   time a board went out of sync, also when it found its way back; `gave
   up` the searches that ran out of budget. `misread` is a game that
   differs at a move the board itself read wrong and never contradicted.
+  `named` is the games in which an alarm said what the board showed: a
+  move out of turn, or a move that is not legal.
 
   The last rows are fast play: `Alnasl.Simulator.Script.profile(:bullet)`,
   with the tracker's defaults and with the "Bullet / fast play" preset of
@@ -39,7 +41,7 @@ defmodule Mix.Tasks.Alnasl.Bench do
 
     header =
       String.pad_trailing("fault mix", 46) <>
-        "  exact  rec ok  rec WRONG  guess ok  guess WRONG  flagged  alarm  misread  silent   faults    rec plies  guess plies  alarms  worst search  gave up"
+        "  exact  rec ok  rec WRONG  guess ok  guess WRONG  flagged  alarm  misread  silent   faults    rec plies  guess plies  alarms  named  worst search  gave up"
 
     Mix.shell().info(header)
 
@@ -67,6 +69,7 @@ defmodule Mix.Tasks.Alnasl.Bench do
           String.pad_leading("#{m.recovered_wrong}/#{m.recovered}", 13) <>
           String.pad_leading("#{m.guessed_wrong}/#{m.guessed}", 13) <>
           n.(m.alarms, 8) <>
+          n.(m.named_games, 7) <>
           String.pad_leading("#{Float.round(m.max_search_ms, 1)} ms", 14) <>
           n.(m.budget_hits, 9)
       )

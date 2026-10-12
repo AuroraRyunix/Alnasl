@@ -54,6 +54,8 @@ defmodule Alnasl.BoardServer do
   alias Alnasl.Boards.Board
 
   @tick_ms 100
+  # Polls missed in a row before the board counts as not heard.
+  @deaf_after 3
   @topic "boards"
 
   def start_link(%Board{} = board) do
@@ -302,12 +304,26 @@ defmodule Alnasl.BoardServer do
   defp driver_event(state, {:poll, :ok}, _t),
     do: %{
       state
-      | stats: Map.update!(state.stats, :polls_ok, &(&1 + 1)),
+      | stats: state.stats |> Map.update!(:polls_ok, &(&1 + 1)) |> Map.put(:missed_run, 0),
         last_seen: DateTime.utc_now(:second)
     }
 
-  defp driver_event(state, {:poll, :missed}, _t),
-    do: dirty(%{state | stats: Map.update!(state.stats, :polls_missed, &(&1 + 1))})
+  # A board on a loop that misses a poll now and then is a noisy line.
+  # One that misses several in a row was not heard for that long, and its
+  # clock with it: a hole in what the box knows (`Tracker.deaf/1`), which is
+  # the one thing that lets the reconstruction consider moves it has no
+  # reading for.
+  defp driver_event(state, {:poll, :missed}, _t) do
+    run = Map.get(state.stats, :missed_run, 0) + 1
+
+    session =
+      if run == @deaf_after and state.session,
+        do: %{state.session | tracker: Tracker.deaf(state.session.tracker)},
+        else: state.session
+
+    stats = state.stats |> Map.update!(:polls_missed, &(&1 + 1)) |> Map.put(:missed_run, run)
+    dirty(%{state | stats: stats, session: session})
+  end
 
   defp driver_event(state, {:raw, direction, bytes}, _t) do
     Recorder.record(state.board.id, {:raw, direction, bytes})
@@ -494,8 +510,7 @@ defmodule Alnasl.BoardServer do
             {%{state | game: game}, :replace}
 
           {:status, status, detail} ->
-            log_status(state, status, detail)
-            {state, queue}
+            {log_status(state, status, detail), queue}
 
           {:result_suggestion, result, why} ->
             {suggest(state, result, why), queue}
@@ -575,16 +590,52 @@ defmodule Alnasl.BoardServer do
     end
   end
 
+  # Writes down that the board went out of sync - by name, when what it
+  # shows has one - and that it is back. `alarmed?` remembers the first so
+  # that the second is said once, and only after it.
   defp log_status(state, :out_of_sync, detail) do
-    Log.add(:error, "board.out_of_sync", %{why: inspect(detail)}, ref(state))
+    case detail do
+      {:out_of_turn, move} ->
+        Log.add(
+          :error,
+          "move.out_of_turn",
+          %{
+            colour: move.colour,
+            move: move.san,
+            from: Position.square_name(move.from),
+            to: Position.square_name(move.to)
+          },
+          ref(state)
+        )
+
+      {:illegal, %{piece: {colour, kind}} = move} ->
+        Log.add(
+          :error,
+          "move.illegal",
+          %{
+            colour: colour,
+            piece: kind,
+            from: Position.square_name(move.from),
+            to: Position.square_name(move.to),
+            why: move.why
+          },
+          ref(state)
+        )
+
+      other ->
+        Log.add(:error, "board.out_of_sync", %{why: inspect(other)}, ref(state))
+    end
+
+    Map.put(state, :alarmed?, true)
   end
 
-  defp log_status(%{session: %{tracker: %{status: :out_of_sync}}} = state, status, _detail)
+  defp log_status(%{alarmed?: true} = state, status, _detail)
        when status in [:live, :waiting_start] do
     Log.add(:info, "board.resumed", %{}, ref(state))
+    %{state | alarmed?: false}
   end
 
-  defp log_status(_state, _status, _detail), do: :ok
+  defp log_status(state, _status, _detail), do: state
 
   # A result the board suggests. Kept for the arbiter; sent on by itself only
   # for what is a fact of the position, and only when Setup says so.
@@ -868,7 +919,6 @@ defmodule Alnasl.BoardServer do
 
         {:status, status, detail} ->
           log_status(state, status, detail)
-          state
 
         {:result_suggestion, result, why} ->
           suggest(state, result, why)

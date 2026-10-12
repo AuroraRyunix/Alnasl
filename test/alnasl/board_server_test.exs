@@ -225,9 +225,12 @@ defmodule Alnasl.BoardServerTest do
 
       snapshot = Boards.snapshot(board.id)
       assert snapshot.status == :recovered
-      assert Enum.take(snapshot.plies, -2) |> Enum.all?(&(:recovered in &1.flags))
+      # Found across a hole in contact: a guess, and marked as one.
+      assert Enum.take(snapshot.plies, -2)
+             |> Enum.all?(&(:guessed in &1.flags and :long_gap in &1.flags))
+
       kinds = Enum.map(Alnasl.Log.list(), & &1.kind)
-      assert "board.disconnected" in kinds and "move.recovered" in kinds
+      assert "board.disconnected" in kinds and "move.guessed" in kinds
     end
 
     test "the clock is read, pressed moves are accepted at once, and a press without a move is flagged" do
@@ -287,7 +290,8 @@ defmodule Alnasl.BoardServerTest do
       assert snapshot.raw == Position.to_text(illegal)
       assert snapshot.certain == Position.to_text(now)
       assert sans(board.id) == ~w(e4 e5)
-      assert "board.out_of_sync" in Enum.map(Alnasl.Log.list(), & &1.kind)
+      # Said by name: a rook does not go through its own pawn.
+      assert "move.illegal" in Enum.map(Alnasl.Log.list(), & &1.kind)
 
       assert {:ok, :none} = Boards.resync(board.id, 6)
 

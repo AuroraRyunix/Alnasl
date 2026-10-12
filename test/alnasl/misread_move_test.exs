@@ -226,7 +226,7 @@ defmodule Alnasl.MisreadMoveTest do
       {tr, b, t} = after_moves(~w(e4 e5))
       {tr, out} = feed(tr, [{t, move(b, "a1", "a3")}], 10_000)
       assert Tracker.sans(tr) == ~w(e4 e5)
-      assert alarms(out) == [:unexplained]
+      assert [{:illegal, %{piece: {:w, :r}, why: :blocked}}] = alarms(out)
 
       # Switched off, the misread pawn is the old story: nothing found at
       # once, and after five seconds the bishop's outing - unless the clock
@@ -245,27 +245,27 @@ defmodule Alnasl.MisreadMoveTest do
       assert Tracker.sans(tr) == @played
     end
 
-    test "more moves than the clock was pressed for are not made up: the alarm, and the arbiter may ask" do
-      # The rewrite switched off, so that the bishop's outing is all there
-      # is. Six moves, six presses; the line would make ten.
+    test "with the rewrite switched off the board says what it shows, and nobody's bishop is sent out to explain it" do
+      # Six moves, six presses; the bishop's outing would make ten - and
+      # the bishop never left f8 in any reading.
       {tr, seen, t} = misread(misread: false)
       tr = Tracker.presses(tr, 6, t - 100)
       {tr, out} = feed(tr, [{t, seen}, {t + 900, :press}], 10_000)
 
       assert Tracker.sans(tr) == ~w(e4 Nc6 Nc3 Nf6 d3 e5)
-      assert alarms(out) == [:unexplained]
+      assert [{:illegal, %{piece: {:w, :p}, why: :shape}}] = alarms(out)
 
-      # "The board is right": his to ask for, and marked for what it is.
-      assert {tr, _events, {:guessed, sans, _others}} = Tracker.resync(tr, t + 20_000, 6)
-      assert length(sans) == 4
-      assert Enum.all?(Enum.take(tr.plies, -4), &(:guessed in &1.flags))
+      # Not even when the arbiter asks: "the board is right" finds moves
+      # the readings support, and there are none.
+      assert {same, [], :none} = Tracker.resync(tr, t + 20_000, 6)
+      assert Tracker.sans(same) == Tracker.sans(tr)
     end
 
-    test "a piece going out and straight back is not taken while no clock says the moves were made" do
+    test "the same without a clock" do
       {tr, seen, t} = misread(misread: false)
       {tr, out} = feed(tr, [{t, seen}], 10_000)
       assert Tracker.sans(tr) == ~w(e4 Nc6 Nc3 Nf6 d3 e5)
-      assert alarms(out) == [:unexplained]
+      assert [{:illegal, _}] = alarms(out)
     end
 
     test "nor while another line does without it" do

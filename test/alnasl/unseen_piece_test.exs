@@ -191,7 +191,7 @@ defmodule Alnasl.UnseenPieceTest do
 
     {tr, out} = feed(tr, [{t, through}], 10_000)
     assert Tracker.sans(tr) == ~w(d4 d5 Nc3 Nf6 Nf3 Nc6)
-    assert alarms(out) == [:unexplained]
+    assert [{:illegal, %{piece: {:w, :p}}}] = alarms(out)
     assert Tracker.unseen(tr) == [%{square: sq("f3"), piece: {:w, :n}}]
     assert elem(tr.pos.board, sq("f3")) == {:w, :n}
   end
@@ -212,7 +212,7 @@ defmodule Alnasl.UnseenPieceTest do
     {tr, out} = feed(tr, [{t + 6_000, played}, {t + 9_000, onto}], 10_000)
 
     assert List.last(Tracker.sans(tr)) == "g6"
-    assert alarms(out) == [:unexplained]
+    assert [{:illegal, %{piece: {:w, :b}}}] = alarms(out)
     assert elem(tr.pos.board, sq("a3")) == {:w, :r}
   end
 
@@ -225,7 +225,8 @@ defmodule Alnasl.UnseenPieceTest do
 
     {tr, out} = feed(tr, [{t, e3}, {t + 3_000, landed}], 10_000)
     assert List.last(Tracker.sans(tr)) == "e3"
-    assert alarms(out) == [:unexplained]
+    # And named for what it is: White's knight, on Black's time.
+    assert [{:out_of_turn, %{colour: :w, san: "Ne5"}}] = alarms(out)
   end
 
   test "an ordinary move, however slow, is not this" do
