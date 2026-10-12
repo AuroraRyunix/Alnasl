@@ -15,7 +15,8 @@ defmodule Mix.Tasks.Alnasl.Bench do
   and `guess plies` are the marked moves: how many are not the move the
   game has at that place, of how many; `alarms` every
   time a board went out of sync, also when it found its way back; `gave
-  up` the searches that ran out of budget.
+  up` the searches that ran out of budget. `misread` is a game that
+  differs at a move the board itself read wrong and never contradicted.
 
   The last rows are fast play: `Alnasl.Simulator.Script.profile(:bullet)`,
   with the tracker's defaults and with the "Bullet / fast play" preset of
@@ -38,7 +39,7 @@ defmodule Mix.Tasks.Alnasl.Bench do
 
     header =
       String.pad_trailing("fault mix", 46) <>
-        "  exact  rec ok  rec WRONG  guess ok  guess WRONG  flagged  alarm  silent   faults    rec plies  guess plies  alarms  worst search  gave up"
+        "  exact  rec ok  rec WRONG  guess ok  guess WRONG  flagged  alarm  misread  silent   faults    rec plies  guess plies  alarms  worst search  gave up"
 
     Mix.shell().info(header)
 
@@ -60,6 +61,7 @@ defmodule Mix.Tasks.Alnasl.Bench do
           v.(:guessed_wrong, 13) <>
           v.(:flagged, 9) <>
           v.(:alarm, 7) <>
+          v.(:unnoticed, 9) <>
           v.(:silent, 8) <>
           n.(m.faults, 9) <>
           String.pad_leading("#{m.recovered_wrong}/#{m.recovered}", 13) <>

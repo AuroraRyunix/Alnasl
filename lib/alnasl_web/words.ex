@@ -320,6 +320,22 @@ defmodule AlnaslWeb.Words do
   A piece the board does not show, taken to stand where it stood
   (`{square, piece}`): the warning that stays for as long as that lasts.
   """
+  def unseen({square, {:w, kind}, read}),
+    do:
+      gettext("White %{piece} read on %{read}, taken to stand on %{square}",
+        piece: kind(kind),
+        read: Position.square_name(read),
+        square: Position.square_name(square)
+      )
+
+  def unseen({square, {_black, kind}, read}),
+    do:
+      gettext("Black %{piece} read on %{read}, taken to stand on %{square}",
+        piece: kind(kind),
+        read: Position.square_name(read),
+        square: Position.square_name(square)
+      )
+
   def unseen({square, {:w, kind}}),
     do:
       gettext("White %{piece} not seen on %{square}",
@@ -356,9 +372,25 @@ defmodule AlnaslWeb.Words do
   def marks(:guessed, count),
     do: ngettext("%{count} move guessed", "%{count} moves guessed", count)
 
+  @doc """
+  A move that was read as another and rewritten, in a sentence: "3. d3 was
+  read; the board now says it was 3. d4". `number` is the ply (1-based).
+  """
+  def read_as(number, read, now) do
+    move = "#{div(number + 1, 2)}#{if rem(number, 2) == 1, do: ".", else: "..."}"
+
+    gettext("%{move} %{read} was read; the board now says it was %{move} %{now}",
+      move: move,
+      read: read,
+      now: now
+    )
+  end
+
   @doc "A flag on a move, as the small word shown beside it."
   def flag(:recovered), do: gettext("reconstructed")
   def flag(:guessed), do: gettext("guessed")
+  def flag(:rewritten), do: gettext("rewritten")
+  def flag(:alone), do: gettext("one line found")
   def flag(:long_gap), do: gettext("3+ at once")
   def flag(:assumed), do: gettext("queen assumed")
   def flag(:unseen), do: gettext("a piece not seen")
@@ -409,6 +441,32 @@ defmodule AlnaslWeb.Words do
   defp log("move.recovered", d),
     do: gettext("Reconstructed, not seen one by one (one line fits): %{moves}", moves: moves(d))
 
+  defp log("move.rewritten", %{"read" => read, "now" => now, "ply" => ply} = d)
+       when is_binary(read) and is_integer(ply) do
+    number = "#{div(ply + 1, 2)}#{if rem(ply, 2) == 1, do: ".", else: "..."}"
+
+    if d["sure"],
+      do:
+        gettext(
+          "%{number} %{read} was read; the board now says it was %{number} %{now}. The game from there: %{moves}",
+          number: number,
+          read: read,
+          now: now,
+          moves: moves(d)
+        ),
+      else:
+        gettext(
+          "%{number} %{read} was read; the box now takes it to have been %{number} %{now} - a guess. The game from there: %{moves}",
+          number: number,
+          read: read,
+          now: now,
+          moves: moves(d)
+        )
+  end
+
+  defp log("move.rewritten", d),
+    do: gettext("A move that was read wrong was put right: %{moves}", moves: moves(d))
+
   defp log("move.guessed", d),
     do:
       gettext("Guessed: more than one line of moves fits, this one was taken: %{moves}",
@@ -417,6 +475,15 @@ defmodule AlnaslWeb.Words do
 
   defp log("move.assumed", d),
     do: gettext("Promotion piece not seen, a queen assumed: %{moves}", moves: moves(d))
+
+  defp log("piece.unseen", %{"read" => read} = d) when is_binary(read),
+    do:
+      gettext(
+        "A %{piece} reads on %{read} and stands on %{square}: set down between the two. The moves are followed with it on %{square}.",
+        piece: kind(d["piece"]),
+        read: read,
+        square: d["square"]
+      )
 
   defp log("piece.unseen", %{"colour" => "w"} = d),
     do:

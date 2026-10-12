@@ -72,7 +72,17 @@ defmodule Alnasl.Session do
 
     # More presses than moves is how the reconstruction knows the board
     # has run further ahead than the shortest explanation says.
-    session = %{session | clock: clock, tracker: Tracker.presses(session.tracker, clock.presses)}
+    # And more moves than presses, that it is making moves up.
+    session = %{
+      session
+      | clock: clock,
+        tracker:
+          Tracker.presses(
+            session.tracker,
+            if(Clock.present?(clock), do: clock.presses),
+            t
+          )
+    }
 
     {session, events} =
       cond do
@@ -97,12 +107,22 @@ defmodule Alnasl.Session do
 
   # The clock was switched off or unplugged: a board without a clock again.
   def handle(%__MODULE__{} = session, t, {:info, %{clock: false}}) do
-    %{session | clock: Clock.off(session.clock, t)} |> check_missing([]) |> check_clock(false)
+    %{
+      session
+      | clock: Clock.off(session.clock, t),
+        tracker: Tracker.presses(session.tracker, nil)
+    }
+    |> check_missing([])
+    |> check_clock(false)
   end
 
   def handle(%__MODULE__{} = session, t, :tick) do
     session.tracker |> Tracker.tick(t) |> wrap(session, t)
   end
+
+  # The cable was out: neither the pieces nor the clock were heard.
+  def handle(%__MODULE__{} = session, _t, :disconnected),
+    do: {%{session | tracker: Tracker.deaf(session.tracker)}, []}
 
   def handle(%__MODULE__{} = session, _t, _other), do: {session, []}
 

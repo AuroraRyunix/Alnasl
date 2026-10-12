@@ -11,7 +11,8 @@ defmodule AlnaslWeb.Choice do
   - the moves every remaining line begins with are not asked about;
   - at the first move where they differ, each move that some line plays
     there is an option, drawn on a small board with its two squares
-    marked, the one the game has now first;
+    marked - in the order the tracker ranks the lines, so the likeliest is
+    first, and the one the game has now says so;
   - an answer leaves only the lines that play it there, and the question
     moves on - until one line is left.
 
@@ -57,6 +58,7 @@ defmodule AlnaslWeb.Choice do
         {:ok, pos} = Chess.parse_fen(before)
         standing = Enum.at(current, at)
         on_course? = List.starts_with?(current, settled)
+        options_in_order = lines
 
         options =
           lines
@@ -72,7 +74,11 @@ defmodule AlnaslWeb.Choice do
               standing?: on_course? and san == standing
             }
           end)
-          |> Enum.sort_by(&{not &1.standing?, &1.san})
+          # In the order of the best line that plays each: the tracker
+          # ranks the lines, and the likeliest answer comes first.
+          |> Enum.sort_by(fn option ->
+            Enum.find_index(options_in_order, &(Enum.at(&1, at) == option.san)) || 0
+          end)
 
         %{
           settled: settled,

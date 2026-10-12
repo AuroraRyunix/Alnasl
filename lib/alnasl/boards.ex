@@ -177,7 +177,8 @@ defmodule Alnasl.Boards do
       linked?: game != nil,
       status: if(game && game.status == "finished", do: :finished, else: :no_signal),
       detail: nil,
-      plies: if(game, do: Enum.map(Games.plies(game), &Map.take(&1, [:san, :flags])), else: []),
+      plies:
+        if(game, do: Enum.map(Games.plies(game), &Map.take(&1, [:san, :flags, :read])), else: []),
       unseen: [],
       clock: nil,
       clock_check: nil,
@@ -288,6 +289,7 @@ defmodule Alnasl.Boards do
   def alternatives(id, number) do
     case call(id, {:repair, :alternatives, number}) do
       {:ok, found} -> found
+      {:error, :not_running} = down -> down
       _error -> nil
     end
   end

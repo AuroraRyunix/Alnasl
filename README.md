@@ -340,7 +340,13 @@ page says so, and simulator boards are unaffected.
   them - takes what it finds and marks it: **reconstructed** (orange, a
   diamond) when one line of moves fits, **guessed** (red, a question mark)
   when several did and one was taken, by the clock's press count, the order
-  the readings show, and a fixed tie-break. The marks are on the moves, on
+  the readings show, and a fixed tie-break. It also asks whether a move it
+  already has was misread - a pawn set down between d3 and d4, read on d3,
+  that then takes on e5 - and rewrites that move ("read as d3" beside it)
+  rather than invent moves to make the board fit. It never adds more moves
+  than the clock was pressed for, and never sends a piece out and straight
+  back to pass the time: then the board is out of sync, and the arbiter
+  asked. The marks are on the moves, on
   the Round tile and in the Boards list, and in the log. A tap on a red
   move asks which line it was, one move at a time, each option on a small
   board. Only when no line of legal moves leads to the board does it go
@@ -368,7 +374,7 @@ page says so, and simulator boards are unaffected.
 
 ## What is proven, and how
 
-By `mix test` (362 tests), three tools, and two evenings with a real board:
+By `mix test` (396 tests), three tools, and three sessions with a real board:
 
 **The tracker**, against 69 games (59 classics before 1930, 7 constructed
 for underpromotion and en passant, 3 more; 4599 plies) played through the
@@ -379,30 +385,52 @@ simulator under each fault mix, three passes each (`mix alnasl.bench
 |---|---|---|---|---|---|
 | clean; hover, lift, knock, swap, missing clock presses, pawn left for a queen, takebacks, slides - each alone at 20-30%, and all together | 207 of 207, every row; **no alarm, no mark** | - | - | 0 | **0** |
 | a piece not seen where it stands for 1-5 plies (5% of plies): alone, without a clock, and with the benign faults at 5% each | 207 of 207, every row | - | - | 0 | **0** |
-| one ply at a time unseen (10%) | 6 | 194 / 0 | 5 / 2 | 0 | **0** |
-| the same, with the other faults at 5% | 11 | 188 / 0 | 6 / 2 | 0 | **0** |
+| a piece set down between two squares and read on the wrong one (5% of quiet moves) | 77 (it never happened) | 80 / 5 | 18 / 9 | 2 | **0**, and 16 where the board never contradicted itself (see below) |
+| the same, no clock | 77 | - | 98 / 14 | 2 | **0**, and 16 |
+| one ply at a time unseen (10%) | 6 | 196 / 0 | 4 / 1 | 0 | **0** |
+| the same, with the other faults at 5% | 11 | 193 / 0 | 3 / 0 | 0 | **0** |
 | unplugged for 2 plies, twice | 0 | 204 / 0 | 0 / 3 | 0 | **0** |
-| up to 3 plies in a row unseen (25%) | 0 | 46 / 6 | 67 / 83 (and 1 wrong at a move marked otherwise) | 4 | **0** |
+| up to 3 plies in a row unseen (25%) | 0 | 39 / 1 | 41 / 22 | 104 | **0** |
 | unplugged for 3 plies | 0 | 107 / 3 | 55 / 41 | 1 | **0** |
 | unplugged for 8 plies | 0 | 3 / 0 | 6 / 72 | 126 | **0** |
-| an illegal move at ply 12, played on | - | 0 / 1 | 0 / 21 | 185 | **0** |
+| an illegal move at ply 12, played on | - | 0 / 13 | 0 / 9 | 185 | **0** |
 | bullet speed (a move every 0.3-2 s, the clock a second late), no faults; defaults, and "Bullet / fast play" | 206, both | 1 / 0, both | - | 0 | **0** |
 | bullet with slammed and knocked-over pieces, 6% of plies unseen, 10% of presses unreported; "Bullet / fast play" | 24 | 180 / 0 | 2 / 1 | 0 | **0** |
 
 A game is counted once, by the worst thing in it: "guessed, wrong" is a
 game in which the first move that differs from the game played is a red
-one. Read the hard rows for what they are. With one ply at a time unseen,
-or the cable out for two, the box now finishes 201-204 games in 207 by
-itself, where it used to stop and ask in 3-9; the 2-3 it gets wrong are
-the positions two different pairs of moves lead to, marked red. With
-three plies or more unseen and nothing read of them, a red move is wrong
-about as often as it is right - per move 71% right with a quarter of all
-plies unseen, 62% with the cable out for three - because the order of two
-moves nobody read is a coin toss; and an orange one is wrong in 3-6 games
-in 207, where two moves explain a board that three made. That is the
-limit of reading a game from positions, `docs/design.md` says exactly
-where it lies, and the marks are how the box says it too. After eight
-unseen plies or an illegal move the alarm is still the usual end.
+one. Read the hard rows for what they are.
+
+- With one ply at a time unseen, or the cable out for two, the box
+  finishes 200-204 games in 207 by itself; the 1-3 it gets wrong are the
+  positions two different pairs of moves lead to, marked red.
+- **A move misread** is found out when a later move makes no sense with
+  the piece where it was read, and rewritten: 98 of the 130 games it
+  happened in end right. In 14 the box picked the wrong neighbouring
+  square or the wrong moment (marked), 2 end in the alarm, and in 16
+  nothing the board ever read contradicts the move as it read it - a queen
+  read on c1 that was on d1 and went on to c2 from either. Those 16 are
+  wrong and unmarked, and no reading tells them from the game played: the
+  board said so. They are counted apart, not as silence.
+- **The box no longer adds more moves than the clock was pressed for.**
+  That is why, with a quarter of all plies unseen (and their presses with
+  them, which the box cannot know), half the games now end in the alarm
+  where they used to end as a guess: 22 wrong guesses instead of 83, 104
+  alarms instead of 4. Fewer wrong red moves, fewer right ones, and an
+  arbiter asked. A board whose cable was out is not held to the clock
+  (it was not heard either), so those rows are as they were.
+- With three plies or more unseen and nothing read of them, a red move is
+  still wrong about as often as right, because the order of two moves
+  nobody read is a coin toss; and an orange one is wrong in 1-3 games in
+  207, where two moves explain a board that three made.
+- **An illegal move played on** is the alarm in 185 games of 207. In 13
+  it is read as "the move before was one square off" and marked orange:
+  a piece that moved a moment ago and now moves as it could only from the
+  square beside is, to a board, the same thing as a misread - and a
+  misread is the likelier of the two. In 9, red.
+
+That is the limit of reading a game from positions, `docs/design.md` says
+exactly where it lies, and the marks are how the box says it too.
 
 The tests assert the last column on every row, the first on the first two
 rows, and that no orange move is wrong where at most two plies went by
@@ -450,7 +478,8 @@ driver (`test/alnasl/real_board_test.exs`, fixtures `real-06310-*.jsonl`):
   exactly that. The recording ends with one.
 
 **The tracker, against a game on that board** (2026-10-11, fixtures
-`real-06310-unseen-knight.jsonl` and `real-06310-castling-after-set.jsonl`):
+`real-06310-unseen-knight.jsonl`, `real-06310-castling-after-set.jsonl`,
+and from the day after `real-06310-misread-pawn.jsonl`):
 
 - a real game followed from the starting position with the clock: 1. d4 d5
   2. Nc3 Nf6 3. Nf3, each move confirmed by its press;
@@ -464,6 +493,15 @@ driver (`test/alnasl/real_board_test.exs`, fixtures `real-06310-*.jsonl`):
   sync: the FEN offered for a bare board said nobody could castle. It now
   offers every right whose king and rook stand at home, and the side to
   move from the clock (`test/alnasl/position_set_by_hand_test.exs`).
+
+- a pawn set down between d3 and d4 on purpose, read on d3, that then
+  took on e5. As recorded, the reconstruction made `3. d3 e5 4. d4 Ba3
+  5. dxe5 Bf8` of it - ten moves to seven presses of the clock, and a
+  bishop that never moved. It now reads `3. d4 e5 4. dxe5`, the third
+  move marked "read as d3" (`test/alnasl/misread_move_test.exs`). That
+  morning "Check them" also did nothing when tapped; it now always opens
+  the question, or says that there is no other line and what can be done
+  instead (`test/alnasl_web/live/review_test.exs`).
 
 Two things the first recording corrected: the lever is up on the side whose time
 *runs* (the code had it the other way, in a fallback that was never
@@ -482,7 +520,7 @@ and names on every page in both languages.
 
 ## What is not done
 
-- **Thirteen moves have been played on a real board**, not a game: no
+- **Twenty moves have been played on a real board**, not a game: one
   capture, no promotion, no en passant, and castling only after a
   position set by hand. The clock's battery-low bit and the flag bits
   beside the hours were never set; a board lying the other way round was
@@ -527,6 +565,11 @@ and names on every page in both languages.
   clock's press count is used against the other failure - two moves
   explaining what three made - but the simulator does not press for a
   move it hides, so that rule is tested by hand, not by the matrix.
+- **A piece that stands crooked and is found out by another piece's
+  move** is carried as "read on d3, standing on c4" and followed one move
+  at a time; the search for several unseen moves does not know about it
+  until it has moved or been straightened. Tested in the simulator, never
+  seen on a real board.
 - **Marks are not kept across a choice of line forever**: the alternatives
   for a red move are searched for again when asked, from the game as
   stored, without the readings that ranked them the first time.

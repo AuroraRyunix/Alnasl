@@ -217,9 +217,95 @@ pieces being set up, and is not read as an opening: two plies (a board
 plugged in late), no more, until the clock has been pressed or the arbiter
 says "the board is right".
 
+### A move misread
+
+The first game on a real board with the reconstruction in it: White played
+3. d4 and set the pawn down between d3 and d4, and the board read d3. Then
+3...e5 4. dxe5, which from d3 a pawn cannot do. A search that only adds
+moves got the pawn to d4 by moving it again and spent the tempo on a
+bishop: `4. d4 Ba3 5. dxe5 Bf8`. Ten moves, seven presses of the clock, and
+a bishop that never left f8.
+
+So the reconstruction also asks whether a move it *has* is wrong
+(`rewrites/1`), and keeps the question small:
+
+- one of the last 6 plies (a piece left crooked for two moves each, and the
+  "move" that was somebody straightening it), not entered by the arbiter,
+  not a castle;
+- replaced by another legal move of the **same piece** to a square **next
+  to** the one read: one short or one long on its line, or beside it. A
+  piece set down between two squares is the physical cause, and it covers
+  the pawn read on the third rank that went to the fourth and the capture
+  read as landing next door;
+- the moves read after it played again, each from and to the squares it
+  was read on. If one no longer can be, this is not what happened. One is
+  left out: a "move" from the square the piece was read on to the square
+  it is now taken to have been on - somebody straightened it, on his own
+  time, and it was read as a move;
+- and then **nothing more, or one move**. Two would be rope enough to
+  explain any hand over the board.
+
+Two ways the board can agree with the rewritten game. The piece is no
+longer where it was read - it moved on (the pawn took on e5), was taken
+where it really stood, was straightened - and the board is simply the
+rewritten game's. Or it still reads there, and another move is legal only
+with it on the square beside (a pawn that jumps over the square a bishop
+reads on): then the piece is carried the way an unseen piece is, with the
+square it reads on (`ghost`): "White bishop read on d3, taken to stand on
+c4", until it is read where it stands, moves, or is taken. The multi-ply
+search does not know about a piece carried so; while one is, only single
+moves are followed.
+
+The rewritten move is marked `rewritten` and keeps what it was read as
+(`read`, shown beside it and said in the log: "3. d3 was read; the board
+now says it was 3. d4"); the game is sent again whole. Orange when it is
+the only rewrite of its cost and the game then has as many moves as the
+clock was pressed for; red otherwise - without a clock, always. The move
+as it was read stays an option on the choice screen.
+
+What it is not allowed to explain, each found by a row of the fault
+matrix going wrong:
+
+- a hand: the board is the game, or one plain move on, with one piece
+  missing (a knocked-over queen beside a bishop that went to f4 reads like
+  "the queen was on f4 all along, and the bishop took her");
+- a move read since that would have *taken* the rewritten piece without
+  anybody seeing a capture - not until the board has stood for
+  `deep_settle_ms` (a king put on a bishop's square while the two are
+  swapped back);
+- a move legal only with a piece beside where it still reads, until it has
+  stood for `unseen_hold_ms` (a queen resting on her way with her king in
+  check is not proof that the checking piece is elsewhere);
+- a castle.
+
+What it costs: a player who makes an illegal move with a piece that moved
+a moment ago can be read as "the move before was one square off". In the
+fault matrix that is 13 of 207 illegal-move games, marked orange. The
+board cannot tell the two apart; a misread is the likelier of them.
+
 ### Which line, when there are several
 
-`rank/3`, in this order:
+Across kinds first (`reconstruct/4`, `usable/3`):
+
+- **Fewest changes to the game.** A new move is one, a move rewritten is
+  one: one rewritten and one added beats four made up. Equal, the line
+  that changes no history.
+- **Not more moves than the clock was pressed for** (`fits?/2`). A line
+  that would put the game further ahead of the clock than it has ever been
+  (`debt`: the players' own forgotten presses, measured when a press
+  arrives and when a move is accepted) by more than two - the press of
+  the move on the board, which a clock tells a second late, and one lost
+  with its move - is the box making up moves. It is not taken at all:
+  the alarm, and "the board is right" for the arbiter who wants it
+  anyway. A board that was not heard for a while (`Tracker.deaf/1`: the
+  cable was out) is not measured against a clock that was not heard
+  either, and a clock switched off says nothing.
+- **No piece going out and straight back** (`null_trip?/1`): one side
+  moving a piece from A to B and, with its next move, back to A, taking
+  nothing. Never taken while another line exists; alone, only when the
+  clock says the moves were made; without a clock, not at all.
+
+Then, among lines of one kind, `rank/3`, in this order:
 
 1. **The clock.** More presses than moves means the board has run further
    ahead than the shortest line says (one press of slack: the lever that

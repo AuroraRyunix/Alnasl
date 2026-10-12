@@ -263,7 +263,12 @@ defmodule Alnasl.BoardServer do
   defp driver_event(state, :disconnected, _t) do
     Recorder.record(state.board.id, {:status, :disconnected})
     if state.connected?, do: Log.add(:warn, "board.disconnected", %{}, ref(state))
-    dirty(%{state | connected?: false})
+
+    # Its clock is not heard either while it is gone (`Tracker.deaf/1`).
+    session =
+      state.session && %{state.session | tracker: Tracker.deaf(state.session.tracker)}
+
+    dirty(%{state | connected?: false, session: session})
   end
 
   defp driver_event(state, {:info, info}, _t) do
@@ -453,12 +458,30 @@ defmodule Alnasl.BoardServer do
           {:correction, keep, plies, reason} ->
             {game, _} = Games.apply_event(state.game, event, wall)
 
-            Log.add(
-              :info,
-              "move.corrected",
-              %{reason: reason, keep: keep, moves: Enum.map(plies, & &1.san)},
-              ref(state)
-            )
+            case {reason, plies} do
+              # A move read wrong and put right: said in so many words.
+              {:misread, [%{read: read} = first | _]} ->
+                Log.add(
+                  :warn,
+                  "move.rewritten",
+                  %{
+                    ply: keep + 1,
+                    read: read,
+                    now: first.san,
+                    moves: Enum.map(plies, & &1.san),
+                    sure: :recovered in first.flags
+                  },
+                  ref(state)
+                )
+
+              _other ->
+                Log.add(
+                  :info,
+                  "move.corrected",
+                  %{reason: reason, keep: keep, moves: Enum.map(plies, & &1.san)},
+                  ref(state)
+                )
+            end
 
             {%{state | game: game}, :replace}
 
@@ -533,11 +556,16 @@ defmodule Alnasl.BoardServer do
   defp log_unseen(state, []), do: Log.add(:info, "piece.accounted", %{}, ref(state))
 
   defp log_unseen(state, pieces) do
-    for %{square: square, piece: {colour, kind}} <- pieces do
+    for %{square: square, piece: {colour, kind}} = entry <- pieces do
       Log.add(
         :warn,
         "piece.unseen",
-        %{square: Position.square_name(square), colour: colour, piece: kind},
+        %{
+          square: Position.square_name(square),
+          colour: colour,
+          piece: kind,
+          read: entry[:ghost] && Position.square_name(entry.ghost)
+        },
         ref(state)
       )
     end
@@ -862,8 +890,12 @@ defmodule Alnasl.BoardServer do
         certain: Position.to_text(tracker.pos.board),
         start_fen: tracker.start_fen,
         last_move: last && {last.from, last.to},
-        plies: Enum.map(tracker.plies, &Map.take(&1, [:san, :flags])),
-        unseen: for(%{square: sq, piece: piece} <- Tracker.unseen(tracker), do: {sq, piece}),
+        plies: Enum.map(tracker.plies, &Map.take(&1, [:san, :flags, :read])),
+        unseen:
+          for(
+            %{square: sq, piece: piece} = entry <- Tracker.unseen(tracker),
+            do: if(entry[:ghost], do: {sq, piece, entry.ghost}, else: {sq, piece})
+          ),
         clock: Clock.read(state.session.clock, t),
         clock_check: Session.clock_check(state.session),
         clock_alarm: state.session.clock_alarm,

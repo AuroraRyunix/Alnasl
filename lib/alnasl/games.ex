@@ -17,6 +17,8 @@ defmodule Alnasl.Games do
   @flags %{
     "recovered" => :recovered,
     "guessed" => :guessed,
+    "rewritten" => :rewritten,
+    "alone" => :alone,
     "long_gap" => :long_gap,
     "assumed" => :assumed,
     "unseen" => :unseen,
@@ -91,7 +93,10 @@ defmodule Alnasl.Games do
 
   # --- moves -------------------------------------------------------------------
 
-  @doc "The plies of a game: `[%{san, flags, at, clock}]`."
+  @doc """
+  The plies of a game: `[%{san, flags, at, clock, read, span}]`. `read` is
+  what a rewritten move was first read as (`nil` for every other move).
+  """
   def plies(%Game{plies: json}) do
     json
     |> Jason.decode!()
@@ -100,6 +105,8 @@ defmodule Alnasl.Games do
         san: ply["san"],
         flags: for(flag <- ply["flags"] || [], is_map_key(@flags, flag), do: @flags[flag]),
         at: ply["at"],
+        read: ply["read"],
+        span: ply["span"],
         clock:
           case ply["clock"] do
             %{} = clock -> %{white_ms: clock["white_ms"], black_ms: clock["black_ms"]}
@@ -157,6 +164,11 @@ defmodule Alnasl.Games do
         "at" => now,
         "clock" => ply[:clock]
       }
+      |> then(fn stored ->
+        if ply[:read],
+          do: Map.merge(stored, %{"read" => ply.read, "span" => ply[:span]}),
+          else: stored
+      end)
     end)
   end
 

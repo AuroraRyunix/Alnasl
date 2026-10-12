@@ -31,6 +31,7 @@ defmodule Alnasl.Simulator.Script do
   | `:leave_pawn` | a pawn promoted to a queen but left standing as a pawn |
   | `:slam` | the move in one reading: the piece was never seen in the air, and a capture never in two steps. A hand faster than the board scans |
   | `:topple` | the move knocks a neighbour over: it is off its square when the clock is pressed and set back on the opponent's time |
+  | `:between` | a piece set down between two squares: the board reads it on the square NEXT to the one it went to (a legal move too), until it moves on, is taken, or somebody straightens it a few plies later. Nothing looks wrong until a later move makes no sense |
   | `:unseen` | a piece (never a king) stops being seen where it stands, for `:unseen_plies` plies or until it moves or is taken: parked beside the board, or standing where the sensor loses it. The game goes on |
 
   Besides those: `:unplug` (`[{ply, plies}]` - the board is gone from before
@@ -84,7 +85,9 @@ defmodule Alnasl.Simulator.Script do
     # the press, whatever the hands do meanwhile. `nil`: at once.
     clock_lag_ms: nil,
     # For how many plies a piece of the `:unseen` fault stays out of sight.
-    unseen_plies: {1, 5}
+    unseen_plies: {1, 5},
+    # For how many plies a piece of the `:between` fault is left crooked.
+    between_plies: {1, 4}
   }
 
   @bullet %{
@@ -136,7 +139,8 @@ defmodule Alnasl.Simulator.Script do
       unplug_left: 0,
       streak: 0,
       clock_at: 0,
-      hidden: nil
+      hidden: nil,
+      crooked: nil
     }
 
     st = emit(st, {:position, st.b})
@@ -151,6 +155,8 @@ defmodule Alnasl.Simulator.Script do
       end)
 
     st = if st.unplug_left > 0, do: plug(st), else: st
+    # Whoever tidies the board after the game straightens the piece.
+    st = %{st | crooked: nil}
     # A board is still read when nobody moves: whatever was missed at the
     # end is on the next reading.
     st = st |> wait(1_500) |> emit({:position, st.b})
@@ -206,7 +212,7 @@ defmodule Alnasl.Simulator.Script do
         if left == 0, do: st |> wait(700) |> plug(), else: st
 
       true ->
-        st = st |> see_again(number) |> maybe_hide(number)
+        st = st |> see_again(number) |> maybe_hide(number) |> straighten(move, number)
         {missed?, st} = chance(st, :missed)
 
         if missed? and st.streak < o.missed_streak do
@@ -254,6 +260,37 @@ defmodule Alnasl.Simulator.Script do
       |> steps([{:put, square, piece}])
     else
       maybe_press(st, pos, number)
+    end
+  end
+
+  # The `:between` fault: the squares next to where the move really went on
+  # which the board could read the piece instead - empty, and a legal move
+  # of the same piece too, or the tracker would not be fooled for a moment.
+  defp beside(pos, move, board) do
+    for other <- Chess.legal_moves(pos),
+        other.from == move.from and other.to != move.to,
+        other.kind in [:normal, :double] and other.capture == nil and other.promo == nil,
+        elem(board, other.to) == nil,
+        abs(rem(other.to, 8) - rem(move.to, 8)) <= 1 and
+          abs(div(other.to, 8) - div(move.to, 8)) <= 1,
+        do: other.to
+  end
+
+  # A crooked piece is put straight after a few plies, or before a move
+  # that lands where the board reads it: nobody plays onto a square that
+  # looks taken.
+  defp straighten(%{crooked: nil} = st, _move, _number), do: st
+
+  defp straighten(%{crooked: crooked} = st, move, number) do
+    cond do
+      elem(st.b, crooked.real) != crooked.piece ->
+        %{st | crooked: nil}
+
+      number >= crooked.until or move.to == crooked.shown ->
+        %{st | crooked: nil} |> emit({:position, st.b}) |> pause()
+
+      true ->
+        st
     end
   end
 
@@ -362,12 +399,27 @@ defmodule Alnasl.Simulator.Script do
       _quiet ->
         {slide?, st} = if faults?, do: chance(st, :slide), else: {false, st}
         via = if slide?, do: between_squares(move), else: []
+        {crooked?, st} = if faults? and via == [], do: chance(st, :between), else: {false, st}
+        beside = if crooked? and st.crooked == nil, do: beside(pos, move, st.b), else: []
 
-        case via do
-          [] ->
+        case {via, beside} do
+          {[], [_ | _]} ->
+            # Set down between two squares: the board reads the neighbour.
+            {shown, st} = pick(st, beside)
+            {plies, st} = between(st, st.o.between_plies)
+            st = st |> note(number, :between) |> steps([{:lift, move.from}])
+
+            st = %{
+              st
+              | crooked: %{real: move.to, shown: shown, piece: piece, until: number + plies}
+            }
+
+            steps(st, [{:put, move.to, piece}])
+
+          {[], []} ->
             steps(st, [{:lift, move.from}, {:put, move.to, piece}])
 
-          squares ->
+          {squares, _beside} ->
             {mid, st} = pick(st, squares)
 
             st
@@ -621,6 +673,14 @@ defmodule Alnasl.Simulator.Script do
   defp emit(%{hidden: %{square: square, piece: piece}} = st, {:position, board})
        when elem(board, square) == piece,
        do: %{st | ev: [{st.t, {:position, put_elem(board, square, nil)}} | st.ev]}
+
+  # A crooked piece is read on the square beside its own - for as long as
+  # it stands there and nothing else stands where it is read.
+  defp emit(%{crooked: %{real: real, shown: shown, piece: piece}} = st, {:position, board})
+       when elem(board, real) == piece and elem(board, shown) == nil do
+    board = board |> put_elem(real, nil) |> put_elem(shown, piece)
+    %{st | ev: [{st.t, {:position, board}} | st.ev]}
+  end
 
   defp emit(st, event), do: %{st | ev: [{st.t, event} | st.ev]}
 

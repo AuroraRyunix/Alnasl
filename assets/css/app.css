@@ -2334,3 +2334,20 @@ tr.sought td:first-child {
   align-items: baseline;
   padding: 0.15rem 0;
 }
+
+.alarm.mark-rec {
+  border-color: var(--reconstructed);
+  background: var(--reconstructed-bg);
+}
+
+.alarm.mark-rec > svg {
+  color: var(--reconstructed);
+}
+
+.choice-actions {
+  flex-wrap: wrap;
+}
+
+.choice-actions .btn {
+  min-height: 2.75rem;
+}

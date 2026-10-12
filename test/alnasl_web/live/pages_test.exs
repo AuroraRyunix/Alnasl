@@ -592,7 +592,7 @@ defmodule AlnaslWeb.PagesTest do
            outbox.online outbox.blocked outbox.conflict outbox.server_ahead door.unlocked door.refused setup.saved
            destination.offline destination.online destination.blocked destination.enabled destination.disabled
            table.set table.cleared table.moved table.remapped table.swapped board.recognised
-           board.other_serial board.replaced piece.unseen piece.accounted game.new)
+           board.other_serial board.replaced piece.unseen piece.accounted game.new move.rewritten)
 
       for kind <- kinds do
         sentence = AlnaslWeb.Words.log(%Alnasl.Log.Event{kind: kind, data: "{}"})

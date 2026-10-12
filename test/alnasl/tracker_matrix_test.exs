@@ -15,6 +15,8 @@ defmodule Alnasl.TrackerMatrixTest do
   - `:unseen` - a piece that is not seen where it stands for one to five
     plies (parked beside the board, a weak sensor), alone and among the
     other survivable faults: every game whole, no alarm.
+  - `:between` - a piece set down between two squares and read on the
+    neighbour of the one it went to. See the case below.
   - `:gap2` - one ply at a time goes by unseen, so two moves must be found at
     once. They are, and marked: "reconstructed" when one pair fits,
     "guessed" when more than one does (the classic: a pawn that went one
@@ -83,6 +85,16 @@ defmodule Alnasl.TrackerMatrixTest do
           assert m.alarms == 0
           assert m.faults > 100
 
+        # A piece set down between two squares and read on the wrong one
+        # (`:between`). Found out when a later move makes no sense, and the
+        # misread move rewritten; or never contradicted by anything the
+        # board reads, which no tracker can help. Nothing silent, and most
+        # games whole.
+        :between ->
+          assert m.faults > 50
+          assert right + v.(:unnoticed) >= m.games * 0.85
+          assert v.(:alarm) <= m.games * 0.05
+
         :gap2 ->
           assert v.(:flagged) == 0
           assert v.(:reconstructed_wrong) == 0
@@ -122,8 +134,15 @@ defmodule Alnasl.TrackerMatrixTest do
           for {index, run} <- m.runs, game = Enum.at(games, index - 1), length(game.moves) > 14 do
             assert run.verdict in [:alarm, :guessed_wrong, :reconstructed_wrong]
             plies = run.session.tracker.plies
-            assert plies |> Enum.take(11) |> Enum.map(& &1.san) == Enum.take(game.moves, 11)
-            assert Enum.all?(Enum.take(plies, 11), &(&1.flags == []))
+
+            # The moves before it are right - or, among the last few, a
+            # move rewritten to make the illegal one a legal one, and
+            # marked as rewritten.
+            for {ply, san} <- plies |> Enum.take(11) |> Enum.zip(game.moves) do
+              assert (ply.san == san and ply.flags == []) or :rewritten in ply.flags
+            end
+
+            assert plies |> Enum.take(5) |> Enum.map(& &1.san) == Enum.take(game.moves, 5)
 
             # Whatever came after is marked, every move of it that the box
             # worked out rather than read.

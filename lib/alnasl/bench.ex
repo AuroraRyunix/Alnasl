@@ -23,6 +23,9 @@ defmodule Alnasl.Bench do
     promotion piece assumed, a piece not seen, a takeback reported there;
   - `:alarm` - the tracker stopped, raised out-of-sync, and what it emitted
     until then is right;
+  - `:unnoticed` - the moves differ at a move the simulator had the board
+    misread (`:between`), nothing marks it or anything after it, and
+    nothing could: see `unnoticed/3`;
   - `:silent` - the moves differ and nothing marks the place, or moves are
     missing with no alarm. **This is the one that must never happen.**
   """
@@ -38,6 +41,7 @@ defmodule Alnasl.Bench do
           | :guessed_wrong
           | :flagged
           | :alarm
+          | :unnoticed
           | :silent
 
   @doc """
@@ -52,8 +56,31 @@ defmodule Alnasl.Bench do
 
     session
     |> judge(out, sans)
+    |> then(fn judged ->
+      from = if is_tuple(judged.difference), do: elem(judged.difference, 0), else: 0
+      later = session.tracker.plies |> Enum.drop(from) |> Enum.flat_map(& &1.flags)
+      unnoticed(judged, script.log, later)
+    end)
     |> Map.merge(%{log: script.log, session: session, out: out, duration_ms: script.duration_ms})
   end
+
+  # A piece set down between two squares and read on the wrong one, where
+  # the game first differs - and nothing marked. The board said so and
+  # never took it back: every move after it was legal with the piece where
+  # it was read. No reading tells this game from the one played, so it is
+  # counted, and not as the tracker's silence.
+  defp unnoticed(%{verdict: :silent, difference: {ply, _mine, _truth}} = judged, log, later) do
+    cond do
+      {ply, :between} not in log -> judged
+      # It was found out after all, and what the box then made of it is
+      # marked - wrongly, since the misread move stands.
+      :guessed in later -> %{judged | verdict: :guessed_wrong}
+      :recovered in later -> %{judged | verdict: :reconstructed_wrong}
+      true -> %{judged | verdict: :unnoticed}
+    end
+  end
+
+  defp unnoticed(judged, _log, _later), do: judged
 
   @doc "The verdict on a finished run, given the moves that were really played."
   def judge(session, out, truth) do
@@ -203,6 +230,9 @@ defmodule Alnasl.Bench do
         {"the same, no clock", :unseen, %{faults: %{unseen: 0.05}, clock: false}},
         {"the same + the benign faults 5%", :unseen,
          %{faults: Map.new(benign, &{&1, 0.05}) |> Map.put(:unseen, 0.05)}},
+        {"a piece set down between squares, 5%", :between, %{faults: %{between: 0.05}}},
+        {"set down between squares, no clock", :between,
+         %{faults: %{between: 0.05}, clock: false}},
         {"missed 10% (one ply at a time)", :gap2, %{faults: %{missed: 0.1}}},
         {"missed 10% + the others 5%", :gap2,
          %{faults: Map.new(benign ++ [:takeback, :slide], &{&1, 0.05}) |> Map.put(:missed, 0.1)}},
