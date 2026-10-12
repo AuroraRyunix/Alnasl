@@ -104,11 +104,13 @@ defmodule Alnasl.OpenPairings.Sync do
   end
 
   # Is a game being played in the round the box has on? Then the box does
-  # not walk its boards BACK to an earlier round by itself. `current_round`
-  # is "the lowest round with a result missing", so an arbiter who clears a
-  # result of round 2 to correct it, while round 3 is being played, makes it
-  # say 2 for a minute. The Round page says where the pairing program is
-  # and offers the button; the boards stay with the games on them.
+  # not walk its boards BACK to an earlier round by itself. In a round robin
+  # `current_round` is "the first round with a result missing", so an
+  # arbiter who clears a result of round 2 to correct it, while round 3 is
+  # being played, makes it say 2 for a minute - and an OpenPairings from
+  # before that rule was mended says the same of a Swiss. The Round page
+  # says where the pairing program is and offers the button; the boards
+  # stay with the games on them.
   defp under_way?(%Tournament{} = tournament) do
     tournament.id
     |> Games.list(tournament.round)

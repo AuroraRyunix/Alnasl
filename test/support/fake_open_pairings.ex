@@ -19,8 +19,10 @@ defmodule Alnasl.FakeOpenPairings do
     colours (`409 pairing_changed`), and shaped as the contract says (`422
     invalid_request`). Legality is not checked, as there.
 
-  `current_round` is worked out as the contract defines it: the lowest
-  paired round with a game that has no result, else the highest paired.
+  `current_round` is worked out as the contract defines it: of the rounds
+  paired last together - the newest round of a Swiss, every round of a
+  round robin (`system: :round_robin`) - the first with a game that has no
+  result, else the last of them.
 
   It can misbehave on purpose (`mode/1`), and every request is kept, in
   order. It is a plug given to `Req` (`config :alnasl,
@@ -73,6 +75,7 @@ defmodule Alnasl.FakeOpenPairings do
       label: Keyword.get(opts, :label),
       state: "running",
       group: Keyword.get(opts, :group),
+      system: Keyword.get(opts, :system, :swiss),
       players:
         for n <- 1..max(boards * 2, 2) do
           %{
@@ -408,7 +411,7 @@ defmodule Alnasl.FakeOpenPairings do
   defp document_of(t), do: document_of(t, version(t))
 
   defp document_of(t, version) do
-    current = current_round(t.rounds)
+    current = current_round(t.rounds, Map.get(t, :system, :swiss))
 
     %{
       "version" => version,
@@ -455,9 +458,13 @@ defmodule Alnasl.FakeOpenPairings do
     }
   end
 
-  defp current_round([]), do: nil
+  defp current_round([], _system), do: nil
 
-  defp current_round(rounds) do
+  # A Swiss pairs one round at a time: the one paired last is on.
+  defp current_round(rounds, :swiss), do: List.last(rounds)["number"]
+
+  # A round robin pairs them all at once: the first with a game still open.
+  defp current_round(rounds, :round_robin) do
     open =
       Enum.find(rounds, fn r ->
         Enum.any?(r["boards"], &(&1["kind"] == "game" and &1["result"] == nil))
@@ -537,7 +544,7 @@ defmodule Alnasl.FakeOpenPairings do
       g["running"] not in [nil, "white", "black", "none"] ->
         invalid("running")
 
-      Enum.any?(~w(white_ms black_ms reconstructed guessed), fn key ->
+      Enum.any?(~w(white_ms black_ms reconstructed guessed rewritten), fn key ->
         g[key] != nil and not (is_integer(g[key]) and g[key] >= 0)
       end) ->
         invalid("a number")

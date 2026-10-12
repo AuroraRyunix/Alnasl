@@ -9,7 +9,7 @@ defmodule Alnasl.Destination.OpenPairings do
   The game as it is now, whole: the moves in SAN, the clock after each
   move, both clocks as they read, the game's PGN as the box writes it,
   whether it is waiting, live or finished, how many of its moves the box
-  reconstructed and how many it guessed, and **the result the board saw** -
+  reconstructed, guessed and rewrote, and **the result the board saw** -
   the one the arbiter set on the box, or, while nobody has, the one the
   position shows (mate, the kings in the centre). The pairing program shows
   that beside the pairing. It does not enter it: a board never enters a
@@ -345,7 +345,10 @@ defmodule Alnasl.Destination.OpenPairings do
         end),
       "result" => result(game),
       "reconstructed" => Enum.count(plies, &(:recovered in &1.flags)),
-      "guessed" => Enum.count(plies, &(:guessed in &1.flags))
+      "guessed" => Enum.count(plies, &(:guessed in &1.flags)),
+      # A move first read as another move of the same piece. Such a move is
+      # also orange or red, so it is in one of the two counts above as well.
+      "rewritten" => Enum.count(plies, &(:rewritten in &1.flags))
     }
     |> put("white_ms", ms(clock["white_ms"]))
     |> put("black_ms", ms(clock["black_ms"]))

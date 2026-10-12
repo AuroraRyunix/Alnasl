@@ -45,7 +45,7 @@ defmodule AlnaslWeb.SetupLive do
      |> assign(page_title: gettext("Setup"), checks: nil, testing?: false)
      |> assign(lichess_checks: nil, lichess_testing?: false)
      |> assign(link_tests: %{}, link_testing: nil, lichess_tid: Tournaments.default_id())
-     |> assign(code_form: to_form(%{"code" => ""}, as: :link))
+     |> assign(code_form: to_form(%{"code" => ""}, as: :link), code_key: 0)
      |> load()}
   end
 
@@ -266,6 +266,10 @@ defmodule AlnaslWeb.SetupLive do
   # --- tournaments and connect codes -------------------------------------------
 
   def handle_event("add_code", %{"link" => %{"code" => text}}, socket) do
+    # A browser keeps what was typed in a field that has the focus. The
+    # field holds a secret, so it is not emptied: it is replaced.
+    socket = assign(socket, code_key: socket.assigns.code_key + 1)
+
     case OpenPairings.add_code(text) do
       {:ok, _link, tournaments} ->
         {:noreply,
@@ -582,25 +586,27 @@ defmodule AlnaslWeb.SetupLive do
             )}
             <.link navigate={~p"/help#help-openpairings"}>{gettext("How, step by step")}</.link>
           </p>
-          <.form for={@code_form} id="code-form" phx-submit="add_code" class="stack">
-            <.input
-              field={@code_form[:code]}
-              id="code-input"
-              type="password"
-              label={gettext("Connect code")}
-              placeholder="https://.../api/boards/v1#oplt_..."
-              hint={
-                gettext(
-                  "Paste the whole line. From the QR code: scan it with the phone's own camera, copy the link it shows instead of opening it, and paste it here. The code is a secret and is not shown again."
-                )
-              }
-              autocomplete="off"
-              spellcheck="false"
-            />
-            <div class="row">
-              <.button id="add-code" variant="primary" type="submit">{gettext("Add")}</.button>
-            </div>
-          </.form>
+          <div id={"code-wrap-#{@code_key}"}>
+            <.form for={@code_form} id="code-form" phx-submit="add_code" class="stack">
+              <.input
+                field={@code_form[:code]}
+                id="code-input"
+                type="password"
+                label={gettext("Connect code")}
+                placeholder="https://.../api/boards/v1#oplt_..."
+                hint={
+                  gettext(
+                    "Paste the whole line. From the QR code: scan it with the phone's own camera, copy the link it shows instead of opening it, and paste it here. The code is a secret and is not shown again."
+                  )
+                }
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <div class="row">
+                <.button id="add-code" variant="primary" type="submit">{gettext("Add")}</.button>
+              </div>
+            </.form>
+          </div>
 
           <ul id="links" class="dests" style="margin-top:0.8rem">
             <li :for={link <- @links} id={"link-#{link.id}"} class="dest">

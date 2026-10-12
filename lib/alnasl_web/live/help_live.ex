@@ -116,6 +116,11 @@ defmodule AlnaslWeb.HelpLive do
               "With a desktop copy of OpenPairings on the same computer, the code begins with http://127.0.0.1 and everything works with no internet at all. Such a code does not work from a box elsewhere in the hall: the desktop copy answers only on its own computer."
             )}
           </p>
+          <p id="help-team-events">
+            {gettext(
+              "A team event looks like any other round on the box today: every board of the round is a tile, numbered through the round as on the results site (boards 1 to 4 are the first match, 5 to 8 the second, with four boards a match). The tiles are not grouped by match and the team names are not shown; the players' names, colours and ratings are."
+            )}
+          </p>
           <p id="help-no-pairing-program">
             {gettext(
               "Without OpenPairings the box still works: type the results page in on Setup, and say who plays on each board's page (\"Players\") or attach a PGN that says it. The box does not read pairings from the results site."

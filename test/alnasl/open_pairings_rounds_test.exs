@@ -173,9 +173,17 @@ defmodule Alnasl.OpenPairingsRoundsTest do
       %{open: open} = ctx
       [a | _] = hall(ctx)
 
-      FakeOpenPairings.finish_round(17, 1)
+      # A round robin: every round is paired at once, and the round that is
+      # on is the first with a game still open. (In a Swiss the pairing
+      # program no longer goes back at all; the box does not rely on it.)
+      FakeOpenPairings.update(17, &Map.put(&1, :system, :round_robin))
       FakeOpenPairings.pair(17, 2, 2)
       poll()
+      assert where(a) == {open.id, 1, 1}
+
+      FakeOpenPairings.finish_round(17, 1)
+      poll()
+      assert where(a) == {open.id, 2, 1}
       eventually(fn -> Boards.snapshot(a.id).status == :waiting_start end)
       play_on("FAKE1", a.id, ~w(e4 e5))
 

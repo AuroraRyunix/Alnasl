@@ -42,7 +42,7 @@ defmodule Alnasl.OpenPairingsReportsTest do
          %{open: open} do
       clock = %{white_ms: 5_398_000, black_ms: 5_391_000, running: :black}
       game = open |> game(1) |> play(~w(e4 e5), clock) |> play(~w(Nf3), clock, [:recovered])
-      game = play(game, ~w(Nc6), clock, [:guessed])
+      game = play(game, ~w(Nc6), clock, [:guessed, :rewritten])
 
       assert OpenPairings.pending_count() == 1
       assert {:empty, 1} = OpenPairings.deliver()
@@ -65,7 +65,8 @@ defmodule Alnasl.OpenPairingsReportsTest do
                "running" => "black",
                "result" => nil,
                "reconstructed" => 1,
-               "guessed" => 1
+               "guessed" => 1,
+               "rewritten" => 1
              } = sent
 
       assert sent["seq"] == OpenPairings.seq(game)

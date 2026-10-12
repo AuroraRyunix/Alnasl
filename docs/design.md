@@ -772,9 +772,11 @@ no others - the other tournaments' boards are other rows with another
 can switch that off per tournament, or look at another round by hand; the
 box does not pull him back, it follows when the number moves again. And
 the box does not walk its boards *back* by itself while a game of the round
-on them is being played: "current" is the lowest round with a result
-missing, so a result of round 2 cleared to be corrected during round 3
-makes the number say 2 for a minute. The Round page then says where the
+on them is being played: in a round robin "current" is the first round
+with a result missing, so a result of round 2 cleared to be corrected
+during round 3 makes the number say 2 for a minute (a Swiss says the round
+paired last, whatever is open before it; an OpenPairings older than that
+rule said 2 there as well). The Round page then says where the
 pairing program is, with the button; the boards stay with their games.
 
 **A pairing that changes under a game.** The cases the contract lists

@@ -276,6 +276,33 @@ mix phx.server        # http://localhost:4040, data in ./data
 tracker's fault matrix. `mix alnasl.demo --faults bullet --speed 1` is a
 hall playing bullet.
 
+### The link, end to end
+
+`mix test` uses a stand-in for OpenPairings. To run the link against the
+real one - before a release, or after either side changed the board link -
+you need an OpenPairings checkout whose development database may be thrown
+away (a `git worktree` of it is the easy way), with its dependencies
+fetched:
+
+    OPENPAIRINGS_DIR=/path/to/scratch/openpairings sh tools/link_e2e_run.sh
+
+That deletes and recreates that checkout's dev database, serves it on
+`PORT` (4061), makes an arbiter, three tournaments and two connect codes in
+it (`tools/link_e2e_openpairings.exs seed`), runs `mix alnasl.link_e2e`
+against it with simulated boards - on port 4046, with its own data
+directory `data/link-e2e` - and stops and cleans up afterwards. It takes
+about two minutes and ends in `PASS: 33/33 checks.` or says which failed.
+`OPENPAIRINGS_BUILD_PATH` and `OPENPAIRINGS_DEPS_PATH` set that checkout's
+`MIX_BUILD_PATH` and `MIX_DEPS_PATH` when it needs its own.
+
+Against an OpenPairings that is already running somewhere, with a person
+playing the arbiter: `mix alnasl.link_e2e --code "<connect code>"` says at
+each step what to do in OpenPairings and waits for it (see `mix help
+alnasl.link_e2e`).
+
+It is not part of `mix test` and does not run in CI: it needs two programs,
+two ports and both sets of dependencies.
+
 ### On the box (Raspberry Pi, Linux)
 
 ```
@@ -421,6 +448,22 @@ page says so, and simulator boards are unaffected.
 ## What is proven, and how
 
 By `mix test` (471 tests), three tools, and three sessions with a real board:
+
+**The link, end to end against the real OpenPairings** (`mix
+alnasl.link_e2e`, run on 2026-10-12 against a scratch copy of OpenPairings
+on a throwaway database - once at its main, commit `b868fee0`, and once
+with the changes to `current_round` and the `rewritten` count that came
+out of it): 33 checks. A group code and a code for one tournament are
+accepted; three tournaments arrive with players, round 1 and the rate of
+play; tables 1-2 and 3-4 become two tournaments' boards 1-2 with their own
+names; four simulated games are reported and OpenPairings holds each with
+its moves, "finished" and the result the board saw, beside an arbiter's
+result that is still empty; round 2 paired there starts here for that
+tournament and no other; a result cleared in round 1 does not walk the
+boards back; two players swapped under games with moves flags both, and
+both of the arbiter's answers go through; a tournament added to the group
+appears; the code works through `http://127.0.0.1`; the code withdrawn
+stops the box asking, in words. How to run it is under "Running it".
 
 **The link with OpenPairings**, against `Alnasl.FakeOpenPairings` - a
 pairing program written from the contract, not from OpenPairings' code, and
@@ -581,11 +624,14 @@ and names on every page in both languages.
 
 ## What is not done
 
-- **No real OpenPairings was spoken to.** The board link is built from the
-  contract (`docs/board-link-api.md` in OpenPairings) and tested against
-  `Alnasl.FakeOpenPairings`, a stand-in written from that same document;
-  the server's own code was read beside it, not run. The first hall, or a
-  scratch copy of OpenPairings on a spare port, is the test that is owed.
+- **The link has met OpenPairings at a desk, not in a hall.** `mix
+  alnasl.link_e2e` (below) runs it against a real OpenPairings with
+  simulated boards; no hall, no real board, no hosted server over the
+  internet, and no tournament that was published to a results site (the
+  results page and relay key arriving over the link are tested against the
+  stand-in only). A desktop copy of OpenPairings in its own "local" mode
+  was not started either: its address shape (`http://127.0.0.1:<port>`,
+  plain http) was used against a development server on this machine.
 - **The QR code of a connect code cannot be scanned by the box's own
   page.** A browser lends its camera only to a page served over https (or
   from the same machine), and the box is plain http on the hall's network.

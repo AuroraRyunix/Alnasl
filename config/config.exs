@@ -59,6 +59,10 @@ config :esbuild,
   ]
 
 # Configure Elixir's Logger
+# What never goes into a log, at any level: the secrets a form carries. The
+# PIN, a relay key, a Lichess token, a connect code.
+config :phoenix, :filter_parameters, ["password", "pin", "relay_key", "token", "code", "secret"]
+
 config :logger, :default_formatter,
   format: "$time $metadata[$level] $message\n",
   metadata: [:request_id]
