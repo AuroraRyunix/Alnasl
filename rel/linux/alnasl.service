@@ -1,0 +1,57 @@
+# Alnasl as a service: starts with the box, starts again when it falls over.
+# Installed by install.sh; kept current by update.sh. Settings an arbiter may
+# want to change are in /etc/alnasl/alnasl.env, not here - this file is
+# replaced by updates.
+
+[Unit]
+Description=Alnasl - live chess boards
+Documentation=https://github.com/AuroraRyunix/Alnasl
+After=network.target
+
+[Service]
+Type=exec
+User=alnasl
+Group=alnasl
+# The serial ports (/dev/ttyUSB*, /dev/ttyACM*) belong to this group.
+SupplementaryGroups=dialout
+WorkingDirectory=/var/lib/alnasl
+
+Environment=HOME=/var/lib/alnasl
+Environment=LANG=C.UTF-8
+Environment=ALNASL_DATA=/var/lib/alnasl
+Environment=PORT=4040
+# No Erlang distribution: no epmd, no node listening on the hall's network.
+Environment=RELEASE_DISTRIBUTION=none
+# The release writes its start-up configuration somewhere; /opt is not
+# writable for this user, and should not be.
+Environment=RELEASE_TMP=/run/alnasl
+RuntimeDirectory=alnasl
+# Tells the program that "Download and install" has somebody to ask
+# (alnasl-update.path), and where that somebody leaves its answer.
+Environment=ALNASL_UPDATER=systemd
+Environment=ALNASL_UPDATE_STATUS=/var/lib/alnasl-update/status
+EnvironmentFile=-/etc/alnasl/alnasl.env
+
+ExecStart=/opt/alnasl/current/bin/alnasl start
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=20
+
+# Not root, and not able to become it. The whole system read-only except the
+# data directory. No home directories, a /tmp of its own.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/var/lib/alnasl
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+# Deliberately absent: PrivateDevices (the boards are devices) and
+# MemoryDenyWriteExecute (the runtime compiles code as it goes).
+
+[Install]
+WantedBy=multi-user.target

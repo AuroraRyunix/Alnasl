@@ -11,13 +11,21 @@ defmodule AlnaslWeb.Hall do
   when no PIN is set, or once it has given the PIN (`/unlock`). The plug
   (`gate/2`) decides for ordinary requests and notes in the session how the
   browser came in; `on_mount/4` reads that note for the LiveView socket.
+
+  ## The notice of a newer version
+
+  `update` is `Alnasl.Updates.notice/0`: the release the box heard of, or
+  `nil`. The frame shows it on every page, and its two buttons that install
+  nothing - "Later" and "Don't ask again" - are answered here, once, for
+  every page. Installing is Setup's, where there is room to say what it
+  costs.
   """
 
   import Plug.Conn
   import Phoenix.Component, only: [assign: 2]
   import Phoenix.LiveView, only: [attach_hook: 4, connected?: 1, redirect: 2]
 
-  alias Alnasl.{Outbox, Settings}
+  alias Alnasl.{Outbox, Settings, Updates}
 
   # --- the plug ----------------------------------------------------------------
 
@@ -63,6 +71,7 @@ defmodule AlnaslWeb.Hall do
       if connected?(socket) do
         Outbox.subscribe()
         Settings.subscribe()
+        Updates.subscribe()
       end
 
       socket =
@@ -70,9 +79,11 @@ defmodule AlnaslWeb.Hall do
         |> assign(
           link: Outbox.status(),
           box: Settings.get("box_name") || "Alnasl",
-          locale: locale
+          locale: locale,
+          update: Updates.notice()
         )
         |> attach_hook(:hall, :handle_info, &info/2)
+        |> attach_hook(:hall_update, :handle_event, &update_event/3)
 
       {:cont, socket}
     else
@@ -88,5 +99,21 @@ defmodule AlnaslWeb.Hall do
     {:cont, assign(socket, link: Outbox.status(), box: Settings.get("box_name") || "Alnasl")}
   end
 
+  defp info(:update_changed, socket), do: {:cont, assign(socket, update: Updates.notice())}
+
   defp info(_other, socket), do: {:cont, socket}
+
+  # Both halt: no page has a clause for them, and a second click on a notice
+  # that is already gone must not be a page's crash.
+  defp update_event("update_later", _params, socket) do
+    with %{version: version} <- socket.assigns[:update], do: Updates.later(version)
+    {:halt, assign(socket, update: nil)}
+  end
+
+  defp update_event("update_never", _params, socket) do
+    Updates.put_mode("never")
+    {:halt, assign(socket, update: nil)}
+  end
+
+  defp update_event(_event, _params, socket), do: {:cont, socket}
 end

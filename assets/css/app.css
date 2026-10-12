@@ -539,6 +539,41 @@ code,
   font-weight: 600;
 }
 
+.banner.news {
+  background: var(--panel);
+  color: var(--ink);
+  font-weight: 500;
+  flex-wrap: wrap;
+}
+
+.banner .banner-actions {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  align-items: center;
+}
+
+.banner .banner-actions a {
+  margin-left: 0;
+}
+
+.banner .linkish {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.banner .linkish:hover,
+.banner .linkish:focus-visible {
+  text-decoration-thickness: 2px;
+}
+
 @media (max-width: 860px) {
   .frame {
     grid-template-columns: minmax(0, 1fr);

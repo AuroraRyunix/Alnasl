@@ -798,7 +798,22 @@ defmodule AlnaslWeb.Words do
         name: destination(d)
       )
 
+  defp log("update.requested", %{"forced" => true} = d),
+    do:
+      gettext("Update to %{version} started by the arbiter, with games in progress.",
+        version: d["version"]
+      )
+
+  defp log("update.requested", d),
+    do: gettext("Update to %{version} started by the arbiter.", version: d["version"])
+
   defp log(kind, _d), do: kind
+
+  @doc "A size in bytes as megabytes, the way a download is spoken of: \"41 MB\", \"0.4 MB\"."
+  def megabytes(bytes) when is_integer(bytes) do
+    mb = bytes / 1_048_576
+    if mb >= 10, do: "#{round(mb)} MB", else: "#{Float.round(mb, 1)} MB"
+  end
 
   @doc "A destination's name, as people call it."
   def destination(%{"destination" => id}), do: destination(id)

@@ -604,7 +604,7 @@ defmodule AlnaslWeb.PagesTest do
            link.added link.removed link.ok link.unreachable link.unauthorized link.unsupported
            tournament.added tournament.back tournament.gone tournament.tables table.tournament
            round.started pairing.changed pairing.gone pairing.board_moved pairing.adopted
-           pairing.set_aside destination.forced)
+           pairing.set_aside destination.forced update.requested)
 
       for kind <- kinds do
         sentence = AlnaslWeb.Words.log(%Alnasl.Log.Event{kind: kind, data: "{}"})

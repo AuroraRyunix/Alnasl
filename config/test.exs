@@ -23,6 +23,9 @@ config :alnasl, AlnaslWeb.Endpoint,
 config :alnasl,
   data_dir: Path.expand("../tmp/test/data", __DIR__),
   autostart: false,
+  updates_timer: false,
+  install_kind: :manual,
+  autostart_cmd: &Alnasl.NoReg.cmd/3,
   skip_migrations: true
 
 config :logger, level: :warning

@@ -12,6 +12,7 @@ defmodule AlnaslWeb.Layouts do
   @doc """
   The app frame. Every LiveView template begins with it.
 
+  `update` is the newer version the box heard of, if any (`AlnaslWeb.Hall`).
   `nav` is the place the page belongs to; `link` is `Alnasl.Outbox.status/0`
   (assigned by `AlnaslWeb.Hall`); `box` the box's name; `locale` the
   language in use.
@@ -23,6 +24,7 @@ defmodule AlnaslWeb.Layouts do
   attr :link, :map, required: true
   attr :box, :string, default: "Alnasl"
   attr :locale, :string, default: "en"
+  attr :update, :any, default: nil, doc: "`Alnasl.Updates.notice/0`"
   attr :alarms, :integer, default: 0
   slot :actions
   slot :inner_block, required: true
@@ -104,6 +106,43 @@ defmodule AlnaslWeb.Layouts do
             <% end %>
           </span>
           <.link navigate={~p"/outbox"}>{gettext("What is waiting")}</.link>
+        </div>
+
+        <div :if={@update} id="update-banner" class="banner news" role="status">
+          <.icon name="send" />
+          <span>
+            {gettext("Alnasl %{version} is out. This box runs %{current}.",
+              version: @update.version,
+              current: Alnasl.Updates.current_version()
+            )}
+            <span :if={@update.size} id="update-banner-size">
+              {gettext("The download is %{size}.", size: AlnaslWeb.Words.megabytes(@update.size))}
+            </span>
+          </span>
+          <span class="banner-actions">
+            <a id="update-banner-notes" href={@update.url} target="_blank" rel="noopener">
+              {gettext("What is new")}
+            </a>
+            <.link id="update-banner-setup" navigate={~p"/setup#setup-updates"}>
+              {gettext("Update...")}
+            </.link>
+            <button id="update-banner-later" type="button" class="linkish" phx-click="update_later">
+              {gettext("Later")}
+            </button>
+            <button
+              id="update-banner-never"
+              type="button"
+              class="linkish"
+              phx-click="update_never"
+              data-confirm={
+                gettext(
+                  "Stop looking for new versions? You can switch it on again under Setup, Updates."
+                )
+              }
+            >
+              {gettext("Don't ask again")}
+            </button>
+          </span>
         </div>
 
         <header class="bar">

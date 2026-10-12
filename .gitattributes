@@ -2,3 +2,7 @@
 # fixtures): a checkout with CRLF line endings fails three of them.
 * text=auto eol=lf
 *.pyc binary
+# cmd reads a batch file with LF endings until the day it does not.
+*.bat text eol=crlf
+*.bat.eex text eol=crlf
+*.ico binary

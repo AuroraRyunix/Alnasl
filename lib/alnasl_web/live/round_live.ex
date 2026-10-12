@@ -343,6 +343,7 @@ defmodule AlnaslWeb.RoundLive do
       flash={@flash}
       nav={:round}
       link={@link}
+      update={@update}
       box={@box}
       locale={@locale}
       alarms={@alarms}

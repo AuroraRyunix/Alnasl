@@ -7,23 +7,43 @@ if System.get_env("PHX_SERVER") do
   config :alnasl, AlnaslWeb.Endpoint, server: true
 end
 
-# ALNASL_LISTEN=lan lets other machines in the hall reach the management
-# site (an arbiter's laptop). Without it only the box itself can. Access
-# from elsewhere is then behind the PIN, when one is set (Setup).
-listen =
-  case System.get_env("ALNASL_LISTEN") do
-    "lan" -> {0, 0, 0, 0}
-    _local -> {127, 0, 0, 1}
+# Where everything is kept. No environment variable is required: a box that
+# has to be configured before it starts is a box that does not start in a
+# playing hall. `Alnasl.DataHome` says where an installed copy keeps it and
+# why that is never a folder an installer owns.
+data_dir =
+  cond do
+    data = System.get_env("ALNASL_DATA") -> Path.expand(data)
+    config_env() == :prod -> Path.expand(Alnasl.DataHome.default())
+    true -> nil
   end
+
+# Who may reach the management site: the box itself (the default, and the
+# safe one - there is no PIN on a box nobody has set up yet), or the hall's
+# network (an arbiter's laptop, the phone the boards are numbered with).
+# ALNASL_LISTEN=lan|local decides when it is set. When it is not, the choice
+# made on Setup does: a one-word file in the data directory, because the
+# address is bound before the database is open. Access from elsewhere is
+# behind the PIN, when one is set.
+listen_choice =
+  System.get_env("ALNASL_LISTEN") ||
+    with dir when is_binary(dir) <- data_dir,
+         {:ok, word} <- File.read(Path.join(dir, "listen")) do
+      String.trim(word)
+    else
+      _none -> "local"
+    end
+
+listen = if listen_choice == "lan", do: {0, 0, 0, 0}, else: {127, 0, 0, 1}
 
 if config_env() != :test do
   config :alnasl, AlnaslWeb.Endpoint,
     http: [ip: listen, port: String.to_integer(System.get_env("PORT", "4040"))]
 end
 
-if data = System.get_env("ALNASL_DATA") do
-  config :alnasl, data_dir: Path.expand(data)
-  config :alnasl, Alnasl.Repo, database: Path.join(Path.expand(data), "alnasl.db")
+if data_dir do
+  config :alnasl, data_dir: data_dir
+  config :alnasl, Alnasl.Repo, database: Path.join(data_dir, "alnasl.db")
 end
 
 if config_env() == :dev do
@@ -40,17 +60,17 @@ if config_env() == :dev do
 end
 
 if config_env() == :prod do
-  # Everything the box keeps lives in one directory. No environment variable
-  # is required: a box that has to be configured before it starts is a box
-  # that does not start in a playing hall.
-  data = Path.expand(System.get_env("ALNASL_DATA") || "~/.alnasl")
+  data = data_dir
+
+  # Refused before anything is written there: data inside a folder that an
+  # update replaces or an uninstall removes is data with a date on it.
+  if reason = Alnasl.DataHome.refusal(data) do
+    raise Alnasl.DataHome.refusal_message(data, reason)
+  end
+
   File.mkdir_p!(data)
 
-  config :alnasl, data_dir: data
-
-  config :alnasl, Alnasl.Repo,
-    database: Path.join(data, "alnasl.db"),
-    pool_size: String.to_integer(System.get_env("POOL_SIZE") || "5")
+  config :alnasl, Alnasl.Repo, pool_size: String.to_integer(System.get_env("POOL_SIZE") || "5")
 
   # The cookie-signing secret is made once and kept beside the data.
   secret_file = Path.join(data, "secret_key_base")

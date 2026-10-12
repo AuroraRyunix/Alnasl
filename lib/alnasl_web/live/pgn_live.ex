@@ -272,7 +272,15 @@ defmodule AlnaslWeb.PgnLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} nav={:pgn} link={@link} box={@box} locale={@locale} title="PGN">
+    <Layouts.app
+      flash={@flash}
+      nav={:pgn}
+      link={@link}
+      update={@update}
+      box={@box}
+      locale={@locale}
+      title="PGN"
+    >
       <:actions>
         <form
           :if={length(@shown) > 1}
