@@ -2532,3 +2532,82 @@ tr.sought td:first-child {
   background: var(--bad-bg);
   color: var(--bad);
 }
+
+/* --- links to the results site ----------------------------------------------- */
+
+.site-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 2.75rem;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.site-link svg {
+  width: 1em;
+  height: 1em;
+  flex: none;
+}
+
+.tile-site {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 0.8rem;
+  padding: 0 0.55rem;
+  font-size: 0.875rem;
+}
+
+.tile-local {
+  margin-top: 0.25rem;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+}
+
+.site-qr > summary {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.7rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.site-qr[open] {
+  flex-basis: 100%;
+}
+
+.site-qr .qr {
+  width: min(13rem, 100%);
+  margin-top: 0.4rem;
+}
+
+.dest-sites {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.head-open {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+}
+
+.head-open svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}

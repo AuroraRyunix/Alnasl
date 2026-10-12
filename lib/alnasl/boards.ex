@@ -132,6 +132,7 @@ defmodule Alnasl.Boards do
 
   @doc "Starts every enabled board. Called when the application starts."
   def start_all do
+    switch_over()
     for board <- list(), board.enabled, do: start(board)
     :ok
   end
@@ -213,6 +214,7 @@ defmodule Alnasl.Boards do
       game_status: game && game.status,
       game_id: game && game.id,
       game_no: game && game.game_no,
+      local: game && game.local,
       pairing_flag: game && game.pairing_flag,
       fen: game && elem(Games.position(game), 0),
       certain: nil,
@@ -339,7 +341,33 @@ defmodule Alnasl.Boards do
   A new game on that board, in the same round: the game there is closed
   (without a result, if it had none) and kept, and the board begins again.
   """
-  def new_game(id), do: call(id, {:repair, :new_game, nil})
+  def new_game(id, kind \\ :auto) when kind in [:auto, :extra, :replace],
+    do: call(id, {:repair, :new_game, kind})
+
+  @doc """
+  The game on the board leaves the box from now on, and the one that was
+  leaving stays here. Without a running board, the game is switched directly.
+  """
+  def send_this(%Games.Game{} = game) do
+    case linked_running(game.tournament_id, game.round, game.board_no) do
+      nil ->
+        switched = Games.make_sendable(game)
+
+        Log.add(:info, "game.switched", %{game: switched.game_no}, %{
+          round: game.round,
+          board_no: game.board_no
+        })
+
+        Outbox.enqueue(switched, nil, true)
+        :ok
+
+      board ->
+        call(board.id, {:repair, :send_this, nil})
+    end
+  end
+
+  @doc "Run at start-up: see `Alnasl.Games.switch_over/0`."
+  def switch_over, do: Games.switch_over()
 
   @doc """
   Starts round `round` of a tournament: every board of that tournament

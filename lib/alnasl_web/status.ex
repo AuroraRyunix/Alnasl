@@ -77,7 +77,19 @@ defmodule AlnaslWeb.Status do
         []
 
       {tone, icon, text} ->
-        [%{id: "head-results", tone: tone, icon: icon, text: text, to: "/outbox"}]
+        [
+          %{id: "head-results", tone: tone, icon: icon, text: text, to: "/outbox"}
+          |> Map.put(:open, open_address())
+        ]
+    end
+  end
+
+  # With exactly one tournament in use, the badge has a link to its page on
+  # the results site; with several there is no telling which one is meant.
+  defp open_address do
+    case Tournaments.active() do
+      [one] -> Alnasl.ResultsSite.tournament_url(one)
+      _several -> nil
     end
   end
 

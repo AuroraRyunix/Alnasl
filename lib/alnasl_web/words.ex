@@ -645,8 +645,29 @@ defmodule AlnaslWeb.Words do
   defp log("game.new", %{"by" => "pieces"} = d),
     do: gettext("The pieces are set up again: game %{n} on this board begins.", n: d["game"])
 
+  defp log("game.new", %{"kind" => "replace"} = d),
+    do:
+      gettext(
+        "Arbiter at the box: a new game on this board, game %{n}. It is the game of the pairing: the one before it stays on the box.",
+        n: d["game"]
+      )
+
+  defp log("game.new", %{"kind" => "extra"} = d),
+    do:
+      gettext(
+        "Arbiter at the box: an extra game on this board, game %{n}. It stays on the box.",
+        n: d["game"]
+      )
+
   defp log("game.new", d),
     do: gettext("Arbiter at the box: a new game on this board, game %{n}.", n: d["game"])
+
+  defp log("game.switched", d),
+    do:
+      gettext(
+        "Game %{n} on this board is the one that leaves the box now, in place of the game before it.",
+        n: d["game"]
+      )
 
   defp log("repair.undo", d),
     do: gettext("Arbiter at the box: last move (%{move}) taken back.", move: d["move"] || "-")
@@ -942,6 +963,40 @@ defmodule AlnaslWeb.Words do
     do: gettext("Update to %{version} started by the arbiter.", version: d["version"])
 
   defp log(kind, _d), do: kind
+
+  @doc "The one sentence a \"new game\" asks to be confirmed with (`nil`: nothing to ask)."
+  def new_game_confirm(:replace, finished?) do
+    if finished?,
+      do:
+        gettext(
+          "Start a new game on this board? It becomes the game of the pairing and is the one sent to the results site, OpenPairings and Lichess; this one is kept on the box."
+        ),
+      else:
+        gettext(
+          "Close this game without a result and start a new one? The new game becomes the game of the pairing and is the one sent to the results site, OpenPairings and Lichess; this one is kept on the box."
+        )
+  end
+
+  def new_game_confirm(:extra, finished?) do
+    if finished?,
+      do: nil,
+      else:
+        gettext(
+          "Close this game without a result and start an extra one? The extra game stays on this box."
+        )
+  end
+
+  def new_game_confirm(:replace_decided, _finished?),
+    do:
+      gettext(
+        "This game has a result. Start a new game that replaces it as the game of the pairing? The result already sent is replaced by the new game; this one is kept on the box."
+      )
+
+  def send_this_confirm,
+    do:
+      gettext(
+        "Send this game instead? It becomes the game of the pairing and replaces what the results site, OpenPairings and Lichess hold for this board; the game that was sent is kept on the box."
+      )
 
   @doc "A size in bytes as megabytes, the way a download is spoken of: \"41 MB\", \"0.4 MB\"."
   def megabytes(bytes) when is_integer(bytes) do

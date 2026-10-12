@@ -9,12 +9,14 @@ defmodule AlnaslWeb.OutboxLive do
 
   use AlnaslWeb, :live_view
 
-  alias Alnasl.{Destination, Outbox, Tournaments}
+  alias Alnasl.{Destination, Games, Outbox, ResultsSite, Tournaments}
   alias Alnasl.Destination.{LichessBroadcast, OpenPairings}
   alias AlnaslWeb.{DestinationWords, LinkWords, Scope, Status, Words}
 
   @impl true
   def mount(_params, _session, socket) do
+    if connected?(socket), do: Alnasl.Boards.subscribe()
+
     {:ok, socket |> assign(page_title: gettext("Outbox"), refresh_due?: false) |> load()}
   end
 
@@ -31,6 +33,7 @@ defmodule AlnaslWeb.OutboxLive do
       lichess_refused: LichessBroadcast.refused(),
       pairing_refused: OpenPairings.refused(),
       tournaments: Tournaments.active(),
+      staying_home: staying_home(),
       names: Map.new(Tournaments.list(), &{&1.id, Tournaments.title(&1)}),
       many?: Tournaments.many?(),
       waiting_by: %{
@@ -40,6 +43,15 @@ defmodule AlnaslWeb.OutboxLive do
       },
       refresh_due?: false
     )
+  end
+
+  # Boards in the round in play that play a game which stays on the box:
+  # nothing of it is waiting, and the arbiter is told why.
+  defp staying_home do
+    for t <- Tournaments.active(),
+        game <- Games.staying_home(t.id, Tournaments.round_in_play(t.id)) do
+      %{tournament: t, game: game}
+    end
   end
 
   @impl true
@@ -140,6 +152,9 @@ defmodule AlnaslWeb.OutboxLive do
     Process.send_after(self(), :refresh, 400)
     {:noreply, assign(socket, refresh_due?: true)}
   end
+
+  # A board changed (a new game on it, say): what stays on the box may have.
+  def handle_info({:board, _id}, socket), do: handle_info(:outbox_changed, socket)
 
   def handle_info(:refresh, socket), do: {:noreply, load(socket)}
 
@@ -304,6 +319,13 @@ defmodule AlnaslWeb.OutboxLive do
               <% else %>
                 <span class="mono">{t.server_url}</span>
                 · {t.slug}
+                <.site_link
+                  :if={ResultsSite.page?(t)}
+                  id={"link-target-open-#{t.id}"}
+                  href={ResultsSite.tournament_url(t)}
+                >
+                  {gettext("Open")}
+                </.site_link>
                 <span :if={t.relay_key == ""} class="note">
                   {gettext("- no relay key yet: nothing is sent there")}
                 </span>
@@ -373,6 +395,19 @@ defmodule AlnaslWeb.OutboxLive do
                 {gettext("Next try at %{t}.", t: Words.time(d.next_try_at))}
               </span>
             </p>
+            <ul :if={d.id == "openresults"} id="dest-sites" class="note dest-sites">
+              <li :for={t <- @tournaments} id={"dest-site-#{t.id}"}>
+                <b :if={@many?}>{@names[t.id] || gettext("This box")}:</b>
+                <%= if ResultsSite.page?(t) do %>
+                  {gettext("sends to")}
+                  <.site_link id={"dest-site-link-#{t.id}"} href={ResultsSite.tournament_url(t)}>
+                    {ResultsSite.display(t)}
+                  </.site_link>
+                <% else %>
+                  {no_site_reason(ResultsSite.why_not(t))}
+                <% end %>
+              </li>
+            </ul>
             <ul :if={@many?} id={"dest-by-#{d.id}"} class="note">
               <li
                 :for={t <- @tournaments}
@@ -448,6 +483,21 @@ defmodule AlnaslWeb.OutboxLive do
       </.panel>
 
       <.panel id="waiting" title={gettext("Waiting (%{n})", n: @link.pending)} flush>
+        <ul :if={@staying_home != []} id="staying-home" class="note">
+          <li
+            :for={%{tournament: t, game: game} <- @staying_home}
+            id={"staying-home-#{t.id}-#{game.board_no}"}
+          >
+            <b :if={@many?}>{@names[t.id] || gettext("This box")}:</b>
+            <.link navigate={Scope.game_path(t.id, game.round, game.board_no)}>
+              {gettext("Board %{n} plays a game that stays on the box (game %{g}).",
+                n: game.board_no,
+                g: game.game_no
+              )}
+            </.link>
+            {gettext("Nothing of it is waiting.")}
+          </li>
+        </ul>
         <div :if={@waiting == []} class="empty">{gettext("Nothing is waiting.")}</div>
         <.entries :if={@waiting != []} id="waiting-table" entries={@waiting} mode={:waiting} />
       </.panel>

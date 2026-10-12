@@ -191,16 +191,23 @@ defmodule AlnaslWeb.NewGameTest do
       assert conn |> get(~p"/files/round/1/board/3") |> response(200) == second
     end
 
-    test "\"New game\" over an unfinished game closes it without a result", %{
+    test "\"New game\" over an unfinished game closes it without a result and replaces it", %{
       view: view,
       board: board
     } do
       assert has_element?(view, "#new-game[data-confirm]")
       view |> element("#new-game") |> render_click()
       assert Boards.snapshot(board.id).game_no == 2
-      assert [%{result: "*", status: "finished"}, %{status: "live"}] = Games.history(1, 3)
+
+      # Board 3 is paired and the game had no result: the new game is the
+      # board's game of the round, the abandoned one stays at home.
+      assert [
+               %{result: "*", status: "finished", local: true},
+               %{status: "live", local: false}
+             ] = Games.history(1, 3)
+
       assert Outbox.drain() == :empty
-      assert %{status: "finished", result: "*", moves: ~w(e4 e5)} = FakeIngest.game(1, 3)
+      assert %{status: "live", moves: []} = FakeIngest.game(1, 3)
     end
   end
 

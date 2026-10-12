@@ -169,6 +169,19 @@ defmodule AlnaslWeb.Layouts do
               >
                 <.badge tone={head.tone} icon={head.icon}>{head.text}</.badge>
               </.link>
+              <a
+                :for={head <- @hall.heads}
+                :if={head[:open]}
+                id={head.id <> "-open"}
+                href={head.open}
+                target="_blank"
+                rel="noopener"
+                class="head-open"
+                aria-label={gettext("Open the results site")}
+                title={gettext("Open the results site")}
+              >
+                <.icon name="external" />
+              </a>
             <% else %>
               <.link navigate={~p"/outbox"} style="text-decoration:none">
                 <.link_state link={@link} />

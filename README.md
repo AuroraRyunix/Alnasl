@@ -267,7 +267,7 @@ plus "match device", chosen per device (rail, or Setup on a phone).
 
 | Page | What it is for |
 |---|---|
-| **Round** | The screen during play. A tile per board: players, the position the box is sure of, clocks, last move, and the state as a shape and a word - Live, Waiting for start, Settling, Reconstructed, Out of sync, No signal, Clock wrong way, Finished - with a count of the moves that were reconstructed or guessed, and a warning for a piece that is not seen. Before the first move a tile also says, in words, when the clock is not set for White. A tile is the way to the board's own page; under it, "Finish game" (the three results, or none) and "New game". Fetch the pairings, start the next round |
+| **Round** | The screen during play. A tile per board: players, the position the box is sure of, clocks, last move, and the state as a shape and a word - Live, Waiting for start, Settling, Reconstructed, Out of sync, No signal, Clock wrong way, Finished - with a count of the moves that were reconstructed or guessed, and a warning for a piece that is not seen. Before the first move a tile also says, in words, when the clock is not set for White. A tile is the way to the board's own page; under it, "Finish game" (the three results, or none) and "New game". Fetch the pairings, start the next round. With a results site: "Open the results site" (the live boards of the round, in a new tab), a "QR" of its live page, and a "Live page" link under each tile |
 | **A board** | The position large, the move list - Left and Right step through it - and, when board and game have parted ways, what the board reads beside what is certain. Moves the box worked out are marked, and a tap on a guessed one asks which line it was. "This game": finish it with a result or without, start a new game on the board, and the games the board has seen this round with their PGN. The repair tools: "the board is right" (search deeper), type moves, undo, change a move, start from a FEN, pause and resume sending, turn the board round |
 | **Boards** | What is plugged in. Add a DGT board or a simulator; connect and disconnect; each board's live picture, signal quality, serial number and firmware; the start-position check, pieces and clock ("black queen and black king are swapped (d8, e8)", "Clock not in starting position: Black's side would run first - the clock is turned or the lever is the wrong way"); each board's **table number** and its board of the round; "Which board is this?"; "Ready for round N?" with the reasons when it is not (the clock among them); the address and QR code for a phone; a printable sheet of labels. See [Which board is which](#which-board-is-which) |
 | **Number / Find** | Two phone-sized pages under Boards: number the boards of a hall by touching them in order (a piece lifted or put down counts, a clock lever does not), and find out which board the one in front of you is |
@@ -913,10 +913,17 @@ and names on every page in both languages.
   position set by hand. The clock's battery-low bit and the flag bits
   beside the hours were never set; a board lying the other way round was
   not tried. Next session: [docs/tomorrow.md](docs/tomorrow.md).
-- **A second game on a board stays on the box.** The results server and
-  Lichess know a game by round and board, and OpenPairings by its pairing -
-  one game each, so one game of a board is sent; the others are in the PGN
-  export and on the board's page.
+- **One game of a board is sent; the others stay on the box.** The results
+  server and Lichess know a game by round and board, and OpenPairings by its
+  pairing - one game each, so one game of a board is sent; the others are in
+  the PGN export and on the board's page. Where a pairing names the board
+  and its game has no result, "New game" makes the new game the one that
+  is sent and keeps the old one at home; where the game has a result, the
+  new game is an extra one that stays (the page offers to let it replace the
+  pairing's game on purpose). A live game that stays on the box says so on
+  its tile, its page and in the Outbox, with "Send this one instead".
+  Nobody has pressed this at a real results site or a real OpenPairings yet:
+  it is tested against fakes of both.
   The reconstruction, the choice of line and "New game" have been used in
   the simulator and in tests, not yet by a person at a real board.
 - **A loop has been read, not played on.** Two real boards on one cable

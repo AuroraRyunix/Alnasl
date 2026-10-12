@@ -28,6 +28,7 @@ defmodule AlnaslWeb.SetupLive do
     Log,
     OpenPairings,
     OpenResults,
+    ResultsSite,
     Seating,
     Settings,
     Tournaments,
@@ -907,7 +908,19 @@ defmodule AlnaslWeb.SetupLive do
                     n: t.round
                   )}
                 </p>
+                <p
+                  :if={ResultsSite.why_not(t)}
+                  id={"tournament-site-none-#{t.id}"}
+                  class="note"
+                >
+                  {no_site_reason(ResultsSite.why_not(t))}
+                </p>
               <% end %>
+              <p :if={ResultsSite.page?(t)} id={"tournament-site-#{t.id}"}>
+                <.site_link id={"tournament-site-link-#{t.id}"} href={ResultsSite.tournament_url(t)}>
+                  {gettext("Open the results page: %{address}", address: ResultsSite.display(t))}
+                </.site_link>
+              </p>
               <.form
                 for={
                   to_form(%{"id" => t.id, "from" => t.table_from, "to" => t.table_to}, as: :tables)
@@ -1070,6 +1083,12 @@ defmodule AlnaslWeb.SetupLive do
               </.button>
             </div>
           </.form>
+
+          <p :if={ResultsSite.page?(@own)} id="server-site" style="margin-top:0.8rem">
+            <.site_link id="server-site-link" href={ResultsSite.tournament_url(@own)}>
+              {gettext("Open the results page: %{address}", address: ResultsSite.display(@own))}
+            </.site_link>
+          </p>
 
           <p :if={@testing?} id="test-running" class="note" role="status" style="margin-top:0.8rem">
             {gettext("Asking the server...")}

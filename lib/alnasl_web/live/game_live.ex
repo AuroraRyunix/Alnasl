@@ -24,7 +24,7 @@ defmodule AlnaslWeb.GameLive do
 
   use AlnaslWeb, :live_view
 
-  alias Alnasl.{Boards, Chess, Games, Position, Tournaments}
+  alias Alnasl.{Boards, Chess, Games, Position, ResultsSite, Tournaments}
   alias AlnaslWeb.Scope
   alias AlnaslWeb.{Choice, Words}
 
@@ -111,6 +111,12 @@ defmodule AlnaslWeb.GameLive do
 
     socket
     |> assign(board: board, game: game, view: view, refresh_due?: false, pairing: pairing)
+    |> assign(
+      new_kind: game && Games.next_kind(game),
+      paired?: pairing != %{},
+      site_url: ResultsSite.board_url(socket.assigns.tournament, round, no),
+      site_why: ResultsSite.why_not(socket.assigns.tournament)
+    )
     |> assign(at: if(fresh?, do: nil, else: at), history: Games.history(tid, round, no))
     |> assign(
       names_form:
@@ -482,9 +488,34 @@ defmodule AlnaslWeb.GameLive do
     end
   end
 
-  def handle_event("new_game", _params, socket) do
+  def handle_event("send_this", _params, %{assigns: %{game: %{} = game}} = socket) do
+    case Boards.send_this(Games.get!(game.id)) do
+      :ok ->
+        {:noreply,
+         socket
+         |> put_flash(
+           :info,
+           gettext(
+             "This game is the one that leaves the box now. The results site, OpenPairings and Lichess are sent it in full; the game before it is kept below."
+           )
+         )
+         |> load()}
+
+      _error ->
+        {:noreply, put_flash(socket, :error, gettext("That could not be done."))}
+    end
+  end
+
+  def handle_event("new_game", params, socket) do
+    kind =
+      case params["kind"] do
+        "replace" -> :replace
+        "extra" -> :extra
+        _auto -> :auto
+      end
+
     with_board(socket, fn board ->
-      case Boards.new_game(board.id) do
+      case Boards.new_game(board.id, kind) do
         :ok ->
           {:info,
            gettext(
@@ -751,6 +782,29 @@ defmodule AlnaslWeb.GameLive do
               )
             }
           >{gettext("Set it aside, begin again")}</.button>
+        </div>
+      </div>
+
+      <div
+        :if={@game && @game.local && @game.status == "live"}
+        id="game-local"
+        class="callout warn"
+        role="status"
+      >
+        <b>
+          {gettext("This game stays on the box: it is game %{n} on this board.", n: @game.game_no)}
+        </b>
+        <p>
+          {gettext(
+            "The results site, OpenPairings and Lichess know one game of a board and a round, and they hold another one for this board. Nothing of this game is sent."
+          )}
+        </p>
+        <div class="row">
+          <.button
+            id="send-this-instead"
+            phx-click="send_this"
+            data-confirm={Words.send_this_confirm()}
+          >{gettext("Send this one instead")}</.button>
         </div>
       </div>
 
@@ -1074,6 +1128,14 @@ defmodule AlnaslWeb.GameLive do
                 {gettext("game %{n} on this board", n: @view.snap[:game_no] || length(@history))}
               </span>
             </:actions>
+            <p :if={@site_url && !(@game && @game.local)} id="game-site" class="site-line">
+              <.site_link id="game-site-link" href={@site_url}>
+                {gettext("This game on the results site")}
+              </.site_link>
+            </p>
+            <p :if={@site_why} id="game-site-none" class="note">
+              {no_site_reason(@site_why)}
+            </p>
             <p :if={@view.snap[:game_status] == "finished"} id="finish-done">
               <b>{finished_word(@view.snap[:result])}</b>
             </p>
@@ -1110,13 +1172,29 @@ defmodule AlnaslWeb.GameLive do
               <.button
                 :if={@board}
                 id="new-game"
-                variant={if @view.snap[:game_status] == "finished", do: "primary"}
-                phx-click="new_game"
-                data-confirm={
-                  if @view.snap[:game_status] != "finished",
-                    do: gettext("Close this game without a result and start a new one on this board?")
+                variant={
+                  if @view.snap[:game_status] == "finished" and @new_kind == :replace,
+                    do: "primary"
                 }
-              >{gettext("New game on this board")}</.button>
+                phx-click="new_game"
+                phx-value-kind={@new_kind}
+                data-confirm={
+                  Words.new_game_confirm(@new_kind, @view.snap[:game_status] == "finished")
+                }
+              >
+                {if @new_kind == :replace,
+                  do: gettext("New game on this board"),
+                  else: gettext("An extra game: it stays on this box")}
+              </.button>
+              <.button
+                :if={@board && @new_kind == :extra && @paired?}
+                id="new-game-replace"
+                phx-click="new_game"
+                phx-value-kind="replace"
+                data-confirm={
+                  Words.new_game_confirm(:replace_decided, @view.snap[:game_status] == "finished")
+                }
+              >{gettext("It replaces the game of the pairing")}</.button>
               <.button
                 :if={@view.snap[:game_status] == "finished"}
                 id="tool-reopen"
@@ -1153,6 +1231,11 @@ defmodule AlnaslWeb.GameLive do
                   <span>{game.result || gettext("in play")}</span>
                   <span class="note">
                     {gettext("%{n} played", n: length(Games.sans(game)))}
+                  </span>
+                  <span id={"game-here-where-#{game.game_no}"} class="note">
+                    {if game.local,
+                      do: gettext("stays on the box"),
+                      else: gettext("is the one that leaves the box")}
                   </span>
                   <.link
                     id={"game-here-pgn-#{game.game_no}"}

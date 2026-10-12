@@ -413,18 +413,36 @@ defmodule Alnasl.BoardServer do
   # A fresh game on this board: the next number, a new tracker, a line in
   # the recording so that a capture can be cut where the games part. A
   # game left unfinished is closed without a result first.
-  defp new_game(state, by) do
+  #
+  # `kind` says whether the new game is the board's game of the round (the
+  # one that leaves the box, and the one before it stays: `:replace`), or an
+  # extra game that stays here (`:extra`); `:auto` is `Games.next_kind/1`:
+  # a replacement while a pairing says who plays here and the game that
+  # leaves has no result.
+  defp new_game(state, by, kind \\ :auto) do
+    kind = if kind == :auto, do: Games.next_kind(state.game), else: kind
+
     state =
       if state.game.status == "finished" do
         state
       else
         Log.add(:info, "result.set", %{result: "*", by: to_string(by)}, ref(state))
         t = now(state)
-        enqueue(%{state | game: Games.finish(state.game, "*")}, t, false)
+        closed = %{state | game: Games.finish(state.game, "*")}
+        # A game about to be replaced is not announced as closed: its
+        # replacement says everything.
+        if kind == :replace, do: closed, else: enqueue(closed, t, false)
       end
 
-    game = Games.next(state.game)
-    Log.add(:info, "game.new", %{game: game.game_no, by: to_string(by)}, ref(state))
+    game = Games.next(state.game, kind)
+
+    Log.add(
+      :info,
+      "game.new",
+      %{game: game.game_no, by: to_string(by), kind: to_string(kind)},
+      ref(state)
+    )
+
     # The board may still show the game before: nothing is read into this
     # one until the starting position has stood on it.
     opts =
@@ -433,7 +451,9 @@ defmodule Alnasl.BoardServer do
       |> Keyword.put(:late_start, false)
 
     Recorder.record(state.board.id, {:cfg, cfg(state.board, game)})
-    %{state | game: game, session: Session.new(opts), warning: nil, queued_at: nil}
+    state = %{state | game: game, session: Session.new(opts), warning: nil, queued_at: nil}
+    # Every place that holds the game before it is told this is the game now.
+    if kind == :replace, do: enqueue(state, now(state), true), else: state
   end
 
   defp play(state, t, event) do
@@ -853,9 +873,19 @@ defmodule Alnasl.BoardServer do
   end
 
   # "New game on this board": the arbiter's word, whatever the board shows.
-  defp repair(state, :new_game, _args, _t) do
-    state = new_game(state, :arbiter)
+  # `kind`: `:auto` (the rule), `:extra` (it stays here) or `:replace` (it
+  # is the game of the pairing).
+  defp repair(state, :new_game, kind, _t) do
+    state = new_game(state, :arbiter, kind || :auto)
     {:ok, refeed(state)}
+  end
+
+  # "Send this one instead": the game on the board becomes the one that
+  # leaves the box, and the one that was leaving is kept at home.
+  defp repair(state, :send_this, _args, t) do
+    game = Games.make_sendable(state.game)
+    Log.add(:info, "game.switched", %{game: game.game_no}, ref(state))
+    {:ok, enqueue(%{state | game: game}, t, true)}
   end
 
   # The pairing changed under this game and the arbiter says it is not the
@@ -995,6 +1025,7 @@ defmodule Alnasl.BoardServer do
         game_status: game.status,
         game_id: game.id,
         game_no: game.game_no,
+        local: game.local,
         pairing_flag: game.pairing_flag,
         problems:
           if(tracker.plies == [] and state.seen,

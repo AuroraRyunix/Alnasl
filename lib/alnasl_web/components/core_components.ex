@@ -66,6 +66,8 @@ defmodule AlnaslWeb.CoreComponents do
       ~s|<path d="M4 12 20 4l-5 16-3.5-6.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>|,
     "flip" =>
       ~s|<path d="M7 4v14m0 0-3.5-3.5M7 18l3.5-3.5M17 20V6m0 0-3.5 3.5M17 6l3.5 3.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>|,
+    "external" =>
+      ~s|<path d="M14 4h6v6M20 4l-9 9M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>|,
     "theme" =>
       ~s|<circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/>|
   }
@@ -306,7 +308,7 @@ defmodule AlnaslWeb.CoreComponents do
   attr :class, :any, default: nil
 
   attr :rest, :global,
-    include: ~w(href navigate patch method download name value disabled type form)
+    include: ~w(href navigate patch method download name value disabled type form target rel)
 
   slot :inner_block, required: true
 

@@ -298,6 +298,17 @@ defmodule AlnaslWeb.HelpLive do
             )}
           </p>
 
+          <p id="help-results-links">
+            {gettext(
+              "To see what spectators see: on the Round page \"Open the results site\" opens the live boards of the round in a new tab, \"QR\" shows a code of the tournament's live page to hold up in the hall, and each tile has a \"Live page\" link to its board. A board's page has \"This game on the results site\", Setup > Tournaments and the Outbox link to the tournament's page. A tournament that is not on a results site has no link, and says so."
+            )}
+          </p>
+          <p id="help-results-lag">
+            {gettext(
+              "The public page may be behind on purpose: the results site can hold live boards back by a delay that its admin sets, so a move made a minute ago may not be there yet. That is not a fault, and nothing is missing."
+            )}
+          </p>
+
           <h2 id="help-repair">{gettext("Repairing a board")}</h2>
           <ul>
             <li>
@@ -335,7 +346,7 @@ defmodule AlnaslWeb.HelpLive do
             </li>
             <li id="help-new-game">
               {gettext(
-                "Another game on the same board: \"New game on this board\". The game before it is kept and listed with its PGN. On a board no pairing names, setting up the pieces again starts the next game by itself (Setup can make that always, or never). One game of a board goes to the results site, Lichess and OpenPairings; the others stay on the box."
+                "Another game on the same board: \"New game on this board\". The game before it is kept and listed with its PGN. One game of a board goes to the results site, Lichess and OpenPairings. Where a pairing names the board and its game has no result (abandoned, a false start, \"No result\"), the new game is that one: it replaces the old game on all three and the old one stays on the box. Where the game has a result, the new game is an extra one that stays on the box, so a finished game is never overwritten; \"It replaces the game of the pairing\" is there for when you mean it. A game that stays on the box says so on its tile, on its page and in the Outbox, with \"Send this one instead\". On a board no pairing names, setting up the pieces again starts the next game by itself (Setup can make that always, or never)."
               )}
             </li>
             <li>
