@@ -115,6 +115,7 @@ defmodule AlnaslWeb.OutboxLive do
       flash={@flash}
       nav={:outbox}
       link={@link}
+      update={@update}
       box={@box}
       locale={@locale}
       title={gettext("Outbox")}

@@ -95,6 +95,7 @@ defmodule AlnaslWeb.LogLive do
       flash={@flash}
       nav={:log}
       link={@link}
+      update={@update}
       box={@box}
       locale={@locale}
       title={gettext("Log")}

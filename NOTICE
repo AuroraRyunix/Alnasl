@@ -36,7 +36,23 @@ It includes the following, which keep their own notices:
    It turns the box's address into the matrix of a QR code; the drawing of
    that matrix as SVG is Alnasl's own (lib/alnasl_web/access.ex).
 
-4. Test games
+4. What the Windows downloads carry besides Alnasl
+
+   None of this is in the repository; the release workflow puts it in the
+   installer and the zip.
+
+   - Erlang/OTP's runtime (Apache-2.0) and the compiled dependencies listed
+     in mix.lock, each under its own licence.
+   - Velopack (https://github.com/velopack/velopack), MIT licence,
+     Copyright (c) Velopack Ltd. and contributors: the installer and
+     updater (Setup.exe, Update.exe, the stub beside them) and
+     velopack_libc.dll, which the launcher loads to apply an update.
+     rel/windows/launcher.c declares the part of its C interface it calls.
+   - Microsoft's Visual C++ runtime (vcruntime140.dll, vcruntime140_1.dll,
+     msvcp140.dll), which Erlang's Windows build needs, redistributed
+     unchanged beside it as Microsoft's terms for those files allow.
+
+5. Test games
 
    priv/games/classics.pgn and the three single games beside it are the
    moves of chess games played between 1620 and 1928. The moves of a chess

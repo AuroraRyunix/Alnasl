@@ -179,7 +179,7 @@ defmodule Alnasl.Tables do
   end
 
   @doc """
-  Numbers the boards in the order they are listed (bus address, then the
+  Numbers the boards in the order they are listed (the order they were added, then the
   order they were added): table and board `first`, `first + 1`, ...
   """
   def number_in_order(round, first \\ 1) do

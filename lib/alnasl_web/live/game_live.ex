@@ -665,6 +665,7 @@ defmodule AlnaslWeb.GameLive do
       flash={@flash}
       nav={:round}
       link={@link}
+      update={@update}
       box={@box}
       locale={@locale}
       title={gettext("Board %{n}", n: @no)}

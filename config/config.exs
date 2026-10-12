@@ -15,6 +15,10 @@ config :alnasl,
 # the PGN of every game. Overridden per environment and by ALNASL_DATA.
 config :alnasl, data_dir: Path.expand("../data", __DIR__)
 
+# Whether the box asks GitHub, on a timer, if a newer version is out. Off in
+# tests, which ask when they mean to.
+config :alnasl, updates_timer: true
+
 # Whether the outbox delivers by itself and the linked boards start with the
 # application. Off in tests, which drive both by hand.
 config :alnasl, autostart: true

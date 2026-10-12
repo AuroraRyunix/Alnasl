@@ -11,6 +11,8 @@ defmodule Alnasl.Application do
       _memory -> :ok
     end
 
+    tidy_release_tmp()
+
     autostart? = Application.get_env(:alnasl, :autostart, true)
 
     children =
@@ -25,6 +27,7 @@ defmodule Alnasl.Application do
         {Registry, keys: :unique, name: Alnasl.BusRegistry},
         {Task.Supervisor, name: Alnasl.TaskSupervisor},
         Alnasl.Recorder,
+        {Alnasl.Updates.Checker, timer: Application.get_env(:alnasl, :updates_timer, true)},
         {DynamicSupervisor, name: Alnasl.BusSupervisor, strategy: :one_for_one},
         {DynamicSupervisor,
          name: Alnasl.BoardSupervisor, strategy: :one_for_one, max_restarts: 100, max_seconds: 60}
@@ -45,6 +48,21 @@ defmodule Alnasl.Application do
   @impl true
   def config_change(changed, _new, removed) do
     AlnaslWeb.Endpoint.config_change(changed, removed)
+    :ok
+  end
+
+  # A release writes the configuration it starts with to a file in
+  # RELEASE_TMP, a new one every start, and never takes one away. They hold
+  # the cookie secret and they add up; the one this start is using stays.
+  defp tidy_release_tmp do
+    with tmp when is_binary(tmp) <- System.get_env("RELEASE_TMP"),
+         mine when is_binary(mine) <- System.get_env("RELEASE_SYS_CONFIG") do
+      for file <- Path.wildcard(Path.join(Path.expand(tmp), "alnasl-*.runtime.config")),
+          Path.basename(file, ".config") != Path.basename(mine) do
+        File.rm(file)
+      end
+    end
+
     :ok
   end
 

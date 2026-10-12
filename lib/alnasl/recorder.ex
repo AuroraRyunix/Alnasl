@@ -123,7 +123,7 @@ defmodule Alnasl.Recorder do
   """
   def read(path, address \\ nil) do
     with {:ok, text} <- File.read(path) do
-      # A capture of a loop (`mix alnasl.dgt --bus`) marks each line with the
+      # A capture of a loop (`mix alnasl.loop --watch`) marks each line with the
       # address it belongs to (`"a"`); `address` picks one board out of it.
       lines =
         text

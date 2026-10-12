@@ -429,6 +429,7 @@ defmodule AlnaslWeb.BoardsLive do
       flash={@flash}
       nav={:boards}
       link={@link}
+      update={@update}
       box={@box}
       locale={@locale}
       title={gettext("Boards")}
@@ -1026,7 +1027,7 @@ defmodule AlnaslWeb.BoardsLive do
           </:actions>
           <p :if={!@found.serial?} id="no-serial" class="note">
             {gettext(
-              "The serial port library is not built into this copy of Alnasl, so real boards cannot be opened here. Simulator boards work. See the README (\"Serial ports\")."
+              "The serial port library is not built into this copy of Alnasl, so real boards cannot be opened here. Simulator boards work. The installed versions have it; a copy built from the source code on Windows has it when asked for (README, \"Serial ports\")."
             )}
           </p>
           <p :if={@found.serial? and @found.ports == []} class="note">

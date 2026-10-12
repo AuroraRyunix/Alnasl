@@ -1,0 +1,16 @@
+# Runs the updater as root when alnasl-update.path sees a request. The
+# request names a version and nothing else; update.sh takes it for a version
+# number or not at all, downloads that release from the project's GitHub
+# releases, and puts the old version back if the new one does not answer.
+
+[Unit]
+Description=Alnasl - install the update that was asked for
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/alnasl/update.sh --requested
+StateDirectory=alnasl-update
+# A download on a phone's hotspot, a stop, a start and a wait for an answer.
+TimeoutStartSec=900

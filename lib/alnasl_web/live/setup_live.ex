@@ -21,14 +21,17 @@ defmodule AlnaslWeb.SetupLive do
   use AlnaslWeb, :live_view
 
   alias Alnasl.{
+    Autostart,
     Boards,
     Destination,
+    Listen,
     Log,
     OpenPairings,
     OpenResults,
     Settings,
     Tournaments,
-    Tracker
+    Tracker,
+    Updates
   }
 
   alias Alnasl.Destination.{LichessApi, LichessBroadcast}
@@ -46,6 +49,7 @@ defmodule AlnaslWeb.SetupLive do
      |> assign(lichess_checks: nil, lichess_testing?: false)
      |> assign(link_tests: %{}, link_testing: nil, lichess_tid: Tournaments.default_id())
      |> assign(code_form: to_form(%{"code" => ""}, as: :link), code_key: 0)
+     |> assign(update_step: nil, update_games: [], update_looked: nil)
      |> load()}
   end
 
@@ -117,7 +121,16 @@ defmodule AlnaslWeb.SetupLive do
           as: :tracker
         ),
       key_hint: Tournaments.relay_key_hint(own),
-      pin_set?: Settings.pin_set?()
+      pin_set?: Settings.pin_set?(),
+      listen: Listen.chosen(),
+      listen_forced: Listen.forced(),
+      listening_lan?: Access.info().lan?,
+      update_available: Updates.available(),
+      update_mode: Updates.mode(),
+      update_kind: Updates.install_kind(),
+      update_result: Updates.last_result(),
+      autostart?: Autostart.supported?(),
+      autostart_on?: Autostart.supported?() and Autostart.enabled?()
     )
   end
 
@@ -439,6 +452,95 @@ defmodule AlnaslWeb.SetupLive do
     {:noreply, socket |> put_flash(:info, gettext("The PIN is removed.")) |> load()}
   end
 
+  # The hall's network is opened only behind a PIN: the switch is on a page
+  # that anybody who reaches the box could otherwise use.
+  def handle_event("set_listen", %{"choice" => choice}, socket) when choice in ["lan", "local"] do
+    cond do
+      socket.assigns.listen_forced ->
+        {:noreply, socket}
+
+      choice == "lan" and not Settings.pin_set?() ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           gettext(
+             "Set a PIN first. Without one, anybody on the hall's network could use this site."
+           )
+         )}
+
+      true ->
+        Listen.put(choice)
+        Log.add(:info, "setup.saved", %{})
+
+        {:noreply,
+         socket
+         |> put_flash(:info, gettext("Saved. It takes effect the next time Alnasl starts."))
+         |> load()}
+    end
+  end
+
+  # --- updates -------------------------------------------------------------------
+
+  def handle_event("save_update_mode", %{"mode" => mode}, socket) when mode in ["ask", "never"] do
+    Updates.put_mode(mode)
+    Log.add(:info, "setup.saved", %{})
+    {:noreply, socket |> put_flash(:info, gettext("Saved.")) |> load()}
+  end
+
+  def handle_event("check_update", _params, socket) do
+    looked =
+      case Updates.Checker.check_now() do
+        {:ok, _info} -> :found
+        :current -> :current
+        :error -> :error
+      end
+
+    {:noreply, socket |> assign(update_looked: looked) |> load()}
+  end
+
+  # The first press costs nothing: it says what the second one will do.
+  def handle_event("update_start", _params, socket) do
+    case Updates.games_in_progress() do
+      [] -> {:noreply, assign(socket, update_step: :confirm, update_games: [])}
+      games -> {:noreply, assign(socket, update_step: :games, update_games: games)}
+    end
+  end
+
+  def handle_event("update_cancel", _params, socket),
+    do: {:noreply, assign(socket, update_step: nil, update_games: [])}
+
+  def handle_event("update_apply", params, socket) do
+    case Updates.apply(force: params["force"] == "yes") do
+      :ok ->
+        {:noreply, assign(socket, update_step: :going, update_games: [])}
+
+      # A game began between the question and the answer.
+      {:error, {:games, games}} ->
+        {:noreply, assign(socket, update_step: :games, update_games: games)}
+
+      {:error, _other} ->
+        {:noreply,
+         socket
+         |> assign(update_step: nil)
+         |> put_flash(:error, gettext("The update could not be started. Nothing was changed."))
+         |> load()}
+    end
+  end
+
+  def handle_event("set_autostart", %{"on" => on}, socket) do
+    case Autostart.set(on == "true") do
+      :ok ->
+        {:noreply, socket |> put_flash(:info, gettext("Saved.")) |> load()}
+
+      {:error, _words} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, gettext("Windows did not accept that. Nothing was changed."))
+         |> load()}
+    end
+  end
+
   def handle_event("save_tracker", %{"tracker" => params}, socket) do
     values =
       for field <- @tracker_fields, into: %{} do
@@ -546,7 +648,27 @@ defmodule AlnaslWeb.SetupLive do
   # A tournament appeared, a round was started, a link went quiet.
   def handle_info({:tournament, _id}, socket), do: {:noreply, load(socket)}
 
+  # The checker heard of a release, or the setting changed in another window.
+  def handle_info(:update_changed, socket), do: {:noreply, load(socket)}
+
   def handle_info(_other, socket), do: {:noreply, socket}
+
+  # "board 3, board 7 and board 12", by the number the arbiter knows them by.
+  defp board_list(games) do
+    names =
+      Enum.map(games, fn game ->
+        cond do
+          game.board_no -> gettext("board %{n}", n: game.board_no)
+          game.table_no -> gettext("table %{n}", n: game.table_no)
+          true -> gettext("a board without a number")
+        end
+      end)
+
+    case Enum.split(names, -1) do
+      {[], [only]} -> only
+      {first, [last]} -> gettext("%{list} and %{last}", list: Enum.join(first, ", "), last: last)
+    end
+  end
 
   defp when_(nil), do: gettext("never")
   defp when_(%DateTime{} = at), do: Words.time(at)
@@ -574,6 +696,7 @@ defmodule AlnaslWeb.SetupLive do
       flash={@flash}
       nav={:setup}
       link={@link}
+      update={@update}
       box={@box}
       locale={@locale}
       title={gettext("Setup")}
@@ -1152,9 +1275,59 @@ defmodule AlnaslWeb.SetupLive do
         <.panel id="setup-pin" title={gettext("Access from other machines")}>
           <p class="note">
             {gettext(
-              "The box itself is always let in. A browser on another machine in the hall is let in freely, unless a PIN is set here. (Other machines can only reach the box at all when it was started with ALNASL_LISTEN=lan.)"
+              "The box itself is always let in. A browser on another machine in the hall is let in freely, unless a PIN is set here. Other machines can only reach the box at all when that is switched on below."
             )}
           </p>
+          <div id="listen" class="callout">
+            <p id="listen-now">
+              <%= if @listening_lan? do %>
+                <.badge tone="ok" icon="ok">{gettext("Reachable from the hall's network")}</.badge>
+              <% else %>
+                <.badge icon="waiting">{gettext("This box only")}</.badge>
+              <% end %>
+              <span :if={@listen_forced} id="listen-forced" class="note">
+                {gettext(
+                  "Decided where the program is started (ALNASL_LISTEN), so there is no switch here."
+                )}
+              </span>
+              <span
+                :if={!@listen_forced && @listen == "lan" != @listening_lan?}
+                id="listen-pending"
+                class="note"
+              >
+                {gettext("Changed. It takes effect the next time Alnasl starts.")}
+              </span>
+            </p>
+            <div :if={!@listen_forced} class="row">
+              <.button
+                :if={@listen == "local"}
+                id="listen-lan"
+                type="button"
+                phx-click="set_listen"
+                phx-value-choice="lan"
+                disabled={!@pin_set?}
+              >
+                {gettext("Let other machines in the hall open this site")}
+              </.button>
+              <.button
+                :if={@listen == "lan"}
+                id="listen-local"
+                type="button"
+                phx-click="set_listen"
+                phx-value-choice="local"
+              >
+                {gettext("This box only")}
+              </.button>
+              <span :if={@listen == "local" && !@pin_set?} id="listen-needs-pin" class="note">
+                {gettext("Set a PIN first.")}
+              </span>
+            </div>
+            <p class="note">
+              {gettext(
+                "The first time, Windows asks whether the program may be reached from the network. Say yes for private networks."
+              )}
+            </p>
+          </div>
           <p id="pin-state">
             <.badge :if={@pin_set?} tone="ok" icon="ok">{gettext("A PIN is set")}</.badge>
             <.badge :if={!@pin_set?} icon="waiting">{gettext("No PIN")}</.badge>
@@ -1187,6 +1360,204 @@ defmodule AlnaslWeb.SetupLive do
               {gettext("Remove the PIN")}
             </.button>
           </.form>
+        </.panel>
+
+        <.panel id="setup-updates" title={gettext("Updates")}>
+          <p id="update-version">
+            {gettext("This is Alnasl %{version}.", version: Updates.current_version())}
+            <a href={Updates.releases_page()} target="_blank" rel="noopener">
+              {gettext("All versions and what changed")}
+            </a>
+          </p>
+
+          <form id="update-mode-form" phx-change="save_update_mode" class="stack">
+            <fieldset class="field">
+              <legend>{gettext("Look for a new version")}</legend>
+              <label class="check" for="update-mode-ask">
+                <input
+                  type="radio"
+                  id="update-mode-ask"
+                  name="mode"
+                  value="ask"
+                  checked={@update_mode == "ask"}
+                />
+                <span>
+                  {gettext("Yes, and tell me when there is one")}
+                  <span class="hint" style="display:block">
+                    {gettext(
+                      "One small question to GitHub every half hour. Nothing is downloaded and nothing is installed until you say so."
+                    )}
+                  </span>
+                </span>
+              </label>
+              <label class="check" for="update-mode-never">
+                <input
+                  type="radio"
+                  id="update-mode-never"
+                  name="mode"
+                  value="never"
+                  checked={@update_mode == "never"}
+                />
+                <span>{gettext("Never")}</span>
+              </label>
+            </fieldset>
+          </form>
+
+          <div class="row" style="margin-top:0.6rem">
+            <.button id="check-update" type="button" phx-click="check_update">
+              {gettext("Look now")}
+            </.button>
+            <span :if={@update_looked == :current} id="update-looked-current" class="note">
+              {gettext("This is the newest version.")}
+            </span>
+            <span :if={@update_looked == :error} id="update-looked-error" class="note">
+              {gettext(
+                "GitHub could not be reached, or gave no answer. That needs the internet; nothing else here does."
+              )}
+            </span>
+          </div>
+
+          <div
+            :if={match?({:failed, _, _}, @update_result)}
+            id="update-failed"
+            class="callout bad"
+            role="status"
+            style="margin-top:0.8rem"
+          >
+            <p>
+              {gettext(
+                "The last update (to %{version}) did not succeed, and the version before it was put back: %{why}",
+                version: elem(@update_result, 1),
+                why: elem(@update_result, 2)
+              )}
+            </p>
+          </div>
+
+          <div :if={@update_available} id="update-offer" class="callout" style="margin-top:0.8rem">
+            <p>
+              <b>
+                {gettext("Alnasl %{version} is out.", version: @update_available.version)}
+              </b>
+              <span :if={@update_available.size} id="update-size">
+                {gettext("The download is %{size}.",
+                  size: Words.megabytes(@update_available.size)
+                )}
+              </span>
+              <a id="update-notes" href={@update_available.url} target="_blank" rel="noopener">
+                {gettext("What is new")}
+              </a>
+            </p>
+
+            <%= cond do %>
+              <% @update_step == :going -> %>
+                <p id="update-going" role="status">
+                  {gettext(
+                    "Downloading and installing. Alnasl stops and starts again by itself; this page comes back when it has. If the update fails, the version you have now is started again."
+                  )}
+                </p>
+              <% @update_kind == :manual -> %>
+                <div id="update-manual">
+                  <p>{gettext("This copy does not update itself. To get the new version:")}</p>
+                  <ul>
+                    <li>
+                      {gettext(
+                        "Windows, from the zip: download the new zip from the page above, unzip it beside the old folder and start Alnasl there. Your data is not in the folder and is used as it is."
+                      )}
+                    </li>
+                    <li>
+                      {gettext("Linux, installed with install.sh: run this on the box:")}
+                      <code>sudo /opt/alnasl/update.sh</code>
+                    </li>
+                    <li>
+                      {gettext("From the source code: fetch the new version and build it again.")}
+                    </li>
+                  </ul>
+                </div>
+              <% @update_step == :games -> %>
+                <div id="update-games" class="callout bad" role="alert">
+                  <p>
+                    {gettext(
+                      "Not now: %{boards} - a game is being played there. An update stops Alnasl for about a minute, and moves played in that minute are not read. Wait until the games are over.",
+                      boards: board_list(@update_games)
+                    )}
+                  </p>
+                  <div class="row">
+                    <.button
+                      id="update-cancel"
+                      type="button"
+                      variant="primary"
+                      phx-click="update_cancel"
+                    >
+                      {gettext("Wait")}
+                    </.button>
+                    <.button
+                      id="update-force"
+                      type="button"
+                      variant="danger"
+                      phx-click="update_apply"
+                      phx-value-force="yes"
+                      data-confirm={
+                        gettext(
+                          "Install now, while games are being played? Moves played while Alnasl restarts are not read and have to be put right by hand."
+                        )
+                      }
+                    >
+                      {gettext("Install anyway")}
+                    </.button>
+                  </div>
+                </div>
+              <% @update_step == :confirm -> %>
+                <div id="update-confirm" role="alert">
+                  <p>
+                    <%= if @update_available.size do %>
+                      {gettext(
+                        "This downloads up to %{size} over this box's internet connection, then stops Alnasl and starts the new version. It takes about a minute; the boards are not read meanwhile. Your data stays where it is.",
+                        size: Words.megabytes(@update_available.size)
+                      )}
+                    <% else %>
+                      {gettext(
+                        "This downloads the new version over this box's internet connection (some tens of megabytes), then stops Alnasl and starts the new version. It takes about a minute; the boards are not read meanwhile. Your data stays where it is."
+                      )}
+                    <% end %>
+                  </p>
+                  <div class="row">
+                    <.button id="update-yes" type="button" variant="primary" phx-click="update_apply">
+                      {gettext("Yes, download and install")}
+                    </.button>
+                    <.button id="update-cancel" type="button" phx-click="update_cancel">
+                      {gettext("Not now")}
+                    </.button>
+                  </div>
+                </div>
+              <% true -> %>
+                <div class="row">
+                  <.button id="update-start" type="button" variant="primary" phx-click="update_start">
+                    {gettext("Download and install...")}
+                  </.button>
+                </div>
+            <% end %>
+          </div>
+
+          <form
+            :if={@autostart?}
+            id="autostart-form"
+            phx-change="set_autostart"
+            class="stack"
+            style="margin-top:0.8rem"
+          >
+            <label class="check" for="autostart">
+              <input type="hidden" name="on" value="false" />
+              <input type="checkbox" id="autostart" name="on" value="true" checked={@autostart_on?} />
+              <span>
+                {gettext("Start Alnasl when Windows starts")}
+                <span class="hint" style="display:block">
+                  {gettext(
+                    "For a computer that stays in the hall. It starts without opening the browser; the small Alnasl window is how you stop it."
+                  )}
+                </span>
+              </span>
+            </label>
+          </form>
         </.panel>
 
         <.panel id="setup-phone" title={gettext("Open this site on your phone")}>

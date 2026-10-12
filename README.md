@@ -82,6 +82,137 @@ Lichess round.
   That is "this box's own tournament", which is always there. The box no
   longer reads pairings from the results site.
 
+## Install
+
+> **There is no release yet.** Everything in this section is built and
+> described; the download links start working with the first release. What
+> has and has not been tried is under [What is not done](#what-is-not-done).
+
+Three ways. All three run the same program, keep their data in the same
+kind of place, and need nothing installed first - the runtime is inside.
+
+### Windows
+
+Download **[Alnasl-Setup.exe](https://github.com/AuroraRyunix/Alnasl/releases/latest/download/Alnasl-Setup.exe)**
+and run it. It installs for you alone, asks for no administrator, puts
+"Alnasl" in the Start menu and on the desktop, and starts.
+
+**Windows will warn you, once.** Alnasl is not signed - a certificate costs
+a few hundred euros a year and this project has none. So the first time,
+Windows SmartScreen shows "Windows protected your PC": click **More info**,
+then **Run anyway**. Your browser may also ask whether to keep the file.
+
+What starts is a small window that says "Alnasl is running", and your
+browser on `http://localhost:4040`. **The window is the program**: closing
+it stops Alnasl (it asks first), and while Alnasl is stopped the boards are
+not read. Minimise it instead.
+
+Rather install nothing? **[alnasl-windows-x86_64-portable.zip](https://github.com/AuroraRyunix/Alnasl/releases/latest/download/alnasl-windows-x86_64-portable.zip)**:
+unzip it anywhere and start `Alnasl.exe` in it. (`Alnasl.bat`, beside it,
+starts the same thing with a console window that shows what the program
+says - for when something is wrong.) Both are a folder with a small
+launcher, on purpose: antivirus has been seen to delete single-file
+programs that unpack themselves, and to leave this shape alone (measured
+for OpenPairings, which is packaged the same way; not yet for Alnasl).
+
+Windows 10 or 11, 64-bit. A DGT board on USB is a COM port; see
+[Serial ports](#serial-ports).
+
+### Linux and the Raspberry Pi
+
+```
+curl -fsSL https://github.com/AuroraRyunix/Alnasl/releases/latest/download/install.sh | sudo sh
+```
+
+That installs Alnasl under `/opt/alnasl`, makes a system user `alnasl` in
+the group `dialout` (the serial ports), and starts a service that comes up
+with the box and comes back when it falls over. Then
+`http://localhost:4040` on the box.
+
+- **A box without a screen**: `... | sudo sh -s -- --lan` lets the hall's
+  network in from the first start. There is no PIN yet at that moment: open
+  Setup from your laptop and set one before anybody else finds the address.
+- **A hall without internet**: download
+  [alnasl-linux-x86_64.tar.gz](https://github.com/AuroraRyunix/Alnasl/releases/latest/download/alnasl-linux-x86_64.tar.gz)
+  (or [`-aarch64`](https://github.com/AuroraRyunix/Alnasl/releases/latest/download/alnasl-linux-aarch64.tar.gz)
+  for a Pi) at home, and on the box: `tar -xzf alnasl-linux-*.tar.gz && sudo sh alnasl/install.sh`.
+- **Without installing**: unpack the same archive and run `alnasl/alnasl.sh`.
+
+It needs a **64-bit** system with systemd and glibc 2.35 or newer: Debian
+12, Ubuntu 22.04, Raspberry Pi OS "Bookworm" (64-bit), or later. On a 32-bit
+Raspberry Pi OS the installer says so and stops; there is no 32-bit build.
+`journalctl -u alnasl` is the log; `/etc/alnasl/alnasl.env` holds the port
+and, if you want it fixed there, who may reach the site.
+
+The service runs as its own user, cannot become root, and sees the system
+read-only except for its data. Read `install.sh` before you pipe it into a
+root shell; it is two hundred lines and says what it does at the top.
+
+### From source
+
+[Running it](#running-it), below. That is also the way on macOS, for which
+nothing is built.
+
+### Updating
+
+Alnasl asks GitHub every half hour whether a newer version is out - one
+small request - and says so at the top of every page. That is all it does
+by itself:
+
+- **Nothing is downloaded until you say yes**, under Setup > *Updates*,
+  where it first tells you how big the download is. The hall may be on
+  somebody's phone.
+- **It will not restart under a game.** While a board has a game in
+  progress, "Download and install" refuses and says which boards; an update
+  stops the program for about a minute, and moves played in that minute are
+  not read. You can insist; it asks whether you are sure.
+- **Later** asks again tomorrow. **Don't ask again** stops the looking;
+  Setup > *Updates* switches it back on, and has "Look now" either way.
+- **Offline it is silent.** No warning, no error: it asks again later.
+
+What "install" does: on Windows the program stops, its launcher fetches the
+update (the difference from your version when there is one, the whole
+program otherwise) and starts the new version - or the old one again if
+anything went wrong. On an installed Linux box a root-owned updater
+downloads the new release, checks it against its checksum, copies the
+database aside, switches, and switches back if the new version does not
+answer within a minute and a half. By hand: `sudo /opt/alnasl/update.sh`
+(`--version 0.3.0` for a particular one). The portable zip does not update
+itself: unzip the new one beside the old.
+
+### Where your data lives, and uninstalling without losing it
+
+Never in the program's folder:
+
+| | The program (replaced by updates, removed by uninstalling) | Your data (touched by neither) |
+|---|---|---|
+| Windows, installed | `%LOCALAPPDATA%\AlnaslApp` | `%LOCALAPPDATA%\AlnaslData` |
+| Windows, portable zip | where you unzipped it | `%LOCALAPPDATA%\AlnaslData` |
+| Linux, installed | `/opt/alnasl` | `/var/lib/alnasl` |
+| Linux, `alnasl.sh`; from source in `prod` | where it is | `~/.alnasl` |
+
+"Data" is everything: the database with your boards, games and settings,
+the PGN of every game, the raw recordings, and the secrets you pasted -
+relay keys, the Lichess token, connect codes. [Where the data
+lives](#where-the-data-lives) has the files.
+
+- **Uninstalling keeps it.** Windows: Settings > Apps > Alnasl > Uninstall.
+  Linux: `sudo /opt/alnasl/uninstall.sh`. The program goes; the data folder
+  stays, and installing again finds it. Delete the folder yourself when you
+  mean to.
+- **Moving to another computer**: stop Alnasl, copy the data folder to the
+  same place on the new one.
+- **A backup** is a copy of that folder made while Alnasl is stopped (or of
+  `alnasl.db`, `alnasl.db-wal` and `alnasl.db-shm` together).
+- `ALNASL_DATA` puts it somewhere else. Alnasl refuses to start if that
+  somewhere is inside the program's own folder: the next update would take
+  it away.
+
+This is not an accident of layout. A sister program once kept its data in
+the folder its installer owned, and an uninstall deleted a season of
+tournaments. Here the two have different names, the installer script
+refuses to build when they do not, and a test reads both and compares.
+
 ## Try it now, without any hardware
 
 ```
@@ -203,15 +334,23 @@ is read as one board, two or more as a loop.
   its serial number on a loop too.
 - `mix alnasl.loop --port COM5 --discover` does the asking from a command
   line and prints every byte; `--watch` reads the loop for a minute.
+  That is for a checkout: an installed copy has no `mix`. There the Boards
+  page is the discovery - Add a board asks the port exactly this - and
+  everything it needs (`Alnasl.Dgt.Loop`, the bus driver, the serial
+  program) is in the release.
 
 ### With your phone
 
 The numbering is meant to be done walking: the two pages are built for a
 phone held in one hand.
 
-1. Start the box with `ALNASL_LISTEN=lan` and **set a PIN in Setup** -
-   before the hall fills up. Without one, anybody on the hall's network who
-   finds the address can renumber your boards.
+1. In Setup, *Access from other machines*: **set a PIN**, then "Let other
+   machines in the hall open this site", and start Alnasl again - before
+   the hall fills up. The switch wants the PIN first: without one, anybody
+   on the hall's network who finds the address could renumber your boards.
+   (`ALNASL_LISTEN=lan` in the environment does the same and overrules the
+   switch.) On Windows, the first time, the firewall asks whether the
+   program may be reached; say yes for private networks.
 2. Boards (or Setup) on the box shows "Open this site on your phone": the
    box's address as text, and as a QR code drawn on the box itself. Point
    the camera at it, give the PIN once.
@@ -328,7 +467,10 @@ alnasl.link_e2e`).
 It is not part of `mix test` and does not run in CI: it needs two programs,
 two ports and both sets of dependencies.
 
-### On the box (Raspberry Pi, Linux)
+### From source on the box (Raspberry Pi, Linux)
+
+[Install](#install) is the short way. This is the long one, for a system
+the release was not built for, or to run a version nobody has released:
 
 ```
 sudo apt install elixir erlang build-essential   # or asdf/mise for a newer Elixir
@@ -347,15 +489,19 @@ The kiosk: start a browser full-screen on the box's own address, e.g.
 chromium-browser --kiosk --app=http://localhost:4040
 ```
 
-A systemd unit and a ready-made image are not part of this build.
+To run a build of your own as the installed service does: `MIX_ENV=prod
+mix release alnasl`, then `sudo sh _build/prod/rel/alnasl/install.sh` - the
+release carries the installer, the updater and the systemd units
+(`rel/linux/`). A ready-made image for the Pi is not part of this build.
+[docs/releasing.md](docs/releasing.md) has how a release is made.
 
 ### Configuration
 
 | Variable | Default | Meaning |
 |---|---|---|
 | `PORT` | `4040` | The port of the management site |
-| `ALNASL_LISTEN` | (local only) | `lan` to let other machines in the hall reach the site - the arbiter's laptop, and the phone the boards are numbered with. Set a PIN in Setup when you do |
-| `ALNASL_DATA` | `./data` (dev), `~/.alnasl` (prod) | Where everything is kept |
+| `ALNASL_LISTEN` | (unset: the switch on Setup decides, and a new box answers only itself) | `lan` to let other machines in the hall reach the site - the arbiter's laptop, and the phone the boards are numbered with; `local` to forbid it. Set, it overrules the switch. Set a PIN when you open it |
+| `ALNASL_DATA` | `./data` (dev); installed or `prod`: see [Where your data lives](#where-your-data-lives-and-uninstalling-without-losing-it) | Where everything is kept. Refused when it is inside the program's own folder |
 | `ALNASL_UART` | on for Linux/macOS, off for Windows | `1` / `0`: build the serial library or not |
 
 Everything else is set on the Setup page and stored in the database.
@@ -369,14 +515,19 @@ alnasl.db                      settings, boards, games, the outbox, the log (SQL
 captures/board-<id>/*.jsonl    everything every board delivered, raw: always on, nothing to switch (rotated at 8 MB, capped in Setup)
 pgn/round-<r>/board-<n>.pgn    every game as PGN with clock times, rewritten on every move
 fixtures/*.jsonl               captures exported as test fixtures
-secret_key_base                prod only
+secret_key_base                the cookie-signing secret, made on first start (installed and prod)
+listen                         "lan" or "local": Setup's switch for the hall's network
+launcher.log                   Windows: what the program said when it last started
+tmp/                           Windows: what the runtime writes when it starts
+update/                        Linux, installed: where "Download and install" leaves its request
+backups/before-<version>-*/    Linux, installed: the database as it was before each update (never pruned)
 ```
 
 A real board is recorded from the moment it is connected, linked to a
 round or not: every byte in both directions (`rx`/`tx`), every position
 and clock reading made of them, with wall-clock milliseconds. The file is
 `<ALNASL_DATA>/captures/board-<id>/<UTC date>-<time>.jsonl` - `./data/...`
-from `mix phx.server`, `~/.alnasl/...` on the box. The Recordings page
+from `mix phx.server`, `/var/lib/alnasl/...` on an installed box, `%LOCALAPPDATA%\AlnaslData\...` on Windows. The Recordings page
 lists, replays and downloads them; at a desk it is
 
 ```
@@ -479,7 +630,7 @@ before LiveChess does. The box leaves the boards as LiveChess expects them
 
 ## What is proven, and how
 
-By `mix test` (509 tests), three tools, three sessions with a real board and
+By `mix test` (583 tests), three tools, three sessions with a real board and
 one with a real loop:
 
 **The link, end to end against the real OpenPairings** (`mix
@@ -780,7 +931,28 @@ and names on every page in both languages.
 - **No visual check in a browser by a person** was part of this build; two
   screenshots were taken headless. Colour-blind safety rests on shapes and
   words, which the tests check exist and differ, not on anybody looking.
-- **No installer, no systemd unit, no Pi image.** `mix phx.server` it is.
+- **No installer has been run by anybody yet.** `Alnasl-Setup.exe`, the
+  portable zip and the Windows launcher have been built on a developer's
+  PC, and the release inside them started and answered there; the
+  installer itself was not run, an update was never applied, and nothing
+  was uninstalled. `install.sh`, `update.sh` and the systemd units have been
+  read by a shell's syntax check and by nobody's Raspberry Pi. The release
+  workflow has never run. [docs/releasing.md](docs/releasing.md) lists what
+  the first release has to prove, one line a claim.
+- **Nothing is signed.** No code-signing certificate: Windows SmartScreen
+  warns on first run, and some antivirus may want convincing. The Linux
+  download is checked against a checksum from the same place it came from,
+  which catches a broken download and not a forged one.
+- **No Pi image, no macOS build, no 32-bit build.** A Raspberry Pi needs
+  the 64-bit system. macOS runs from source.
+- **An update that changes the database cannot be undone by going back.**
+  On Linux the old program is put back when the new one does not answer,
+  and the database from before is kept beside the data - but it is not put
+  back by itself, because that would discard whatever was recorded since.
+  On Windows nothing copies the database before an update.
+- **"Start with Windows" has never started with Windows.** The switch
+  writes one registry value for the current user; whether Velopack's
+  shortcut stub passes `--background` on to the launcher is assumed.
 - **One loop per port is modelled; several ports work** (each port is its
   own bus), but more than one has only been run against the emulator. More
   than two boards on a loop likewise: twelve would each be asked what

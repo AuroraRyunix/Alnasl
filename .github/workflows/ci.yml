@@ -1,0 +1,126 @@
+name: CI
+
+# Every push and every pull request: the tests, the formatter, no warnings.
+# And, on Windows, the two things that are compiled from C there - the
+# serial port program and the launcher - so that a Windows build that no
+# longer builds is found on the push that broke it and not on the day of a
+# release.
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build and test
+    # Named, not `ubuntu-latest`: that label moves, and it should move here
+    # when somebody decides it does.
+    runs-on: ubuntu-24.04
+
+    steps:
+      # Actions are pinned to a commit, not to a tag: a tag can be moved, and
+      # whoever moves it runs their code here. The comment is the version a
+      # person reads; .github/dependabot.yml keeps the pair current.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
+        with:
+          elixir-version: "1.20"
+          otp-version: "29.0"
+
+      - name: Restore dependencies and build cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-mix-otp29.0-ex1.20-${{ hashFiles('mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-otp29.0-ex1.20-
+
+      # --check-locked: a constraint edited in mix.exs without the lock file
+      # would otherwise be resolved here, silently, into a set of
+      # dependencies nobody committed.
+      - name: Install dependencies
+        run: mix deps.get --check-locked
+
+      # The serial library is on by default on Linux, so this compiles it.
+      - name: Compile
+        run: mix compile --warnings-as-errors
+
+      - name: Check formatting
+        run: mix format --check-formatted
+
+      - name: Run tests
+        run: mix test
+
+      # The installer scripts run as root on somebody's box and cannot be
+      # run here. They can at least be read by something stricter than sh.
+      - name: Lint the Linux installer scripts
+        run: |
+          for script in rel/linux/*.sh; do
+            sh -n "$script"
+          done
+          shellcheck --shell=sh --severity=warning rel/linux/*.sh
+
+  windows:
+    name: Windows builds (serial program, launcher)
+    runs-on: windows-latest
+    env:
+      # On Windows the serial library is asked for, not assumed (mix.exs).
+      ALNASL_UART: "1"
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
+        with:
+          elixir-version: "1.20"
+          otp-version: "29.0.5"
+
+      - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+        with:
+          version: 0.15.2
+
+      - name: Restore dependencies and build cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-mix-otp29.0.5-ex1.20-${{ hashFiles('mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-otp29.0.5-ex1.20-
+
+      # circuits_uart is built with mingw-w64: `gcc` and `mingw32-make`, both
+      # on the runner image's PATH. If an image ever drops them, this says
+      # so in one line instead of in the middle of a make error.
+      - name: Check the C toolchain
+        shell: pwsh
+        run: |
+          gcc --version | Select-Object -First 1
+          mingw32-make --version | Select-Object -First 1
+
+      - run: mix deps.get --check-locked
+
+      - run: mix compile --warnings-as-errors
+
+      - name: Check the serial program was built
+        shell: pwsh
+        run: |
+          $exe = "_build\dev\lib\circuits_uart\priv\circuits_uart.exe"
+          if (-not (Test-Path $exe)) { throw "No $exe - the serial library did not build." }
+          Get-Item $exe | Select-Object Name, Length
+
+      - name: Build the launcher
+        shell: pwsh
+        run: |
+          .\rel\windows\build_launcher.ps1 -OutputPath "$env:RUNNER_TEMP\Alnasl.exe"

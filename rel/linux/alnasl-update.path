@@ -1,0 +1,13 @@
+# The arbiter pressed "Download and install" on the Setup page: the program,
+# which is not root and cannot replace itself, wrote the version it wants
+# into this file. That is all it can do; alnasl-update.service does the rest.
+
+[Unit]
+Description=Alnasl - an update was asked for on the Setup page
+
+[Path]
+PathExists=/var/lib/alnasl/update/request
+Unit=alnasl-update.service
+
+[Install]
+WantedBy=multi-user.target

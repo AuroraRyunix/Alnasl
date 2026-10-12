@@ -16,6 +16,7 @@ defmodule AlnaslWeb.HelpLive do
       flash={@flash}
       nav={:help}
       link={@link}
+      update={@update}
       box={@box}
       locale={@locale}
       title={gettext("Help")}
@@ -202,7 +203,7 @@ defmodule AlnaslWeb.HelpLive do
           <ol>
             <li>
               {gettext(
-                "Start the box so that other devices can reach it (ALNASL_LISTEN=lan, see the README) and set a PIN in Setup - before the hall fills up: without one, anybody on the hall's network who finds the address can renumber your boards."
+                "Setup, \"Access from other machines\": set a PIN, then let other machines in the hall open the site, and start Alnasl again. Do it before the hall fills up - and never without the PIN: anybody on the hall's network who finds the address could renumber your boards."
               )}
             </li>
             <li>
@@ -368,6 +369,44 @@ defmodule AlnaslWeb.HelpLive do
             <dd>
               {gettext(
                 "The results site serves each round as one PGN at https://<results site>/t/<tournament>/live/<round>/pgn. Give that address to Lichess as the round's source and Lichess reads it every few seconds. The box needs no Lichess token for this; it only has to reach the results site. Spectators on Lichess then see what the results site shows, including its delay. The same address works for any other broadcast tool that follows a PGN on the web."
+              )}
+            </dd>
+          </dl>
+
+          <h2 id="help-install">{gettext("Installing, updating, and where your data is")}</h2>
+          <dl>
+            <dt>{gettext("Windows")}</dt>
+            <dd>
+              {gettext(
+                "Alnasl-Setup.exe installs for you alone, without an administrator, and puts \"Alnasl\" in the Start menu. The program is not signed, so the first time Windows says \"Windows protected your PC\": choose \"More info\", then \"Run anyway\". The small Alnasl window is the program: closing it stops Alnasl, and while it is stopped the boards are not read. There is also a zip that installs nothing: unzip it and start Alnasl.exe."
+              )}
+            </dd>
+            <dt>{gettext("Linux and the Raspberry Pi")}</dt>
+            <dd>
+              {gettext(
+                "One line installs Alnasl as a service that starts with the box (64-bit; Debian 12, Ubuntu 22.04, Raspberry Pi OS Bookworm, or newer):"
+              )}
+              <code>
+                curl -fsSL https://github.com/AuroraRyunix/Alnasl/releases/latest/download/install.sh | sudo sh
+              </code>
+            </dd>
+            <dt>{gettext("Updating")}</dt>
+            <dd>
+              {gettext(
+                "The box asks once every half hour whether a newer version is out, and says so at the top of the page. It downloads nothing until you say yes under Setup, Updates, where it also says how big the download is. It will not restart while a game is being played unless you insist: the moves played during the restart are not read. \"Later\" asks again tomorrow; \"Don't ask again\" stops the looking, and Setup switches it back on. On Linux the same thing by hand:"
+              )}
+              <code>sudo /opt/alnasl/update.sh</code>
+            </dd>
+            <dt>{gettext("Where your data is")}</dt>
+            <dd>
+              {gettext(
+                "Not in the program's folder. Windows: %LOCALAPPDATA%\\AlnaslData (type that in Explorer's address bar). Linux, installed: /var/lib/alnasl. It holds the database, the PGN of every game, the raw recordings, and the keys and codes you pasted. Updating and uninstalling leave it alone; installing again finds it. To move to another computer, copy that folder while Alnasl is stopped."
+              )}
+            </dd>
+            <dt>{gettext("Uninstalling")}</dt>
+            <dd>
+              {gettext(
+                "Windows: Settings, Apps, Alnasl, Uninstall. Linux: sudo /opt/alnasl/uninstall.sh. Both remove the program and keep the data; delete the data folder yourself if you mean to."
               )}
             </dd>
           </dl>
