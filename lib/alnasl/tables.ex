@@ -179,12 +179,13 @@ defmodule Alnasl.Tables do
   end
 
   @doc """
-  Numbers the boards in the order they are listed (the order they were added, then the
-  order they were added): table and board `first`, `first + 1`, ...
+  Numbers the boards in the order they were added (not by the number a
+  board answers to on a loop, which says nothing of where it stands): table
+  and board `first`, `first + 1`, ...
   """
   def number_in_order(round, first \\ 1) do
     Boards.list()
-    |> Enum.sort_by(&{&1.address || 0, &1.id})
+    |> Enum.sort_by(& &1.id)
     |> Enum.with_index(first)
     |> Enum.each(fn {board, number} ->
       for other <- Boards.list(), other.id != board.id, other.table_no == number do
