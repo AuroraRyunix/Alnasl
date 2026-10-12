@@ -27,22 +27,57 @@ whom; the arrow carries the games out of the hall.
 
 ```
 [DGT boards] --serial--> Alnasl (in the hall)
-                            |  moves, clocks - live, buffered when offline
-                            v
-                       OpenResults  <-- snapshot --  OpenPairings
-                     (live boards,                 (pairings: which board
-                      hall screens)                  is which game)
+                          |  ^   \
+     who plays whom, the  |  |    \  moves, clocks - live, buffered
+     round that is on     |  |     \ when offline (push only)
+                          |  |      v
+   what each board saw    v  |    OpenResults
+                       OpenPairings  (live boards, hall screens)
 ```
 
-- **OpenPairings** pairs the tournament and owns the results.
-- **OpenResults** shows the games live. Alnasl reads the round's pairings from
-  its public snapshot (`GET /api/tournaments/:slug`) and writes to its
-  live-boards API (`POST /api/tournaments/:slug/live`, with a relay key).
+- **OpenPairings** pairs the tournament and owns the results. Alnasl asks it
+  who sits where (the board link, `docs/board-link-api.md` in OpenPairings:
+  a connect code pasted once, then a poll every five seconds) and tells it
+  what each board saw: moves, clocks, PGN, and the result on the board -
+  shown beside the pairing there, never entered as the result.
+- **OpenResults** shows the games live. Alnasl writes to its live-boards API
+  (`POST /api/tournaments/:slug/live`, with a relay key) and reads nothing
+  from it: the address, the tournament's short name and the relay key
+  arrive over the board link.
 - **Alnasl** does only the part in the hall: talk to the boards, turn what
-  they report into legal moves, and get those moves to OpenResults.
+  they report into legal moves, and get those moves out.
+
+Alnasl always calls; nothing calls Alnasl. So the hall opens no port, and the
+same box works against a hosted OpenPairings over the internet and against a
+desktop copy on the same computer (`http://127.0.0.1:<port>`) with no
+internet at all.
 
 Alnasl is a separate program on purpose. A board that hangs, a loose cable or
 a hall without a network must never be able to touch the pairing program.
+
+## Several tournaments, one box
+
+A hall has one box and often more than one tournament: tables 1-4 the Open,
+5-8 the under-twelves. Each is a tournament of its own on the box, with its
+own pairings, its own round in play, its own results page and its own
+Lichess round.
+
+- **A connect code** from OpenPairings (Settings, Live boards) is for one
+  tournament or for a group. Paste it under Setup, Tournaments. A tournament
+  added to the group later appears on the box without a new code.
+- **Which table plays in which tournament is said on the box**: "tables 5
+  to 8" under the tournament, and table 5 is its board 1. Board numbers
+  begin again in each tournament; a table number is the sticker, as before.
+- **A round starts by itself** when it is paired in OpenPairings, for that
+  tournament's boards and no others. "Start round N" stays as the fallback.
+- **A pairing changed after the round began** reaches the box the same way.
+  A board where nothing was played takes the new pairing; a game with moves
+  is kept and flagged "Pairing changed", and the arbiter says whether the
+  moves are the new pairing's game or the game is set aside.
+- **Without OpenPairings** the box works as it did: the results page typed
+  in on Setup, the names said by hand on a board's page or read from a PGN.
+  That is "this box's own tournament", which is always there. The box no
+  longer reads pairings from the results site.
 
 ## Try it now, without any hardware
 
@@ -87,7 +122,7 @@ plus "match device", chosen per device (rail, or Setup on a phone).
 | **PGN** | Read PGN files or pasted moves (checked for legality). Play a game on a simulator board; attach a game that was not captured to its board, after asking; compare a scoresheet with the captured game (the first difference). Export a game or the whole round |
 | **Recordings** | The raw captures per board. Replay one through the tracker as a dry run (what it makes of it, where it lost the thread); export it as a test fixture; download it |
 | **Log** | What happened, in sentences, with filters: board connected, moves recovered, out of sync, repaired by the arbiter, offline, back |
-| **Setup** | Results server, tournament (its short name, or paste the link), relay key (never shown again once saved), "Test connection" that really asks the server and explains failures; a Lichess broadcast round and its token, with a test of its own; the box's name, language, round; a PIN for other machines and the address they open; the tracker's timings, with "Bullet / fast play" for games of a few minutes or less |
+| **Setup** | Tournaments: a connect code from OpenPairings (pasted once, never shown again), what each tournament came with, which tables play in it, "Test connection" that really asks and explains failures - a wrong code, a withdrawn one, nobody home, a tournament that is not published; for a box without OpenPairings the results server, tournament and relay key typed in; a Lichess broadcast round and its token per tournament, with a test of its own; the box's name, language, round; a PIN for other machines and the address they open; the tracker's timings, with "Bullet / fast play" for games of a few minutes or less |
 | **Help** | The cycle on one page: before the round, during, after, and when something is wrong |
 
 A banner on every page says so when the results server cannot be reached.
@@ -177,7 +212,13 @@ wait, the last error in words), its own switch and its own "Send now".
 | Destination | What it gets | Its place in the queue |
 |---|---|---|
 | **Results server** (OpenResults) | every change as a message of its own: the whole game so far, with the clock | the row of the outbox it has got to |
+| **OpenPairings** | each game of a linked tournament as it stands, whenever anything but the clock changed: moves, clocks, PGN, the result the board saw, how many moves were reconstructed or guessed | per game, the game's change counter at the last report that was answered |
 | **Lichess broadcast** | the PGN of each game of one round as it stands, whenever it changed | per game, the game's change counter at the last push Lichess answered for |
+
+Each game goes to the places of **its own tournament**: that tournament's
+results page with that tournament's relay key, that tournament's Lichess
+round, the OpenPairings it came from. A tournament whose key is refused, or
+which is not published yet, holds up nobody else's.
 
 ### Broadcasting on Lichess
 
@@ -365,8 +406,13 @@ page says so, and simulator boards are unaffected.
   message is the whole game so far, which is the server's own rule and what
   makes a retry harmless. Offline for hours is normal.
 - **More than one destination.** The results server is one; a Lichess
-  broadcast is another (`Alnasl.Destination`). Each keeps its own place in
-  the queue and its own sender, so one being down never holds up another.
+  broadcast is another; the pairing program a third (`Alnasl.Destination`).
+  Each keeps its own place in the queue and its own sender, so one being
+  down never holds up another.
+- **The pairings are asked for, not typed.** `Alnasl.OpenPairings` polls
+  the pairing program's listing with its `ETag` and fetches a tournament
+  when its version changed; the answer is kept, so the box knows who plays
+  with the network gone. `current_round` moving is what starts a round.
 - **Everything is recorded raw**, per board, so a game can be rebuilt and a
   failure in a hall replayed at a desk.
 - **A result is never final without the arbiter.** Mate on the board, or
@@ -374,7 +420,22 @@ page says so, and simulator boards are unaffected.
 
 ## What is proven, and how
 
-By `mix test` (396 tests), three tools, and three sessions with a real board:
+By `mix test` (471 tests), three tools, and three sessions with a real board:
+
+**The link with OpenPairings**, against `Alnasl.FakeOpenPairings` - a
+pairing program written from the contract, not from OpenPairings' code, and
+not OpenPairings: reading a connect code; the poll and its `ETag` (an
+unchanged listing is one request and no document); a group code and a
+tournament that joins the group later; a tournament that leaves; a code
+withdrawn (asked no more), nobody home (the document is kept), another
+program on the port; a round paired there starting here for one
+tournament's boards and no other's, and not walking the boards back; a
+pairing changed with and without moves on the board, a game moved to
+another board number, the two answers of the arbiter; the report of a game,
+`seq` with its duplicate and stale answers, the queue through an outage;
+each tournament's games to its own results page and Lichess round; the
+migration from a box with one tournament in its settings, on a database of
+its own.
 
 **The tracker**, against 69 games (59 classics before 1930, 7 constructed
 for underpromotion and en passant, 3 more; 4599 plies) played through the
@@ -520,14 +581,35 @@ and names on every page in both languages.
 
 ## What is not done
 
+- **No real OpenPairings was spoken to.** The board link is built from the
+  contract (`docs/board-link-api.md` in OpenPairings) and tested against
+  `Alnasl.FakeOpenPairings`, a stand-in written from that same document;
+  the server's own code was read beside it, not run. The first hall, or a
+  scratch copy of OpenPairings on a spare port, is the test that is owed.
+- **The QR code of a connect code cannot be scanned by the box's own
+  page.** A browser lends its camera only to a page served over https (or
+  from the same machine), and the box is plain http on the hall's network.
+  So: the phone's own camera reads the QR, the link it shows is copied
+  instead of opened, and pasted. A photo decoded on the box, or the box
+  serving https, would lift that; neither is built.
+- **A box elsewhere on the LAN cannot use a desktop OpenPairings.** The
+  desktop copy answers on its own computer only; that is its decision, and
+  the box says so when such a code gets no answer.
+- **Team events are shown as boards, not as matches.** The board link names
+  the match and the board within it; the box numbers the boards through the
+  round, as the results site does, and does not group the tiles by match.
+- **Chess960 from the pairing program is not started.** The round's drawn
+  position arrives and is ignored (see below).
+
 - **Twenty moves have been played on a real board**, not a game: one
   capture, no promotion, no en passant, and castling only after a
   position set by hand. The clock's battery-low bit and the flag bits
   beside the hours were never set; a board lying the other way round was
   not tried. Next session: [docs/tomorrow.md](docs/tomorrow.md).
 - **A second game on a board stays on the box.** The results server and
-  Lichess know a game by round and board, so only the first game of a
-  board is sent; the others are in the PGN export and on the board's page.
+  Lichess know a game by round and board, and OpenPairings by its pairing -
+  one game each, so one game of a board is sent; the others are in the PGN
+  export and on the board's page.
   The reconstruction, the choice of line and "New game" have been used in
   the simulator and in tests, not yet by a person at a real board.
 - **The bus (loop) wire format is assumed.** `lib/alnasl/dgt/bus.ex` holds

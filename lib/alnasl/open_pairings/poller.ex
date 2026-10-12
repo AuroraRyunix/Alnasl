@@ -35,6 +35,9 @@ defmodule Alnasl.OpenPairings.Poller do
 
   @impl true
   def init(_arg) do
+    # Stopped between two conversations, not in the middle of one (as
+    # `Alnasl.Destination.Sender` is): see `terminate/2`.
+    Process.flag(:trap_exit, true)
     Process.send_after(self(), :tick, 200)
     # `due`: link id => monotonic ms; `backoff`: link id => ms; `told`: link
     # id => what the pairing program was last told about the box.
@@ -86,6 +89,18 @@ defmodule Alnasl.OpenPairings.Poller do
 
   def handle_info(_other, state), do: {:noreply, state}
 
+  @impl true
+  def terminate(_reason, %{task: ref}) when is_reference(ref) do
+    receive do
+      {^ref, _results} -> :ok
+      {:DOWN, ^ref, :process, _pid, _reason} -> :ok
+    after
+      4_000 -> :ok
+    end
+  end
+
+  def terminate(_reason, _state), do: :ok
+
   defp run(%{task: task} = state) when task != nil, do: state
 
   defp run(state) do
@@ -94,7 +109,9 @@ defmodule Alnasl.OpenPairings.Poller do
     due =
       for link <- Tournaments.links(),
           OpenPairings.polled?(link),
-          Map.get(state.due, link.id, 0) <= now,
+          # A link nobody has asked yet is due now. (Not "at 0": the monotonic
+          # clock is free to be negative, and on some machines it is.)
+          Map.get(state.due, link.id, now) <= now,
           do: link
 
     case due do

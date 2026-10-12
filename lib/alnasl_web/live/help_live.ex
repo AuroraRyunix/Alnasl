@@ -25,7 +25,7 @@ defmodule AlnaslWeb.HelpLive do
           <h2 id="help-what">{gettext("What this box does")}</h2>
           <p>
             {gettext(
-              "Alnasl reads the electronic boards in the hall, works out the moves from where the pieces stand, and sends moves and clock times to the results site. It keeps everything itself first, so a hall without internet loses nothing: what could not be sent goes out, in order, when the connection is back."
+              "Alnasl reads the electronic boards in the hall, works out the moves from where the pieces stand, and sends moves and clock times to the results site. Who plays whom it learns from OpenPairings, and what each board saw goes back there. It keeps everything itself first, so a hall without internet loses nothing: what could not be sent goes out, in order, when the connection is back."
             )}
           </p>
           <p>
@@ -38,7 +38,7 @@ defmodule AlnaslWeb.HelpLive do
           <ol>
             <li>
               {gettext(
-                "Setup: the results site's address, the tournament and the relay key. Press \"Test connection\" - it says in words what is wrong if something is."
+                "Setup, Tournaments: paste the connect code from OpenPairings (see \"Working with OpenPairings\" below) and say which tables play in which tournament. Press \"Test connection\" - it says in words what is wrong if something is. Without OpenPairings: the results site's address, the tournament and the relay key, typed in on the same page."
               )}
             </li>
             <li>
@@ -72,6 +72,55 @@ defmodule AlnaslWeb.HelpLive do
               )}
             </li>
           </ol>
+
+          <h2 id="help-openpairings">{gettext("Working with OpenPairings")}</h2>
+          <ol>
+            <li>
+              {gettext(
+                "In OpenPairings: Settings, Live boards, make a connect code - for one tournament, or for a group of tournaments. It is shown once, as a line of text and as a QR code holding the same text."
+              )}
+            </li>
+            <li>
+              {gettext(
+                "On the box: Setup, Tournaments, paste the line and press Add. From a phone: scan the QR code with the phone's own camera, copy the link it shows instead of opening it, and paste it in the field. (The box cannot scan it itself: a browser only lends its camera to a page served over https, and the box is not.)"
+              )}
+            </li>
+            <li>
+              {gettext(
+                "The tournaments the code reaches appear, each with what came with it: players, the rounds that are paired, the rate of play, and - when the tournament is published - its results page and relay key. Nothing is typed on the box for the results site. A tournament added to the group later appears by itself."
+              )}
+            </li>
+            <li>
+              {gettext(
+                "Say which tables play in which tournament: \"Tables from 5 to 8\" under the tournament. Table 5 is then its board 1. One board can also be put in a tournament on the Boards page."
+              )}
+            </li>
+          </ol>
+          <p id="help-rounds-start">
+            {gettext(
+              "From then on a round starts by itself: a few seconds after the arbiter pairs it in OpenPairings, that tournament's boards show the new round with names, ratings and colours. The boards of the other tournaments are not touched. \"Start round N\" on the Round page stays for when there is no connection, and a tournament can be told not to start rounds by itself (Setup)."
+            )}
+          </p>
+          <p id="help-board-saw">
+            {gettext(
+              "What goes back to OpenPairings, per game: the moves, the clocks, the PGN, and the result the board saw - with how many moves the box reconstructed or guessed. It is shown beside the pairing there, in red when it differs from the result the arbiter entered. A board never enters a result."
+            )}
+          </p>
+          <p id="help-pairing-changed">
+            {gettext(
+              "When a pairing is changed in OpenPairings after the round began: a board where nothing was played simply takes the new pairing. A game that has moves is kept as it is and its tile says \"Pairing changed\" - open the board and choose. \"These moves are that game\" when the players are the ones in the new pairing (a colour switch, a corrected name): the moves stand under the new names. \"Set it aside, begin again\" when the game on the board is nobody's any more: it is kept on the box with its PGN, and the board begins again for the new pairing. A game that only got another board number moves there by itself."
+            )}
+          </p>
+          <p id="help-desktop">
+            {gettext(
+              "With a desktop copy of OpenPairings on the same computer, the code begins with http://127.0.0.1 and everything works with no internet at all. Such a code does not work from a box elsewhere in the hall: the desktop copy answers only on its own computer."
+            )}
+          </p>
+          <p id="help-no-pairing-program">
+            {gettext(
+              "Without OpenPairings the box still works: type the results page in on Setup, and say who plays on each board's page (\"Players\") or attach a PGN that says it. The box does not read pairings from the results site."
+            )}
+          </p>
 
           <h2 id="help-which">{gettext("Which board is which")}</h2>
           <p>
@@ -237,7 +286,7 @@ defmodule AlnaslWeb.HelpLive do
             </li>
             <li id="help-new-game">
               {gettext(
-                "Another game on the same board: \"New game on this board\". The game before it is kept and listed with its PGN. On a board no pairing names, setting up the pieces again starts the next game by itself (Setup can make that always, or never). Only the first game of a board goes to the results site and Lichess; the others stay on the box."
+                "Another game on the same board: \"New game on this board\". The game before it is kept and listed with its PGN. On a board no pairing names, setting up the pieces again starts the next game by itself (Setup can make that always, or never). One game of a board goes to the results site, Lichess and OpenPairings; the others stay on the box."
               )}
             </li>
             <li>
@@ -246,7 +295,11 @@ defmodule AlnaslWeb.HelpLive do
               )}
             </li>
             <li>{gettext("PGN page: \"Whole round as PGN\" for the bulletin.")}</li>
-            <li>{gettext("Round page: \"Start round N\" moves all boards on to the next round.")}</li>
+            <li>
+              {gettext(
+                "The next round starts by itself when OpenPairings pairs it. Without OpenPairings: Round page, \"Start round N\" moves the tournament's boards on to the next round."
+              )}
+            </li>
           </ol>
 
           <h2 id="help-lichess">{gettext("Broadcasting on Lichess")}</h2>
@@ -329,6 +382,24 @@ defmodule AlnaslWeb.HelpLive do
             <dd>
               {gettext(
                 "The clock was pressed more often than moves were seen. Compare the board with the move list."
+              )}
+            </dd>
+            <dt>{gettext("\"Code refused\" under Tournaments in Setup")}</dt>
+            <dd>
+              {gettext(
+                "OpenPairings does not accept the connect code: it was withdrawn there, or it is not the whole line. The box has stopped asking, and the boards go on with the pairings it has. Make a new code in OpenPairings (Settings, Live boards), add it, and remove the old one."
+              )}
+            </dd>
+            <dt>{gettext("\"No answer\" under Tournaments in Setup")}</dt>
+            <dd>
+              {gettext(
+                "OpenPairings cannot be reached. Nothing is lost: the boards go on with the pairings the box has, the games are kept for it, and the box asks again by itself. A round paired meanwhile is started with \"Start round N\" and takes its names when the connection is back."
+              )}
+            </dd>
+            <dt>{gettext("A tournament has no results page")}</dt>
+            <dd>
+              {gettext(
+                "It is not published from OpenPairings, or no relay key is saved there (Settings, Live boards). Setup says which. Until then its moves go to OpenPairings only; the address and the key arrive by themselves once they are there."
               )}
             </dd>
             <dt>{gettext("The results site shows nothing")}</dt>

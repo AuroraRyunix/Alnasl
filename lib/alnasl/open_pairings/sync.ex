@@ -19,7 +19,9 @@ defmodule Alnasl.OpenPairings.Sync do
   starts that round for this tournament's boards by itself
   (`Alnasl.Boards.start_round/2`) - names, ratings, colours and the rate of
   play are on the tiles a few seconds after the arbiter paired. The boards
-  of the other tournaments are not touched. A tournament can be told not
+  of the other tournaments are not touched. One exception: the number
+  going *down* while a game of the round on the boards is being played
+  moves nothing (see `under_way?/1`). A tournament can be told not
   to (`auto_start`): the Round page then says which round the pairing
   program is on and leaves the button to the arbiter. The arbiter may also
   look at another round by hand; the box follows again when the pairing
@@ -63,6 +65,7 @@ defmodule Alnasl.OpenPairings.Sync do
     current = document["current_round"]
 
     was = tournament.remote_round
+    target_was = {tournament.server_url, tournament.slug, tournament.relay_key}
 
     tournament =
       Tournaments.update!(
@@ -79,7 +82,8 @@ defmodule Alnasl.OpenPairings.Sync do
       )
 
     tournament =
-      if is_integer(current) and current != was and tournament.auto_start do
+      if is_integer(current) and current != was and tournament.auto_start and
+           (current > tournament.round or not under_way?(tournament)) do
         Boards.start_round(tournament.id, current)
         Tournaments.get!(tournament.id)
       else
@@ -87,9 +91,28 @@ defmodule Alnasl.OpenPairings.Sync do
       end
 
     reconcile(tournament)
+
+    # A results page that has just arrived (or is another one now) gets every
+    # game as it stands; there was nowhere to send them until now.
+    if Tournaments.openresults_configured?(tournament) and
+         {tournament.server_url, tournament.slug, tournament.relay_key} != target_was,
+       do: Alnasl.Outbox.requeue(tournament.id)
+
     Boards.refresh_games(tournament.id)
     Tournaments.notify(tournament.id)
     tournament
+  end
+
+  # Is a game being played in the round the box has on? Then the box does
+  # not walk its boards BACK to an earlier round by itself. `current_round`
+  # is "the lowest round with a result missing", so an arbiter who clears a
+  # result of round 2 to correct it, while round 3 is being played, makes it
+  # say 2 for a minute. The Round page says where the pairing program is
+  # and offers the button; the boards stay with the games on them.
+  defp under_way?(%Tournament{} = tournament) do
+    tournament.id
+    |> Games.list(tournament.round)
+    |> Enum.any?(&(not &1.local and &1.status == "live" and Games.begun?(&1)))
   end
 
   defp target(%{"server_url" => url, "slug" => slug} = target)

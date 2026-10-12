@@ -70,6 +70,7 @@ defmodule Alnasl.OpenPairingsReportsTest do
 
       assert sent["seq"] == OpenPairings.seq(game)
       assert sent["pgn"] =~ ~s([White "IM Open Player 1"]) and sent["pgn"] =~ "1. e4"
+      assert sent["pgn"] =~ ~s([TimeControl "5400+30"])
       refute is_map_key(sent, "replace")
     end
 
@@ -357,10 +358,32 @@ defmodule Alnasl.OpenPairingsReportsTest do
       Outbox.drain()
       assert_received {:results_site, "slug-17", _key, %{"moves" => ["e4"]}}
       refute_received {:results_site, _slug, _key, _body}
-      assert Outbox.pending_by_tournament() == %{u12.id => 1}
+      # Nothing piles up for a results page that may never be.
+      assert Outbox.pending_by_tournament() == %{}
 
       # Still reported to the pairing program, which is where the contract sends it.
       assert {:empty, 2} = OpenPairings.deliver()
+
+      # Published after all: the game goes there as it stands, in full.
+      Games.current(u12.id, 1, 1) |> play(~w(d5))
+
+      FakeOpenPairings.update(18, fn t ->
+        %{
+          t
+          | openresults: %{
+              "server_url" => "http://results.test",
+              "slug" => "slug-18",
+              "relay_key" => FakeOpenPairings.relay_key(18)
+            }
+        }
+      end)
+
+      poll()
+      assert Outbox.pending_by_tournament() == %{u12.id => 1}
+      Outbox.drain()
+
+      assert_received {:results_site, "slug-18", _key,
+                       %{"moves" => ["d4", "d5"], "replace" => true}}
     end
 
     test "Lichess: each tournament's round gets that tournament's games, and no more than the arbiter shows",

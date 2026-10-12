@@ -168,6 +168,33 @@ defmodule Alnasl.OpenPairingsRoundsTest do
       assert where(a) == {open.id, 3, 1}
     end
 
+    test "the boards are not walked back to an earlier round while a game is being played",
+         ctx do
+      %{open: open} = ctx
+      [a | _] = hall(ctx)
+
+      FakeOpenPairings.finish_round(17, 1)
+      FakeOpenPairings.pair(17, 2, 2)
+      poll()
+      eventually(fn -> Boards.snapshot(a.id).status == :waiting_start end)
+      play_on("FAKE1", a.id, ~w(e4 e5))
+
+      # The arbiter clears a result of round 1 to correct it: for a minute the
+      # pairing program says round 1 is the one that is on.
+      FakeOpenPairings.boards(17, 1, fn [one | rest] -> [%{one | "result" => nil} | rest] end)
+      poll()
+
+      assert %{round: 2, remote_round: 1} = again(open)
+      assert where(a) == {open.id, 2, 1}
+      assert sans(a.id) == ~w(e4 e5)
+
+      # Entered again: nothing to do, the box never left.
+      FakeOpenPairings.finish_round(17, 1)
+      poll()
+      assert %{round: 2, remote_round: 2} = again(open)
+      assert where(a) == {open.id, 2, 1}
+    end
+
     test "offline, a round is started by hand and takes the pairings when they arrive", ctx do
       %{open: open} = ctx
       [a | _] = hall(ctx)

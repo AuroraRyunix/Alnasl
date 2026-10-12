@@ -297,7 +297,10 @@ defmodule Alnasl.Destination.LichessBroadcast do
           {"White", name(players.white, game.white)},
           {"Black", name(players.black, game.black)},
           {"Board", Integer.to_string(game.board_no)}
-        ] ++ extra("White", players.white, shown) ++ extra("Black", players.black, shown),
+        ] ++
+          extra("White", players.white, shown) ++
+          extra("Black", players.black, shown) ++
+          if(info.time_control_pgn, do: [{"TimeControl", info.time_control_pgn}], else: []),
       moves: Enum.map(plies, & &1.san),
       clocks: clocks,
       result: if(game.status == "finished", do: game.result || "*", else: "*"),

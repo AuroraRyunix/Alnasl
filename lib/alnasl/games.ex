@@ -451,6 +451,10 @@ defmodule Alnasl.Games do
         {"White", game.white || "?"},
         {"Black", game.black || "?"},
         {"Board", Integer.to_string(game.board_no)}
+        # The rate of play, when the pairing program gave it in PGN's own
+        # notation. Never worked out from the words: a wrong one is worse
+        # than none.
+        | if(info.time_control_pgn, do: [{"TimeControl", info.time_control_pgn}], else: [])
       ],
       moves: Enum.map(plies, & &1.san),
       clocks:

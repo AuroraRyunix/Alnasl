@@ -313,6 +313,43 @@ defmodule Alnasl.OpenPairingsTest do
     end
   end
 
+  describe "the poller" do
+    defp wait_until(fun, left \\ 300) do
+      cond do
+        fun.() ->
+          :ok
+
+        left == 0 ->
+          flunk("timed out waiting")
+
+        true ->
+          receive do
+          after
+            20 -> wait_until(fun, left - 1)
+          end
+      end
+    end
+
+    test "asks by itself, learns what changed, and tells the pairing program which box this is" do
+      tournament = linked(17)
+      FakeOpenPairings.pair(17, 2, 2)
+
+      start_supervised!(Alnasl.OpenPairings.Poller)
+      wait_until(fn -> Tournaments.rounds(tournament.id) == [1, 2] end)
+      wait_until(fn -> FakeOpenPairings.boxes() != [] end)
+      assert [{{:tournament, 17}, %{"boards" => %{"17" => 0}}} | _] = FakeOpenPairings.boxes()
+
+      # A code that is refused is left alone from then on.
+      FakeOpenPairings.withdraw(FakeOpenPairings.root() <> "#" <> Repo.one!(Link).secret)
+      Alnasl.OpenPairings.Poller.poll_now()
+      wait_until(fn -> Repo.one!(Link).state == "unauthorized" end)
+      FakeOpenPairings.reset_requests()
+      Alnasl.OpenPairings.Poller.poll_now()
+      _ = :sys.get_state(Alnasl.OpenPairings.Poller)
+      assert FakeOpenPairings.requests() == []
+    end
+  end
+
   describe "taking a code off the box" do
     test "takes its tournaments with it and leaves the box's own alone" do
       own = Tournaments.default()

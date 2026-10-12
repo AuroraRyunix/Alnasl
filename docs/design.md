@@ -4,7 +4,8 @@ Five parts, in the order a move passes through them: a **driver** reads a
 board, the **recorder** writes down what it read, the **tracker** works out
 the moves, the **outbox** gets them to the server (and the other
 **destinations** get them elsewhere), and the **round model** says which
-board is which game. This document is about the reasoning; the
+board is which game - of which tournament, as the **link with the pairing
+program** tells it (section 6a). This document is about the reasoning; the
 moduledocs have the details.
 
 ```
@@ -563,8 +564,18 @@ What "its place in the queue" is, depends on what the destination takes:
 
 | Destination | It takes | So its place is |
 |---|---|---|
-| `OpenResults` | every change, as a message of its own | the `outbox` row it has got to - section 4 above, unchanged |
+| `OpenResults` | every change, as a message of its own | the `outbox` row it has got to - section 4 above, per tournament |
 | `LichessBroadcast` | the game as it is now, as PGN | per game, `games.seq` at the last push Lichess answered for (`destination_cursors.acked_seq`) |
+| `OpenPairings` | the game as it is now, as the board link's report | the same, for the last report the pairing program answered for |
+
+A game goes to the places of **its own tournament**. An outbox row carries
+its tournament and is posted to that tournament's results page with that
+tournament's relay key; each tournament's rows are sent oldest first, and a
+tournament whose key is refused, or which has no results page, holds up
+nobody else's. A Lichess push carries the games of one tournament's round
+to that tournament's Lichess round. What the sender says when several
+tournaments are in play is the worst of how they went, with the
+tournament's name in front.
 
 `games.seq` goes up by one for every change queued, in the same transaction
 as the outbox row. So "the game is ahead of what this destination has
@@ -632,8 +643,14 @@ still comes out whole.
 
 ## 6. The round
 
-- The pairings are read from the server's public snapshot and kept on the
-  box, so it knows them offline.
+- A game is `(tournament, round, board, game number)`. A box serves several
+  tournaments (section 6a); a box that serves one has "its own", and the
+  addresses and files it always had.
+- The pairings come from the pairing program (section 6a) and are kept on
+  the box, so it knows them offline. For the box's own tournament they
+  come from the arbiter: names said on a board's page, or a PGN. The box
+  does not read them from the results server any more - that link is one
+  way.
 - A physical board has an **identity**: the serial number it reports. The
   row of the `boards` table is that board, wherever it is plugged in
   (`Alnasl.Tables`). A board added on a port that then reports a serial the
@@ -689,19 +706,107 @@ still comes out whole.
   line in the recording (`cfg` with `game`), its own PGN file, and reads
   nothing until the starting position has stood on the board: the pieces
   of the game before are not its first moves.
-- **Only game 1 of a board leaves the box.** The results server knows a
-  game by round and board (`round` + `board` in the ingest, nothing else)
-  and Lichess by its headers; a second game sent there would overwrite the
-  first. So `Outbox.enqueue/3` and the Lichess push skip `game_no > 1`:
-  those games are on the board's page with their PGN, in the round's PGN,
-  and in the recordings.
-- **Starting a round** is `Alnasl.Boards.start_round/1` - pairings fetched,
-  boards moved - so that something other than the Round page can ask for
-  it.
+- **One game of a board leaves the box.** The results server knows a
+  game by round and board (`round` + `board` in the ingest, nothing else),
+  Lichess by its headers, and the pairing program by the pairing (one
+  report per `game`, whole, replacing the last: the contract has no room
+  for a second game of the same pairing). A second game sent to any of
+  them would overwrite the first. So a game begun with "New game on this
+  board" is marked `local` and `Outbox.enqueue/3`, the Lichess push and
+  the report to the pairing program skip it: such games are on the board's
+  page with their PGN, in the round's PGN, and in the recordings. (The
+  mark is a column and not "game number above 1" because of the one case
+  where the later game is the one that counts: a game set aside when its
+  pairing changed, section 6a.)
+- **Starting a round** is `Alnasl.Boards.start_round/2` - that
+  tournament's boards moved to the round, each to the board its table
+  stands for - so that something other than the Round page can ask for it.
+  The pairing program does (section 6a).
 - **Ready or not** (`Alnasl.Tables.checks/1`): duplicate table numbers,
   two boards on one board of the round, one serial seen twice, a numbered
   board that does not answer, a wrong starting position, a connected board
   without a number, a gap below the highest electronic board.
+
+## 6a. Several tournaments, and the pairing program
+
+`docs/board-link-api.md` in OpenPairings is the contract; `Alnasl.OpenPairings`
+is the box's half of it. The decisions that are the box's own:
+
+**Tournaments are rows.** One is always there - the box's own, for a box
+without a pairing program and for a board nobody gave to another - and each
+tournament a connect code reaches is another. A row holds what used to be
+five settings (results page, slug, relay key, Lichess round, round in
+play) and the document the pairing program last gave. The migration makes
+the box's own tournament out of the old settings, and the old snapshot
+into its document: a box upgraded mid-weekend carries on with the names it
+had.
+
+**The code is a secret and is treated like the relay key.** It is stored
+as given (it must be sent with every request; the pairing program keeps
+only a hash and cannot show it again), never logged, never put back in the
+form, and shown as a hint. What is before the `#` is used as written:
+`http://127.0.0.1:<port>` is a desktop copy on the same computer and
+needs no internet and no certificate.
+
+**The box polls; nothing is pushed.** `GET /link` with the `ETag` of the
+last answer, at the pace the pairing program asks for (5 s). A `304` is
+the usual answer and costs nothing. A listing that changed names the
+versions; a tournament whose version the box does not hold is fetched. No
+answer: the pause doubles to a minute and the boards go on with what the
+box has. `401`: the box stops asking - a withdrawn code asked for every
+five seconds from the hall's address gets the address throttled - and
+says so; trying again is the arbiter's button.
+
+**Tables are the box's.** The pairing program knows boards of a round;
+the box knows tables. A tournament is given a range of tables, and the
+board a table stands for is its number counted from the range's first:
+tables 5-8, table 5 is board 1 (`Alnasl.Tables.home_board/1`). So the
+arbiter numbers the hall once, 1 to N, and says where each tournament
+begins.
+
+**A paired round is on.** The pairing program has no "start": it says
+which round is current. When that number changes the box starts that
+round for that tournament's boards (`Alnasl.OpenPairings.Sync`), and for
+no others - the other tournaments' boards are other rows with another
+`tournament_id`, and `start_round/2` does not look at them. The arbiter
+can switch that off per tournament, or look at another round by hand; the
+box does not pull him back, it follows when the number moves again. And
+the box does not walk its boards *back* by itself while a game of the round
+on them is being played: "current" is the lowest round with a result
+missing, so a result of round 2 cleared to be corrected during round 3
+makes the number say 2 for a minute. The Round page then says where the
+pairing program is, with the button; the boards stay with their games.
+
+**A pairing that changes under a game.** The cases the contract lists
+look alike in the document and are not alike in the hall, so the box
+decides only the ones that are safe:
+
+| | the box |
+|---|---|
+| nothing played on the board | takes the new pairing, silently |
+| the same game, another board number | moves the game and the physical board with it; the board that waited there takes the number left behind |
+| moves played, and other players, other colours, or no such game | keeps the game untouched, flags it, stops reporting it to the pairing program, and asks |
+
+The arbiter's two answers: *these moves are that game* (a colour switch
+entered because the players sat down wrong, a corrected name: the moves
+stand, the names change, every destination is told again in full), or
+*set it aside, begin again* (the round was paired again while this board
+had begun: the old game is kept on the box, closed without a result, and a
+new game on the board is the one that leaves the box). Until he answers,
+the results site and Lichess go on getting the moves under the names the
+game had - a live board that goes dark is worse than one with yesterday's
+name on it. The flag clears by itself when the pairing is put back.
+
+**What goes back.** Per game, whole, with a `seq` that only grows
+(`game row * 2^32 + its change counter`: a game begun again for the same
+pairing outranks the one set aside). The result is the one *the board
+saw*: the arbiter's on the box when the game is closed, else what the
+position shows. It is never entered there. A `stale` answer - another box
+reported the game, or this one was wiped - is listed, and overruled
+(`replace: true`) only when the arbiter says so. The twenty-second clock
+refresh is not sent: the contract asks for reports on a move, a state
+change or a clock correction, and the pairing program shows no running
+clock.
 
 ## 7. The processes
 
@@ -717,6 +822,8 @@ Alnasl.Supervisor
 ├─ Finder                      who was touched last; the numbering run
 ├─ Outbox                      the results server's sender; each batch runs in a task so it can always answer
 ├─ LichessBroadcast.Sender     the same process, for Lichess
+├─ OpenPairings.Sender         the same process, for the pairing program
+├─ OpenPairings.Poller         asks each connect code what it reaches, at its pace
 └─ Endpoint                    the management site
 ```
 

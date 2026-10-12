@@ -84,21 +84,24 @@ defmodule Alnasl.Outbox do
 
   def enqueue(%Game{} = game, clock, replace?) do
     body = Games.body(game, clock, replace?)
+    row? = wanted?(game.tournament_id)
 
     {:ok, game} =
       Repo.transaction(fn ->
         game = game |> Ecto.Changeset.change(%{seq: game.seq + 1}) |> Repo.update!()
 
-        Repo.insert!(%Entry{
-          game_id: game.id,
-          tournament_id: game.tournament_id,
-          round: game.round,
-          board_no: game.board_no,
-          seq: game.seq,
-          plies: length(body["moves"]),
-          replace: replace?,
-          body: Jason.encode!(body)
-        })
+        if row?,
+          do:
+            Repo.insert!(%Entry{
+              game_id: game.id,
+              tournament_id: game.tournament_id,
+              round: game.round,
+              board_no: game.board_no,
+              seq: game.seq,
+              plies: length(body["moves"]),
+              replace: replace?,
+              body: Jason.encode!(body)
+            })
 
         game
       end)
@@ -106,6 +109,34 @@ defmodule Alnasl.Outbox do
     Phoenix.PubSub.broadcast(Alnasl.PubSub, @topic, :outbox_changed)
     kick()
     game
+  end
+
+  # A tournament of a pairing program that is not on a results site has
+  # nowhere for a row to go, and may never have: the change is counted (the
+  # other destinations go by the count) and no row is written. When its
+  # results page arrives, `requeue/1` sends each game as it stands then. The
+  # box's own tournament keeps its rows, as it always did: there the results
+  # page is typed in by somebody who may be about to.
+  defp wanted?(tournament_id) do
+    case Tournaments.get(tournament_id) do
+      %Tournament{kind: "linked"} = tournament -> Tournaments.openresults_configured?(tournament)
+      _own -> true
+    end
+  end
+
+  @doc """
+  Queues every game of a tournament again, in full: its results page has
+  just arrived, or is another one than it was.
+  """
+  def requeue(tournament_id) do
+    for round <- Games.rounds(tournament_id),
+        game <- Games.list(tournament_id, round),
+        not game.local,
+        Games.begun?(game) or game.status == "finished" do
+      enqueue(game, game.clock && decode_clock(game.clock), true)
+    end
+
+    :ok
   end
 
   @doc "Wakes the senders that are running - every destination's, not only the results server's."
