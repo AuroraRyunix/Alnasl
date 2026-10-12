@@ -111,6 +111,12 @@ defmodule AlnaslWeb.RoundLive do
           do: tournament.remote_round
         ),
       gone?: tournament.gone,
+      # Names of the linked tournaments a board of the box's own plays outside of.
+      outside_titles:
+        if(tournament.kind == "local",
+          do: Enum.map(Alnasl.Seating.linked(), &(Tournaments.title(&1) || "")),
+          else: []
+        ),
       time_control: info.time_control,
       tiles: tiles,
       counts: counts,
@@ -345,6 +351,7 @@ defmodule AlnaslWeb.RoundLive do
       flash={@flash}
       nav={:round}
       link={@link}
+      hall={@hall}
       update={@update}
       box={@box}
       locale={@locale}
@@ -549,6 +556,15 @@ defmodule AlnaslWeb.RoundLive do
                   piece
                 )}</span>
                 <.state state={tile.state} />
+              </div>
+              <div
+                :if={section.outside_titles != [] and tile.board_name}
+                id={"tile-outside-#{tile.dom}"}
+                class="tile-note"
+              >
+                <.icon name="warning" />{gettext("Not playing in %{tournament}",
+                  tournament: Enum.join(section.outside_titles, " / ")
+                )}
               </div>
               <div :if={tile.pairing_flag} id={"tile-pairing-#{tile.dom}"} class="tile-note">
                 <.icon name="warning" />{gettext("Pairing changed in OpenPairings")}

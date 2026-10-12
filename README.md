@@ -68,6 +68,17 @@ Lichess round.
 - **A connect code** from OpenPairings (Settings, Live boards) is for one
   tournament or for a group. Paste it under Setup, Tournaments. A tournament
   added to the group later appears on the box without a new code.
+- **After a code the box takes the obvious step or asks one question.** One
+  tournament, and the box's own tournament unused: every board the box
+  knows plays there at once (its table number is its board), and the line
+  under the bar says so, with an Undo. A group, or a game already under way:
+  "Which tables play in ...?" right on Setup, with ranges filled in. A board
+  that plays in no linked tournament is never silent: the bar, the Boards
+  page, the Round tiles and "Ready for round N?" all say "Board 1 is not
+  playing in ...", with a button to put it there (a game under way on it
+  either becomes the pairing's game, in full, or is closed and the board
+  starts fresh). A board connected later joins by itself while the own
+  tournament is unused.
 - **Which table plays in which tournament is said on the box**: "tables 5
   to 8" under the tournament, and table 5 is its board 1. Board numbers
   begin again in each tournament; a table number is the sticker, as before.
@@ -182,6 +193,14 @@ itself: unzip the new one beside the old.
 
 ### Where your data lives, and uninstalling without losing it
 
+Setup, "This copy of Alnasl", shows the version, how this copy was started
+(installed, service, portable, from source), the full path of its data
+folder and how many boards and tournaments it knows. The boards' table
+numbers are kept there per board serial number, so they survive rounds,
+updates and reinstalls - and a second copy started another way on the same
+computer has a data folder, boards, numbers and tournaments of its own
+(from source it is `./data` in the checkout).
+
 Never in the program's folder:
 
 | | The program (replaced by updates, removed by uninstalling) | Your data (touched by neither) |
@@ -256,7 +275,7 @@ plus "match device", chosen per device (rail, or Setup on a phone).
 | **PGN** | Read PGN files or pasted moves (checked for legality). Play a game on a simulator board; attach a game that was not captured to its board, after asking; compare a scoresheet with the captured game (the first difference). Export a game or the whole round |
 | **Recordings** | The raw captures per board. Replay one through the tracker as a dry run (what it makes of it, where it lost the thread); export it as a test fixture; download it |
 | **Log** | What happened, in sentences, with filters: board connected, moves recovered, out of sync, repaired by the arbiter, offline, back |
-| **Setup** | Tournaments: a connect code from OpenPairings (pasted once, never shown again), what each tournament came with, which tables play in it, "Test connection" that really asks and explains failures - a wrong code, a withdrawn one, nobody home, a tournament that is not published; for a box without OpenPairings the results server, tournament and relay key typed in; a Lichess broadcast round and its token per tournament, with a test of its own; the box's name, language, round; a PIN for other machines and the address they open; the tracker's timings, with "Bullet / fast play" for games of a few minutes or less |
+| **Setup** | This copy (version, how started, data folder); Tournaments: a connect code from OpenPairings (pasted once, never shown again), what each tournament came with, which tables play in it, "Test connection" that really asks and explains failures - a wrong code, a withdrawn one, nobody home, a tournament that is not published; for a box without OpenPairings the results server, tournament and relay key typed in; a Lichess broadcast round and its token per tournament, with a test of its own; the box's name, language, round; a PIN for other machines and the address they open; the tracker's timings, with "Bullet / fast play" for games of a few minutes or less |
 | **Help** | The cycle on one page: before the round, during, after, and when something is wrong |
 
 A banner on every page says so when the results server cannot be reached.
@@ -634,7 +653,7 @@ before LiveChess does. The box leaves the boards as LiveChess expects them
 
 ## What is proven, and how
 
-By `mix test` (611 tests), three tools, three sessions with a real board and
+By `mix test` (635 tests), three tools, three sessions with a real board and
 one with a real loop:
 
 **The link, end to end against the real OpenPairings** (`mix

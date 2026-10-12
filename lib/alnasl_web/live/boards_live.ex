@@ -429,6 +429,7 @@ defmodule AlnaslWeb.BoardsLive do
       flash={@flash}
       nav={:boards}
       link={@link}
+      hall={@hall}
       update={@update}
       box={@box}
       locale={@locale}
@@ -644,6 +645,13 @@ defmodule AlnaslWeb.BoardsLive do
                     {gettext(
                       "This board does not say its serial number on a loop. Plug it into a port of its own once, and the box knows it by its serial number from then on."
                     )}
+                  </div>
+                  <div
+                    :for={o <- Enum.filter(@hall.seating.outside, &(&1.board.id == s.id))}
+                    id={"board-outside-#{s.id}"}
+                    class="callout warn"
+                  >
+                    <AlnaslWeb.SeatingComponents.outside_line entry={o} scope="row-" />
                   </div>
                   <div :if={s.serial || s.firmware} id={"identity-#{s.id}"} class="note">
                     <span :if={s.serial}>{gettext("serial %{s}", s: s.serial)}</span>

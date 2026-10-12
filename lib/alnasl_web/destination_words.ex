@@ -37,6 +37,36 @@ defmodule AlnaslWeb.DestinationWords do
   def state(%{pending: n}) when n > 0, do: {nil, "waiting", gettext("Waiting")}
   def state(_idle), do: {nil, "waiting", gettext("Nothing sent yet")}
 
+  @doc "Why \"Send now\" would do nothing (`Alnasl.Destination.send_plan/1`), in a sentence."
+  def quiet(:switched_off), do: gettext("Switched off: switch it on first.")
+  def quiet(:nothing_waiting), do: gettext("Nothing is waiting.")
+
+  def quiet(:no_code),
+    do: gettext("No connect code: add one under Setup, Tournaments.")
+
+  def quiet(:board_outside),
+    do:
+      gettext(
+        "Nothing is waiting, and a board is not playing in a linked tournament, so what it reads is not reported. Put it in the tournament (the line under the bar)."
+      )
+
+  def quiet({:no_key, titles}),
+    do:
+      gettext(
+        "OpenPairings has no relay key for %{names} yet, so there is nowhere to send. In OpenPairings: Settings > Live boards > The results site. Sending starts by itself once the key is there.",
+        names: Enum.join(titles, ", ")
+      )
+
+  def quiet({:not_set_up, "lichess"}),
+    do:
+      gettext("Stays off until a round and a token are filled in under Setup, Lichess broadcast.")
+
+  def quiet({:not_set_up, _id}),
+    do:
+      gettext(
+        "No results page yet: a tournament from OpenPairings brings its own; for the box's own tournament give one under Setup."
+      )
+
   @doc "Why a destination is not sending."
   def error({:lichess, 401, _message}),
     do: gettext("Lichess does not accept the token. Make a new one and put it in Setup.")

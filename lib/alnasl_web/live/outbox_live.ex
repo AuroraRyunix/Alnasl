@@ -11,7 +11,7 @@ defmodule AlnaslWeb.OutboxLive do
 
   alias Alnasl.{Destination, Outbox, Tournaments}
   alias Alnasl.Destination.{LichessBroadcast, OpenPairings}
-  alias AlnaslWeb.{DestinationWords, Scope, Words}
+  alias AlnaslWeb.{DestinationWords, LinkWords, Scope, Status, Words}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -25,6 +25,9 @@ defmodule AlnaslWeb.OutboxLive do
       sent: Outbox.list("sent", 30),
       counts: Outbox.counts(),
       destinations: Destination.statuses(),
+      plans: Map.new(Destination.all(), &{&1.id(), Destination.send_plan(&1)}),
+      linked: Alnasl.Seating.linked(),
+      links: Tournaments.links(),
       lichess_refused: LichessBroadcast.refused(),
       pairing_refused: OpenPairings.refused(),
       tournaments: Tournaments.active(),
@@ -40,17 +43,62 @@ defmodule AlnaslWeb.OutboxLive do
   end
 
   @impl true
+  # The big button: every destination that has something to do is nudged, and
+  # the ones that have not say why - in words, not in silence.
   def handle_event("send_now", _params, socket) do
-    Outbox.send_now()
-    {:noreply, put_flash(socket, :info, gettext("Trying now."))}
+    plans = Map.new(Destination.all(), &{&1.id(), {&1, Destination.send_plan(&1)}})
+    go = for {id, {module, {:go, n}}} <- plans, do: {id, module, n}
+    quiet = for {id, {_module, {:quiet, why}}} <- plans, do: {id, why}
+
+    for {_id, module, _n} <- go, do: Destination.send_now(module)
+    for {id, _module, n} <- go, do: schedule_report(id, n)
+
+    trying =
+      Enum.map_join(go, "; ", fn {id, _m, n} ->
+        gettext("%{name}: %{n} waiting, trying now", name: DestinationWords.name(id), n: n)
+      end)
+
+    why =
+      Enum.map_join(quiet, " ", fn {id, why} ->
+        DestinationWords.name(id) <> ": " <> DestinationWords.quiet(why)
+      end)
+
+    socket =
+      case go do
+        [] -> put_flash(socket, :info, gettext("Nothing to send. ") <> why)
+        _some -> put_flash(socket, :info, trying)
+      end
+
+    {:noreply, socket}
   end
 
   # One destination's own "send now": the others are left to their pauses.
   def handle_event("dest_send", %{"id" => id}, socket) do
-    if module = Destination.get(id), do: Destination.send_now(module)
+    module = Destination.get(id)
 
-    {:noreply,
-     put_flash(socket, :info, gettext("Trying %{name} now.", name: DestinationWords.name(id)))}
+    case module && Destination.send_plan(module) do
+      {:go, n} ->
+        Destination.send_now(module)
+        schedule_report(id, n)
+
+        {:noreply,
+         put_flash(
+           socket,
+           :info,
+           gettext("%{name}: %{n} waiting, trying now.", name: DestinationWords.name(id), n: n)
+         )}
+
+      {:quiet, why} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :info,
+           DestinationWords.name(id) <> ": " <> DestinationWords.quiet(why)
+         )}
+
+      nil ->
+        {:noreply, socket}
+    end
   end
 
   def handle_event("dest_toggle", %{"id" => id}, socket) do
@@ -94,7 +142,47 @@ defmodule AlnaslWeb.OutboxLive do
   end
 
   def handle_info(:refresh, socket), do: {:noreply, load(socket)}
+
+  # What came of a nudge: how much went, or why not.
+  def handle_info({:report, id, before}, socket) do
+    socket = load(socket)
+    d = Enum.find(socket.assigns.destinations, &(&1.id == id))
+    name = DestinationWords.name(id)
+
+    flash =
+      cond do
+        d == nil ->
+          nil
+
+        d.pending == 0 ->
+          {:info, gettext("%{name}: %{n} sent. Nothing is waiting now.", name: name, n: before)}
+
+        d.state in [:offline, :blocked] and d.last_error ->
+          {:error,
+           gettext("%{name}: not sent (%{n} waiting). %{why}",
+             name: name,
+             n: d.pending,
+             why: DestinationWords.error(d.last_error)
+           )}
+
+        true ->
+          {:info,
+           gettext("%{name}: %{sent} sent, %{n} still waiting.",
+             name: name,
+             sent: max(before - d.pending, 0),
+             n: d.pending
+           )}
+      end
+
+    case flash do
+      nil -> {:noreply, socket}
+      {kind, text} -> {:noreply, put_flash(socket, kind, text)}
+    end
+  end
+
   def handle_info(_other, socket), do: {:noreply, socket}
+
+  defp schedule_report(id, before), do: Process.send_after(self(), {:report, id, before}, 2_500)
 
   defp what(entry) do
     body = Jason.decode!(entry.body)
@@ -115,19 +203,94 @@ defmodule AlnaslWeb.OutboxLive do
       flash={@flash}
       nav={:outbox}
       link={@link}
+      hall={@hall}
       update={@update}
       box={@box}
       locale={@locale}
       title={gettext("Outbox")}
     >
       <:actions>
-        <.button id="send-now" icon="send" variant="primary" phx-click="send_now">{gettext("Send now")}</.button>
+        <.button
+          id="send-now"
+          icon="send"
+          variant="primary"
+          phx-click="send_now"
+          disabled={Enum.all?(@plans, fn {_id, plan} -> match?({:quiet, _}, plan) end)}
+        >{gettext("Send now")}</.button>
       </:actions>
 
-      <.panel id="link-panel" title={gettext("Connection to the results server")}>
+      <.panel :if={@linked != []} id="linked-panel" title={gettext("Linked tournaments")}>
+        <p class="note">
+          {gettext(
+            "These are the tournaments in use. Each is reported to OpenPairings, and sent to its results site when it has one and OpenPairings has given the box a relay key for it."
+          )}
+        </p>
+        <ul class="dests">
+          <li :for={l <- @links} id={"linked-link-#{l.id}"} class="dest">
+            <% {tone, icon, word} = LinkWords.state(l) %>
+            <div class="row">
+              <b>{LinkWords.about(l)}</b>
+              <.badge id={"linked-link-state-#{l.id}"} tone={tone} icon={icon}>{word}</.badge>
+              <span class="note">
+                {gettext("Last contact: %{t}.",
+                  t: if(l.last_ok_at, do: Words.time(l.last_ok_at), else: gettext("never"))
+                )}
+              </span>
+            </div>
+          </li>
+          <li :for={t <- @linked} id={"linked-#{t.id}"} class="dest">
+            <% {rtone, rtext} = Status.results_line(t) %>
+            <div class="row">
+              <b>{Tournaments.title(t)}</b>
+              <.badge
+                id={"linked-results-#{t.id}"}
+                tone={rtone}
+                icon={
+                  if rtone == "ok",
+                    do: "live",
+                    else: if(rtone == "warn", do: "warning", else: "waiting")
+                }
+              >
+                {cond do
+                  t.server_url == "" -> gettext("OpenPairings only")
+                  t.relay_key == "" -> gettext("No relay key yet")
+                  true -> gettext("Results site")
+                end}
+              </.badge>
+            </div>
+            <p
+              id={"linked-results-line-#{t.id}"}
+              class={["dest-line", rtone == "warn" && "warn-text"]}
+            >
+              {rtext}
+            </p>
+          </li>
+        </ul>
+      </.panel>
+
+      <.panel
+        id="link-panel"
+        title={
+          if @linked == [],
+            do: gettext("Connection to the results server"),
+            else: gettext("Results site")
+        }
+      >
         <dl class="kv">
           <dt>{gettext("State")}</dt>
-          <dd id="link-word"><Layouts.link_state link={@link} /></dd>
+          <dd id="link-word">
+            <%= if @linked == [] do %>
+              <Layouts.link_state link={@link} />
+            <% else %>
+              <% result = Status.results() %>
+              <%= if result do %>
+                <% {tone, icon, text} = result %>
+                <.badge tone={tone} icon={icon}>{text}</.badge>
+              <% else %>
+                <.badge icon="waiting">{gettext("OpenPairings only")}</.badge>
+              <% end %>
+            <% end %>
+          </dd>
           <dt>{gettext("Server")}</dt>
           <dd id="link-targets">
             <div :for={t <- @tournaments} id={"link-target-#{t.id}"}>
@@ -142,7 +305,7 @@ defmodule AlnaslWeb.OutboxLive do
                 <span class="mono">{t.server_url}</span>
                 · {t.slug}
                 <span :if={t.relay_key == ""} class="note">
-                  {gettext("- no relay key: nothing is sent there")}
+                  {gettext("- no relay key yet: nothing is sent there")}
                 </span>
               <% end %>
             </div>
@@ -177,6 +340,11 @@ defmodule AlnaslWeb.OutboxLive do
         <p class="note">
           {gettext(
             "Each destination has its own queue and its own patience. One being offline, refused or switched off never holds up another."
+          )}
+        </p>
+        <p id="auto-note" class="note">
+          {gettext(
+            "Sending is automatic: OpenPairings and the results site start by themselves as soon as there is somewhere to send to, and a game recorded before that goes out in full. Send now only nudges a destination that is waiting out a pause."
           )}
         </p>
         <ul class="dests">
@@ -241,10 +409,17 @@ defmodule AlnaslWeb.OutboxLive do
                 icon="send"
                 phx-click="dest_send"
                 phx-value-id={d.id}
-                disabled={!d.enabled?}
+                disabled={!d.enabled? or match?({:quiet, _}, @plans[d.id])}
               >
                 {gettext("Send now")}
               </.button>
+              <span
+                :if={match?({:quiet, _}, @plans[d.id])}
+                id={"dest-send-why-#{d.id}"}
+                class="note"
+              >
+                {DestinationWords.quiet(elem(@plans[d.id], 1))}
+              </span>
               <.button id={"dest-toggle-#{d.id}"} small phx-click="dest_toggle" phx-value-id={d.id}>
                 {if d.enabled?, do: gettext("Switch off"), else: gettext("Switch on")}
               </.button>

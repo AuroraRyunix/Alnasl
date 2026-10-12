@@ -150,6 +150,7 @@ defmodule AlnaslWeb.WalkLive do
       flash={@flash}
       nav={:boards}
       link={@link}
+      hall={@hall}
       update={@update}
       box={@box}
       locale={@locale}

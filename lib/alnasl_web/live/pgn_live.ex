@@ -276,6 +276,7 @@ defmodule AlnaslWeb.PgnLive do
       flash={@flash}
       nav={:pgn}
       link={@link}
+      hall={@hall}
       update={@update}
       box={@box}
       locale={@locale}

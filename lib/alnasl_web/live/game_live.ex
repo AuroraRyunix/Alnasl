@@ -670,6 +670,7 @@ defmodule AlnaslWeb.GameLive do
       flash={@flash}
       nav={:round}
       link={@link}
+      hall={@hall}
       update={@update}
       box={@box}
       locale={@locale}

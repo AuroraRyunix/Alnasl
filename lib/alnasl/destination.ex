@@ -141,6 +141,56 @@ defmodule Alnasl.Destination do
 
   def statuses, do: Enum.map(@all, &status/1)
 
+  @doc """
+  What "Send now" can do for a destination, before anything is pressed:
+
+    * `{:go, n}` - `n` things wait (or are being retried); pressing it
+      nudges the sender, which tries at once;
+    * `{:quiet, reason}` - pressing it could do nothing, and `reason` says
+      why: `:switched_off`, `{:not_set_up, id}`, `{:no_key, titles}` (a
+      tournament is on a results site but OpenPairings has no relay key for
+      it), `:no_code`, `:board_outside` (OpenPairings: games exist on
+      boards that play in no linked tournament, so nothing is paired to
+      report) or `:nothing_waiting`.
+
+  Sending is automatic; this only decides what the manual nudge is worth.
+  """
+  def send_plan(module) do
+    status = status(module)
+
+    cond do
+      not module.configured?() ->
+        {:quiet, unconfigured_reason(module)}
+
+      not status.enabled? ->
+        {:quiet, :switched_off}
+
+      status.pending > 0 ->
+        {:go, status.pending}
+
+      module == Alnasl.Destination.OpenPairings and Alnasl.Seating.outside() != [] ->
+        {:quiet, :board_outside}
+
+      true ->
+        {:quiet, :nothing_waiting}
+    end
+  end
+
+  defp unconfigured_reason(Alnasl.Destination.OpenResults) do
+    keyless =
+      for t <- Alnasl.Tournaments.list(),
+          t.kind == "linked",
+          not t.gone,
+          t.server_url != "",
+          t.relay_key == "",
+          do: Alnasl.Tournaments.title(t) || ""
+
+    if keyless == [], do: {:not_set_up, "openresults"}, else: {:no_key, keyless}
+  end
+
+  defp unconfigured_reason(Alnasl.Destination.OpenPairings), do: :no_code
+  defp unconfigured_reason(module), do: {:not_set_up, module.id()}
+
   @doc "\"Send now\" for one destination: forget the pause and try at once."
   def send_now(module) do
     if pid = Process.whereis(sender(module)), do: send(pid, :send_now)

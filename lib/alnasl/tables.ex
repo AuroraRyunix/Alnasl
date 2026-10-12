@@ -106,13 +106,34 @@ defmodule Alnasl.Tables do
   @doc """
   Puts a board in a tournament: it follows that tournament's round, on the
   board its table stands for there (not linked, when it has no table
-  number). Its game in the tournament it leaves stays as it is.
+  number). Its game in the tournament it leaves stays as it is - unless a
+  game is being played on it; see `assign_carry/3`.
   """
-  def assign(%Board{} = board, %Tournaments.Tournament{} = tournament) do
+  def assign(%Board{} = board, %Tournaments.Tournament{} = tournament, opts \\ []) do
+    with {:ok, board, _carried} <- assign_carry(board, tournament, opts), do: {:ok, board}
+  end
+
+  @doc """
+  `assign/3`, and what became of a game under way on the board: `nil` when
+  there was none, else `%{moves, round, board_no, outcome}` with `outcome`
+
+    * `:adopted` - the moves are the game of the board the table stands for
+      in the new tournament (the default, `carry: :adopt`): the game moves
+      with the board, takes the pairing's names and ids, and every
+      destination is told it in full;
+    * `:fresh` - `carry: :fresh`: the game is closed without a result and
+      kept where it was, and the board begins again;
+    * `:left` - no board of the new tournament to carry it to (the board has
+      no table number there), or that board has a game of its own already:
+      the game stays where it was and is said so in the log.
+  """
+  def assign_carry(%Board{} = board, %Tournaments.Tournament{} = tournament, opts \\ []) do
     if board.tournament_id == tournament.id and board.round == tournament.round and
          board.board_no == Tournaments.board_of_table(tournament, board.table_no) do
-      {:ok, board}
+      {:ok, board, nil}
     else
+      under_way = under_way(board, tournament)
+
       Log.add(
         :info,
         "table.tournament",
@@ -123,10 +144,65 @@ defmodule Alnasl.Tables do
       {:ok, board} =
         Boards.update(board, %{tournament_id: tournament.id, round: nil, board_no: nil})
 
-      case home_board(board) do
-        nil -> {:ok, board}
-        number -> Boards.link(board, tournament.round, number)
-      end
+      board =
+        case home_board(board) do
+          nil -> board
+          number -> elem(Boards.link(board, tournament.round, number), 1)
+        end
+
+      carried =
+        under_way && carry(under_way, board, tournament, Keyword.get(opts, :carry, :adopt))
+
+      {:ok, Boards.get!(board.id), carried}
+    end
+  end
+
+  # The game being played on the board in another tournament, if there is one.
+  defp under_way(%Board{tournament_id: from, round: round, board_no: no}, tournament)
+       when is_integer(round) and is_integer(no) and from != tournament.id do
+    case Alnasl.Games.current(from, round, no) do
+      %{local: false, status: "live"} = game -> if Alnasl.Games.begun?(game), do: game
+      _none -> nil
+    end
+  end
+
+  defp under_way(_board, _tournament), do: nil
+
+  defp carry(game, board, tournament, mode) do
+    moves = length(Alnasl.Games.plies(game))
+    info = %{moves: moves, round: board.round, board_no: board.board_no, outcome: :left}
+
+    cond do
+      mode == :fresh ->
+        game |> Alnasl.Games.finish("*") |> Alnasl.Outbox.enqueue(nil, false)
+
+        Log.add(:info, "table.game_fresh", %{name: board.name, moves: moves}, ref(board))
+        %{info | outcome: :fresh}
+
+      not (is_integer(board.round) and is_integer(board.board_no)) ->
+        Log.add(:warn, "table.game_left", %{name: board.name, moves: moves}, ref(board))
+        info
+
+      true ->
+        case Alnasl.Games.carry(game, tournament.id, board.round, board.board_no) do
+          {:ok, moved} ->
+            pairing = Tournaments.board(tournament.id, board.round, board.board_no)
+            moved = moved |> Alnasl.Games.adopt(pairing) |> Alnasl.Outbox.enqueue(nil, true)
+            Boards.refresh_games(tournament.id)
+
+            Log.add(
+              :info,
+              "table.game_carried",
+              %{name: board.name, moves: moves, tournament: Tournaments.title(tournament) || ""},
+              %{board_id: board.id, round: moved.round, board_no: moved.board_no}
+            )
+
+            %{info | outcome: :adopted}
+
+          :taken ->
+            Log.add(:warn, "table.game_left", %{name: board.name, moves: moves}, ref(board))
+            info
+        end
     end
   end
 
@@ -475,6 +551,7 @@ defmodule Alnasl.Tables do
   | `{:turned, name, n}` | plugged in turned round - noticed, and read the other way up |
   | `{:remapped, name, table, n}` | feeds another board than its sticker says, as asked |
   | `{:uncovered, count}` | boards of the round beyond the electronic ones |
+  | `{:outside, name, titles}` | a board of the box's own tournament while a linked one exists: what it reads goes nowhere |
   """
   def checks(round), do: checks(Tournaments.default_id(), round)
 
@@ -495,6 +572,7 @@ defmodule Alnasl.Tables do
         &serial/1,
         :same_serial
       ) ++
+      outside_checks(tournament_id, snaps) ++
       Enum.flat_map(snaps, &board_checks(&1, round)) ++
       for(n <- paired, n < top, not is_map_key(by_no, n), do: issue(:warn, {:gap, n})) ++
       case Enum.count(paired, &(&1 > top)) do
@@ -502,6 +580,18 @@ defmodule Alnasl.Tables do
         _all when top == 0 -> []
         count -> [issue(:info, {:uncovered, count})]
       end
+  end
+
+  # A board in the box's own tournament while a linked one exists: it reads
+  # a game that goes nowhere.
+  defp outside_checks(tournament_id, snaps) do
+    with %Tournaments.Tournament{kind: "local"} <- Tournaments.get(tournament_id),
+         [_ | _] = linked <- Alnasl.Seating.linked() do
+      titles = Enum.map(linked, &(Tournaments.title(&1) || ""))
+      for s <- snaps, do: issue(:warn, {:outside, s.name, titles}, s.id)
+    else
+      _fine -> []
+    end
   end
 
   defp serial(%{serial: serial}) when is_binary(serial) and serial != "", do: serial
