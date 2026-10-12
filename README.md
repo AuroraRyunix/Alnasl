@@ -73,7 +73,9 @@ a hall without internet looks like.
 ## The management site
 
 Local, in a browser: full-screen in a kiosk browser on the box, or from the
-arbiter's laptop on the hall's network. English and Dutch, light and dark.
+arbiter's laptop on the hall's network. English and Dutch, and the same
+five colour themes as OpenResults (paper, night, board, slate, high contrast)
+plus "match device", chosen per device (rail, or Setup on a phone).
 
 | Page | What it is for |
 |---|---|
@@ -461,7 +463,7 @@ with the pieces in the starting position.
 
 **The site**: LiveView tests of every page's main actions; an accessibility
 pass that computes the contrast of every text pairing of the colour tokens
-(lowest: 5.66:1; all above 4.5:1, both themes) and checks structure, labels
+(all above 4.5:1, in every theme) and checks structure, labels
 and names on every page in both languages.
 
 ## What is not done

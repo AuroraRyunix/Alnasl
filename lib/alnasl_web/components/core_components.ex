@@ -67,10 +67,21 @@ defmodule AlnaslWeb.CoreComponents do
     "flip" =>
       ~s|<path d="M7 4v14m0 0-3.5-3.5M7 18l3.5-3.5M17 20V6m0 0-3.5 3.5M17 6l3.5 3.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>|,
     "theme" =>
-      ~s|<circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/>|,
-    "arrow" =>
-      ~s|<path d="M3 21 21 3M21 3h-9M21 3v9" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="m3 21 5.5-1.5-4-4z" fill="currentColor"/>|
+      ~s|<circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/>|
   }
+
+  @doc "The mark (`AlnaslWeb.Logo`): decorative, the name beside it says what it is."
+  attr :class, :any, default: nil
+
+  def logo(assigns) do
+    assigns = assign(assigns, :inner, Phoenix.HTML.raw(AlnaslWeb.Logo.inner()))
+
+    ~H"""
+    <svg class={["logo", @class]} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      {@inner}
+    </svg>
+    """
+  end
 
   @doc "One of the site's own icons, by name. Decorative: the word beside it says what it means."
   attr :name, :string, required: true

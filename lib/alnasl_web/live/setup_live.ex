@@ -561,6 +561,15 @@ defmodule AlnaslWeb.SetupLive do
           </p>
         </.panel>
 
+        <.panel id="setup-look" title={gettext("Colour theme")}>
+          <p class="note">
+            {gettext(
+              "Chosen per device and kept in this browser; the box and the other screens are not told. Match device follows the phone or computer, light by day and dark by night."
+            )}
+          </p>
+          <Layouts.theme_picker id="theme-grid" variant={:grid} />
+        </.panel>
+
         <.panel id="setup-box" title={gettext("This box")}>
           <.form for={@box_form} id="box-form" phx-submit="save_box" class="stack">
             <div class="form-grid">

@@ -17,7 +17,7 @@ defmodule AlnaslWeb do
   those modules here.
   """
 
-  def static_paths, do: ~w(assets pieces favicon.svg robots.txt)
+  def static_paths, do: ~w(assets pieces robots.txt)
 
   def router do
     quote do
