@@ -95,9 +95,9 @@ Lichess round.
 
 ## Install
 
-> **There is no release yet.** Everything in this section is built and
-> described; the download links start working with the first release. What
-> has and has not been tried is under [What is not done](#what-is-not-done).
+> **Releases exist since 0.1.0 (2026-10-12)** and the download links work.
+> What has and has not been tried with them is under
+> [What is not done](#what-is-not-done).
 
 Three ways. All three run the same program, keep their data in the same
 kind of place, and need nothing installed first - the runtime is inside.
@@ -988,14 +988,18 @@ and names on every page in both languages.
 - **No visual check in a browser by a person** was part of this build; two
   screenshots were taken headless. Colour-blind safety rests on shapes and
   words, which the tests check exist and differ, not on anybody looking.
-- **No installer has been run by anybody yet.** `Alnasl-Setup.exe`, the
+- **The installers have been used once, on one Windows PC.** `Alnasl-Setup.exe`, the
   portable zip and the Windows launcher have been built on a developer's
   PC, and the release inside them started and answered there; the
   installer itself was not run, an update was never applied, and nothing
   was uninstalled. `install.sh`, `update.sh` and the systemd units have been
   read by a shell's syntax check and by nobody's Raspberry Pi. The release
-  workflow has never run. [docs/releasing.md](docs/releasing.md) lists what
-  the first release has to prove, one line a claim.
+  workflow has run and published 0.1.0 to 0.1.2 for all three targets, and
+  one Windows PC has installed 0.1.0 with Setup.exe and taken the update to
+  0.1.1 from the Setup page, its board and tournament link still there afterwards. Uninstalling, the failure
+  fallback and everything on Linux remain unwatched.
+  [docs/releasing.md](docs/releasing.md) lists what is still to prove, one
+  line a claim.
 - **Nothing is signed.** No code-signing certificate: Windows SmartScreen
   warns on first run, and some antivirus may want convincing. The Linux
   download is checked against a checksum from the same place it came from,

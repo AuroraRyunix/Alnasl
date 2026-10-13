@@ -110,11 +110,10 @@ what holds.
 
 **The workflow**
 
-- [ ] `ci.yml` and `release.yml` parse and run at all (they were checked as
-      YAML and against OpenPairings' working workflow, never executed).
-- [ ] `erlef/setup-beam` has OTP 29.0.5 for `ubuntu-22.04` and
+- [x] `ci.yml` and `release.yml` parse and run at all (0.1.0, 2026-10-12).
+- [x] `erlef/setup-beam` has OTP 29.0.5 for `ubuntu-22.04` and
       `ubuntu-22.04-arm`.
-- [ ] `circuits_uart` builds on `windows-latest` with the image's own
+- [x] `circuits_uart` builds on `windows-latest` with the image's own
       `gcc` and `mingw32-make`.
 - [ ] `shellcheck --severity=warning` passes on `rel/linux/*.sh` (it was
       not available where they were written; they pass `sh -n`).
