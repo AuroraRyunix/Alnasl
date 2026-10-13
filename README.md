@@ -988,16 +988,14 @@ and names on every page in both languages.
 - **No visual check in a browser by a person** was part of this build; two
   screenshots were taken headless. Colour-blind safety rests on shapes and
   words, which the tests check exist and differ, not on anybody looking.
-- **The installers have been used once, on one Windows PC.** `Alnasl-Setup.exe`, the
-  portable zip and the Windows launcher have been built on a developer's
-  PC, and the release inside them started and answered there; the
-  installer itself was not run, an update was never applied, and nothing
-  was uninstalled. `install.sh`, `update.sh` and the systemd units have been
-  read by a shell's syntax check and by nobody's Raspberry Pi. The release
-  workflow has run and published 0.1.0 to 0.1.2 for all three targets, and
-  one Windows PC has installed 0.1.0 with Setup.exe and taken the update to
-  0.1.1 from the Setup page, its board and tournament link still there afterwards. Uninstalling, the failure
-  fallback and everything on Linux remain unwatched.
+- **The installers have been used once, on one Windows PC.** The release
+  workflow has run and published 0.1.0 to 0.1.2 for all three targets. One
+  Windows PC installed 0.1.0 with `Alnasl-Setup.exe` and took the update to
+  0.1.1 from the Setup page; its board and its tournament link were still
+  there afterwards. Not watched by anybody: uninstalling (the data must
+  stay), reinstalling, the fallback when an update fails, the portable zip,
+  and everything on Linux - `install.sh`, `update.sh` and the systemd units
+  have been read by a shell's syntax check and by nobody's Raspberry Pi.
   [docs/releasing.md](docs/releasing.md) lists what is still to prove, one
   line a claim.
 - **Nothing is signed.** No code-signing certificate: Windows SmartScreen
