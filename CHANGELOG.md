@@ -20,6 +20,7 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 ## [Unreleased]
 
 - [Change] **The Boards page fits a phone.** The table was 1,100 pixels wide and slid sideways inside its frame on a 375-pixel screen, which is not how one walks a hall. Below 860 pixels every board is a card instead: its table number large and typeable at the top, the name beside it, then state (shape and word), the board of the round, the reading, the signal, the start position and the buttons, each button 44 pixels tall and Remove on a line of its own. Wider than that nothing changed: the same table, the same ids. "Back" and "Sound" on the two touch pages are now 44 pixels tall on a phone as well.
+- [Change] **The Dutch says what OpenPairings says.** Where both programs name the same thing, Alnasl's Dutch now uses OpenPairings' word: het kastje (was "de box"), uitslagensite (was also "uitslagenserver"), relaissleutel, paring and paringsprogramma (were "indeling" and "indelingsprogramma"; a round is "gepaard", not "ingedeeld"), afgeleid and geraden for the moves it worked out and the ones it had to guess (were "gereconstrueerd" and "gegokt"), Help (was "Hulp"), Klaar (was "Gereed" on the state and "Klaar" in the Help line that described it), Wacht and Sluiten. `docs/glossary-nl.md` has the table, what was left different on purpose and what OpenPairings might change in return. Only Dutch changed; the English texts did not.
 
 ## [0.1.2] - 2026-10-12
 

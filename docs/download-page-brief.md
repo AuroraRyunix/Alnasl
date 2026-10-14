@@ -229,8 +229,8 @@ Dutch:
 >
 > Alnasl leest de elektronische borden in je speelzaal en zet elke zet en
 > elke kloktijd op je uitslagensite terwijl er gespeeld wordt. Het haalt de
-> paringen uit OpenPairings, draait op een Windows-pc of een kleine
-> Linux-box naast de borden, en verliest niets als het internet in de zaal
+> paringen uit OpenPairings, draait op een Windows-pc of een klein
+> Linux-kastje naast de borden, en verliest niets als het internet in de zaal
 > wegvalt: de zetten worden bewaard en verstuurd zodra de verbinding terug
 > is.
 >
