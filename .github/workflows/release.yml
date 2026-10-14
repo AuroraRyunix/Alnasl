@@ -2,7 +2,7 @@ name: Build and release
 
 # Builds what people download - the Windows installer and its update feed,
 # the Windows portable zip, the Linux archives for x86_64 and arm64, the Mac
-# app for Apple Silicon and Intel - on
+# app for Apple Silicon - on
 # every push to main, each on its own kind of machine, and starts each one
 # to see that it answers. A release that is only built on the day it is
 # published is only tested on that day.
@@ -56,12 +56,9 @@ jobs:
           - { runner: ubuntu-22.04-arm, target: linux-aarch64 }
           - { runner: windows-latest, target: windows-x86_64 }
           # macOS (2026-10-14): Alnasl.app, zipped - docs/macos.md. Apple
-          # Silicon is the one that matters; Intel stays while it builds with
-          # no special case (drop the line and its name in the release's
-          # list if it stops being worth its runner). `macos-15-intel`, not
-          # `macos-13`: GitHub retired macos-13 in December 2025.
+          # Silicon only; Intel Macs were dropped the same day, by the
+          # owner, with feeling.
           - { runner: macos-15, target: macos-aarch64 }
-          - { runner: macos-15-intel, target: macos-x86_64 }
           # No Windows on ARM: Erlang publishes no build for it. It runs
           # the x86_64 one under Windows' own emulation.
 
@@ -606,7 +603,6 @@ jobs:
             alnasl-linux-x86_64.tar.gz \
             alnasl-linux-aarch64.tar.gz \
             alnasl-macos-aarch64.zip \
-            alnasl-macos-x86_64.zip \
             install.sh update.sh uninstall.sh \
             releases.win.json \
             "AlnaslApp-${VERSION}-full.nupkg"; do

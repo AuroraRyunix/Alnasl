@@ -54,7 +54,7 @@ defmodule Alnasl.ReleaseFilesTest do
       # release must hold, on the download page's brief and in the README.
       for name <- ~w(Alnasl-Setup.exe alnasl-windows-x86_64-portable.zip
                      alnasl-linux-x86_64.tar.gz alnasl-linux-aarch64.tar.gz install.sh
-                     alnasl-macos-aarch64.zip alnasl-macos-x86_64.zip) do
+                     alnasl-macos-aarch64.zip) do
         assert workflow =~ name, "release.yml does not publish #{name}"
         assert brief =~ "releases/latest/download/#{name}", "the brief does not link #{name}"
       end
@@ -75,7 +75,7 @@ defmodule Alnasl.ReleaseFilesTest do
     test "the Mac app is built on the Macs whose names the release gives it" do
       workflow = read(".github/workflows/release.yml")
       assert workflow =~ "runner: macos-15, target: macos-aarch64"
-      assert workflow =~ "runner: macos-15-intel, target: macos-x86_64"
+      refute workflow =~ "macos-15-intel"
       assert workflow =~ ~s(dist/alnasl-${{ matrix.target }}.zip)
       # Signing is there, and cannot run without its secret.
       assert workflow =~ "if: runner.os == 'macOS' && steps.apple.outputs.sign == 'true'"
