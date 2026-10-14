@@ -2,8 +2,8 @@
 
 Both programs name the same things in front of the same person, so they use the
 same Dutch word. Where the two differed, Alnasl moved to OpenPairings' word
-(2026-10-14), unless Alnasl's was clearly better Dutch; those are listed as
-suggestions for OpenPairings at the end.
+(2026-10-14), unless Alnasl's was clearly better Dutch; those are listed under
+"Left different on purpose". The changes made to OpenPairings follow at the end.
 
 Source of OpenPairings' words: `priv/gettext/nl/LC_MESSAGES/default.po` and the
 manual chapters `priv/manual/nl/17-live-boards.md` and `18-setting-up-boards.md`
@@ -54,46 +54,43 @@ of the OpenPairings repository. Only `msgstr` lines of Alnasl's
 
 | English | OpenPairings | Alnasl | Why |
 |---|---|---|---|
-| Result | Resultaat (and Uitslag, Uitslagen) | Uitslag | OpenPairings' own live-boards text and manual say uitslag ("de uitslag die het bord zag"); Alnasl follows that. |
-| Sent | Verstuurd (78 uses of versturen, 24 of verzonden) | Verzonden / verzenden | OpenPairings mixes both; Alnasl uses verzenden throughout, as the manual's "Verzendlijst" does. |
+| Result (of a game) | Resultaat | Uitslag | OpenPairings decided on 2026-10-14: a game's result is a *resultaat*, the results site is the *uitslagensite*. Alnasl still says uitslag for the game's result ("Geen uitslag", "de drie uitslagen"); left as it is until the owner says whether to follow. The manual quotes Alnasl's own labels as they are. |
+| Sent | Verstuurd, versturen | Verzonden / verzenden | OpenPairings settled on versturen/verstuurd (2026-10-14). Alnasl uses verzenden throughout, "Verzendlijst" and "Nu verzenden" included; the manual names the Verzendlijst page as Alnasl does. Open, same as above. |
 | By hand | Handmatig (and "met de hand", also in the manual) | Met de hand | Both are OpenPairings'. |
 | Permission (a Lichess token's scope) | recht | Recht | Not the same thing as the box's "toestemming" to send to the results site; Alnasl has no string for the latter. |
 | Results page of a tournament | (no fixed word: "pagina op de uitslagensite") | uitslagenpagina | The manual quotes Alnasl's "de uitslagenpagina en relaissleutel zijn meegekomen". |
 
-## Not a word, but open: je or u
+## Decided: je
 
-Alnasl addresses the reader as "je" in most strings and "u" in a few
+Both programs address the reader as "je" (informal), never "u" (decision of the
+owner, 2026-10-14). In Alnasl the six strings that still said "u" were changed
 ("Borden die u later aansluit", "De borden worden voor u in het toernooi gezet",
-"de code die u plakte"). OpenPairings' live-boards strings and the manual use
-"u", the rest of OpenPairings "je". Nothing changed here: it needs one decision,
-then a pass.
+"de code die u plakte", and three more). In OpenPairings the live-boards strings
+and the whole Dutch manual were changed. Two "u" remain on purpose, in both
+programs: they are quotes of Windows' own text ("Uw pc wordt beschermd" from
+SmartScreen; "wilt u toestaan dat deze app communiceert..." from the firewall
+prompt), which Windows says in the formal form.
 
-## Suggestions for OpenPairings
+## Done in OpenPairings (branch `dutch-je`)
 
-Nothing below was changed in OpenPairings.
+These were suggestions in the first version of this file; they are now applied.
 
-1. **"koppeling" means two things.** It is the link between OpenPairings and the
-   box (and Alnasl's "Koppelcode"), but the Ainalrami strings use it for
-   pairing: "De koppeling is onverwacht mislukt", "Ronde N kan niet gekoppeld
-   worden", "Ronde N wordt gekoppeld...", "De ploegkoppeling voor ronde N is
-   mislukt". Everywhere else the same program says paring, paren, gepaard.
-   Suggest paring / gepaard there.
-2. **Resultaat and uitslag** are both used for the same thing ("Result =>
-   Resultaat", "Results => Uitslagen", "Bord zag", "wijkt af"). Pick one for
-   the app; uitslag is the one the boards chapters already use.
-3. **versturen / verzenden**: pick one ("Verstuurd" next to "Bezig met
-   verzenden" in the same status badge set).
-4. **scheidsrechter** in the team match sheet ("handtekeningen van de
-   kapiteins en de scheidsrechter") against arbiter everywhere else.
-5. **liveborden** (one audit-log string) against "Live borden".
-6. **The manual quotes Alnasl's interface**, and these quotes now change
-   (`priv/manual/nl/18-setting-up-boards.md`):
-   - line 129 and line 365: `relaysleutel` becomes `relaissleutel`;
-   - line 142: `Het moet *Gereed* zeggen` becomes `*Klaar*`;
-   - line 157 and line 293: `Gereconstrueerd` becomes `Afgeleid`;
-   - line 295: `gegokt` becomes `geraden`;
-   - line 296: `*read as d3*` is English in the Dutch manual; Alnasl's Dutch is
-     `gelezen als d3`;
-   - line 299: the page `Hulp` is `Help`;
-   - lines 302 and 378: `Indeling gewijzigd in OpenPairings` becomes
-     `Paring gewijzigd in OpenPairings`.
+1. **"koppeling" means one thing.** It is the link between OpenPairings and the
+   box (and Alnasl's "Koppelcode"). The Ainalrami strings that used it for
+   pairing now say paring / gepaard / paren ("De paring is onverwacht
+   mislukt", "Ronde N kan niet gepaard worden", "Ronde N wordt gepaard...",
+   "De paring van de ploegen voor ronde N is mislukt").
+2. **Resultaat and uitslag**: a game's, a round's or a match's result is a
+   *resultaat*; "outcome" (a possible result in the next-round preview) is
+   *uitkomst*; the results site is the *uitslagensite*. One exception: the
+   Belgian SWAR publication's heading "Uitslagen" is a Dutch message id and
+   stays as the federation prints it.
+3. **versturen / verzenden**: versturen, verstuurd. The "Receipt" strings, which
+   said Verzendbewijs next to Ontvangstbewijs, all say Ontvangstbewijs now.
+4. **scheidsrechter** in the team match sheet is *arbiter*, like everywhere else.
+5. **liveborden** (one audit-log string) is "Live borden".
+6. **The manual quotes Alnasl's interface**, and these quotes were corrected
+   (`priv/manual/nl/18-setting-up-boards.md`): `relaysleutel` is `relaissleutel`;
+   `*Gereed*` is `*Klaar*`; `Gereconstrueerd` is `Afgeleid`; `gegokt` is
+   `geraden`; `*read as d3*` is `*gelezen als d3*`; the page `Hulp` is `Help`;
+   `Indeling gewijzigd in OpenPairings` is `Paring gewijzigd in OpenPairings`.

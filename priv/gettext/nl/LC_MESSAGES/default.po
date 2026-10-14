@@ -5655,7 +5655,7 @@ msgstr "Op die poort antwoordt nu maar één bord. Het wordt weer als één bord
 #: lib/alnasl_web/live/boards_live.ex:694
 #, elixir-autogen, elixir-format
 msgid "Read as one board, a loop gives nonsense: every board answers at once. Nothing is read from it until you say so."
-msgstr "Als één bord gelezen geeft een lus onzin: alle borden antwoorden tegelijk. Er wordt niets van gelezen tot u het zegt."
+msgstr "Als één bord gelezen geeft een lus onzin: alle borden antwoorden tegelijk. Er wordt niets van gelezen tot je het zegt."
 
 #: lib/alnasl_web/live/boards_live.ex:704
 #, elixir-autogen, elixir-format
@@ -5791,7 +5791,7 @@ msgstr "Beantwoord in Instellingen"
 #: lib/alnasl_web/live/setup_live.ex:721
 #, elixir-autogen, elixir-format
 msgid "Boards you connect later can be put in them on the Boards page."
-msgstr "Borden die u later aansluit kunt u er op de pagina Borden in zetten."
+msgstr "Borden die je later aansluit, kun je er op de pagina Borden in zetten."
 
 #: lib/alnasl_web/components/layouts.ex:325
 #: lib/alnasl_web/components/layouts.ex:329
@@ -5847,7 +5847,7 @@ msgstr "Nog geen relaissleutel: OpenPairings heeft er geen opgeslagen voor dit t
 #: lib/alnasl_web/destination_words.ex:66
 #, elixir-autogen, elixir-format
 msgid "No results page yet: a tournament from OpenPairings brings its own; for the box's own tournament give one under Setup."
-msgstr "Nog geen uitslagenpagina: een toernooi uit OpenPairings brengt er zelf een mee; voor het eigen toernooi van het kastje geeft u er een op onder Instellingen."
+msgstr "Nog geen uitslagenpagina: een toernooi uit OpenPairings brengt er zelf een mee; voor het eigen toernooi van het kastje geef je er een op onder Instellingen."
 
 #: lib/alnasl_web/components/seating_components.ex:214
 #, elixir-autogen, elixir-format
@@ -6118,7 +6118,7 @@ msgstr "Een bord dat in geen gekoppeld toernooi speelt, blijft nooit stil: de re
 #: lib/alnasl_web/live/help_live.ex:112
 #, elixir-autogen, elixir-format
 msgid "Sending is automatic: to OpenPairings from the moment a tournament is linked, to the results site from the moment it has an address and a key (a game recorded before that goes out in full). Lichess stays off until you fill in a round and a token. \"Send now\" on the Outbox page only nudges a destination that is waiting out a pause, and always says what it did or why it did nothing."
-msgstr "Verzenden gaat vanzelf: naar OpenPairings zodra een toernooi gekoppeld is, naar de uitslagensite zodra die een adres en een sleutel heeft (een partij die daarvoor is opgenomen gaat volledig mee). Lichess blijft uit tot u een ronde en een token invult. \"Nu verzenden\" op de pagina Verzendlijst port alleen een bestemming aan die een pauze uitzit, en zegt altijd wat het deed of waarom het niets deed."
+msgstr "Verzenden gaat vanzelf: naar OpenPairings zodra een toernooi gekoppeld is, naar de uitslagensite zodra die een adres en een sleutel heeft (een partij die daarvoor is opgenomen gaat volledig mee). Lichess blijft uit tot je een ronde en een token invult. \"Nu verzenden\" op de pagina Verzendlijst port alleen een bestemming aan die een pauze uitzit, en zegt altijd wat het deed of waarom het niets deed."
 
 #: lib/alnasl_web/live/help_live.ex:450
 #, elixir-autogen, elixir-format
@@ -6128,12 +6128,12 @@ msgstr "Instellingen, \"Deze kopie van Alnasl\", zegt de versie, hoe deze kopie 
 #: lib/alnasl_web/live/help_live.ex:107
 #, elixir-autogen, elixir-format
 msgid "The bar names what it is about: \"OpenPairings: connected\" is the code you pasted; \"Results site: ...\" is the tournament's results page. \"No relay key yet\" means OpenPairings has not saved a relay key for the tournament: in OpenPairings, Settings, Live boards, The results site. The box starts sending by itself a few seconds after the key is saved. \"Live\" and the number beside it is this browser's connection to the box, not to the internet."
-msgstr "De balk zegt waarover hij gaat: \"OpenPairings: verbonden\" is de code die u plakte; \"Uitslagensite: ...\" is de uitslagenpagina van het toernooi. \"Nog geen relaissleutel\" betekent dat OpenPairings voor het toernooi geen relaissleutel heeft opgeslagen: in OpenPairings, Instellingen, Live borden, De uitslagensite. Het kastje begint enkele seconden nadat de sleutel is opgeslagen vanzelf te verzenden. \"Live\" met het getal ernaast is de verbinding van deze browser met het kastje, niet met het internet."
+msgstr "De balk zegt waarover hij gaat: \"OpenPairings: verbonden\" is de code die je plakte; \"Uitslagensite: ...\" is de uitslagenpagina van het toernooi. \"Nog geen relaissleutel\" betekent dat OpenPairings voor het toernooi geen relaissleutel heeft opgeslagen: in OpenPairings, Instellingen, Live borden, De uitslagensite. Het kastje begint enkele seconden nadat de sleutel is opgeslagen vanzelf te verzenden. \"Live\" met het getal ernaast is de verbinding van deze browser met het kastje, niet met het internet."
 
 #: lib/alnasl_web/live/help_live.ex:96
 #, elixir-autogen, elixir-format
 msgid "The boards are put in the tournament for you. With one tournament and nothing played yet in the box's own, every board the box knows plays there at once, its table number being its board; the line under the bar says so and has an Undo. With a group, or a game already under way, the box asks which tables play in which, with ranges filled in: \"Tables from 5 to 8\", table 5 being the tournament's board 1. One board can also be put in a tournament on the Boards page."
-msgstr "De borden worden voor u in het toernooi gezet. Met één toernooi en nog niets gespeeld in het eigen toernooi van het kastje spelen alle borden die het kastje kent er meteen, met hun tafelnummer als bord; de regel onder de balk zegt dat en heeft een Ongedaan maken. Bij een groep, of een partij die al bezig is, vraagt het kastje welke tafels in welk toernooi spelen, met ingevulde reeksen: \"Tafels van 5 tot 8\", tafel 5 is bord 1 van het toernooi. Eén bord kan ook op de pagina Borden in een toernooi worden gezet."
+msgstr "De borden worden voor je in het toernooi gezet. Met één toernooi en nog niets gespeeld in het eigen toernooi van het kastje spelen alle borden die het kastje kent er meteen, met hun tafelnummer als bord; de regel onder de balk zegt dat en heeft een Ongedaan maken. Bij een groep, of een partij die al bezig is, vraagt het kastje welke tafels in welk toernooi spelen, met ingevulde reeksen: \"Tafels van 5 tot 8\", tafel 5 is bord 1 van het toernooi. Eén bord kan ook op de pagina Borden in een toernooi worden gezet."
 
 #: lib/alnasl_web/live/help_live.ex:448
 #, elixir-autogen, elixir-format
