@@ -1,7 +1,8 @@
 name: Build and release
 
 # Builds what people download - the Windows installer and its update feed,
-# the Windows portable zip, the Linux archives for x86_64 and arm64 - on
+# the Windows portable zip, the Linux archives for x86_64 and arm64, the Mac
+# app for Apple Silicon and Intel - on
 # every push to main, each on its own kind of machine, and starts each one
 # to see that it answers. A release that is only built on the day it is
 # published is only tested on that day.
@@ -54,6 +55,13 @@ jobs:
           # is arm64 (with the 64-bit system; there is no 32-bit build).
           - { runner: ubuntu-22.04-arm, target: linux-aarch64 }
           - { runner: windows-latest, target: windows-x86_64 }
+          # macOS (2026-10-14): Alnasl.app, zipped - docs/macos.md. Apple
+          # Silicon is the one that matters; Intel stays while it builds with
+          # no special case (drop the line and its name in the release's
+          # list if it stops being worth its runner). `macos-15-intel`, not
+          # `macos-13`: GitHub retired macos-13 in December 2025.
+          - { runner: macos-15, target: macos-aarch64 }
+          - { runner: macos-15-intel, target: macos-x86_64 }
           # No Windows on ARM: Erlang publishes no build for it. It runs
           # the x86_64 one under Windows' own emulation.
 
@@ -71,6 +79,14 @@ jobs:
         with:
           otp-version: "29.0.5"
           elixir-version: "1.20"
+
+      # On macOS setup-beam installs erlef/otp_builds, which links OpenSSL
+      # statically. What the runner compiles itself (the SQLite NIF, the
+      # serial program) would otherwise require the runner's own macOS
+      # version, clang's default. 11.0 is the first with Apple Silicon.
+      - name: Build for macOS 11 and newer (macOS)
+        if: runner.os == 'macOS'
+        run: echo "MACOSX_DEPLOYMENT_TARGET=11.0" >> "$GITHUB_ENV"
 
       # `_build/prod/lib` only - never `rel`, which is this run's output and
       # must not come from an earlier commit.
@@ -361,6 +377,149 @@ jobs:
           Copy-Item "installer_out\AlnaslApp-$version-*.nupkg" dist\
           Get-ChildItem dist | Select-Object Name, Length
 
+      # --- macOS: Alnasl.app, zipped ----------------------------------------
+      # The release inside a bundle whose executable is rel/macos/launcher.sh:
+      # a small window that says Alnasl is running and stops it, the browser
+      # opened once the site answers. build_app.sh also checks that the
+      # serial program is in, that no binary links to anything but the
+      # system (the runner has Homebrew, the hall's Mac does not), and writes
+      # the oldest macOS they all accept into Info.plist. docs/macos.md.
+      - name: Build Alnasl.app (macOS)
+        if: runner.os == 'macOS'
+        run: sh rel/macos/build_app.sh _build/prod/rel/alnasl _build/prod/rel
+
+      # Developer ID signing and notarisation: written, switched off until the
+      # Apple Developer account exists, and skipped while the certificate
+      # secret is empty. The secrets are named in rel/macos/sign_and_notarize.sh
+      # and docs/releasing.md. Asked in a step of its own rather than through
+      # the job's `env:`: job env reaches every step, the third-party actions
+      # above included, and only the two steps here should see a signing key.
+      - name: Is Apple signing set up? (macOS)
+        id: apple
+        if: runner.os == 'macOS'
+        env:
+          APPLE_CERTIFICATE_P12_BASE64: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
+        run: |
+          if [ -n "$APPLE_CERTIFICATE_P12_BASE64" ]; then
+            echo "sign=true" >> "$GITHUB_OUTPUT"
+            echo "Apple signing secrets present - signing and notarising."
+          else
+            echo "sign=false" >> "$GITHUB_OUTPUT"
+            echo "No APPLE_CERTIFICATE_P12_BASE64 secret - the app ships ad-hoc signed (docs/macos.md)."
+          fi
+
+      - name: Sign and notarise Alnasl.app (macOS, only with Apple secrets)
+        if: runner.os == 'macOS' && steps.apple.outputs.sign == 'true'
+        env:
+          APPLE_CERTIFICATE_P12_BASE64: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: sh rel/macos/sign_and_notarize.sh _build/prod/rel/Alnasl.app
+
+      # `ditto`, which keeps the bundle's modes and signature; a name without
+      # a version, like every other download.
+      - name: Pack the macOS zip
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p dist
+          ditto -c -k --keepParent _build/prod/rel/Alnasl.app "dist/alnasl-${{ matrix.target }}.zip"
+          ls -lh dist
+
+      # The zip unpacked as an arbiter unpacks it, the bundle made READ-ONLY
+      # (a fresh download runs from a read-only, translocated copy), and
+      # started through the file Finder runs. Then, as on Linux: it answers,
+      # on loopback alone, without distribution, with the serial library;
+      # and, for the app: a second start leaves at once, SIGTERM to the
+      # launcher stops the server, nothing is left running, the bundle's
+      # seal still verifies (nothing was written into it), and the database
+      # is in the data folder.
+      - name: Start the app and see that it answers (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          check="$RUNNER_TEMP/app-check"
+          rm -rf "$check"
+          mkdir -p "$check"
+          ditto -x -k "dist/alnasl-${{ matrix.target }}.zip" "$check"
+          app="$check/Alnasl.app"
+          launcher="$app/Contents/MacOS/Alnasl"
+          chmod -R a-w "$app"
+
+          export ALNASL_DATA="$RUNNER_TEMP/alnasl-app-data"
+          export PORT=4046
+          export ALNASL_LAUNCHER_NO_UI=1
+
+          status=0
+          fail() { echo "::error::$1"; status=1; }
+
+          # The serial library, from inside the bundle, as on Linux.
+          serial=$(RELEASE_TMP="$RUNNER_TEMP/alnasl-eval" "$app/Contents/Resources/app/bin/alnasl" \
+            eval 'IO.puts(Alnasl.Transport.Uart.available?())' | tail -n 1)
+          [ "$serial" = true ] || fail "the serial library does not load: $serial"
+
+          "$launcher" > "$RUNNER_TEMP/alnasl.log" 2>&1 &
+          pid=$!
+
+          body=""
+          for _ in $(seq 1 60); do
+            if body=$(curl -fsS --max-time 5 "http://127.0.0.1:$PORT/help" 2>/dev/null); then break; fi
+            kill -0 "$pid" 2>/dev/null || break
+            sleep 2
+          done
+
+          case "$body" in
+            *'id="help"'*) echo "the app serves its help page" ;;
+            *) echo "::error::the app did not serve a page"
+               cat "$RUNNER_TEMP/alnasl.log" || true
+               kill "$pid" 2>/dev/null || true
+               exit 1 ;;
+          esac
+
+          # `lsof`, not `ss`: the macOS image has no iproute2.
+          listeners=$(lsof -nP -iTCP -sTCP:LISTEN)
+          echo "$listeners"
+          if echo "$listeners" | awk 'NR>1{print $9}' | grep -q ':4369$'; then
+            fail "epmd is listening: Erlang distribution is on"
+          fi
+          beam=$(echo "$listeners" | awk 'NR>1 && $1 ~ /beam/ {print $9}' | sort -u)
+          [ "$beam" = "127.0.0.1:$PORT" ] ||
+            fail "the program listens on '$beam', not on 127.0.0.1:$PORT alone"
+
+          "$launcher" > "$RUNNER_TEMP/alnasl-second.log" 2>&1 &
+          second=$!
+          for _ in $(seq 1 15); do
+            kill -0 "$second" 2>/dev/null || break
+            sleep 1
+          done
+          if kill -0 "$second" 2>/dev/null; then
+            fail "a second start did not leave; it would have been a second server"
+            kill "$second" 2>/dev/null || true
+          fi
+
+          kill -TERM "$pid" 2>/dev/null || true
+          for _ in $(seq 1 30); do
+            kill -0 "$pid" 2>/dev/null || break
+            sleep 1
+          done
+          if kill -0 "$pid" 2>/dev/null; then fail "the launcher did not stop within 30 seconds"; fi
+          if pgrep -fl "$check"; then
+            fail "something from the app is still running after the launcher stopped"
+            pkill -9 -f "$check" || true
+          fi
+
+          chmod -R u+w "$app"
+          codesign --verify --deep --strict "$app" ||
+            fail "the bundle's seal is broken: something was written into the app"
+          [ -f "$ALNASL_DATA/alnasl.db" ] || fail "no database in the data directory"
+
+          [ "$status" = 0 ] || cat "$RUNNER_TEMP/alnasl.log" || true
+          exit "$status"
+
+      # On every push, not only for a release: this is also how a build is
+      # tried before anything is published (docs/macos.md, "Testing a build").
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: release_assets_${{ matrix.target }}
@@ -446,6 +605,8 @@ jobs:
             alnasl-windows-x86_64-portable.zip \
             alnasl-linux-x86_64.tar.gz \
             alnasl-linux-aarch64.tar.gz \
+            alnasl-macos-aarch64.zip \
+            alnasl-macos-x86_64.zip \
             install.sh update.sh uninstall.sh \
             releases.win.json \
             "AlnaslApp-${VERSION}-full.nupkg"; do

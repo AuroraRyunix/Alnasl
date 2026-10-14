@@ -35,6 +35,19 @@ defmodule Alnasl.DataHomeTest do
       assert DataHome.default({:unix, :linux}, env(%{"HOME" => "/home/pi"})) == "/home/pi/.alnasl"
     end
 
+    test "macOS: Application Support, in a folder of its own, never in the app" do
+      data = DataHome.default({:unix, :darwin}, env(%{"HOME" => "/Users/arbiter"}))
+
+      assert data == "/Users/arbiter/Library/Application Support/AlnaslData"
+      assert DataHome.refusal(data, release_root: nil, local_app_data: nil) == nil
+
+      # Even with the release inside an app in Applications, as it is there.
+      assert DataHome.refusal(data,
+               release_root: "/Applications/Alnasl.app/Contents/Resources/app",
+               local_app_data: nil
+             ) == nil
+    end
+
     test "the three names are three names" do
       names = [DataHome.pack_id(), DataHome.pack_title(), DataHome.data_folder()]
       assert names == Enum.uniq(names)
@@ -87,6 +100,24 @@ defmodule Alnasl.DataHomeTest do
                local_app_data: @local
              ) ==
                nil
+    end
+
+    test "anything inside a Mac app, whichever app and however it is spelled" do
+      for path <- [
+            "/Applications/Alnasl.app",
+            "/Applications/Alnasl.app/Contents/Resources/app/data",
+            "/Users/arbiter/Downloads/ALNASL.APP/x",
+            "/Applications/Some Other.app/data"
+          ] do
+        assert DataHome.refusal(path, release_root: nil, local_app_data: nil) == :app_bundle
+      end
+
+      for path <- ["/Users/arbiter/apps", "/Users/arbiter/Alnasl.application", "/srv/app"] do
+        assert DataHome.refusal(path, release_root: nil, local_app_data: nil) == nil
+      end
+
+      assert DataHome.refusal_message("/Applications/Alnasl.app/d", :app_bundle) =~
+               "inside an app"
     end
 
     test "a folder that only looks alike is not" do
@@ -191,6 +222,22 @@ defmodule Alnasl.DataHomeTest do
       folder = DataHome.data_folder()
       assert read("rel/windows/launcher.c") =~ ~s(L"\\\\#{folder}")
       assert read("rel/windows/Alnasl.bat") =~ "%LOCALAPPDATA%\\#{folder}"
+    end
+
+    test "the Mac launcher puts the data where this module does, and no Mac script removes it" do
+      launcher = read("rel/macos/launcher.sh")
+      assert launcher =~ ~s(ALNASL_DATA=${ALNASL_DATA:-"$HOME/#{DataHome.macos_data()}"})
+      # What the release writes at start goes outside the (read-only) bundle.
+      assert launcher =~ ~s(export RELEASE_TMP="${TMPDIR:-/tmp}/Alnasl")
+      assert launcher =~ ~s(cd "$ALNASL_DATA")
+
+      for name <- ~w(launcher.sh build_app.sh sign_and_notarize.sh),
+          line <- String.split(read("rel/macos/#{name}"), "\n"),
+          line = String.trim(line),
+          line =~ ~r/\brm\b/ and not String.starts_with?(line, "#") do
+        refute line =~ "ALNASL_DATA", "rel/macos/#{name} removes the data: #{line}"
+        refute line =~ "Application Support", "rel/macos/#{name} removes the data: #{line}"
+      end
     end
 
     test "the Linux scripts keep program and data apart, and no script removes the data" do

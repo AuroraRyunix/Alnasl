@@ -48,6 +48,8 @@ not host copies.
 | Linux, PC (x86_64) | `https://github.com/AuroraRyunix/Alnasl/releases/latest/download/alnasl-linux-x86_64.tar.gz` |
 | Linux, Raspberry Pi and other arm64 | `https://github.com/AuroraRyunix/Alnasl/releases/latest/download/alnasl-linux-aarch64.tar.gz` |
 | Linux installer script | `https://github.com/AuroraRyunix/Alnasl/releases/latest/download/install.sh` |
+| Mac, Apple chip (M1 and later) | `https://github.com/AuroraRyunix/Alnasl/releases/latest/download/alnasl-macos-aarch64.zip` |
+| Mac, Intel | `https://github.com/AuroraRyunix/Alnasl/releases/latest/download/alnasl-macos-x86_64.zip` |
 | Checksums | `https://github.com/AuroraRyunix/Alnasl/releases/latest/download/SHA256SUMS` |
 | All versions, release notes | `https://github.com/AuroraRyunix/Alnasl/releases` |
 | The newest version's notes | `https://github.com/AuroraRyunix/Alnasl/releases/latest` |
@@ -90,6 +92,16 @@ change; take them from the API (`assets[].size`) or say nothing.
 3. For a hall without internet: download the archive beforehand, unpack it
    on the box, and run `sudo sh alnasl/install.sh` from it.
 
+**Mac (macOS 11 or newer)**
+
+1. Download the zip for your Mac (Apple chip or Intel), open it, and drag
+   Alnasl into Applications.
+2. The first time, macOS refuses it, because Apple has not signed it yet:
+   System Settings, Privacy & Security, "Open Anyway" (macOS 14 or older:
+   right-click the app, Open).
+3. A small window and the browser, as on Windows. Leave the window open -
+   Stop Alnasl stops it.
+
 Show the `curl` line as copyable text, in one piece. Do not shorten the
 address and do not wrap it in a redirect of your own: people are being
 asked to run it as root, and it should visibly come from the project's
@@ -103,8 +115,11 @@ GitHub.
   Ubuntu 22.04, Raspberry Pi OS "Bookworm" **64-bit**, or later. Root is
   needed once, to install. **There is no build for 32-bit Raspberry Pi
   OS**; say so, because that is what many Pis run.
-- **macOS**: no download. It runs from the source code; do not offer a
-  button.
+- **macOS**: macOS 11 or newer; Apple chip or Intel, one download each.
+  **Not signed by Apple yet**, and **not yet tried on a real Mac** (it is
+  built and started on GitHub's): until `docs/macos.md`'s test list has
+  been worked through, show the Mac downloads as "preview", or not at all.
+  The links above answer from the first release that carries them.
 - **Boards**: DGT electronic boards with a serial connection: a DGT USB
   board directly, or a serial (RS232) board through a USB-serial adapter.
   A DGT clock connected to the board is read too. See "What not to claim"

@@ -40,7 +40,9 @@ defmodule Alnasl.FakeReleases do
           "Alnasl-Setup.exe" => 44_000_000,
           "alnasl-windows-x86_64-portable.zip" => 52_000_000,
           "alnasl-linux-x86_64.tar.gz" => 31_000_000,
-          "alnasl-linux-aarch64.tar.gz" => 30_000_000
+          "alnasl-linux-aarch64.tar.gz" => 30_000_000,
+          "alnasl-macos-aarch64.zip" => 29_000_000,
+          "alnasl-macos-x86_64.zip" => 29_000_000
         },
         Keyword.get(opts, :sizes, %{})
       )

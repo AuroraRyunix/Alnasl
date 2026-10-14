@@ -44,6 +44,8 @@ is a link that stays right. The version is inside each file.
 | `alnasl-windows-x86_64-portable.zip` | The same release as a folder; installs nothing | the download page |
 | `alnasl-linux-x86_64.tar.gz` | The Linux release, PCs | `install.sh`, `update.sh`, the download page |
 | `alnasl-linux-aarch64.tar.gz` | The Linux release, 64-bit Raspberry Pi and other arm64 | the same |
+| `alnasl-macos-aarch64.zip` | `Alnasl.app` for Apple Silicon (M1 and later), zipped with `ditto` | the download page; a Mac copy's update notice (its size) |
+| `alnasl-macos-x86_64.zip` | `Alnasl.app` for Intel Macs | the same |
 | `install.sh` | The one-line installer | `curl ... \| sudo sh` |
 | `update.sh`, `uninstall.sh` | Copies of what the archive carries, for reading | nobody; a person |
 | `SHA256SUMS` | Checksums of everything above and below | `install.sh`, `update.sh` |
@@ -68,8 +70,34 @@ find them stays on its version for ever without saying why.
 | `rel/windows/build_icon.py` | draws `Alnasl.ico` from the mark; run by hand when the mark changes |
 | `rel/linux/install.sh`, `update.sh`, `uninstall.sh` | the Linux installation |
 | `rel/linux/alnasl.service`, `alnasl-update.path`, `alnasl-update.service` | the service, and the root-owned updater a page can ask but not command |
+| `rel/macos/build_app.sh`, `launcher.sh`, `Info.plist` | `Alnasl.app` around the release: its launcher (status window, Stop), the checks that it links nothing but the system |
+| `rel/macos/sign_and_notarize.sh`, `entitlements.plist` | Developer ID signing and notarisation, once the Apple account exists (below) |
 | `lib/alnasl/updates.ex`, `updates/checker.ex` | the check, the notice, the refusal under a game, the hand-over |
 | `tools/release_notes.sh` | the changelog section of one version |
+
+## Signing the Mac app
+
+Not done yet: there is no Apple Developer account. The macOS jobs build
+`Alnasl.app` **ad-hoc signed** (Apple Silicon requires a signature on every
+binary; Gatekeeper still asks the arbiter once, see `docs/macos.md`).
+
+The signing step is already in `release.yml`, and skips itself while the
+secret `APPLE_CERTIFICATE_P12_BASE64` is empty. Once the account exists,
+add these repository secrets and nothing else changes:
+
+| Secret | What |
+|---|---|
+| `APPLE_CERTIFICATE_P12_BASE64` | the *Developer ID Application* certificate with its private key, exported as `.p12`, then base64 |
+| `APPLE_CERTIFICATE_PASSWORD` | the `.p12`'s password |
+| `APPLE_TEAM_ID` | the ten-character team id |
+| `APPLE_ID` | the Apple ID that notarises |
+| `APPLE_APP_PASSWORD` | an app-specific password for that Apple ID |
+
+`rel/macos/sign_and_notarize.sh` then signs every binary with the hardened
+runtime and the BEAM's entitlements (JIT, `dlopen` of the SQLite library),
+notarises, staples, and asks Gatekeeper before the zip is made. The same
+five secrets, under the same names, sign OpenPairings.app. The first signed
+build needs a Mac test of its own.
 
 ## Building one by hand
 
@@ -162,6 +190,17 @@ what holds.
       `alnasl-update.path` fires, the page comes back on the new version.
 - [ ] `uninstall.sh` removes the program and **leaves `/var/lib/alnasl`**.
 - [ ] Offline install from an unpacked archive.
+
+**macOS** (the full list, for a person with a Mac, is in `docs/macos.md`)
+
+- [ ] `macos-15` and `macos-15-intel` build it, `build_app.sh` finds no
+      Homebrew library, and the app starts from a read-only bundle on the
+      runner.
+- [ ] Downloaded on a real Mac, it opens after "Open Anyway", shows its
+      window, opens the browser; Stop asks and stops; no `beam` is left.
+- [ ] The data is in `~/Library/Application Support/AlnaslData`, and is
+      still there after the app is binned.
+- [ ] A real DGT board on a USB adapter shows up as `/dev/cu.*` and is read.
 
 ## Version numbers
 

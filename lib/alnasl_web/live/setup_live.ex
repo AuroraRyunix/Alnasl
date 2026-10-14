@@ -1624,6 +1624,11 @@ defmodule AlnaslWeb.SetupLive do
                       )}
                     </li>
                     <li>
+                      {gettext(
+                        "Mac: download the new zip from the page above, stop Alnasl, and put the new Alnasl.app in place of the old one in Applications. Your data is not in the app and is used as it is."
+                      )}
+                    </li>
+                    <li>
                       {gettext("Linux, installed with install.sh: run this on the box:")}
                       <code>sudo /opt/alnasl/update.sh</code>
                     </li>

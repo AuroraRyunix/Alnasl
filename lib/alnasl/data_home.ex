@@ -14,7 +14,12 @@ defmodule Alnasl.DataHome do
   | Windows, installed | `%LOCALAPPDATA%\\AlnaslApp` | `%LOCALAPPDATA%\\AlnaslData` |
   | Windows, portable zip | wherever it was unzipped | `%LOCALAPPDATA%\\AlnaslData` |
   | Linux, installed | `/opt/alnasl` | `/var/lib/alnasl` (the unit says so) |
-  | from source, `MIX_ENV=prod` | the checkout | `~/.alnasl` (Windows: as above) |
+  | macOS, `Alnasl.app` | the app, wherever it was dragged | `~/Library/Application Support/AlnaslData` |
+  | from source, `MIX_ENV=prod` | the checkout | `~/.alnasl` (Windows and macOS: as above) |
+
+  A Mac app is a folder whose name ends in `.app`, and it is replaced whole
+  by the next version and binned whole by an uninstall. So no folder inside
+  any `.app` may hold the data either (`:app_bundle`), whatever it is called.
 
   `ALNASL_DATA` overrides the default everywhere, and is held to the same
   rule: `config/runtime.exs` refuses to start with a data directory that
@@ -33,12 +38,16 @@ defmodule Alnasl.DataHome do
   @data_folder "AlnaslData"
   @linux_install "/opt/alnasl"
   @linux_data "/var/lib/alnasl"
+  @macos_data_parent "Library/Application Support"
 
   def pack_id, do: @pack_id
   def pack_title, do: @pack_title
   def data_folder, do: @data_folder
   def linux_install, do: @linux_install
   def linux_data, do: @linux_data
+
+  @doc "Where the data folder is on a Mac, relative to the home directory."
+  def macos_data, do: Path.join(@macos_data_parent, @data_folder)
 
   @doc """
   The data directory when `ALNASL_DATA` does not name one. `os` and `env`
@@ -54,6 +63,8 @@ defmodule Alnasl.DataHome do
     end
   end
 
+  def default({:unix, :darwin}, env), do: Path.join(home(env), macos_data())
+
   def default(_unix, env), do: Path.join(home(env), ".alnasl")
 
   defp home(env), do: env.("HOME") || env.("USERPROFILE") || System.user_home!()
@@ -67,6 +78,8 @@ defmodule Alnasl.DataHome do
       pack title
     * `:release_dir` - inside the running release itself, which the next
       version replaces
+    * `:app_bundle` - inside a macOS app (a folder named `*.app`), which the
+      next version replaces and an uninstall bins whole
 
   `opts`: `:release_root` (default `RELEASE_ROOT`), `:local_app_data`
   (default `LOCALAPPDATA`).
@@ -80,6 +93,7 @@ defmodule Alnasl.DataHome do
       Enum.any?(segments, &(&1 == String.downcase(@pack_id))) -> :install_dir
       under?(segments, segments(@linux_install)) -> :install_dir
       local && under?(segments, segments(Path.join(local, @pack_title))) -> :title_dir
+      Enum.any?(segments, &String.ends_with?(&1, ".app")) -> :app_bundle
       release_root && under?(segments, segments(release_root)) -> :release_dir
       true -> nil
     end
@@ -92,6 +106,7 @@ defmodule Alnasl.DataHome do
         :install_dir -> "it is inside the folder the installer owns and removes on uninstall"
         :title_dir -> "it is the folder an installer of this program may remove"
         :release_dir -> "it is inside the program's own folder, which the next version replaces"
+        :app_bundle -> "it is inside an app, which the next version replaces and the Bin removes"
       end
 
     "Alnasl will not keep its data in #{path}: #{why}. " <>

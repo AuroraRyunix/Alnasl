@@ -53,13 +53,15 @@ defmodule Alnasl.ReleaseFilesTest do
       # ...and every fixed name, in the workflow's own list of what a
       # release must hold, on the download page's brief and in the README.
       for name <- ~w(Alnasl-Setup.exe alnasl-windows-x86_64-portable.zip
-                     alnasl-linux-x86_64.tar.gz alnasl-linux-aarch64.tar.gz install.sh) do
+                     alnasl-linux-x86_64.tar.gz alnasl-linux-aarch64.tar.gz install.sh
+                     alnasl-macos-aarch64.zip alnasl-macos-x86_64.zip) do
         assert workflow =~ name, "release.yml does not publish #{name}"
         assert brief =~ "releases/latest/download/#{name}", "the brief does not link #{name}"
       end
 
       assert readme =~ "releases/latest/download/Alnasl-Setup.exe"
       assert readme =~ "releases/latest/download/install.sh"
+      assert readme =~ "releases/latest/download/alnasl-macos-aarch64.zip"
       assert workflow =~ "releases.win.json"
       assert workflow =~ "SHA256SUMS"
     end
@@ -68,6 +70,15 @@ defmodule Alnasl.ReleaseFilesTest do
       workflow = read(".github/workflows/release.yml")
       assert workflow =~ "runner: ubuntu-22.04, target: linux-x86_64"
       assert workflow =~ "runner: ubuntu-22.04-arm, target: linux-aarch64"
+    end
+
+    test "the Mac app is built on the Macs whose names the release gives it" do
+      workflow = read(".github/workflows/release.yml")
+      assert workflow =~ "runner: macos-15, target: macos-aarch64"
+      assert workflow =~ "runner: macos-15-intel, target: macos-x86_64"
+      assert workflow =~ ~s(dist/alnasl-${{ matrix.target }}.zip)
+      # Signing is there, and cannot run without its secret.
+      assert workflow =~ "if: runner.os == 'macOS' && steps.apple.outputs.sign == 'true'"
       # ...and install.sh refuses, in words, a system older than that.
       assert read("rel/linux/install.sh") =~ ~s([ "$minor" -lt 35 ])
     end
@@ -144,6 +155,18 @@ defmodule Alnasl.ReleaseFilesTest do
         assert File.exists?(Path.join([@root, "rel/windows", name])),
                "rel/windows/#{name} is missing"
       end
+
+      for name <- ~w(launcher.sh build_app.sh sign_and_notarize.sh Info.plist entitlements.plist) do
+        assert File.exists?(Path.join([@root, "rel/macos", name])), "rel/macos/#{name} is missing"
+      end
+
+      # The plist takes its version from the release, never from a literal.
+      plist = read("rel/macos/Info.plist")
+      assert plist =~ "<string>__VERSION__</string>"
+      refute plist =~ ~r{<key>CFBundleShortVersionString</key>\s*<string>\d}
+
+      assert read("rel/macos/build_app.sh") =~
+               ~s(cp "$here/launcher.sh" "$app/Contents/MacOS/Alnasl")
     end
 
     test "the launcher and the program agree on the code that means \"update me\"" do
@@ -175,6 +198,7 @@ defmodule Alnasl.ReleaseFilesTest do
     test "the shell scripts have Unix line endings, and the batch files Windows'" do
       for file <-
             Path.wildcard(Path.join(@root, "rel/linux/*")) ++
+              Path.wildcard(Path.join(@root, "rel/macos/*.sh")) ++
               [Path.join(@root, "tools/release_notes.sh"), Path.join(@root, "rel/env.sh.eex")] do
         refute File.read!(file) =~ "\r", "#{file} has CRLF line endings"
       end

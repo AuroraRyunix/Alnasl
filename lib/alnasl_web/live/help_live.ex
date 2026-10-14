@@ -432,6 +432,12 @@ defmodule AlnaslWeb.HelpLive do
                 curl -fsSL https://github.com/AuroraRyunix/Alnasl/releases/latest/download/install.sh | sudo sh
               </code>
             </dd>
+            <dt>{gettext("Mac")}</dt>
+            <dd id="help-install-mac">
+              {gettext(
+                "Download alnasl-macos-aarch64.zip for a Mac with an Apple chip (M1 and later) or alnasl-macos-x86_64.zip for an Intel Mac, open it, and drag Alnasl into Applications. Apple has not signed it yet, so the first time macOS refuses to open it: in System Settings, Privacy & Security, click \"Open Anyway\" beside the message about Alnasl (on macOS 14 or older: right-click the app and choose Open). The small Alnasl window is the program, as on Windows. A DGT board on USB is a port called /dev/cu.usbserial-... or /dev/cu.usbmodem...; the USB adapter of an RS232 board may need its maker's driver before it shows up (FTDI works as it is; Prolific, CH340 and CP210x may not). To update, stop Alnasl and put the new app in place of the old one."
+              )}
+            </dd>
             <dt>{gettext("Updating")}</dt>
             <dd>
               {gettext(
@@ -442,7 +448,7 @@ defmodule AlnaslWeb.HelpLive do
             <dt>{gettext("Where your data is")}</dt>
             <dd>
               {gettext(
-                "Not in the program's folder. Windows: %LOCALAPPDATA%\\AlnaslData (type that in Explorer's address bar). Linux, installed: /var/lib/alnasl. It holds the database, the PGN of every game, the raw recordings, and the keys and codes you pasted. Updating and uninstalling leave it alone; installing again finds it. To move to another computer, copy that folder while Alnasl is stopped."
+                "Not in the program's folder. Windows: %LOCALAPPDATA%\\AlnaslData (type that in Explorer's address bar). Linux, installed: /var/lib/alnasl. Mac: ~/Library/Application Support/AlnaslData (in Finder: Go, Go to Folder). It holds the database, the PGN of every game, the raw recordings, and the keys and codes you pasted. Updating and uninstalling leave it alone; installing again finds it. To move to another computer, copy that folder while Alnasl is stopped."
               )}
             </dd>
             <dt>{gettext("Which copy is which")}</dt>
@@ -454,7 +460,7 @@ defmodule AlnaslWeb.HelpLive do
             <dt>{gettext("Uninstalling")}</dt>
             <dd>
               {gettext(
-                "Windows: Settings, Apps, Alnasl, Uninstall. Linux: sudo /opt/alnasl/uninstall.sh. Both remove the program and keep the data; delete the data folder yourself if you mean to."
+                "Windows: Settings, Apps, Alnasl, Uninstall. Linux: sudo /opt/alnasl/uninstall.sh. Mac: stop Alnasl and drag it from Applications to the Bin. All three remove the program and keep the data; delete the data folder yourself if you mean to."
               )}
             </dd>
           </dl>

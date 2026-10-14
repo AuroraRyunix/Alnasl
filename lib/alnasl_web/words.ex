@@ -1095,6 +1095,7 @@ defmodule AlnaslWeb.Words do
   @doc "How this copy was started (`Alnasl.BoxInfo.kind/0`)."
   def install_kind(:installed), do: gettext("Installed (Windows installer)")
   def install_kind(:service), do: gettext("Installed as a service (Linux)")
+  def install_kind(:mac_app), do: gettext("The Mac app (Alnasl.app)")
   def install_kind(:portable), do: gettext("Portable copy (a release folder)")
   def install_kind(:source), do: gettext("From source (a checkout)")
 end

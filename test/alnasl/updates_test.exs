@@ -51,7 +51,18 @@ defmodule Alnasl.UpdatesTest do
 
       # A copy that is not installed fetches the archive of its system.
       assert info.asset == Updates.asset_name(:manual, newer())
-      assert info.size in [52_000_000, 31_000_000, 30_000_000]
+      assert info.size in [52_000_000, 31_000_000, 30_000_000, 29_000_000]
+    end
+
+    test "each system asks for the download of its own, by the name the release gives it" do
+      v = newer()
+      assert Updates.asset_name(:manual, v, {:win32, :nt}) == "alnasl-windows-x86_64-portable.zip"
+
+      assert Updates.asset_name(:manual, v, {:unix, :linux}) =~
+               ~r/^alnasl-linux-(x86_64|aarch64)\.tar\.gz$/
+
+      assert Updates.asset_name(:manual, v, {:unix, :darwin}) =~
+               ~r/^alnasl-macos-(x86_64|aarch64)\.zip$/
     end
 
     test "the Windows installation is told the size of the full package" do

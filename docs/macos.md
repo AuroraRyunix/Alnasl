@@ -1,0 +1,237 @@
+# Alnasl on macOS
+
+Since 2026-10-14 every push to `main` builds **`Alnasl.app`** for both
+kinds of Mac, and a release attaches it. Nobody on the project has a Mac:
+everything here was built and started on GitHub's macOS runners, and the
+[test list](#testing-a-build-on-a-real-mac) at the end is what a person
+with a Mac (and ideally a DGT board) still has to confirm.
+
+| | |
+|---|---|
+| Apple Silicon (M1 and later) | `alnasl-macos-aarch64.zip`, built on `macos-15` |
+| Intel | `alnasl-macos-x86_64.zip`, built on `macos-15-intel` (GitHub retired `macos-13` in December 2025) |
+| Runtime | Erlang/OTP 29.0.5 and Elixir 1.20 from `erlef/setup-beam`, as on Linux and Windows. On macOS that is `erlef/otp_builds`, with OpenSSL linked in, so nothing from Homebrew is needed |
+| Serial library | `circuits_uart`, compiled on the runner (`ALNASL_UART=1`, on by default on any Unix); the build stops if it is missing |
+| Oldest macOS | 11 (Big Sur) is asked for (`MACOSX_DEPLOYMENT_TARGET`); the build log says what the binaries really accept and puts it in `Info.plist` |
+| Signed | ad-hoc only, for now - see [Unsigned, for now](#unsigned-for-now) |
+
+## What the app is
+
+```
+Alnasl.app/Contents/
+  Info.plist              rel/macos/Info.plist, version from the release's VERSION
+  MacOS/Alnasl            rel/macos/launcher.sh
+  Resources/app/          the release (bin/alnasl), whole
+  Resources/Alnasl.icns   from rel/windows/Alnasl.ico
+```
+
+`rel/macos/build_app.sh` builds it on the runner. The launcher behaves like
+`Alnasl.exe`, as far as a shell script and the Mac's own `osascript` allow:
+
+- a second double-click opens the browser at the running copy instead of a
+  second server;
+- it starts the release, waits until `http://localhost:4040` answers, then
+  opens the browser;
+- it stays as a **small window** - "Alnasl is running at
+  http://localhost:4040", *Open in browser*, *Stop Alnasl* - in English, or
+  Dutch when the Mac's first language is Dutch. **Stop asks first**: while
+  Alnasl is stopped the boards are not read. Logging out or shutting down
+  stops it cleanly too. If it stops by itself, the window says so and
+  names the log.
+
+The window is AppleScript's `display dialog`: nothing compiled, nothing to
+sign apart. A menu-bar icon needs a Cocoa program nobody here can run. The
+app has no Dock icon; the window is how you find it.
+
+Nothing is written into the app: a fresh download runs from a read-only,
+"translocated" copy, and a write would break the bundle's seal. The
+release's runtime files go to the temporary folder and crash dumps to the
+data folder; CI starts the app from a read-only bundle and checks its seal
+afterwards.
+
+There is no "Start with macOS" switch (Windows has one). Add the app to
+*System Settings > General > Login Items* if the box should start with the
+Mac.
+
+## Where the data is
+
+`~/Library/Application Support/AlnaslData` - the database, the PGN, the
+recordings, the codes and keys, and `launcher.log`. Never inside the app:
+replacing the app (an update) or binning it (an uninstall) leaves it alone.
+`Alnasl.DataHome` refuses to start with a data folder inside any `.app`
+(`ALNASL_DATA` included), and `test/alnasl/data_home_test.exs` holds the
+module, the launcher and the scripts to the same names.
+
+## Updates
+
+**The update notice says what to do; it does not install.** On a Mac,
+Setup > Updates says "Mac: download the new zip from the page above, stop
+Alnasl, and put the new Alnasl.app in place of the old one", gives the size
+of the right zip (`Alnasl.Updates.asset_name/2` knows the Mac names), and
+links to the release. The install kind is `:manual`, the same as the
+Windows portable zip; Setup's "This copy of Alnasl" says *The Mac app*.
+
+Velopack (which updates the Windows copy in place) was considered and not
+used, for now:
+
+- On Windows the update is applied by the launcher, through
+  `velopack_libc.dll`. A Mac would need a compiled launcher with Velopack's
+  macOS library and its install hooks: a second native program, written
+  blind.
+- Velopack's Mac installer is a `.pkg` installing into `/Applications` as
+  root, so an update in place needs an administrator.
+- Unsigned, the `.pkg` meets the same Gatekeeper refusal as the app, and
+  nobody has tried an update over an ad-hoc signed bundle.
+
+Worth another look once the app is signed and can be tested on a Mac. The
+feed would be `releases.osx.json` beside `releases.win.json`.
+
+## Unsigned, for now
+
+There is no Apple Developer account yet. Every binary in the app carries
+an ad-hoc signature (Apple Silicon runs nothing without one), but
+Gatekeeper does not know who made it.
+
+**Opening it the first time** (once per download):
+
+- **macOS 15 Sequoia and newer**: double-click; macOS says it could not
+  verify the app. Click *Done*. *System Settings > Privacy & Security*,
+  scroll down to "Alnasl was blocked...", **Open Anyway**, confirm with your
+  password or Touch ID, *Open*. (Right-click > Open no longer does it on
+  Sequoia.)
+- **macOS 14 and older**: right-click the app, **Open**, then *Open*.
+- **"Alnasl is damaged and can't be opened"**: it is not. In Terminal:
+
+  ```sh
+  xattr -dr com.apple.quarantine /Applications/Alnasl.app
+  ```
+
+**What can still ask, signed or not:**
+
+- *"Do you want the application beam.smp to accept incoming network
+  connections?"* - when the macOS firewall is on and Setup lets other
+  machines in the hall in. Allow it, or the arbiter's laptop and the phone
+  cannot reach the box. A box that answers only itself never asks.
+- *Local network* (macOS 15 and newer) - may be asked the first time the box
+  sends to an OpenPairings or a results site on the hall's network. Allow
+  it, or those sends fail; *System Settings > Privacy & Security > Local
+  Network* switches it back on.
+- **The serial port asks nothing.** The USB adapter may need a driver:
+  FTDI adapters work as they are; Prolific (PL2303), WCH (CH340/CH341) and
+  Silicon Labs (CP210x) ones may need the chip maker's driver, depending on
+  the adapter and the macOS version. A board plugged in with no `cu.` port
+  appearing (Terminal: `ls /dev/cu.*`) is that.
+
+**Signing, when the account exists**, is five repository secrets -
+`APPLE_CERTIFICATE_P12_BASE64`, `APPLE_CERTIFICATE_PASSWORD`,
+`APPLE_TEAM_ID`, `APPLE_ID`, `APPLE_APP_PASSWORD` - see
+[releasing.md, "Signing the Mac app"](releasing.md#signing-the-mac-app). The
+step is in the workflow already and skips itself while they are missing.
+Then the first start is a double-click.
+
+## Serial ports on a Mac
+
+Every adapter appears twice, `/dev/tty.usbserial-XXXX` and
+`/dev/cu.usbserial-XXXX` (a DGT USB board: `usbmodem...`). The `tty.` one is
+for dial-in and waits for a carrier signal a board never sends, so Alnasl
+lists only the `cu.` one (`Alnasl.Transport.Uart.one_per_device/1`). Pick
+`/dev/cu.usbserial-...` or `/dev/cu.usbmodem...`; `Bluetooth-Incoming-Port`
+and `debug-console` are the Mac's own and never a board.
+
+## What CI checks on every push
+
+In the macOS jobs of `.github/workflows/release.yml`:
+
+1. `build_app.sh`: the serial program is in the release; every binary links
+   only to the system; the oldest macOS they accept goes into `Info.plist`;
+   the ad-hoc signature verifies.
+2. The zip is unpacked as an arbiter would, the bundle made read-only, the
+   serial library loads from inside it (`Uart.available?()` is `true`).
+3. The launcher (no window, no browser: `ALNASL_LAUNCHER_NO_UI=1`) starts it
+   with a scratch data folder on port 4046. It must serve its help page on
+   `127.0.0.1:4046` alone, without `epmd`.
+4. A second start must leave at once.
+5. SIGTERM to the launcher must stop the server, leaving nothing running;
+   the bundle's seal must still verify; the database must be in the data
+   folder.
+
+The zip is uploaded as the workflow artifact `release_assets_macos-aarch64`
+(and `-x86_64`) on every push, and attached to the release when one is
+published. What CI cannot check: the window, Gatekeeper on a download, a
+real board. That is the list below.
+
+## Testing a build on a real Mac
+
+For the owner's M1 Pro, before anything is released. About twenty
+minutes, plus the board.
+
+**Get the build**
+
+1. On GitHub: **Actions > Build and release**, open the newest green run
+   (for `main`, or for the branch you were asked to test - *Run workflow* on
+   that branch builds one without publishing anything).
+2. Under *Artifacts*, download **`release_assets_macos-aarch64`** (signed in
+   to GitHub).
+3. Open it until you have **`Alnasl.app`** (the artifact is a zip holding
+   `alnasl-macos-aarch64.zip`, which holds the app).
+4. Drag `Alnasl.app` into **Applications**.
+
+**First start**
+
+5. Double-click it. Expect macOS to refuse; follow
+   [Opening it the first time](#unsigned-for-now). Note the message you saw.
+6. Expect within about ten seconds: a small window **"Alnasl is running at
+   http://localhost:4040"** (in Dutch if your Mac is in Dutch) with *Stop
+   Alnasl* and *Open in browser*, and the browser on Alnasl's site. No
+   Terminal window.
+7. Setup, *This copy of Alnasl*: version as on the run's commit, started as
+   **The Mac app (Alnasl.app)**, data folder
+   `/Users/<you>/Library/Application Support/AlnaslData`.
+
+**The data folder**
+
+8. Finder > *Go > Go to Folder...* >
+   `~/Library/Application Support/AlnaslData`: `alnasl.db`,
+   `secret_key_base`, `launcher.log`.
+
+**A board**
+
+9. Plug in the DGT board (USB, or RS232 through its adapter). In Terminal,
+   `ls /dev/cu.*` should list a `cu.usbmodem...` or `cu.usbserial-...`. If
+   nothing new appears, the adapter needs its driver (see above) - note the
+   adapter's make.
+10. Boards page, add a DGT board: the port list shows the `cu.` port, and no
+    `tty.` twin. Pick it and connect: the board's picture appears, with its
+    serial number. Move a piece: the picture follows.
+11. (If an OpenPairings is at hand) a connect code in Setup, *Test
+    connection*. Note any "Local network" question macOS asks.
+
+**Running, stopping**
+
+12. Close the browser tab, *Open in browser*: it comes back. Double-click
+    the app again: a browser tab, no second window.
+13. **Stop Alnasl**: it asks first ("the boards are not read while it is
+    stopped"). *Keep running* keeps it; *Stop Alnasl* stops it: the window
+    goes, `http://localhost:4040` no longer answers, *Activity Monitor* has
+    no `beam`.
+14. Start it again: no Gatekeeper question; the board is still known by its
+    number.
+15. With it running, log out and back in: it starts normally afterwards.
+
+**Updates**
+
+16. Setup > Updates: the setting is there; *Look now* says nothing newer for
+    the newest build. If a newer release exists, the notice gives the size
+    of `alnasl-macos-aarch64.zip` and the Mac line of what to do - no
+    *Download and install* button. That is intended on a Mac.
+
+**Removing it**
+
+17. Stop Alnasl, drag it from Applications to the Bin, empty the Bin.
+18. `~/Library/Application Support/AlnaslData` is **still there**.
+19. Install again (3-5): the board and its number are back.
+
+**Report back**: macOS version, the Gatekeeper message (step 5), the
+adapter and whether a driver was needed (step 9), any step that went
+otherwise, and `launcher.log` if something failed. Delete the data folder
+yourself afterwards if you want everything gone; the app never does.

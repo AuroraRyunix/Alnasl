@@ -64,6 +64,12 @@ defmodule Alnasl.MixProject do
         c_runtime(release)
         without_debug_files(release)
 
+      # Nothing beside bin/ on a Mac: the release goes inside Alnasl.app,
+      # whose launcher (rel/macos/launcher.sh) is put there by
+      # rel/macos/build_app.sh, and systemd units mean nothing to macOS.
+      {:unix, :darwin} ->
+        :ok
+
       _unix ->
         copy_extras(
           release,

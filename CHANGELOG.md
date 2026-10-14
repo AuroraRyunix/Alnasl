@@ -19,6 +19,12 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+- [Feature] **A Mac app.** Every push builds `Alnasl.app` for Apple Silicon and Intel on GitHub's Macs, and a release attaches it as `alnasl-macos-aarch64.zip` and `alnasl-macos-x86_64.zip` (fixed names, like the others; `SHA256SUMS` covers them). It behaves like the Windows program: a small window says Alnasl is running (in Dutch on a Dutch Mac), the browser opens once the site answers, a second double-click opens a tab instead of a second server, and *Stop Alnasl* asks first because the boards are not read while it is stopped. The serial library is in it. Nobody has opened it on a real Mac yet; `docs/macos.md` has the test list, the README and the Help page say how to install it (English and Dutch).
+- [Feature] **The Mac keeps its data in `~/Library/Application Support/AlnaslData`**, and `Alnasl.DataHome` refuses any data folder inside a `.app`: an app is replaced whole by the next version and binned whole by an uninstall. The test reads the folder's name out of the Mac launcher too.
+- [Change] **Not signed by Apple yet.** The first start needs "Open Anyway" in Privacy & Security; README, Help and `docs/macos.md` walk through it. Developer ID signing and notarisation are written into the release workflow and skip themselves until the Apple account's five secrets exist (`docs/releasing.md`).
+- [Feature] **Updates on a Mac are by hand, and the notice says how.** Setup > Updates gives the size of the Mac zip and a Mac line: download, stop Alnasl, put the new app in place of the old one. Setup's "This copy of Alnasl" says *The Mac app*.
+- [Feature] **A Mac's serial ports are listed once.** macOS shows every adapter as `/dev/tty.X` and `/dev/cu.X`; the `tty.` one waits for a modem signal a board never sends, so only the `cu.` one is offered.
+
 ## [0.1.3] - 2026-10-15
 
 - [Change] **The Dutch says "resultaat" and "versturen", like OpenPairings.** A game's result was an "uitslag" and sending was "verzenden"; both now use OpenPairings' words (resultaat, versturen, verstuurd), and the Verzendlijst page is called Wachtrij. The uitslagensite stays. Only Dutch changed; `docs/glossary-nl.md` records it.

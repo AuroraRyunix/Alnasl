@@ -118,7 +118,7 @@ Lichess round.
 > What has and has not been tried with them is under
 > [What is not done](#what-is-not-done).
 
-Three ways. All three run the same program, keep their data in the same
+Four ways. All four run the same program, keep their data in the same
 kind of place, and need nothing installed first - the runtime is inside.
 
 ### Windows
@@ -178,10 +178,40 @@ The service runs as its own user, cannot become root, and sees the system
 read-only except for its data. Read `install.sh` before you pipe it into a
 root shell; it is two hundred lines and says what it does at the top.
 
+### macOS
+
+> **New, and not yet tried on a real Mac** (2026-10-14): it is built and
+> started on GitHub's Macs on every push; [docs/macos.md](docs/macos.md)
+> has the test list for a person with one.
+
+Download **[alnasl-macos-aarch64.zip](https://github.com/AuroraRyunix/Alnasl/releases/latest/download/alnasl-macos-aarch64.zip)**
+for a Mac with an Apple chip (M1 and later) or
+[alnasl-macos-x86_64.zip](https://github.com/AuroraRyunix/Alnasl/releases/latest/download/alnasl-macos-x86_64.zip) for an Intel
+Mac, open it, and drag **Alnasl** into *Applications*.
+
+**macOS will refuse it, once.** Alnasl is not signed by Apple yet (that
+needs a paid developer account, which is coming). The first time:
+
+- macOS 15 and newer: double-click, click *Done* on "could not verify",
+  then *System Settings > Privacy & Security*, **Open Anyway** beside the
+  message about Alnasl, and confirm.
+- macOS 14 and older: right-click the app, **Open**, *Open*.
+- "Alnasl is damaged and can't be opened": it is not. In Terminal:
+  `xattr -dr com.apple.quarantine /Applications/Alnasl.app`, then open it.
+
+What starts is a small window that says "Alnasl is running", and your
+browser on `http://localhost:4040`. **The window is the program**, as on
+Windows: *Stop Alnasl* stops it (it asks first). The data is in
+`~/Library/Application Support/AlnaslData`, never in the app, so replacing
+the app or dragging it to the Bin leaves it alone. Updating is by hand for
+now: download the new zip and put the new app in place of the old one.
+
+A DGT board on USB is `/dev/cu.usbserial-...` or `/dev/cu.usbmodem...`;
+see [Serial ports](#serial-ports). macOS 11 (Big Sur) or newer.
+
 ### From source
 
-[Running it](#running-it), below. That is also the way on macOS, for which
-nothing is built.
+[Running it](#running-it), below.
 
 ### Updating
 
@@ -580,7 +610,18 @@ want to know what they would have made of it) and saves nothing.
 
 A DGT board is a serial port to the system: `/dev/ttyUSB0` or `/dev/ttyACM0`
 on Linux (the user needs to be in the `dialout` group), `COM3` and the like
-on Windows (Device Manager, *Ports (COM & LPT)*). 9600 baud, 8N1.
+on Windows (Device Manager, *Ports (COM & LPT)*), `/dev/cu.usbserial-...` or
+`/dev/cu.usbmodem...` on a Mac. 9600 baud, 8N1.
+
+A Mac lists every adapter twice, as `/dev/tty.X` and `/dev/cu.X`; the `tty.`
+one waits for a modem signal a board never sends, so Alnasl offers only the
+`cu.` one. No permission is needed for a serial port on a Mac, but an
+RS232 board's USB adapter needs a driver macOS has. Adapters with an FTDI
+chip work as they are (macOS carries that driver); Prolific (PL2303),
+WCH (CH340/CH341) and Silicon Labs (CP210x) adapters may need the chip
+maker's driver, depending on the adapter and the macOS version. If the
+board is plugged in and no `cu.` port appears, that is the driver.
+`ls /dev/cu.*` in Terminal shows what macOS sees.
 
 The serial library (`circuits_uart`) is C code built with `make`:
 
@@ -1034,8 +1075,10 @@ and names on every page in both languages.
   warns on first run, and some antivirus may want convincing. The Linux
   download is checked against a checksum from the same place it came from,
   which catches a broken download and not a forged one.
-- **No Pi image, no macOS build, no 32-bit build.** A Raspberry Pi needs
-  the 64-bit system. macOS runs from source.
+- **No Pi image, no 32-bit build, and the Mac app is unsigned and
+  untried.** A Raspberry Pi needs the 64-bit system. The Mac app is built
+  and started by CI on every push, has not yet been opened by a person on a
+  Mac, and asks for "Open Anyway" until it is signed (docs/macos.md).
 - **An update that changes the database cannot be undone by going back.**
   On Linux the old program is put back when the new one does not answer,
   and the database from before is kept beside the data - but it is not put

@@ -36,7 +36,9 @@ defmodule Alnasl.Updates do
       wants into a file; a systemd path unit sees the file and runs
       `/opt/alnasl/update.sh` as root, which downloads, verifies, switches
       and restarts - or switches back.
-    * `:manual` - a portable zip, a checkout. The notice says what to do.
+    * `:manual` - a portable zip, `Alnasl.app` on a Mac, a checkout. The
+      notice says what to do: on a Mac, replace the app with the new one
+      (docs/macos.md says why there is no button there yet).
 
   Neither the data directory nor anything in it is part of an update on
   either road; see `Alnasl.DataHome`.
@@ -201,12 +203,13 @@ defmodule Alnasl.Updates do
   @doc "The release asset an installation of `kind` downloads for `version`."
   def asset_name(:velopack, version), do: "#{Alnasl.DataHome.pack_id()}-#{version}-full.nupkg"
 
-  def asset_name(_kind, _version) do
-    case :os.type() do
-      {:win32, _} -> "alnasl-windows-x86_64-portable.zip"
-      _unix -> "alnasl-linux-#{arch()}.tar.gz"
-    end
-  end
+  def asset_name(kind, version), do: asset_name(kind, version, :os.type())
+
+  @doc false
+  # The system as an argument, so that a test on one can ask about another.
+  def asset_name(_kind, _version, {:win32, _}), do: "alnasl-windows-x86_64-portable.zip"
+  def asset_name(_kind, _version, {:unix, :darwin}), do: "alnasl-macos-#{arch()}.zip"
+  def asset_name(_kind, _version, _unix), do: "alnasl-linux-#{arch()}.tar.gz"
 
   @doc "`x86_64` or `aarch64`, as the release assets are named."
   def arch do
