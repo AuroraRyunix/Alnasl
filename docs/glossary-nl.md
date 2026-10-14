@@ -46,7 +46,7 @@ of the OpenPairings repository. Only `msgstr` lines of Alnasl's
 | State | Toestand |
 | Log | Logboek |
 | Labels (sheet of stickers) | Etiketten |
-| Outbox | Verzendlijst (the manual's name for it; OpenPairings has no such page) |
+| Outbox | Wachtrij (the page's menu item and title; was Verzendlijst, chosen because the queue is what it shows and the manual already calls it "de wachtrij van Alnasl"; OpenPairings has no such page) |
 | Round N starting | Ronde N starten |
 | the Live link on the public pages | Live-link |
 
@@ -54,8 +54,8 @@ of the OpenPairings repository. Only `msgstr` lines of Alnasl's
 
 | English | OpenPairings | Alnasl | Why |
 |---|---|---|---|
-| Result (of a game) | Resultaat | Uitslag | OpenPairings decided on 2026-10-14: a game's result is a *resultaat*, the results site is the *uitslagensite*. Alnasl still says uitslag for the game's result ("Geen uitslag", "de drie uitslagen"); left as it is until the owner says whether to follow. The manual quotes Alnasl's own labels as they are. |
-| Sent | Verstuurd, versturen | Verzonden / verzenden | OpenPairings settled on versturen/verstuurd (2026-10-14). Alnasl uses verzenden throughout, "Verzendlijst" and "Nu verzenden" included; the manual names the Verzendlijst page as Alnasl does. Open, same as above. |
+| Result (of a game) | Resultaat | Resultaat | The owner decided on 2026-10-14 that Alnasl follows OpenPairings: a game's result is a *resultaat* ("Geen resultaat", "de drie resultaten"), the results site stays the *uitslagensite*. |
+| Sent | Verstuurd, versturen | Verstuurd / versturen | Alnasl follows OpenPairings (owner's decision, 2026-10-14): "Nu versturen", "Versturen hervatten", the page Wachtrij. |
 | By hand | Handmatig (and "met de hand", also in the manual) | Met de hand | Both are OpenPairings'. |
 | Permission (a Lichess token's scope) | recht | Recht | Not the same thing as the box's "toestemming" to send to the results site; Alnasl has no string for the latter. |
 | Results page of a tournament | (no fixed word: "pagina op de uitslagensite") | uitslagenpagina | The manual quotes Alnasl's "de uitslagenpagina en relaissleutel zijn meegekomen". |
@@ -85,7 +85,7 @@ These were suggestions in the first version of this file; they are now applied.
    *uitkomst*; the results site is the *uitslagensite*. One exception: the
    Belgian SWAR publication's heading "Uitslagen" is a Dutch message id and
    stays as the federation prints it.
-3. **versturen / verzenden**: versturen, verstuurd. The "Receipt" strings, which
+3. **versturen**: versturen, verstuurd, never verzenden/verzonden. The "Receipt" strings, which
    said Verzendbewijs next to Ontvangstbewijs, all say Ontvangstbewijs now.
 4. **scheidsrechter** in the team match sheet is *arbiter*, like everywhere else.
 5. **liveborden** (one audit-log string) is "Live borden".

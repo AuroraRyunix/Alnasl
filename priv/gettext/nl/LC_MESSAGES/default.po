@@ -163,7 +163,7 @@ msgstr "Een PIN moet minstens 4 tekens bevatten."
 #: lib/alnasl_web/live/help_live.ex:306
 #, elixir-autogen, elixir-format
 msgid "A banner across the top means the results site cannot be reached. Play goes on and nothing is lost; the Outbox page says how much is waiting and why."
-msgstr "Een balk bovenaan betekent dat de uitslagensite niet bereikbaar is. Het spel gaat door en er gaat niets verloren; de pagina Verzendlijst zegt hoeveel er wacht en waarom."
+msgstr "Een balk bovenaan betekent dat de uitslagensite niet bereikbaar is. Het spel gaat door en er gaat niets verloren; de pagina Wachtrij zegt hoeveel er wacht en waarom."
 
 #: lib/alnasl_web/live/setup_live.ex:1829
 #, elixir-autogen, elixir-format
@@ -316,12 +316,12 @@ msgstr "Arbiter bij het kastje: zetten ingetypt: %{moves}"
 #: lib/alnasl_web/words.ex:713
 #, elixir-autogen, elixir-format
 msgid "Arbiter at the box: sending paused for this board."
-msgstr "Arbiter bij het kastje: verzenden gepauzeerd voor dit bord."
+msgstr "Arbiter bij het kastje: versturen gepauzeerd voor dit bord."
 
 #: lib/alnasl_web/words.ex:716
 #, elixir-autogen, elixir-format
 msgid "Arbiter at the box: sending resumed for this board."
-msgstr "Arbiter bij het kastje: verzenden hervat voor dit bord."
+msgstr "Arbiter bij het kastje: versturen hervat voor dit bord."
 
 #: lib/alnasl_web/live/setup_live.ex:1196
 #, elixir-autogen, elixir-format
@@ -624,7 +624,7 @@ msgstr "Elk verbonden bord wordt opgenomen vanaf het moment dat het verbonden is
 #: lib/alnasl_web/live/outbox_live.ex:355
 #, elixir-autogen, elixir-format
 msgid "Every move is written on the box before it is sent, and stays here until the server has answered for it. Without a connection the box simply keeps them; they go out in order when it is back."
-msgstr "Elke zet wordt op het kastje weggeschreven voordat hij wordt verzonden en blijft hier staan tot de server ervoor heeft geantwoord. Zonder verbinding bewaart het kastje ze gewoon; ze gaan in volgorde weg zodra de verbinding terug is."
+msgstr "Elke zet wordt op het kastje weggeschreven voordat hij wordt verstuurd en blijft hier staan tot de server ervoor heeft geantwoord. Zonder verbinding bewaart het kastje ze gewoon; ze gaan in volgorde weg zodra de verbinding terug is."
 
 #: lib/alnasl_web/live/log_live.ex:111
 #: lib/alnasl_web/words.ex:1054
@@ -735,7 +735,7 @@ msgstr "Hoe ernstig"
 #: lib/alnasl_web/live/help_live.ex:34
 #, elixir-autogen, elixir-format
 msgid "It never decides a result. A mate on the board or kings in the centre is a suggestion; you confirm it."
-msgstr "Het beslist nooit over een uitslag. Een mat op het bord of koningen in het midden is een suggestie; de bevestiging blijft bij de arbiter."
+msgstr "Het beslist nooit over een resultaat. Een mat op het bord of koningen in het midden is een suggestie; de bevestiging blijft bij de arbiter."
 
 #: lib/alnasl_web/live/pgn_live.ex:436
 #, elixir-autogen, elixir-format
@@ -958,7 +958,7 @@ msgstr "In die tekst is geen partij gevonden."
 #: lib/alnasl_web/words.ex:228
 #, elixir-autogen, elixir-format
 msgid "No legal moves lead from the last certain position to what the board reads now. Nothing is being sent for this board. If the pieces are put right it carries on by itself; otherwise use the tools below."
-msgstr "Geen toegestane zetten leiden van de laatste zekere stelling naar wat het bord nu leest. Voor dit bord wordt niets verzonden. Als de stukken goed worden gezet, gaat het vanzelf verder; gebruik anders de hulpmiddelen hieronder."
+msgstr "Geen toegestane zetten leiden van de laatste zekere stelling naar wat het bord nu leest. Voor dit bord wordt niets verstuurd. Als de stukken goed worden gezet, gaat het vanzelf verder; gebruik anders de hulpmiddelen hieronder."
 
 #: lib/alnasl_web/live/round_live.ex:961
 #, elixir-autogen, elixir-format
@@ -1005,7 +1005,7 @@ msgstr "Niet gekoppeld"
 #: lib/alnasl_web/live/round_live.ex:858
 #, elixir-autogen, elixir-format
 msgid "Not sending"
-msgstr "Niet verzenden"
+msgstr "Niet versturen"
 
 #: lib/alnasl_web/components/layouts.ex:294
 #: lib/alnasl_web/destination_words.ex:35
@@ -1028,7 +1028,7 @@ msgstr "Opmerking"
 #: lib/alnasl_web/live/outbox_live.ex:518
 #, elixir-autogen, elixir-format
 msgid "Nothing has been sent yet."
-msgstr "Er is nog niets verzonden."
+msgstr "Er is nog niets verstuurd."
 
 #: lib/alnasl_web/live/game_live.ex:994
 #, elixir-autogen, elixir-format
@@ -1043,7 +1043,7 @@ msgstr "Over bord %{n} van ronde %{r} is niets bekend"
 #: lib/alnasl_web/live/game_live.ex:543
 #, elixir-autogen, elixir-format
 msgid "Nothing is sent for this board until you resume."
-msgstr "Voor dit bord wordt niets verzonden tot het verzenden wordt hervat."
+msgstr "Voor dit bord wordt niets verstuurd tot het versturen wordt hervat."
 
 #: lib/alnasl_web/destination_words.ex:42
 #: lib/alnasl_web/live/outbox_live.ex:501
@@ -1060,7 +1060,7 @@ msgstr "Nog niets opgenomen"
 #: lib/alnasl_web/destination_words.ex:38
 #, elixir-autogen, elixir-format
 msgid "Nothing sent yet"
-msgstr "Nog niets verzonden"
+msgstr "Nog niets verstuurd"
 
 #: lib/alnasl_web/live/log_live.ex:137
 #, elixir-autogen, elixir-format
@@ -1070,7 +1070,7 @@ msgstr "Niets om te tonen."
 #: lib/alnasl_web/live/setup_live.ex:1407
 #, elixir-autogen, elixir-format
 msgid "Off: every result waits for the arbiter. On: a game that ends in mate or stalemate on the board is sent as finished at once - still provisional on the site."
-msgstr "Uit: elke uitslag wacht op de arbiter. Aan: een partij die op het bord in mat of pat eindigt, wordt meteen als afgelopen verzonden - op de site nog voorlopig."
+msgstr "Uit: elk resultaat wacht op de arbiter. Aan: een partij die op het bord in mat of pat eindigt, wordt meteen als afgelopen verstuurd - op de site nog voorlopig."
 
 #: lib/alnasl_web/live/setup_live.ex:1405
 #, elixir-autogen, elixir-format
@@ -1115,12 +1115,12 @@ msgstr "Niet synchroon: het bord komt niet overeen met de partij."
 #: lib/alnasl_web/live/outbox_live.ex:225
 #, elixir-autogen, elixir-format
 msgid "Outbox"
-msgstr "Verzendlijst"
+msgstr "Wachtrij"
 
 #: lib/alnasl_web/live/help_live.ex:533
 #, elixir-autogen, elixir-format
 msgid "Outbox: is anything waiting, and why? Was the round published from the pairing program? A game is only shown for a published board."
-msgstr "Verzendlijst: wacht er iets, en waarom? Is de ronde vanuit het paringsprogramma gepubliceerd? Een partij wordt alleen getoond voor een gepubliceerd bord."
+msgstr "Wachtrij: wacht er iets, en waarom? Is de ronde vanuit het paringsprogramma gepubliceerd? Een partij wordt alleen getoond voor een gepubliceerd bord."
 
 #: lib/alnasl_web/components/layouts.ex:61
 #, elixir-autogen, elixir-format
@@ -1146,7 +1146,7 @@ msgstr "PIN"
 #: lib/alnasl_web/live/help_live.ex:343
 #, elixir-autogen, elixir-format
 msgid "Pause sending"
-msgstr "Verzenden pauzeren"
+msgstr "Versturen pauzeren"
 
 #: lib/alnasl_web/live/setup_live.ex:1816
 #, elixir-autogen, elixir-format
@@ -1321,37 +1321,37 @@ msgstr "Herhalen via de tracker"
 #: lib/alnasl_web/live/pgn_live.ex:464
 #, elixir-autogen, elixir-format
 msgid "Result"
-msgstr "Uitslag"
+msgstr "Resultaat"
 
 #: lib/alnasl_web/words.ex:638
 #, elixir-autogen, elixir-format
 msgid "Result %{result}, from the position."
-msgstr "Uitslag %{result}, uit de stelling."
+msgstr "Resultaat %{result}, uit de stelling."
 
 #: lib/alnasl_web/words.ex:641
 #, elixir-autogen, elixir-format
 msgid "Result %{result}, set by the arbiter at the box."
-msgstr "Uitslag %{result}, ingesteld door de arbiter bij het kastje."
+msgstr "Resultaat %{result}, ingesteld door de arbiter bij het kastje."
 
 #: lib/alnasl_web/live/game_live.ex:424
 #, elixir-autogen, elixir-format
 msgid "Result set: %{r}"
-msgstr "Uitslag ingesteld: %{r}"
+msgstr "Resultaat ingesteld: %{r}"
 
 #: lib/alnasl_web/live/recordings_live.ex:141
 #, elixir-autogen, elixir-format
 msgid "Result suggested"
-msgstr "Uitslag voorgesteld"
+msgstr "Resultaat voorgesteld"
 
 #: lib/alnasl_web/live/round_live.ex:963
 #, elixir-autogen, elixir-format
 msgid "Result? %{r}"
-msgstr "Uitslag? %{r}"
+msgstr "Resultaat? %{r}"
 
 #: lib/alnasl_web/words.ex:1058
 #, elixir-autogen, elixir-format
 msgid "Results"
-msgstr "Uitslagen"
+msgstr "Resultaten"
 
 #: lib/alnasl_web/destination_words.ex:11
 #, elixir-autogen, elixir-format
@@ -1361,7 +1361,7 @@ msgstr "Uitslagensite"
 #: lib/alnasl_web/live/game_live.ex:1372
 #, elixir-autogen, elixir-format
 msgid "Resume sending"
-msgstr "Verzenden hervatten"
+msgstr "Versturen hervatten"
 
 #: lib/alnasl_web/live/game_live.ex:1264
 #, elixir-autogen, elixir-format
@@ -1432,42 +1432,42 @@ msgstr "Dieper zoeken naar de zetten tussen de laatste zekere stelling en wat he
 #: lib/alnasl_web/live/outbox_live.ex:449
 #, elixir-autogen, elixir-format
 msgid "Send now"
-msgstr "Nu verzenden"
+msgstr "Nu versturen"
 
 #: lib/alnasl_web/live/setup_live.ex:1391
 #, elixir-autogen, elixir-format
 msgid "Send the clocks every (seconds)"
-msgstr "De klokken verzenden elke (seconden)"
+msgstr "De klokken versturen elke (seconden)"
 
 #: lib/alnasl_web/words.ex:164
 #, elixir-autogen, elixir-format
 msgid "Sending failed inside the box. It is tried again."
-msgstr "Verzenden is binnen in het kastje mislukt. Er wordt opnieuw geprobeerd."
+msgstr "Versturen is binnen in het kastje mislukt. Er wordt opnieuw geprobeerd."
 
 #: lib/alnasl_web/words.ex:166
 #, elixir-autogen, elixir-format
 msgid "Sending failed. It is tried again."
-msgstr "Verzenden mislukt. Er wordt opnieuw geprobeerd."
+msgstr "Versturen mislukt. Er wordt opnieuw geprobeerd."
 
 #: lib/alnasl_web/live/game_live.ex:544
 #, elixir-autogen, elixir-format
 msgid "Sending resumed. The game was sent in full."
-msgstr "Verzenden hervat. De partij is volledig verzonden."
+msgstr "Versturen hervat. De partij is volledig verstuurd."
 
 #: lib/alnasl_web/live/outbox_live.ex:538
 #, elixir-autogen, elixir-format
 msgid "Sent"
-msgstr "Verzonden"
+msgstr "Verstuurd"
 
 #: lib/alnasl_web/live/outbox_live.ex:514
 #, elixir-autogen, elixir-format
 msgid "Sent lately"
-msgstr "Onlangs verzonden"
+msgstr "Onlangs verstuurd"
 
 #: lib/alnasl_web/live/game_live.ex:1167
 #, elixir-autogen, elixir-format
 msgid "Sent to the results site as provisional; the published result comes from the pairing program."
-msgstr "Als voorlopig naar de uitslagensite verzonden; de gepubliceerde uitslag komt uit het paringsprogramma."
+msgstr "Als voorlopig naar de uitslagensite verstuurd; het gepubliceerde resultaat komt uit het paringsprogramma."
 
 #: lib/alnasl_web/live/boards_live.ex:1009
 #, elixir-autogen, elixir-format
@@ -1730,7 +1730,7 @@ msgstr "Het bord komt niet overeen met de partij"
 #: lib/alnasl_web/live/help_live.ex:272
 #, elixir-autogen, elixir-format
 msgid "The board does not match the game and nothing is being sent for it. Open the board: it shows what it reads beside what is certain, and the tools to repair it."
-msgstr "Het bord komt niet overeen met de partij en er wordt niets voor verzonden. Open het bord: het toont wat het leest naast wat zeker is, en de hulpmiddelen om het te herstellen."
+msgstr "Het bord komt niet overeen met de partij en er wordt niets voor verstuurd. Open het bord: het toont wat het leest naast wat zeker is, en de hulpmiddelen om het te herstellen."
 
 #: lib/alnasl_web/words.ex:259
 #, elixir-autogen, elixir-format
@@ -1780,7 +1780,7 @@ msgstr "Het bord antwoordt niet meer."
 #: lib/alnasl_web/live/game_live.ex:993
 #, elixir-autogen, elixir-format
 msgid "The board suggests a result: %{r}"
-msgstr "Het bord stelt een uitslag voor: %{r}"
+msgstr "Het bord stelt een resultaat voor: %{r}"
 
 #: lib/alnasl_web/words.ex:489
 #, elixir-autogen, elixir-format
@@ -1822,7 +1822,7 @@ msgstr "De opname is verwijderd."
 #: lib/alnasl_web/live/recordings_live.ex:117
 #, elixir-autogen, elixir-format
 msgid "The capture was played through a fresh tracker. Nothing was saved or sent."
-msgstr "De opname is door een verse tracker gehaald. Er is niets opgeslagen of verzonden."
+msgstr "De opname is door een verse tracker gehaald. Er is niets opgeslagen of verstuurd."
 
 #: lib/alnasl_web/words.ex:609
 #, elixir-autogen, elixir-format
@@ -1912,7 +1912,7 @@ msgstr "De paringen konden niet worden opgehaald."
 #: lib/alnasl_web/words.ex:269
 #, elixir-autogen, elixir-format
 msgid "The players signal a result: %{result}. Confirm it below."
-msgstr "De spelers geven een uitslag aan: %{result}. Bevestig die hieronder."
+msgstr "De spelers geven een resultaat aan: %{result}. Bevestig dat hieronder."
 
 #: lib/alnasl_web/live/game_live.ex:876
 #, elixir-autogen, elixir-format
@@ -1958,7 +1958,7 @@ msgstr "De relaissleutel wordt aanvaard voor dit toernooi."
 #: lib/alnasl_web/live/round_live.ex:425
 #, elixir-autogen, elixir-format
 msgid "The result could not be set."
-msgstr "De uitslag kon niet worden ingesteld."
+msgstr "Het resultaat kon niet worden ingesteld."
 
 #: lib/alnasl_web/words.ex:29
 #, elixir-autogen, elixir-format
@@ -1978,7 +1978,7 @@ msgstr "De uitslagensite kent dit toernooi niet. Is het gepubliceerd?"
 #: lib/alnasl_web/words.ex:727
 #, elixir-autogen, elixir-format
 msgid "The results server is back. Sending what was kept."
-msgstr "De uitslagensite is terug. Wat bewaard was, wordt verzonden."
+msgstr "De uitslagensite is terug. Wat bewaard was, wordt verstuurd."
 
 #: lib/alnasl_web/words.ex:730
 #, elixir-autogen, elixir-format
@@ -2033,7 +2033,7 @@ msgstr "De server antwoordt."
 #: lib/alnasl_web/words.ex:140
 #, elixir-autogen, elixir-format
 msgid "The server asks to slow down. Sending goes on by itself."
-msgstr "De server vraagt om te vertragen. Het verzenden gaat vanzelf door."
+msgstr "De server vraagt om te vertragen. Het versturen gaat vanzelf door."
 
 #: lib/alnasl_web/words.ex:95
 #, elixir-autogen, elixir-format
@@ -2089,22 +2089,22 @@ msgstr "De server neemt voor dit toernooi geen live borden aan."
 #: lib/alnasl_web/words.ex:100
 #, elixir-autogen, elixir-format
 msgid "The server has paused all sending for the moment. The key could not be tested."
-msgstr "De server heeft al het verzenden even gepauzeerd. De sleutel kon niet worden getest."
+msgstr "De server heeft al het versturen even gepauzeerd. De sleutel kon niet worden getest."
 
 #: lib/alnasl_web/words.ex:143
 #, elixir-autogen, elixir-format
 msgid "The server has paused all sending. It goes on by itself when that is lifted."
-msgstr "De server heeft al het verzenden gepauzeerd. Het gaat vanzelf door als dat wordt opgeheven."
+msgstr "De server heeft al het versturen gepauzeerd. Het gaat vanzelf door als dat wordt opgeheven."
 
 #: lib/alnasl_web/words.ex:172
 #, elixir-autogen, elixir-format
 msgid "The server held other moves for this game. The game was sent again in full."
-msgstr "De server hield andere zetten vast voor deze partij. De partij is opnieuw volledig verzonden."
+msgstr "De server hield andere zetten vast voor deze partij. De partij is opnieuw volledig verstuurd."
 
 #: lib/alnasl_web/words.ex:733
 #, elixir-autogen, elixir-format
 msgid "The server held other moves for this game; it was sent again in full."
-msgstr "De server hield andere zetten vast voor deze partij; ze is opnieuw volledig verzonden."
+msgstr "De server hield andere zetten vast voor deze partij; ze is opnieuw volledig verstuurd."
 
 #: lib/alnasl_web/words.ex:736
 #, elixir-autogen, elixir-format
@@ -2571,7 +2571,7 @@ msgstr "bord %{id} verwijderd"
 #: lib/alnasl_web/live/outbox_live.ex:207
 #, elixir-autogen, elixir-format
 msgid "result %{r}"
-msgstr "uitslag %{r}"
+msgstr "resultaat %{r}"
 
 #: lib/alnasl_web/live/setup_live.ex:1819
 #: lib/alnasl_web/words.ex:413
@@ -2594,7 +2594,7 @@ msgstr "die naam bestaat niet. Controleer het adres."
 #: lib/alnasl_web/live/help_live.ex:343
 #, elixir-autogen, elixir-format
 msgid "the board is followed but nothing goes out until you resume."
-msgstr "het bord wordt gevolgd, maar er gaat niets uit tot het verzenden wordt hervat."
+msgstr "het bord wordt gevolgd, maar er gaat niets uit tot het versturen wordt hervat."
 
 #: lib/alnasl_web/link_words.ex:82
 #: lib/alnasl_web/words.ex:120
@@ -2792,12 +2792,12 @@ msgstr "%{done} van %{all} bord(en) genummerd in deze gang."
 #: lib/alnasl_web/words.ex:742
 #, elixir-autogen, elixir-format
 msgid "%{name} is back. Sending what was kept."
-msgstr "%{name} is terug. Wat bewaard is, wordt verzonden."
+msgstr "%{name} is terug. Wat bewaard is, wordt verstuurd."
 
 #: lib/alnasl_web/words.ex:745
 #, elixir-autogen, elixir-format
 msgid "%{name} refuses what the box sends. See the Outbox page."
-msgstr "%{name} weigert wat het kastje stuurt. Zie de pagina Verzendlijst."
+msgstr "%{name} weigert wat het kastje stuurt. Zie de pagina Wachtrij."
 
 #: lib/alnasl_web/live/walk_live.ex:382
 #, elixir-autogen, elixir-format
@@ -2867,17 +2867,17 @@ msgstr "Iedereen op het netwerk van de zaal die dit adres opent, kan de borden h
 #: lib/alnasl_web/words.ex:751
 #, elixir-autogen, elixir-format
 msgid "Arbiter at the box: sending to %{name} switched off."
-msgstr "Arbiter bij het kastje: verzenden naar %{name} uitgeschakeld."
+msgstr "Arbiter bij het kastje: versturen naar %{name} uitgeschakeld."
 
 #: lib/alnasl_web/words.ex:748
 #, elixir-autogen, elixir-format
 msgid "Arbiter at the box: sending to %{name} switched on."
-msgstr "Arbiter bij het kastje: verzenden naar %{name} ingeschakeld."
+msgstr "Arbiter bij het kastje: versturen naar %{name} ingeschakeld."
 
 #: lib/alnasl_web/destination_words.ex:90
 #, elixir-autogen, elixir-format
 msgid "Asked to slow down. Sending goes on by itself after the pause."
-msgstr "Gevraagd om te vertragen. Het verzenden gaat na de pauze vanzelf verder."
+msgstr "Gevraagd om te vertragen. Het versturen gaat na de pauze vanzelf verder."
 
 #: lib/alnasl_web/live/setup_live.ex:1319
 #, elixir-autogen, elixir-format
@@ -3018,7 +3018,7 @@ msgstr "De Lichess-ronde en haar token vergeten?"
 #: lib/alnasl_web/live/help_live.ex:401
 #, elixir-autogen, elixir-format
 msgid "From then on every move, correction and result goes to Lichess within a couple of seconds, with the clocks. The Outbox page shows Lichess as a destination of its own: connected or not, how many games wait, and why."
-msgstr "Vanaf dan gaat elke zet, correctie en uitslag binnen een paar seconden naar Lichess, met de klokken. De pagina Verzendlijst toont Lichess als een bestemming op zich: verbonden of niet, hoeveel partijen wachten, en waarom."
+msgstr "Vanaf dan gaat elke zet, correctie en resultaat binnen een paar seconden naar Lichess, met de klokken. De pagina Wachtrij toont Lichess als een bestemming op zich: verbonden of niet, hoeveel partijen wachten, en waarom."
 
 #: lib/alnasl_web/live/boards_live.ex:585
 #, elixir-autogen, elixir-format
@@ -3272,7 +3272,7 @@ msgstr "Maak op Lichess een persoonlijk toegangstoken (lichess.org/account/oauth
 #: lib/alnasl_web/live/help_live.ex:396
 #, elixir-autogen, elixir-format
 msgid "On the box, Setup, \"Lichess broadcast\": paste the link and the token, say which round of the tournament it is, tick \"Send the games\", Save. \"Test\" asks Lichess whether the token and the round are right, and says in words what is not."
-msgstr "Op het kastje, Instellingen, \"Lichess-uitzending\": plak de link en het token, zeg welke ronde van het toernooi het is, vink \"De partijen verzenden\" aan, Opslaan. \"Testen\" vraagt Lichess of het token en de ronde kloppen, en zegt in woorden wat niet klopt."
+msgstr "Op het kastje, Instellingen, \"Lichess-uitzending\": plak de link en het token, zeg welke ronde van het toernooi het is, vink \"De partijen versturen\" aan, Opslaan. \"Testen\" vraagt Lichess of het token en de ronde kloppen, en zegt in woorden wat niet klopt."
 
 #: lib/alnasl_web/live/help_live.ex:236
 #, elixir-autogen, elixir-format
@@ -3359,7 +3359,7 @@ msgstr "Klaar voor ronde %{n}?"
 #: lib/alnasl_web/live/setup_live.ex:1287
 #, elixir-autogen, elixir-format
 msgid "Send the games of that round to Lichess"
-msgstr "De partijen van die ronde naar Lichess verzenden"
+msgstr "De partijen van die ronde naar Lichess versturen"
 
 #: lib/alnasl_web/table_words.ex:63
 #, elixir-autogen, elixir-format
@@ -3522,7 +3522,7 @@ msgstr "De telefoon wordt een keer om de PIN gevraagd."
 #: lib/alnasl_web/destination_words.ex:18
 #, elixir-autogen, elixir-format
 msgid "The results site of the tournament: every move, clock and result, one by one."
-msgstr "De uitslagensite van het toernooi: elke zet, klok en uitslag, een voor een."
+msgstr "De uitslagensite van het toernooi: elke zet, klok en resultaat, een voor een."
 
 #: lib/alnasl_web/live/help_live.ex:412
 #, elixir-autogen, elixir-format
@@ -3557,7 +3557,7 @@ msgstr "De sticker op het bord: \"dit is tafel 7\". Je stelt het een keer in voo
 #: lib/alnasl_web/live/setup_live.ex:1345
 #, elixir-autogen, elixir-format
 msgid "The test asks Lichess who the token belongs to and whether the round exists. It sends no game and changes nothing there."
-msgstr "De test vraagt Lichess van wie het token is en of de ronde bestaat. Hij verzendt geen partij en verandert daar niets."
+msgstr "De test vraagt Lichess van wie het token is en of de ronde bestaat. Hij verstuurt geen partij en verandert daar niets."
 
 #: lib/alnasl_web/destination_words.ex:154
 #, elixir-autogen, elixir-format
@@ -3572,7 +3572,7 @@ msgstr "Het token mag studies schrijven (study:write), wat een uitzending nodig 
 #: lib/alnasl_web/destination_words.ex:162
 #, elixir-autogen, elixir-format
 msgid "The token's permissions could not be read. If sending is refused later, make a token with study:write."
-msgstr "De rechten van het token konden niet gelezen worden. Wordt het verzenden later geweigerd, maak dan een token met study:write."
+msgstr "De rechten van het token konden niet gelezen worden. Wordt het versturen later geweigerd, maak dan een token met study:write."
 
 #: lib/alnasl_web/destination_words.ex:177
 #, elixir-autogen, elixir-format
@@ -4187,23 +4187,23 @@ msgstr "Bord %{n}: een nieuwe partij."
 #: lib/alnasl_web/live/round_live.ex:418
 #, elixir-autogen, elixir-format
 msgid "Board %{n}: closed without a result."
-msgstr "Bord %{n}: afgesloten zonder uitslag."
+msgstr "Bord %{n}: afgesloten zonder resultaat."
 
 #: lib/alnasl_web/live/game_live.ex:1144
 #, elixir-autogen, elixir-format
 msgid "Change the result"
-msgstr "De uitslag wijzigen"
+msgstr "Het resultaat wijzigen"
 
 #: lib/alnasl_web/live/game_live.ex:1161
 #: lib/alnasl_web/live/round_live.ex:1001
 #, elixir-autogen, elixir-format
 msgid "Close this game without a result?"
-msgstr "Deze partij zonder uitslag afsluiten?"
+msgstr "Deze partij zonder resultaat afsluiten?"
 
 #: lib/alnasl_web/live/game_live.ex:1452
 #, elixir-autogen, elixir-format
 msgid "Closed without a result"
-msgstr "Afgesloten zonder uitslag"
+msgstr "Afgesloten zonder resultaat"
 
 #: lib/alnasl_web/live/game_live.ex:1145
 #: lib/alnasl_web/live/round_live.ex:980
@@ -4260,7 +4260,7 @@ msgstr "Aan bord %{n} is geen verbonden bord gekoppeld."
 #: lib/alnasl_web/live/round_live.ex:1002
 #, elixir-autogen, elixir-format
 msgid "No result"
-msgstr "Geen uitslag"
+msgstr "Geen resultaat"
 
 #: lib/alnasl_web/live/setup_live.ex:1418
 #, elixir-autogen, elixir-format
@@ -4270,7 +4270,7 @@ msgstr "Op borden die in geen paring voorkomen (standaard)"
 #: lib/alnasl_web/live/help_live.ex:353
 #, elixir-autogen, elixir-format
 msgid "Set the result on every board (or confirm the suggestion): \"Finish game\" on the board's page, or under its tile on the Round page - the three results, or \"No result\" for a game that was abandoned."
-msgstr "Zet de uitslag op elk bord (of bevestig het voorstel): \"Partij beëindigen\" op de pagina van het bord, of onder zijn tegel op de pagina Ronde - de drie uitslagen, of \"Geen uitslag\" voor een partij die is afgebroken."
+msgstr "Zet het resultaat op elk bord (of bevestig het voorstel): \"Partij beëindigen\" op de pagina van het bord, of onder zijn tegel op de pagina Ronde - de drie resultaten, of \"Geen resultaat\" voor een partij die is afgebroken."
 
 #: lib/alnasl_web/live/setup_live.ex:1416
 #, elixir-autogen, elixir-format
@@ -4280,12 +4280,12 @@ msgstr "Een nieuwe partij beginnen als de stukken weer zijn opgezet"
 #: lib/alnasl_web/live/game_live.ex:421
 #, elixir-autogen, elixir-format
 msgid "The game is closed without a result."
-msgstr "De partij is zonder uitslag afgesloten."
+msgstr "De partij is zonder resultaat afgesloten."
 
 #: lib/alnasl_web/words.ex:635
 #, elixir-autogen, elixir-format
 msgid "The game was closed without a result."
-msgstr "De partij is zonder uitslag afgesloten."
+msgstr "De partij is zonder resultaat afgesloten."
 
 #: lib/alnasl_web/words.ex:646
 #, elixir-autogen, elixir-format
@@ -4490,7 +4490,7 @@ msgstr "%{name}: ronde %{r}, bord %{n}"
 #: lib/alnasl_web/live/outbox_live.ex:133
 #, elixir-autogen, elixir-format
 msgid "%{n} game(s) are sent again, to replace what is held."
-msgstr "%{n} partij(en) worden opnieuw verzonden, ter vervanging van wat daar staat."
+msgstr "%{n} partij(en) worden opnieuw verstuurd, ter vervanging van wat daar staat."
 
 #: lib/alnasl_web/words.ex:836
 #, elixir-autogen, elixir-format
@@ -4555,12 +4555,12 @@ msgstr "Alle"
 #: lib/alnasl_web/live/help_live.ex:29
 #, elixir-autogen, elixir-format
 msgid "Alnasl reads the electronic boards in the hall, works out the moves from where the pieces stand, and sends moves and clock times to the results site. Who plays whom it learns from OpenPairings, and what each board saw goes back there. It keeps everything itself first, so a hall without internet loses nothing: what could not be sent goes out, in order, when the connection is back."
-msgstr "Alnasl leest de elektronische borden in de zaal, leidt de zetten af uit de stand van de stukken, en stuurt zetten en kloktijden naar de uitslagensite. Wie tegen wie speelt, hoort het van OpenPairings, en wat elk bord zag gaat daarheen terug. Het bewaart alles eerst zelf, zodat een zaal zonder internet niets verliest: wat niet verzonden kon worden, gaat in volgorde de deur uit zodra de verbinding terug is."
+msgstr "Alnasl leest de elektronische borden in de zaal, leidt de zetten af uit de stand van de stukken, en stuurt zetten en kloktijden naar de uitslagensite. Wie tegen wie speelt, hoort het van OpenPairings, en wat elk bord zag gaat daarheen terug. Het bewaart alles eerst zelf, zodat een zaal zonder internet niets verliest: wat niet verstuurd kon worden, gaat in volgorde de deur uit zodra de verbinding terug is."
 
 #: lib/alnasl_web/words.ex:980
 #, elixir-autogen, elixir-format
 msgid "Arbiter at the box: %{games} game(s) sent to %{name} again, to replace what it holds."
-msgstr "Arbiter bij het kastje: %{games} partij(en) opnieuw naar %{name} verzonden, ter vervanging van wat daar staat."
+msgstr "Arbiter bij het kastje: %{games} partij(en) opnieuw naar %{name} verstuurd, ter vervanging van wat daar staat."
 
 #: lib/alnasl_web/words.ex:974
 #, elixir-autogen, elixir-format
@@ -4902,7 +4902,7 @@ msgstr "De namen opslaan"
 #: lib/alnasl_web/live/outbox_live.ex:475
 #, elixir-autogen, elixir-format
 msgid "Send again, whatever is held"
-msgstr "Opnieuw verzenden, wat daar ook staat"
+msgstr "Opnieuw versturen, wat daar ook staat"
 
 #: lib/alnasl_web/live/game_live.ex:784
 #, elixir-autogen, elixir-format
@@ -5051,7 +5051,7 @@ msgstr "De partij is opzijgezet en staat hieronder bewaard. Zet de stukken op: h
 #: lib/alnasl_web/live/game_live.ex:440
 #, elixir-autogen, elixir-format
 msgid "The moves stand. The game now carries the names of the pairing as it is, and is sent again."
-msgstr "De zetten blijven staan. De partij draagt nu de namen van de paring zoals die is, en wordt opnieuw verzonden."
+msgstr "De zetten blijven staan. De partij draagt nu de namen van de paring zoals die is, en wordt opnieuw verstuurd."
 
 #: lib/alnasl_web/live/game_live.ex:486
 #, elixir-autogen, elixir-format
@@ -5091,7 +5091,7 @@ msgstr "Het paringsprogramma vermeldt %{name} niet meer. Er wordt niets meer aan
 #: lib/alnasl_web/destination_words.ex:25
 #, elixir-autogen, elixir-format
 msgid "The pairing program: each game goes back to the tournament it came from, with the result the board saw. Shown beside the pairings there; never entered as the result."
-msgstr "Het paringsprogramma: elke partij gaat terug naar het toernooi waar ze vandaan kwam, met de uitslag die het bord zag. Daar getoond naast de paringen; nooit ingevoerd als de uitslag."
+msgstr "Het paringsprogramma: elke partij gaat terug naar het toernooi waar ze vandaan kwam, met het resultaat dat het bord zag. Daar getoond naast de paringen; nooit ingevoerd als het resultaat."
 
 #: lib/alnasl_web/live/setup_live.ex:405
 #, elixir-autogen, elixir-format
@@ -5160,7 +5160,7 @@ msgstr "Versie %{v}."
 #: lib/alnasl_web/live/help_live.ex:122
 #, elixir-autogen, elixir-format
 msgid "What goes back to OpenPairings, per game: the moves, the clocks, the PGN, and the result the board saw - with how many moves the box reconstructed or guessed. It is shown beside the pairing there, in red when it differs from the result the arbiter entered. A board never enters a result."
-msgstr "Wat teruggaat naar OpenPairings, per partij: de zetten, de klokken, de PGN, en de uitslag die het bord zag - met hoeveel zetten het kastje heeft afgeleid of geraden. Het staat daar naast de paring, in het rood wanneer het afwijkt van de uitslag die de arbiter heeft ingevoerd. Een bord voert nooit een uitslag in."
+msgstr "Wat teruggaat naar OpenPairings, per partij: de zetten, de klokken, de PGN, en het resultaat dat het bord zag - met hoeveel zetten het kastje heeft afgeleid of geraden. Het staat daar naast de paring, in het rood wanneer het afwijkt van het resultaat dat de arbiter heeft ingevoerd. Een bord voert nooit een resultaat in."
 
 #: lib/alnasl_web/live/help_live.ex:127
 #, elixir-autogen, elixir-format
@@ -5190,7 +5190,7 @@ msgstr "het is niet gepubliceerd op een uitslagensite, dus de zetten gaan alleen
 #: lib/alnasl_web/link_words.ex:197
 #, elixir-autogen, elixir-format
 msgid "it is on a results site, but no relay key is saved in OpenPairings (Settings, Live boards): nothing is sent to the results site until one is"
-msgstr "het staat op een uitslagensite, maar in OpenPairings is geen relaissleutel opgeslagen (Instellingen, Live borden): er wordt niets naar de uitslagensite verzonden tot er een is"
+msgstr "het staat op een uitslagensite, maar in OpenPairings is geen relaissleutel opgeslagen (Instellingen, Live borden): er wordt niets naar de uitslagensite verstuurd tot er een is"
 
 #: lib/alnasl_web/link_words.ex:193
 #, elixir-autogen, elixir-format
@@ -5746,7 +5746,7 @@ msgstr "%{name} speelt niet in %{tournament}: wat het bord leest gaat nergens he
 #: lib/alnasl_web/live/outbox_live.ex:173
 #, elixir-autogen, elixir-format
 msgid "%{name}: %{n} sent. Nothing is waiting now."
-msgstr "%{name}: %{n} verzonden. Er wacht niets meer."
+msgstr "%{name}: %{n} verstuurd. Er wacht niets meer."
 
 #: lib/alnasl_web/live/outbox_live.ex:70
 #, elixir-autogen, elixir-format
@@ -5761,12 +5761,12 @@ msgstr "%{name}: %{n} wachtend, nu proberen."
 #: lib/alnasl_web/live/outbox_live.ex:185
 #, elixir-autogen, elixir-format
 msgid "%{name}: %{sent} sent, %{n} still waiting."
-msgstr "%{name}: %{sent} verzonden, %{n} wachten nog."
+msgstr "%{name}: %{sent} verstuurd, %{n} wachten nog."
 
 #: lib/alnasl_web/live/outbox_live.ex:177
 #, elixir-autogen, elixir-format
 msgid "%{name}: not sent (%{n} waiting). %{why}"
-msgstr "%{name}: niet verzonden (%{n} wachtend). %{why}"
+msgstr "%{name}: niet verstuurd (%{n} wachtend). %{why}"
 
 #: lib/alnasl_web/live/setup_live.ex:980
 #, elixir-autogen, elixir-format
@@ -5776,7 +5776,7 @@ msgstr "%{url}, %{slug}: nog geen relaissleutel"
 #: lib/alnasl_web/live/outbox_live.ex:330
 #, elixir-autogen, elixir-format
 msgid "- no relay key yet: nothing is sent there"
-msgstr "- nog geen relaissleutel: er wordt niets naartoe verzonden"
+msgstr "- nog geen relaissleutel: er wordt niets naartoe verstuurd"
 
 #: lib/alnasl_web/components/seating_components.ex:122
 #, elixir-autogen, elixir-format
@@ -5842,7 +5842,7 @@ msgstr "Nog geen relaissleutel"
 #: lib/alnasl_web/status.ex:156
 #, elixir-autogen, elixir-format
 msgid "No relay key yet: OpenPairings has none saved for this tournament, so nothing is sent to its results site. In OpenPairings: Settings > Live boards > The results site. The box starts sending by itself a few seconds after the key is there."
-msgstr "Nog geen relaissleutel: OpenPairings heeft er geen opgeslagen voor dit toernooi, dus er wordt niets naar de uitslagensite gestuurd. In OpenPairings: Instellingen > Live borden > De uitslagensite. Het kastje begint vanzelf te verzenden enkele seconden nadat de sleutel er is."
+msgstr "Nog geen relaissleutel: OpenPairings heeft er geen opgeslagen voor dit toernooi, dus er wordt niets naar de uitslagensite gestuurd. In OpenPairings: Instellingen > Live borden > De uitslagensite. Het kastje begint vanzelf te versturen enkele seconden nadat de sleutel er is."
 
 #: lib/alnasl_web/destination_words.ex:66
 #, elixir-autogen, elixir-format
@@ -5867,7 +5867,7 @@ msgstr "Er wacht niets, en een bord speelt niet in een gekoppeld toernooi, dus w
 #: lib/alnasl_web/live/outbox_live.ex:80
 #, elixir-autogen, elixir-format
 msgid "Nothing to send. "
-msgstr "Niets te verzenden. "
+msgstr "Niets te versturen. "
 
 #: lib/alnasl_web/components/seating_components.ex:38
 #, elixir-autogen, elixir-format
@@ -5877,7 +5877,7 @@ msgstr "OK"
 #: lib/alnasl_web/destination_words.ex:55
 #, elixir-autogen, elixir-format
 msgid "OpenPairings has no relay key for %{names} yet, so there is nowhere to send. In OpenPairings: Settings > Live boards > The results site. Sending starts by itself once the key is there."
-msgstr "OpenPairings heeft nog geen relaissleutel voor %{names}, dus er is nergens om naartoe te verzenden. In OpenPairings: Instellingen > Live borden > De uitslagensite. Verzenden begint vanzelf zodra de sleutel er is."
+msgstr "OpenPairings heeft nog geen relaissleutel voor %{names}, dus er is nergens om naartoe te versturen. In OpenPairings: Instellingen > Live borden > De uitslagensite. Versturen begint vanzelf zodra de sleutel er is."
 
 #: lib/alnasl_web/live/outbox_live.ex:270
 #: lib/alnasl_web/live/outbox_live.ex:305
@@ -5975,7 +5975,7 @@ msgstr "Uitslagensite: geweigerd"
 #: lib/alnasl_web/status.ex:124
 #, elixir-autogen, elixir-format
 msgid "Results site: sending"
-msgstr "Uitslagensite: verzendt"
+msgstr "Uitslagensite: verstuurt"
 
 #: lib/alnasl_web/status.ex:119
 #, elixir-autogen, elixir-format
@@ -5990,12 +5990,12 @@ msgstr "Geef hieronder op welke tafels in welk toernooi spelen."
 #: lib/alnasl_web/live/outbox_live.ex:368
 #, elixir-autogen, elixir-format
 msgid "Sending is automatic: OpenPairings and the results site start by themselves as soon as there is somewhere to send to, and a game recorded before that goes out in full. Send now only nudges a destination that is waiting out a pause."
-msgstr "Verzenden gaat vanzelf: OpenPairings en de uitslagensite beginnen zodra er een bestemming is, en een partij die daarvoor is opgenomen gaat volledig mee. Nu verzenden port alleen een bestemming aan die een pauze uitzit."
+msgstr "Versturen gaat vanzelf: OpenPairings en de uitslagensite beginnen zodra er een bestemming is, en een partij die daarvoor is opgenomen gaat volledig mee. Nu versturen port alleen een bestemming aan die een pauze uitzit."
 
 #: lib/alnasl_web/status.ex:162
 #, elixir-autogen, elixir-format
 msgid "Sending to %{url}, %{slug}, key %{hint}. It came with the code."
-msgstr "Verzendt naar %{url}, %{slug}, sleutel %{hint}. Kwam mee met de code."
+msgstr "Verstuurt naar %{url}, %{slug}, sleutel %{hint}. Kwam mee met de code."
 
 #: lib/alnasl_web/live/setup_live.ex:1109
 #, elixir-autogen, elixir-format
@@ -6047,7 +6047,7 @@ msgstr "De code is aanvaard: %{count} toernooi(en)."
 #: lib/alnasl_web/hall.ex:234
 #, elixir-autogen, elixir-format
 msgid "The game under way (%{moves} moves) is board %{n} of round %{r} there now, under the pairing's names and sent in full. If it is not that game, set it aside on the board's page."
-msgstr "De partij die bezig was (%{moves} zetten) is daar nu bord %{n} van ronde %{r}, onder de namen van de paring en volledig verzonden. Is het niet die partij, zet hem dan opzij op de pagina van het bord."
+msgstr "De partij die bezig was (%{moves} zetten) is daar nu bord %{n} van ronde %{r}, onder de namen van de paring en volledig verstuurd. Is het niet die partij, zet hem dan opzij op de pagina van het bord."
 
 #: lib/alnasl_web/hall.ex:252
 #, elixir-autogen, elixir-format
@@ -6057,7 +6057,7 @@ msgstr "De partij die bezig was (%{moves} zetten) blijft waar ze was: het bord h
 #: lib/alnasl_web/hall.ex:244
 #, elixir-autogen, elixir-format
 msgid "The game under way (%{moves} moves) was closed without a result and kept where it was; the board begins again."
-msgstr "De partij die bezig was (%{moves} zetten) is zonder uitslag afgesloten en blijft bewaard waar ze was; het bord begint opnieuw."
+msgstr "De partij die bezig was (%{moves} zetten) is zonder resultaat afgesloten en blijft bewaard waar ze was; het bord begint opnieuw."
 
 #: lib/alnasl_web/words.ex:942
 #, elixir-autogen, elixir-format
@@ -6067,7 +6067,7 @@ msgstr "De partij die bezig was op \"%{name}\" (%{moves} zetten) bleef waar ze w
 #: lib/alnasl_web/words.ex:934
 #, elixir-autogen, elixir-format
 msgid "The game under way on \"%{name}\" (%{moves} moves) was closed without a result; the board begins again."
-msgstr "De partij die bezig was op \"%{name}\" (%{moves} zetten) is zonder uitslag afgesloten; het bord begint opnieuw."
+msgstr "De partij die bezig was op \"%{name}\" (%{moves} zetten) is zonder resultaat afgesloten; het bord begint opnieuw."
 
 #: lib/alnasl_web/words.ex:926
 #, elixir-autogen, elixir-format
@@ -6113,12 +6113,12 @@ msgstr "Welke tafels spelen in %{names}?"
 #: lib/alnasl_web/live/help_live.ex:102
 #, elixir-autogen, elixir-format
 msgid "A board that plays in no linked tournament is never left silent: the line under the bar, the Boards page, the Round page and \"Ready for round N?\" all say \"Board 1 is not playing in ...\", with a button to put it there. If a game is under way on it, the button offers \"these moves are board N of round R\" (the moves stay, under the pairing's names, and are sent in full) or \"start fresh\" (the game is closed without a result and kept where it was). A board connected later joins the only linked tournament by itself, as long as the box's own has not been used."
-msgstr "Een bord dat in geen gekoppeld toernooi speelt, blijft nooit stil: de regel onder de balk, de pagina Borden, de pagina Ronde en \"Klaar voor ronde N?\" zeggen allemaal \"Bord 1 speelt niet in ...\", met een knop om het erin te zetten. Is er een partij bezig, dan biedt de knop \"deze zetten zijn bord N van ronde R\" (de zetten blijven, onder de namen van de paring, en gaan volledig mee) of \"opnieuw beginnen\" (de partij wordt zonder uitslag afgesloten en bewaard waar ze was). Een bord dat later wordt aangesloten komt vanzelf in het enige gekoppelde toernooi, zolang het eigen toernooi van het kastje niet gebruikt is."
+msgstr "Een bord dat in geen gekoppeld toernooi speelt, blijft nooit stil: de regel onder de balk, de pagina Borden, de pagina Ronde en \"Klaar voor ronde N?\" zeggen allemaal \"Bord 1 speelt niet in ...\", met een knop om het erin te zetten. Is er een partij bezig, dan biedt de knop \"deze zetten zijn bord N van ronde R\" (de zetten blijven, onder de namen van de paring, en gaan volledig mee) of \"opnieuw beginnen\" (de partij wordt zonder resultaat afgesloten en bewaard waar ze was). Een bord dat later wordt aangesloten komt vanzelf in het enige gekoppelde toernooi, zolang het eigen toernooi van het kastje niet gebruikt is."
 
 #: lib/alnasl_web/live/help_live.ex:112
 #, elixir-autogen, elixir-format
 msgid "Sending is automatic: to OpenPairings from the moment a tournament is linked, to the results site from the moment it has an address and a key (a game recorded before that goes out in full). Lichess stays off until you fill in a round and a token. \"Send now\" on the Outbox page only nudges a destination that is waiting out a pause, and always says what it did or why it did nothing."
-msgstr "Verzenden gaat vanzelf: naar OpenPairings zodra een toernooi gekoppeld is, naar de uitslagensite zodra die een adres en een sleutel heeft (een partij die daarvoor is opgenomen gaat volledig mee). Lichess blijft uit tot je een ronde en een token invult. \"Nu verzenden\" op de pagina Verzendlijst port alleen een bestemming aan die een pauze uitzit, en zegt altijd wat het deed of waarom het niets deed."
+msgstr "Versturen gaat vanzelf: naar OpenPairings zodra een toernooi gekoppeld is, naar de uitslagensite zodra die een adres en een sleutel heeft (een partij die daarvoor is opgenomen gaat volledig mee). Lichess blijft uit tot je een ronde en een token invult. \"Nu versturen\" op de pagina Wachtrij port alleen een bestemming aan die een pauze uitzit, en zegt altijd wat het deed of waarom het niets deed."
 
 #: lib/alnasl_web/live/help_live.ex:450
 #, elixir-autogen, elixir-format
@@ -6128,7 +6128,7 @@ msgstr "Instellingen, \"Deze kopie van Alnasl\", zegt de versie, hoe deze kopie 
 #: lib/alnasl_web/live/help_live.ex:107
 #, elixir-autogen, elixir-format
 msgid "The bar names what it is about: \"OpenPairings: connected\" is the code you pasted; \"Results site: ...\" is the tournament's results page. \"No relay key yet\" means OpenPairings has not saved a relay key for the tournament: in OpenPairings, Settings, Live boards, The results site. The box starts sending by itself a few seconds after the key is saved. \"Live\" and the number beside it is this browser's connection to the box, not to the internet."
-msgstr "De balk zegt waarover hij gaat: \"OpenPairings: verbonden\" is de code die je plakte; \"Uitslagensite: ...\" is de uitslagenpagina van het toernooi. \"Nog geen relaissleutel\" betekent dat OpenPairings voor het toernooi geen relaissleutel heeft opgeslagen: in OpenPairings, Instellingen, Live borden, De uitslagensite. Het kastje begint enkele seconden nadat de sleutel is opgeslagen vanzelf te verzenden. \"Live\" met het getal ernaast is de verbinding van deze browser met het kastje, niet met het internet."
+msgstr "De balk zegt waarover hij gaat: \"OpenPairings: verbonden\" is de code die je plakte; \"Uitslagensite: ...\" is de uitslagenpagina van het toernooi. \"Nog geen relaissleutel\" betekent dat OpenPairings voor het toernooi geen relaissleutel heeft opgeslagen: in OpenPairings, Instellingen, Live borden, De uitslagensite. Het kastje begint enkele seconden nadat de sleutel is opgeslagen vanzelf te versturen. \"Live\" met het getal ernaast is de verbinding van deze browser met het kastje, niet met het internet."
 
 #: lib/alnasl_web/live/help_live.ex:96
 #, elixir-autogen, elixir-format
@@ -6229,7 +6229,7 @@ msgstr "Een extra partij: ze blijft op dit kastje"
 #: lib/alnasl_web/live/help_live.ex:358
 #, elixir-autogen, elixir-format
 msgid "Another game on the same board: \"New game on this board\". The game before it is kept and listed with its PGN. One game of a board goes to the results site, Lichess and OpenPairings. Where a pairing names the board and its game has no result (abandoned, a false start, \"No result\"), the new game is that one: it replaces the old game on all three and the old one stays on the box. Where the game has a result, the new game is an extra one that stays on the box, so a finished game is never overwritten; \"It replaces the game of the pairing\" is there for when you mean it. A game that stays on the box says so on its tile, on its page and in the Outbox, with \"Send this one instead\". On a board no pairing names, setting up the pieces again starts the next game by itself (Setup can make that always, or never)."
-msgstr "Nog een partij op hetzelfde bord: \"Nieuwe partij op dit bord\". De partij ervoor blijft bewaard en staat in de lijst met haar PGN. Van een bord gaat één partij naar de uitslagensite, Lichess en OpenPairings. Waar een paring het bord noemt en de partij nog geen uitslag heeft (verlaten, een valse start, \"Geen uitslag\"), is de nieuwe partij die ene: ze vervangt de oude op alle drie en de oude blijft op het kastje. Heeft de partij een uitslag, dan is de nieuwe een extra partij die op het kastje blijft, zodat een afgewerkte partij nooit wordt overschreven; \"Ze vervangt de partij van de paring\" is er voor als je dat echt wilt. Een partij die op het kastje blijft, zegt dat op haar tegel, op haar pagina en in de Verzendlijst, met \"Verstuur deze in de plaats\". Op een bord dat geen paring noemt, begint het opnieuw opstellen van de stukken vanzelf de volgende partij (in Instellingen kan dat altijd of nooit)."
+msgstr "Nog een partij op hetzelfde bord: \"Nieuwe partij op dit bord\". De partij ervoor blijft bewaard en staat in de lijst met haar PGN. Van een bord gaat één partij naar de uitslagensite, Lichess en OpenPairings. Waar een paring het bord noemt en de partij nog geen resultaat heeft (verlaten, een valse start, \"Geen resultaat\"), is de nieuwe partij die ene: ze vervangt de oude op alle drie en de oude blijft op het kastje. Heeft de partij een resultaat, dan is de nieuwe een extra partij die op het kastje blijft, zodat een afgewerkte partij nooit wordt overschreven; \"Ze vervangt de partij van de paring\" is er voor als je dat echt wilt. Een partij die op het kastje blijft, zegt dat op haar tegel, op haar pagina en in de Wachtrij, met \"Verstuur deze in de plaats\". Op een bord dat geen paring noemt, begint het opnieuw opstellen van de stukken vanzelf de volgende partij (in Instellingen kan dat altijd of nooit)."
 
 #: lib/alnasl_web/words.ex:650
 #, elixir-autogen, elixir-format
@@ -6254,12 +6254,12 @@ msgstr "Bord %{n}: deze partij is nu degene die het kastje verlaat."
 #: lib/alnasl_web/words.ex:1005
 #, elixir-autogen, elixir-format
 msgid "Close this game without a result and start a new one? The new game becomes the game of the pairing and is the one sent to the results site, OpenPairings and Lichess; this one is kept on the box."
-msgstr "Deze partij zonder uitslag afsluiten en een nieuwe beginnen? De nieuwe partij wordt de partij van de paring en is degene die naar de uitslagensite, OpenPairings en Lichess gaat; deze blijft op het kastje."
+msgstr "Deze partij zonder resultaat afsluiten en een nieuwe beginnen? De nieuwe partij wordt de partij van de paring en is degene die naar de uitslagensite, OpenPairings en Lichess gaat; deze blijft op het kastje."
 
 #: lib/alnasl_web/words.ex:1014
 #, elixir-autogen, elixir-format
 msgid "Close this game without a result and start an extra one? The extra game stays on this box."
-msgstr "Deze partij zonder uitslag afsluiten en een extra partij beginnen? De extra partij blijft op dit kastje."
+msgstr "Deze partij zonder resultaat afsluiten en een extra partij beginnen? De extra partij blijft op dit kastje."
 
 #: lib/alnasl_web/words.ex:667
 #, elixir-autogen, elixir-format
@@ -6344,7 +6344,7 @@ msgstr "De uitslagensite, OpenPairings en Lichess kennen één partij per bord e
 #: lib/alnasl_web/words.ex:1021
 #, elixir-autogen, elixir-format
 msgid "This game has a result. Start a new game that replaces it as the game of the pairing? The result already sent is replaced by the new game; this one is kept on the box."
-msgstr "Deze partij heeft een uitslag. Een nieuwe partij beginnen die haar vervangt als partij van de paring? De uitslag die al verstuurd is, wordt door de nieuwe partij vervangen; deze blijft op het kastje."
+msgstr "Deze partij heeft een resultaat. Een nieuwe partij beginnen die haar vervangt als partij van de paring? Het resultaat dat al verstuurd is, wordt door de nieuwe partij vervangen; deze blijft op het kastje."
 
 #: lib/alnasl_web/live/game_live.ex:498
 #, elixir-autogen, elixir-format
@@ -6365,7 +6365,7 @@ msgstr "Deze partij blijft op het kastje: het is partij %{n} op dit bord."
 #: lib/alnasl_web/live/help_live.ex:312
 #, elixir-autogen, elixir-format
 msgid "To see what spectators see: on the Round page \"Open the results site\" opens the live boards of the round in a new tab, \"QR\" shows a code of the tournament's live page to hold up in the hall, and each tile has a \"Live page\" link to its board. A board's page has \"This game on the results site\", Setup > Tournaments and the Outbox link to the tournament's page. A tournament that is not on a results site has no link, and says so."
-msgstr "Om te zien wat de toeschouwers zien: op de Ronde-pagina opent \"Open de uitslagensite\" de live borden van de ronde in een nieuw tabblad, toont \"QR\" een code van de livepagina van het toernooi om in de zaal omhoog te houden, en heeft elke tegel een link \"Livepagina\" naar haar bord. De pagina van een bord heeft \"Deze partij op de uitslagensite\"; Instellingen > Toernooien en de Verzendlijst linken naar de pagina van het toernooi. Een toernooi dat niet op een uitslagensite staat, heeft geen link en zegt dat."
+msgstr "Om te zien wat de toeschouwers zien: op de Ronde-pagina opent \"Open de uitslagensite\" de live borden van de ronde in een nieuw tabblad, toont \"QR\" een code van de livepagina van het toernooi om in de zaal omhoog te houden, en heeft elke tegel een link \"Livepagina\" naar haar bord. De pagina van een bord heeft \"Deze partij op de uitslagensite\"; Instellingen > Toernooien en de Wachtrij linken naar de pagina van het toernooi. Een toernooi dat niet op een uitslagensite staat, heeft geen link en zegt dat."
 
 #: lib/alnasl_web/live/game_live.ex:1238
 #, elixir-autogen, elixir-format
