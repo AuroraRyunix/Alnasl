@@ -622,7 +622,7 @@ defmodule AlnaslWeb.BoardsLive do
                 id={"board-#{s.id}"}
                 class={[@lit && @lit.id == s.id && "found", @seeking == s.id && "sought"]}
               >
-                <td>
+                <td class="b-name">
                   <b>{s.name}</b>
                   <.badge :if={Tables.new?(s)} id={"new-board-#{s.id}"} tone="warn" icon="warning">
                     {gettext("New board")}
@@ -658,13 +658,13 @@ defmodule AlnaslWeb.BoardsLive do
                     <span :if={s.firmware}> · {gettext("firmware %{v}", v: s.firmware)}</span>
                   </div>
                 </td>
-                <td>
+                <td class="b-reads">
                   <div class="mini">
                     <.board position={s.raw} label={gettext("What %{name} reads", name: s.name)} />
                   </div>
                   <span :if={s.flipped} class="flag plain">{gettext("turned round")}</span>
                 </td>
-                <td>
+                <td class="b-state" data-label={gettext("State")}>
                   <.state
                     id={"board-state-#{s.id}"}
                     state={if s.running?, do: s.status, else: :no_signal}
@@ -704,7 +704,7 @@ defmodule AlnaslWeb.BoardsLive do
                     >{gettext("Read it as a loop")}</.button>
                   </div>
                 </td>
-                <td>
+                <td class="b-signal" data-label={gettext("Signal")}>
                   <%= case signal(s.stats) do %>
                     <% {percent, tone} -> %>
                       <span class={["meter", tone]}><i style={"width:#{percent}%"}></i></span>{percent}%
@@ -723,7 +723,7 @@ defmodule AlnaslWeb.BoardsLive do
                     <span :if={s.info[:clock_battery_low]} class="flag">{gettext("clock battery low")}</span>
                   </div>
                 </td>
-                <td>
+                <td class="b-start" data-label={gettext("Start position")}>
                   <%= cond do %>
                     <% s.raw == nil -> %>
                       <span class="note">-</span>
@@ -778,7 +778,7 @@ defmodule AlnaslWeb.BoardsLive do
                       </ul>
                   <% end %>
                 </td>
-                <td>
+                <td class="b-table">
                   <form id={"table-form-#{s.id}"} phx-change="table" phx-submit="table">
                     <input type="hidden" name="board_id" value={s.id} />
                     <label class="sr-only" for={"table-#{s.id}"}>{gettext("Table number of %{name}",
@@ -823,7 +823,12 @@ defmodule AlnaslWeb.BoardsLive do
                     </select>
                   </form>
                 </td>
-                <td :if={s[:tournament_id] != @tid} id={"elsewhere-#{s.id}"}>
+                <td
+                  :if={s[:tournament_id] != @tid}
+                  id={"elsewhere-#{s.id}"}
+                  class="b-link"
+                  data-label={gettext("Board of round %{n}", n: @round)}
+                >
                   <span class="note">
                     <%= if s.board_no && s.round do %>
                       {gettext("%{name}: round %{r}, board %{n}",
@@ -836,7 +841,11 @@ defmodule AlnaslWeb.BoardsLive do
                     <% end %>
                   </span>
                 </td>
-                <td :if={s[:tournament_id] == @tid}>
+                <td
+                  :if={s[:tournament_id] == @tid}
+                  class="b-link"
+                  data-label={gettext("Board of round %{n}", n: @round)}
+                >
                   <form id={"link-form-#{s.id}"} phx-change="link">
                     <input type="hidden" name="board_id" value={s.id} />
                     <label class="sr-only" for={"link-#{s.id}"}>{gettext("Board number for %{name}",

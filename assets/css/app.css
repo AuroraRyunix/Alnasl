@@ -1682,6 +1682,175 @@ tr.sought td:first-child {
   font-variant-numeric: tabular-nums;
 }
 
+/* The Boards table on a phone: every row becomes a card, so the owner can walk
+   the hall with it and nothing scrolls sideways. The cells keep their ids and
+   their forms; only the layout changes. Above the breakpoint nothing here
+   applies and the table is the table. */
+@media (max-width: 860px) {
+  #boards-wrap {
+    overflow-x: visible;
+  }
+
+  #boards-table,
+  #boards-table tbody {
+    display: block;
+  }
+
+  #boards-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  #boards-table tbody {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 21rem), 1fr));
+    gap: 0.8rem;
+  }
+
+  #boards-table tr {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "table name"
+      "state state"
+      "link link"
+      "reads signal"
+      "start start"
+      "act act";
+    gap: 0.7rem 0.9rem;
+    align-content: start;
+    padding: 0.9rem;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    background: var(--panel);
+    font-size: 0.9375rem;
+  }
+
+  #boards-table tr.found {
+    border-color: var(--ok);
+    background: var(--ok-bg);
+  }
+
+  #boards-table tr.sought {
+    border-color: var(--accent);
+    border-width: 2px;
+  }
+
+  #boards-table td {
+    display: block;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+  }
+
+  #boards-table tr.found td {
+    background: none;
+    animation: none;
+    box-shadow: none;
+  }
+
+  #boards-table tr.sought td:first-child {
+    box-shadow: none;
+  }
+
+  #boards-table tbody tr:hover td {
+    background: none;
+  }
+
+  #boards-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.2rem;
+    font-size: 0.75rem;
+    font-weight: 650;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--quiet);
+  }
+
+  #boards-table td.b-table {
+    grid-area: table;
+  }
+
+  #boards-table td.b-name {
+    grid-area: name;
+    align-self: center;
+    font-size: 1.0625rem;
+  }
+
+  #boards-table td.b-state {
+    grid-area: state;
+  }
+
+  #boards-table td.b-link {
+    grid-area: link;
+  }
+
+  #boards-table td.b-reads {
+    grid-area: reads;
+  }
+
+  #boards-table td.b-signal {
+    grid-area: signal;
+  }
+
+  #boards-table td.b-start {
+    grid-area: start;
+  }
+
+  /* The table number is what you read at arm's length, so it is the big thing. */
+  #boards-table td.b-table .input.table-no {
+    width: 6rem;
+    min-height: 3.5rem;
+    font-size: 2rem;
+    text-align: center;
+  }
+
+  #boards-table td.b-table form + form {
+    margin-top: 0.4rem;
+  }
+
+  #boards-table td.b-table select.input,
+  #boards-table td.b-link select.input {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 2.75rem;
+    font-size: 1rem;
+  }
+
+  #boards-table td.b-table select.input {
+    max-width: 14rem !important;
+  }
+
+  #boards-table td.b-reads .mini {
+    width: 7rem;
+  }
+
+  #boards-table td.act {
+    grid-area: act;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    text-align: left;
+    white-space: normal;
+  }
+
+  #boards-table td.act .btn {
+    min-height: 2.75rem;
+    font-size: 1rem;
+  }
+
+  /* Remove sits on a line of its own, away from the thumb's usual targets. */
+  #boards-table td.act .btn.danger {
+    grid-column: 1 / -1;
+  }
+}
+
 .checks {
   list-style: none;
   margin: 0;
@@ -2610,4 +2779,12 @@ tr.sought td:first-child {
 .head-open svg {
   width: 1.1rem;
   height: 1.1rem;
+}
+
+/* The two small controls of the numbering and finding pages: a thumb's size on a phone. */
+@media (max-width: 860px) {
+  #walk-back,
+  #walk-mute {
+    min-height: 2.75rem;
+  }
 }

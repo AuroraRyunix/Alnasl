@@ -374,6 +374,34 @@ defmodule AlnaslWeb.TablesAndOutputsTest do
       assert has_element?(view, "#walk-start")
     end
 
+    test "the Boards table turns into cards on a phone: every row's cells carry the names the card layout is drawn from",
+         %{conn: conn} do
+      a = still("a")
+      still("b")
+      {:ok, view, _html} = live(conn, ~p"/boards")
+
+      for cell <- ~w(b-name b-reads b-state b-signal b-start b-table b-link act) do
+        assert has_element?(view, "#board-#{a.id} td.#{cell}"), "no #{cell} cell on the row"
+      end
+
+      # The cells that have no heading of their own in the card carry one.
+      for cell <- ~w(b-state b-signal b-start b-link) do
+        assert has_element?(view, "#board-#{a.id} td.#{cell}[data-label]")
+      end
+
+      # The ids the rest of the tests (and the thumb) go by survive the card.
+      for id <- [
+            "table-#{a.id}",
+            "link-#{a.id}",
+            "show-me-#{a.id}",
+            "toggle-#{a.id}",
+            "flip-#{a.id}",
+            "delete-#{a.id}"
+          ] do
+        assert has_element?(view, "#board-#{a.id} ##{id}")
+      end
+    end
+
     test "a spectator's phone gets the PIN question, not the numbering", %{conn: conn} do
       board = still("a")
       Settings.set_pin("2468")
