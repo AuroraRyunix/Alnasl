@@ -135,7 +135,17 @@ defmodule AlnaslWeb.HelpLive do
           </p>
           <p id="help-team-events">
             {gettext(
-              "A team event looks like any other round on the box today: every board of the round is a tile, numbered through the round as on the results site (boards 1 to 4 are the first match, 5 to 8 the second, with four boards a match). The tiles are not grouped by match and the team names are not shown; the players' names, colours and ratings are."
+              "A team event reads as matches on the Round page: \"Match 3: Team A - Team B\", the match's boards under it in board order, each tile naming the team of each player and its place in the match. Beside the match, its score as the boards saw it finish - only that: the score that counts is the one the arbiter enters in OpenPairings. Boards keep the number they have through the round, as on the results site, so board 6 is board 2 of match 2 with four boards a match."
+            )}
+          </p>
+          <p id="help-team-tables">
+            {gettext(
+              "Tables for a team event: \"Keep each match together\" (on by default) counts a tournament's tables match by match, so a match sits side by side and numbering by touching goes match by match. \"Ready for round N?\" names a missing board by its match, and says when only part of a match is on electronic boards. The PGN of a team game carries WhiteTeam and BlackTeam, and Round as round and board (\"3.6\")."
+            )}
+          </p>
+          <p id="help-two-codes">
+            {gettext(
+              "Two codes that reach one tournament - a group's and the tournament's own, or a desktop copy's code for this computer and for the hall's network - make one tournament on the box, not two: the second code says \"This code reaches ..., which this box already has through ...\". When the old code was withdrawn and a new one made, press \"Use this code\" under the new one: the tournament keeps its boards and games, and the old code goes when it reaches nothing else."
             )}
           </p>
           <p id="help-no-pairing-program">

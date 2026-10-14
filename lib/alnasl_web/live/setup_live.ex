@@ -37,6 +37,7 @@ defmodule AlnaslWeb.SetupLive do
   }
 
   alias Alnasl.Destination.{LichessApi, LichessBroadcast}
+  alias Alnasl.OpenPairings.Duplicates
   alias AlnaslWeb.{Access, DestinationWords, Hall, LinkWords, SeatingComponents, Status, Words}
 
   @tracker_fields ~w(settle_ms castle_hold_ms promotion_hold_ms takeback_settle_ms transient_ms lifted_ms search_depth)
@@ -287,11 +288,34 @@ defmodule AlnaslWeb.SetupLive do
     socket = assign(socket, code_key: socket.assigns.code_key + 1)
 
     case OpenPairings.add_code(text) do
-      {:ok, _link, tournaments} ->
+      {:ok, link, tournaments} ->
+        shared = Duplicates.shared(link)
+
+        socket =
+          cond do
+            # Everything it reaches is here through another code already.
+            tournaments == [] and shared != [] ->
+              put_flash(socket, :error, LinkWords.elsewhere(shared))
+
+            shared != [] ->
+              put_flash(
+                socket,
+                :info,
+                accepted_words(tournaments, Seating.after_code(tournaments)) <>
+                  " " <> LinkWords.elsewhere(shared)
+              )
+
+            true ->
+              put_flash(
+                socket,
+                :info,
+                accepted_words(tournaments, Seating.after_code(tournaments))
+              )
+          end
+
         {:noreply,
          socket
          |> assign(code_form: to_form(%{"code" => ""}, as: :link))
-         |> put_flash(:info, accepted_words(tournaments, Seating.after_code(tournaments)))
          |> Hall.refresh()
          |> load()}
 
@@ -323,6 +347,26 @@ defmodule AlnaslWeb.SetupLive do
 
     {:noreply,
      assign(socket, link_testing: id, link_tests: Map.delete(socket.assigns.link_tests, id))}
+  end
+
+  # The tournament stays the same row; it is asked through this code now.
+  def handle_event("use_code", %{"id" => id, "remote" => remote}, socket) do
+    with %{} = link <- Tournaments.get_link(id),
+         {:ok, tournament} <- OpenPairings.use_code(link, String.to_integer(remote)) do
+      {:noreply,
+       socket
+       |> put_flash(
+         :info,
+         gettext(
+           "%{name} is asked through this code from now on. Its boards and games are as they were.",
+           name: Tournaments.title(tournament) || ""
+         )
+       )
+       |> load()}
+    else
+      _none ->
+        {:noreply, socket |> put_flash(:error, gettext("That could not be done.")) |> load()}
+    end
   end
 
   def handle_event("retry_link", %{"id" => id}, socket) do
@@ -365,6 +409,17 @@ defmodule AlnaslWeb.SetupLive do
     tournament = Tournaments.get(id)
     from = optional_int(params["from"])
     to = optional_int(params["to"]) || from
+
+    # A team event's form says whether a match keeps its tables together;
+    # said before the boards move, so that they move by it.
+    tournament =
+      case {tournament, params["keep_matches"]} do
+        {%{} = t, keep} when keep in ["true", "false"] ->
+          Tournaments.update!(t, %{keep_matches: keep == "true"})
+
+        _other ->
+          tournament
+      end
 
     result =
       cond do
@@ -763,6 +818,26 @@ defmodule AlnaslWeb.SetupLive do
               <p :if={LinkWords.why(link)} id={"link-why-#{link.id}"} class="note">
                 {LinkWords.why(link)}
               </p>
+              <div
+                :for={found <- Duplicates.shared(link)}
+                id={"link-elsewhere-#{link.id}-#{found.remote_id}"}
+                class="callout"
+                role="status"
+              >
+                <p>{LinkWords.elsewhere([found])}</p>
+                <p class="note">
+                  {gettext(
+                    "Nothing of it is made twice. If this code is meant to replace the other one - that one was withdrawn and this one made new - use this one: the tournament keeps its boards and its games."
+                  )}
+                </p>
+                <.button
+                  id={"use-code-#{link.id}-#{found.remote_id}"}
+                  small
+                  phx-click="use_code"
+                  phx-value-id={link.id}
+                  phx-value-remote={found.remote_id}
+                >{gettext("Use this code for %{name}", name: found.name)}</.button>
+              </div>
               <div class="row">
                 <.button
                   id={"test-link-#{link.id}"}
@@ -872,6 +947,11 @@ defmodule AlnaslWeb.SetupLive do
                       round: t.remote_round || "-"
                     )}
                     <span :if={got.time_control}>{got.time_control}.</span>
+                    <span :if={Tournaments.team_event?(t)} id={"tournament-teams-#{t.id}"}>
+                      {gettext("A team event, %{n} boards a match.",
+                        n: Tournaments.boards_per_match(t) || "?"
+                      )}
+                    </span>
                   <% else %>
                     {gettext("Nothing received yet.")}
                   <% end %>
@@ -957,6 +1037,19 @@ defmodule AlnaslWeb.SetupLive do
                     class="input table-no"
                   />
                 </div>
+                <div :if={Tournaments.team_event?(t)} class="field">
+                  <input type="hidden" name="tables[keep_matches]" value="false" />
+                  <label for={"tables-keep-#{t.id}"} class="row" style="gap:0.35rem">
+                    <input
+                      id={"tables-keep-#{t.id}"}
+                      name="tables[keep_matches]"
+                      type="checkbox"
+                      value="true"
+                      checked={t.keep_matches}
+                    />
+                    {gettext("Keep each match together")}
+                  </label>
+                </div>
                 <.button id={"assign-tables-#{t.id}"} small type="submit">
                   {gettext("These tables play here")}
                 </.button>
@@ -996,6 +1089,15 @@ defmodule AlnaslWeb.SetupLive do
           <p class="note">
             {gettext(
               "Tables 5 to 8 given to a tournament: table 5 is its board 1. A board that gets one of those table numbers later joins by itself. One board can also be put in a tournament on the Boards page."
+            )}
+          </p>
+          <p
+            :if={Enum.any?(@tournaments, &Tournaments.team_event?/1)}
+            id="tables-matches-note"
+            class="note"
+          >
+            {gettext(
+              "In a team event, \"Keep each match together\" counts the tables match by match: with four boards a match, the fifth table is board 1 of match 2, so a match sits side by side."
             )}
           </p>
         </.panel>

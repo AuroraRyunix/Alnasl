@@ -38,6 +38,17 @@ defmodule Alnasl.OpenPairings.Poller do
     # Stopped between two conversations, not in the middle of one (as
     # `Alnasl.Destination.Sender` is): see `terminate/2`.
     Process.flag(:trap_exit, true)
+
+    # A box from before one tournament was one row may hold two rows of
+    # one tournament, reached through two codes: made one before anybody
+    # is asked anything.
+    try do
+      Alnasl.OpenPairings.Duplicates.merge_all()
+    rescue
+      error ->
+        Alnasl.Log.add(:error, "tournament.merge_failed", %{reason: Exception.message(error)})
+    end
+
     Process.send_after(self(), :tick, 200)
     # `due`: link id => monotonic ms; `backoff`: link id => ms; `told`: link
     # id => what the pairing program was last told about the box.

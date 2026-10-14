@@ -36,7 +36,7 @@ defmodule Alnasl.OpenPairings do
   import Ecto.Query
 
   alias Alnasl.{Boards, Log, Repo, Tournaments}
-  alias Alnasl.OpenPairings.{Client, Code, Sync}
+  alias Alnasl.OpenPairings.{Client, Code, Duplicates, Sync}
   alias Alnasl.Tournaments.{Link, Tournament}
 
   # --- codes -------------------------------------------------------------------
@@ -61,7 +61,7 @@ defmodule Alnasl.OpenPairings do
       case poll(link, force: true) do
         {:ok, link} ->
           Log.add(:info, "link.added", %{server: Code.host(link.root)})
-          {:ok, link, Tournaments.of_link(link)}
+          {:ok, Repo.get!(Link, link.id), Tournaments.of_link(link)}
 
         {:error, :unauthorized} ->
           Repo.delete(link)
@@ -92,6 +92,19 @@ defmodule Alnasl.OpenPairings do
     Log.add(:info, "link.removed", %{server: Code.host(link.root)})
     Tournaments.notify(nil)
     :ok
+  end
+
+  @doc """
+  The arbiter says: the tournament with id `remote_id` there, which `link`
+  reaches and the box has through another code, is asked through `link`
+  from now on (`Alnasl.OpenPairings.Duplicates.use_code/2`). Then `link` is
+  asked at once.
+  """
+  def use_code(%Link{} = link, remote_id) do
+    with {:ok, tournament} <- Duplicates.use_code(link, remote_id) do
+      poll(Repo.get!(Link, link.id), force: true)
+      {:ok, Tournaments.get!(tournament.id)}
+    end
   end
 
   @doc "The arbiter says: try this code again (after it was refused)."
@@ -187,46 +200,73 @@ defmodule Alnasl.OpenPairings do
     entries = Enum.filter(entries, &(is_map(&1) and is_integer(&1["id"])))
     named = MapSet.new(entries, & &1["id"])
 
-    for entry <- entries do
-      changes = %{
-        name: entry["name"],
-        label: entry["label"],
-        state: entry["state"],
-        listed_version: entry["version"],
-        gone: false
-      }
+    elsewhere =
+      Enum.reduce(entries, %{}, fn entry, elsewhere ->
+        changes = %{
+          name: entry["name"],
+          label: entry["label"],
+          state: entry["state"],
+          listed_version: entry["version"],
+          gone: false
+        }
 
-      case held[entry["id"]] do
-        nil ->
-          tournament =
-            %Tournament{kind: "linked", link_id: link.id, remote_id: entry["id"]}
-            |> Tournament.changeset(changes)
-            |> Repo.insert!()
+        case held[entry["id"]] || Duplicates.holder(link, entry) do
+          nil ->
+            tournament =
+              %Tournament{kind: "linked", link_id: link.id, remote_id: entry["id"]}
+              |> Tournament.changeset(changes)
+              |> Repo.insert!()
 
-          Log.add(:info, "tournament.added", %{tournament: Tournaments.title(tournament) || ""})
-          Tournaments.notify(tournament.id)
+            Log.add(:info, "tournament.added", %{tournament: Tournaments.title(tournament) || ""})
+            Tournaments.notify(tournament.id)
+            elsewhere
 
-        tournament ->
-          if Map.take(tournament, Map.keys(changes)) != changes do
-            if tournament.gone,
-              do:
-                Log.add(:info, "tournament.back", %{
-                  tournament: Tournaments.title(tournament) || ""
-                })
+          # The box has it through another code: one row, not two.
+          %Tournament{link_id: other, gone: false} = tournament when other != link.id ->
+            Map.put(elsewhere, entry["id"], {tournament, entry["name"]})
 
-            Tournaments.update!(tournament, changes)
-          end
-      end
-    end
+          # ... which no longer lists it: it is asked through this one now.
+          %Tournament{link_id: other} = tournament when other != link.id ->
+            tournament |> Duplicates.adopt(link) |> Tournaments.update!(changes)
+            elsewhere
+
+          tournament ->
+            if Map.take(tournament, Map.keys(changes)) != changes do
+              if tournament.gone,
+                do:
+                  Log.add(:info, "tournament.back", %{
+                    tournament: Tournaments.title(tournament) || ""
+                  })
+
+              Tournaments.update!(tournament, changes)
+            end
+
+            elsewhere
+        end
+      end)
+
+    Duplicates.note(link, elsewhere)
 
     for {remote_id, tournament} <- held,
         not MapSet.member?(named, remote_id),
         not tournament.gone do
-      Log.add(:warn, "tournament.gone", %{tournament: Tournaments.title(tournament) || ""})
-      Tournaments.update!(tournament, %{gone: true})
+      gone(tournament)
     end
 
     :ok
+  end
+
+  # A code no longer reaches a tournament. When another code the box has
+  # does, the row is asked through that one; else it is gone.
+  defp gone(%Tournament{} = tournament) do
+    case Duplicates.reclaim(tournament) do
+      {:moved, _row} ->
+        :ok
+
+      nil ->
+        Log.add(:warn, "tournament.gone", %{tournament: Tournaments.title(tournament) || ""})
+        Tournaments.update!(tournament, %{gone: true})
+    end
   end
 
   defp fetch_stale(%Link{} = link, now) do
@@ -260,15 +300,19 @@ defmodule Alnasl.OpenPairings do
   defp fetch(%Link{} = link, %Tournament{} = tournament) do
     case Client.tournament(link, tournament.remote_id) do
       {:ok, document} ->
-        Sync.apply(tournament, document)
+        # Reached through two codes after all: one row, not two.
+        case Duplicates.check_document(tournament, document) do
+          {:apply, tournament} -> Sync.apply(tournament, document)
+          :merged -> :ok
+        end
+
         :ok
 
       :not_modified ->
         :ok
 
       {:error, :tournament_not_found} ->
-        Log.add(:warn, "tournament.gone", %{tournament: Tournaments.title(tournament) || ""})
-        Tournaments.update!(tournament, %{gone: true})
+        gone(tournament)
         :ok
 
       {:error, reason} ->

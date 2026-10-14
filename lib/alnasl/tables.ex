@@ -84,18 +84,22 @@ defmodule Alnasl.Tables do
   The board of the round a board's table stands for: its table number,
   counted from the first table of its tournament. `nil` without a table
   number, or with one below its tournament's first table. Takes a board row
-  or a snapshot.
+  or a snapshot. In a team event the count goes match by match
+  (`Alnasl.Tournaments.board_of_table/3`), for `round` - the round the
+  tournament has on its boards unless another is named.
   """
-  def home_board(%{table_no: nil}), do: nil
+  def home_board(board, round \\ nil)
 
-  def home_board(%{table_no: table} = board) do
+  def home_board(%{table_no: nil}, _round), do: nil
+
+  def home_board(%{table_no: table} = board, round) do
     case Tournaments.get(Map.get(board, :tournament_id)) do
       nil -> table
-      tournament -> Tournaments.board_of_table(tournament, table)
+      tournament -> Tournaments.board_of_table(tournament, table, round)
     end
   end
 
-  def home_board(_board), do: nil
+  def home_board(_board, _round), do: nil
 
   @doc "Does the board feed another board of the round than its table says?"
   def remapped?(%{table_no: table, board_no: board} = row) when table != nil and board != nil,
@@ -548,6 +552,8 @@ defmodule Alnasl.Tables do
   | `{:no_number, name}` | a connected board that feeds no board of this round |
   | `{:no_table, name}` | a board without a table number |
   | `{:gap, n}` | a board of the round, below the highest one that has a physical board, has none |
+  | `{:gap_match, n, match, place}` | the same, in a team event: board `place` of match `match` |
+  | `{:part_match, match, have, of}` | a team event: `have` of the match's `of` boards are on electronic boards |
   | `{:turned, name, n}` | plugged in turned round - noticed, and read the other way up |
   | `{:remapped, name, table, n}` | feeds another board than its sticker says, as asked |
   | `{:uncovered, count}` | boards of the round beyond the electronic ones |
@@ -562,7 +568,9 @@ defmodule Alnasl.Tables do
     snaps = Enum.filter(all, &(&1[:tournament_id] == tournament_id))
     here = Enum.filter(snaps, &(&1.round == round and &1.board_no != nil))
     by_no = Enum.group_by(here, & &1.board_no)
-    paired = tournament_id |> Tournaments.boards(round) |> Enum.map(& &1.board)
+    pairings = Tournaments.boards(tournament_id, round)
+    paired = Enum.map(pairings, & &1.board)
+    in_match = Map.new(pairings, &{&1.board, &1.match})
     top = here |> Enum.map(& &1.board_no) |> Enum.max(fn -> 0 end)
 
     duplicates(all, & &1[:table_no], :duplicate_table) ++
@@ -574,12 +582,34 @@ defmodule Alnasl.Tables do
       ) ++
       outside_checks(tournament_id, snaps) ++
       Enum.flat_map(snaps, &board_checks(&1, round)) ++
-      for(n <- paired, n < top, not is_map_key(by_no, n), do: issue(:warn, {:gap, n})) ++
+      for(n <- paired, n < top, not is_map_key(by_no, n), do: issue(:warn, gap(n, in_match[n]))) ++
+      match_checks(pairings, by_no) ++
       case Enum.count(paired, &(&1 > top)) do
         0 -> []
         _all when top == 0 -> []
         count -> [issue(:info, {:uncovered, count})]
       end
+  end
+
+  # In a team event a board is named by its match too: "board 7" alone
+  # sends the arbiter counting.
+  defp gap(n, %{number: match, board: place}), do: {:gap_match, n, match, place}
+  defp gap(n, _none), do: {:gap, n}
+
+  # A match the box follows only in part: some of its boards are on
+  # electronic boards, some are not. Said, not refused - it may be meant.
+  defp match_checks(pairings, by_no) do
+    pairings
+    |> Enum.filter(&(&1.match != nil and &1.kind == "game"))
+    |> Enum.group_by(& &1.match.number)
+    |> Enum.sort()
+    |> Enum.flat_map(fn {match, boards} ->
+      have = Enum.count(boards, &is_map_key(by_no, &1.board))
+
+      if have > 0 and have < length(boards),
+        do: [issue(:info, {:part_match, match, have, length(boards)})],
+        else: []
+    end)
   end
 
   # A board in the box's own tournament while a linked one exists: it reads

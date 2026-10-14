@@ -464,6 +464,20 @@ defmodule Alnasl.Games do
   end
 
   @doc """
+  The game belongs to another row from now on (`changes` names it: a
+  tournament, a game number, `local`): two rows of one tournament became
+  one. Its PGN moves with it.
+  """
+  def rehome(%Game{} = game, changes) do
+    File.rm(pgn_path(game))
+
+    game
+    |> Ecto.Changeset.change(changes)
+    |> Repo.update!()
+    |> tap(&write_pgn/1)
+  end
+
+  @doc """
   Moves a game to another board of its round: the pairing program gave it
   another number. A number below 1 is a place to wait while two games
   change places.
@@ -655,19 +669,21 @@ defmodule Alnasl.Games do
     offset = if black_first?(game), do: 1, else: 0
 
     Pgn.write(%{
-      headers: [
-        {"Event", info.name || "?"},
-        {"Site", info.city || "?"},
-        {"Date", date},
-        {"Round", Integer.to_string(game.round)},
-        {"White", game.white || "?"},
-        {"Black", game.black || "?"},
-        {"Board", Integer.to_string(game.board_no)}
-        # The rate of play, when the pairing program gave it in PGN's own
-        # notation. Never worked out from the words: a wrong one is worse
-        # than none.
-        | if(info.time_control_pgn, do: [{"TimeControl", info.time_control_pgn}], else: [])
-      ],
+      # The rate of play, when the pairing program gave it in PGN's own
+      # notation. Never worked out from the words: a wrong one is worse
+      # than none.
+      headers:
+        [
+          {"Event", info.name || "?"},
+          {"Site", info.city || "?"},
+          {"Date", date},
+          {"Round", round_tag(game)},
+          {"White", game.white || "?"},
+          {"Black", game.black || "?"},
+          {"Board", Integer.to_string(game.board_no)}
+        ] ++
+          team_tags(game) ++
+          if(info.time_control_pgn, do: [{"TimeControl", info.time_control_pgn}], else: []),
       moves: Enum.map(plies, & &1.san),
       clocks:
         plies
@@ -682,6 +698,31 @@ defmodule Alnasl.Games do
 
   defp black_first?(%Game{start_fen: fen}) do
     match?({:ok, %{turn: :b}}, Chess.parse_fen(fen))
+  end
+
+  @doc """
+  The PGN `Round` of a game: `"3"`, and in a team event `"3.6"` - round and
+  board of the round, the board numbered through the round as the pairing
+  program and the results site number it. Both of them write `Round` that
+  way for a game with moves; the box does it where it matters most, in a
+  team event, where "3" is forty games.
+  """
+  def round_tag(%Game{} = game) do
+    if Tournaments.team_event?(game.tournament_id),
+      do: "#{game.round}.#{game.board_no}",
+      else: Integer.to_string(game.round)
+  end
+
+  @doc """
+  `WhiteTeam` and `BlackTeam` for a game of a team event, from the players
+  the box believes are playing it; `[]` elsewhere. Lichess builds its team
+  table of a broadcast from these two.
+  """
+  def team_tags(%Game{} = game) do
+    {white, black} =
+      Tournaments.game_teams(game.tournament_id, game.remote_white, game.remote_black)
+
+    for {tag, team} <- [{"WhiteTeam", white}, {"BlackTeam", black}], team != nil, do: {tag, team}
   end
 
   @doc "Every game of a round of a tournament as one PGN file, earlier games on a board included."

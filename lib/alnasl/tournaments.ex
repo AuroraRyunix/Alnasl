@@ -234,13 +234,47 @@ defmodule Alnasl.Tournaments do
 
   def for_table(_none), do: nil
 
-  @doc "The board of the round that table `number` stands for in this tournament."
-  def board_of_table(%Tournament{table_from: from}, number)
-      when is_integer(from) and is_integer(number) and number >= from,
-      do: number - from + 1
+  @doc """
+  The board of the round that table `number` stands for in this tournament:
+  the tables are counted from its first one, table `from` being its board 1.
 
-  def board_of_table(%Tournament{table_from: nil}, number) when is_integer(number), do: number
-  def board_of_table(_tournament, _number), do: nil
+  In a team event that keeps each match together (`keep_matches`, on by
+  default) the count is in matches and then boards: with four boards a
+  match, the fifth table is board 1 of match 2, whatever number the
+  pairing program gave that board in the round. A place no pairing names
+  (a team with the bye, a line-up not entered yet) stands for the number
+  it would have in a round numbered match by match. `round` is the round
+  the table is wanted for (the one on the boards by default).
+  """
+  def board_of_table(tournament, number, round \\ nil)
+
+  def board_of_table(%Tournament{table_from: from} = tournament, number, round)
+      when is_integer(from) and is_integer(number) and number >= from,
+      do: by_match(tournament, number - from + 1, round)
+
+  def board_of_table(%Tournament{table_from: nil} = tournament, number, round)
+      when is_integer(number),
+      do: by_match(tournament, number, round)
+
+  def board_of_table(_tournament, _number, _round), do: nil
+
+  defp by_match(%Tournament{keep_matches: true, kind: "linked"} = tournament, k, round) do
+    with true <- team_event?(tournament),
+         per when is_integer(per) <- boards_per_match(tournament) do
+      {number, place} = {div(k - 1, per) + 1, rem(k - 1, per) + 1}
+
+      found =
+        Enum.find(boards(tournament.id, round || tournament.round), fn b ->
+          b.match != nil and b.match.number == number and b.match.board == place
+        end)
+
+      if found, do: found.board, else: k
+    else
+      _plain -> k
+    end
+  end
+
+  defp by_match(_tournament, k, _round), do: k
 
   # --- the pairings ------------------------------------------------------------
 
@@ -286,9 +320,15 @@ defmodule Alnasl.Tournaments do
   @doc """
   The boards of a round that have a game to follow, in board order:
   `[%{board, label, game, kind, white, black, white_id, black_id,
-  white_rating, black_rating, result}]` with `white` and `black` the names
-  as a tile shows them (title first).
+  white_rating, black_rating, result, match, white_team, black_team}]` with
+  `white` and `black` the names as a tile shows them (title first).
   A bye has no board to set up and is left out.
+
+  In a team event `match` is `%{number, board, team_a, team_b}` - the
+  match's number in the round, the board's place in the match, and the two
+  teams as the pairing program names them - and `white_team` and
+  `black_team` say which team each player plays for. Elsewhere all three
+  are `nil`.
   """
   def boards(id, round) do
     with %{"rounds" => rounds} = document <- document(id),
@@ -309,12 +349,73 @@ defmodule Alnasl.Tournaments do
           black_id: b["black"],
           white_rating: rating(players[b["white"]]),
           black_rating: rating(players[b["black"]]),
-          result: b["result"]
+          result: b["result"],
+          match: match(b["match"]),
+          white_team: team(players[b["white"]]),
+          black_team: team(players[b["black"]])
         }
       end)
       |> Enum.sort_by(& &1.board)
     else
       _none -> []
+    end
+  end
+
+  defp match(%{"number" => number, "board" => board} = match)
+       when is_integer(number) and is_integer(board) do
+    %{
+      number: number,
+      board: board,
+      team_a: text_or_nil(match["team_a"]),
+      team_b: text_or_nil(match["team_b"])
+    }
+  end
+
+  defp match(_none), do: nil
+
+  defp team(%{"team" => team}), do: text_or_nil(team)
+  defp team(_none), do: nil
+
+  defp text_or_nil(value) when is_binary(value) and value != "", do: value
+  defp text_or_nil(_none), do: nil
+
+  # --- team events -------------------------------------------------------------
+
+  @doc """
+  Is it a team event? The pairing program says so in the document
+  (`tournament.team_event`); the box's own tournament never is.
+  """
+  def team_event?(%Tournament{kind: "local"}), do: false
+
+  def team_event?(%Tournament{} = tournament),
+    do: get_in(document(tournament) || %{}, ["tournament", "team_event"]) == true
+
+  def team_event?(id) when is_integer(id), do: id |> get() |> then(&(&1 && team_event?(&1)))
+  def team_event?(nil), do: false
+
+  @doc "How many boards a match has in a team event, else `nil`."
+  def boards_per_match(%Tournament{} = tournament) do
+    case get_in(document(tournament) || %{}, ["tournament", "boards_per_match"]) do
+      n when is_integer(n) and n > 0 -> n
+      _none -> nil
+    end
+  end
+
+  def boards_per_match(id) when is_integer(id),
+    do: id |> get() |> then(&(&1 && boards_per_match(&1)))
+
+  @doc """
+  The teams of the two players of a game, by the player ids the box
+  believes are playing it: `{white team | nil, black team | nil}`. Both
+  `nil` outside a team event.
+  """
+  def game_teams(tournament_id, white_id, black_id) do
+    with true <- team_event?(tournament_id),
+         %{} = document <- document(tournament_id) do
+      players = players_by_id(document)
+      {team(players[white_id]), team(players[black_id])}
+    else
+      _none -> {nil, nil}
     end
   end
 
@@ -366,7 +467,8 @@ defmodule Alnasl.Tournaments do
       title: if(p["title"] in [nil, ""], do: nil, else: p["title"]),
       rating: if(is_integer(p["rating"]) and p["rating"] > 0, do: p["rating"]),
       fide_id: if(is_integer(p["fide_id"]) and p["fide_id"] > 0, do: p["fide_id"]),
-      federation: if(p["federation"] in [nil, ""], do: nil, else: p["federation"])
+      federation: if(p["federation"] in [nil, ""], do: nil, else: p["federation"]),
+      team: team(p)
     }
   end
 

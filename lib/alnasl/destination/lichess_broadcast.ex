@@ -293,11 +293,12 @@ defmodule Alnasl.Destination.LichessBroadcast do
           {"Event", info.name || "?"},
           {"Site", info.city || "?"},
           {"Date", date},
-          {"Round", Integer.to_string(game.round)},
+          {"Round", Games.round_tag(game)},
           {"White", name(players.white, game.white)},
           {"Black", name(players.black, game.black)},
           {"Board", Integer.to_string(game.board_no)}
         ] ++
+          Games.team_tags(game) ++
           extra("White", players.white, shown) ++
           extra("Black", players.black, shown) ++
           if(info.time_control_pgn, do: [{"TimeControl", info.time_control_pgn}], else: []),

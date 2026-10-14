@@ -107,6 +107,23 @@ defmodule AlnaslWeb.TableWords do
   defp sentence({:gap, n}),
     do: gettext("Board %{n} of the round has no electronic board, though higher boards do.", n: n)
 
+  defp sentence({:gap_match, n, match, place}),
+    do:
+      gettext(
+        "Board %{n} of the round (match %{match}, board %{place}) has no electronic board, though higher boards do.",
+        n: n,
+        match: match,
+        place: place
+      )
+
+  defp sentence({:part_match, match, have, of}),
+    do:
+      gettext("Match %{match}: %{have} of its %{of} boards are on electronic boards.",
+        match: match,
+        have: have,
+        of: of
+      )
+
   defp sentence({:turned, name, n}),
     do:
       gettext("Board %{n}: \"%{name}\" is plugged in turned round. It is read the other way up.",

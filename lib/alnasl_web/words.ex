@@ -867,6 +867,36 @@ defmodule AlnaslWeb.Words do
         name: tournament(d)
       )
 
+  defp log("tournament.elsewhere", d),
+    do:
+      gettext(
+        "A connect code for %{server} reaches %{name}, which this box already has through another code. No second copy was made.",
+        server: d["server"],
+        name: tournament(d)
+      )
+
+  defp log("tournament.code_replaced", d),
+    do:
+      gettext("%{name} is asked through the connect code for %{server} from now on.",
+        name: tournament(d),
+        server: d["server"]
+      )
+
+  defp log("tournament.merged", d),
+    do:
+      gettext(
+        "%{name} was on the box twice, through two connect codes. Made one: %{boards} board(s) and %{games} game(s) moved to the first.",
+        name: tournament(d),
+        boards: d["boards"] || 0,
+        games: d["games"] || 0
+      )
+
+  defp log("tournament.merge_failed", d),
+    do:
+      gettext("Two copies of one tournament could not be made one: %{reason}",
+        reason: d["reason"]
+      )
+
   defp log("tournament.tables", d),
     do:
       gettext("Tables %{from}-%{to} play in %{name}.",

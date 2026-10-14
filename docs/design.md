@@ -821,7 +821,7 @@ says so; trying again is the arbiter's button.
 **Tables are the box's.** The pairing program knows boards of a round;
 the box knows tables. A tournament is given a range of tables, and the
 board a table stands for is its number counted from the range's first:
-tables 5-8, table 5 is board 1 (`Alnasl.Tables.home_board/1`). So the
+tables 5-8, table 5 is board 1 (`Alnasl.Tables.home_board/2`). So the
 arbiter numbers the hall once, 1 to N, and says where each tournament
 begins.
 
@@ -870,6 +870,62 @@ reported the game, or this one was wiped - is listed, and overruled
 refresh is not sent: the contract asks for reports on a move, a state
 change or a clock correction, and the pairing program shows no running
 clock.
+
+**One tournament, one row, however many codes.** Two codes can reach one
+tournament: a group's and the tournament's own, a desktop copy's code for
+this computer and the one for the hall's network. Two rows meant two
+reports of every game, two sets of tiles and two places a board could be
+put. The contract gives no identity but the address and the id there
+(`Alnasl.OpenPairings.Duplicates`), so the box takes the same tournament to
+be
+
+| | |
+|---|---|
+| the same address (scheme, host, port; `localhost` is `127.0.0.1`) and the same id | at listing time |
+| the same id, the other row still listed, and the listing's version the one that row holds | at listing time: the version hashes the whole document |
+| the same id and a game id in common | when the document arrives: game ids are random and live as long as the pairing |
+
+A second code that reaches a tournament the box has makes no row: the
+link writes it down (`links.elsewhere`) and Setup says "This code reaches
+X, which this box already has through Y". The first row stays, because
+the boards and games are on it. "Use this code" moves the row to the new
+link - the same row, so nothing is carried and nothing lost - and the old
+link goes when it reaches nothing else; the usual reason is a code
+withdrawn and made again. A row the old code stops listing while another
+code the box has lists it moves to that code by itself instead of being
+marked gone. Rows that exist already (a box from before the rule) are
+merged at start-up, before the first poll: the later into the first;
+boards, games and the outbox move; a game whose place the first row has
+filled with a game that began becomes the next game on that board and
+stays on the box, because two games cannot both be the one of a pairing;
+an empty game whose place is taken is dropped. The log says what moved.
+
+**A team event.** The document gives each board its match (`number`,
+`board` within it, `team_a`, `team_b`) and each player a team; boards keep
+their number through the round (`(match - 1) * boards per match + board`
+in OpenPairings), and that number stays the key everywhere: the results
+site keys a live game by round and that board, so its ingest needs no
+notion of a match (it draws matches from its own published snapshot), and
+the pairing program keys a report by game id. What changes is what the
+arbiter reads and the PGN:
+
+- the Round page groups the tiles by match in board order, names each
+  player's team, and adds the match's score *as the boards saw it* - games
+  the box saw finish with a result, labelled as such, because the score
+  that counts is the arbiter's;
+- with `keep_matches` (on by default) a tournament's tables are counted
+  match by match: table k is board `((k-1) mod n) + 1` of match
+  `div(k-1, n) + 1`, looked up in the round, so a match sits side by side
+  even if a round were numbered otherwise. With OpenPairings' numbering it
+  gives the same numbers as the plain count; it is the box not depending
+  on that. A place no pairing names stands for the number it would have;
+- "Ready for round N?" names a missing board by its match and says when
+  only part of a match is on electronic boards;
+- the PGN (the box's own, the one OpenPairings stores beside a report,
+  Lichess's) carries `WhiteTeam`/`BlackTeam` and `Round` as `3.6`. That
+  `Round` is what OpenPairings' and OpenResults' PGN exports write for a
+  game with moves; neither of them writes team tags, Lichess builds its
+  team table from them.
 
 ## 7. The processes
 

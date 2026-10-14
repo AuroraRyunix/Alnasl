@@ -297,7 +297,7 @@ defmodule Alnasl.Boards do
     # A board with a sticker goes back to its own number: "table 7 plays
     # board 3" was said for a round, not for the tournament.
     for board <- list(), board.tournament_id == tournament_id do
-      case Tables.home_board(board) || board.board_no do
+      case Tables.home_board(board, round) || board.board_no do
         nil -> :ok
         number -> link(board, round, number)
       end

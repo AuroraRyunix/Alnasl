@@ -40,6 +40,7 @@ defmodule Alnasl.Tournaments.Tournament do
     field :auto_start, :boolean, default: true
     field :table_from, :integer
     field :table_to, :integer
+    field :keep_matches, :boolean, default: true
     field :server_url, :string, default: ""
     field :slug, :string, default: ""
     field :relay_key, :string, default: "", redact: true
@@ -73,6 +74,7 @@ defmodule Alnasl.Tournaments.Tournament do
       :auto_start,
       :table_from,
       :table_to,
+      :keep_matches,
       :server_url,
       :slug,
       :relay_key,

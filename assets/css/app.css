@@ -2788,3 +2788,32 @@ tr.sought td:first-child {
     min-height: 2.75rem;
   }
 }
+
+/* A team event on the Round page: each match under a heading of its own,
+   its boards beneath it, the team beside each player's name. */
+.match-group + .match-group {
+  margin-top: 1.1rem;
+}
+
+.match-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3rem 0.8rem;
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--ink);
+}
+
+.match-score {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.tile .name .team {
+  margin-left: 0.35rem;
+  color: var(--quiet);
+  font-weight: 400;
+}

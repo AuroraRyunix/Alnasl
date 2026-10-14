@@ -12,6 +12,12 @@ defmodule AlnaslWeb.RoundLive do
   each at its own round, with its own "start round" and its own "ready or
   not" - and a row of names at the top to look at one of them alone. A box
   with one tournament looks as it always did.
+
+  A team event reads like one: the boards stand under their match ("Match
+  3: Team A - Team B"), in the match's board order, each tile naming the
+  team of each player, and the match carries its score as the boards saw
+  it finish - labelled so, because the score that counts is the arbiter's,
+  in OpenPairings.
   """
 
   use AlnaslWeb, :live_view
@@ -169,6 +175,7 @@ defmodule AlnaslWeb.RoundLive do
       time_control: info.time_control,
       site: site,
       tiles: tiles,
+      matches: if(Tournaments.team_event?(tournament), do: matches(tiles)),
       counts: counts,
       alarms:
         Map.get(counts, :out_of_sync, 0) + Map.get(counts, :no_signal, 0) +
@@ -202,6 +209,13 @@ defmodule AlnaslWeb.RoundLive do
       black: (snap && snap[:black]) || (game && game.black) || pairing[:black],
       white_rating: pairing[:white_rating],
       black_rating: pairing[:black_rating],
+      # A team event: the board's match, and the team each player plays for.
+      match: pairing[:match],
+      white_team: pairing[:white_team],
+      black_team: pairing[:black_team],
+      # The result that counts for the match as the boards saw it: a game the
+      # box saw finish with a result, not the arbiter's.
+      seen: if(game != nil and game.status == "finished" and not game.local, do: game.result),
       label: if(pairing[:label] not in [nil, "", to_string(no)], do: pairing[:label]),
       state: state,
       position: fen && fen |> Position.from_fen() |> then(&(&1 && Position.to_text(&1))),
@@ -237,6 +251,72 @@ defmodule AlnaslWeb.RoundLive do
       new_kind: Games.kind_for(history, pairing != %{}),
       site_url: site.page && ResultsSite.board_url(site.tournament, round, no)
     }
+  end
+
+  # The tiles of a team event under their matches: `[%{key, match, score,
+  # tiles}]`, matches in order and each match's boards in its board order.
+  # Boards no match names (a game on a board nobody paired) come last.
+  defp matches(tiles) do
+    {in_match, loose} = Enum.split_with(tiles, & &1.match)
+
+    groups =
+      in_match
+      |> Enum.group_by(& &1.match.number)
+      |> Enum.sort()
+      |> Enum.map(fn {number, tiles} ->
+        tiles = Enum.sort_by(tiles, & &1.match.board)
+        match = hd(tiles).match
+        %{key: number, match: match, score: score(match, tiles), tiles: tiles}
+      end)
+
+    if loose == [], do: groups, else: groups ++ [%{key: 0, match: nil, score: nil, tiles: loose}]
+  end
+
+  # The match as the boards saw it: points for each team from the games the
+  # box saw finish. Not the official score - that is the arbiter's.
+  defp score(match, tiles) do
+    finished = Enum.filter(tiles, &(&1.seen in ["1-0", "0-1", "1/2-1/2"]))
+
+    {a, b} =
+      Enum.reduce(finished, {0, 0}, fn tile, {a, b} ->
+        {white, black} =
+          case tile.seen do
+            "1-0" -> {2, 0}
+            "0-1" -> {0, 2}
+            _draw -> {1, 1}
+          end
+
+        a = a + if(tile.white_team == match.team_a, do: white, else: 0)
+        a = a + if(tile.black_team == match.team_a, do: black, else: 0)
+        b = b + if(tile.white_team == match.team_b, do: white, else: 0)
+        b = b + if(tile.black_team == match.team_b, do: black, else: 0)
+        {a, b}
+      end)
+
+    if finished == [],
+      do: nil,
+      else: %{a: a, b: b, done: length(finished), of: length(tiles)}
+  end
+
+  # Half points, counted in halves: 5 is 2½.
+  defp points(halves) do
+    whole = div(halves, 2)
+
+    cond do
+      rem(halves, 2) == 0 -> Integer.to_string(whole)
+      whole == 0 -> "½"
+      true -> "#{whole}½"
+    end
+  end
+
+  defp match_title(nil), do: gettext("Boards outside the matches")
+
+  defp match_title(match) do
+    gettext("Match %{n}: %{a} - %{b}",
+      n: match.number,
+      a: match.team_a || "?",
+      b: match.team_b || "?"
+    )
   end
 
   defp tile_state(nil, nil), do: :unlinked
@@ -642,7 +722,7 @@ defmodule AlnaslWeb.RoundLive do
         </div>
 
         <div
-          :if={section.tiles != []}
+          :if={section.tiles != [] and section.matches == nil}
           id={sid("tiles", section.tid)}
           class={[
             "tiles",
@@ -650,201 +730,47 @@ defmodule AlnaslWeb.RoundLive do
             length(section.tiles) > 12 && "many"
           ]}
         >
-          <div :for={tile <- section.tiles} id={"tile-wrap-#{tile.dom}"} class="tile-wrap">
-            <.link
-              id={"tile-#{tile.dom}"}
-              navigate={Scope.game_path(section.tid, section.round, tile.no)}
-              class={["tile", tone(tile.state), tile.pairing_flag && "flagged"]}
-              aria-label={gettext("Board %{n}: %{state}", n: tile.no, state: state_word(tile.state))}
-            >
-              <div class="tile-head">
-                <span class="tile-no">{tile.no}</span>
-                <span
-                  :if={@many? and section.title}
-                  id={"tile-tournament-#{tile.dom}"}
-                  class="flag plain"
-                >{section.title}</span>
-                <span :if={tile.label} id={"tile-label-#{tile.dom}"} class="flag plain">
-                  {gettext("table %{label}", label: tile.label)}
-                </span>
-                <span :if={tile.paused} class="flag plain">{gettext("Not sending")}</span>
-                <span
-                  :if={tile.stays_home?}
-                  id={"tile-local-flag-#{tile.dom}"}
-                  class="flag"
-                >{gettext("Stays on the box")}</span>
-                <span :if={tile.warning} class="flag">{gettext("Move missing?")}</span>
-                <span :for={piece <- tile.unseen} id={"tile-unseen-#{tile.dom}"} class="flag">{AlnaslWeb.Words.unseen(
-                  piece
-                )}</span>
-                <.state state={tile.state} />
-              </div>
-              <div
-                :if={section.outside_titles != [] and tile.board_name}
-                id={"tile-outside-#{tile.dom}"}
-                class="tile-note"
-              >
-                <.icon name="warning" />{gettext("Not playing in %{tournament}",
-                  tournament: Enum.join(section.outside_titles, " / ")
-                )}
-              </div>
-              <div :if={tile.pairing_flag} id={"tile-pairing-#{tile.dom}"} class="tile-note">
-                <.icon name="warning" />{gettext("Pairing changed in OpenPairings")}
-              </div>
-              <div :if={tile.alarm} id={"tile-alarm-#{tile.dom}"} class="tile-note tile-alarm">
-                <.icon name="error" />{tile.alarm}
-              </div>
-              <div :if={tile.reconstructed + tile.guessed > 0} class="tile-marks">
-                <span :if={tile.guessed > 0} id={"tile-guessed-#{tile.dom}"} class="flag guess">
-                  {AlnaslWeb.Words.marks(:guessed, tile.guessed)}
-                </span>
-                <span
-                  :if={tile.reconstructed > 0}
-                  id={"tile-reconstructed-#{tile.dom}"}
-                  class="flag rec"
-                >
-                  {AlnaslWeb.Words.marks(:recovered, tile.reconstructed)}
-                </span>
-              </div>
-              <div class="side">
-                <span class="dot black"></span>
-                <span id={"tile-black-#{tile.dom}"} class="name">
-                  {tile.black || gettext("Black")}
-                  <span :if={tile.black_rating} class="rating">{tile.black_rating}</span>
-                </span>
-                <.clock
-                  :if={tile.clock}
-                  ms={tile.clock.black_ms}
-                  running={tile.clock.running == :black}
-                />
-              </div>
-              <div class="tile-board">
-                <.board
-                  position={tile.position}
-                  last={tile.last}
-                  label={gettext("Position on board %{n}", n: tile.no)}
-                />
-              </div>
-              <div class="side">
-                <span class="dot white"></span>
-                <span id={"tile-white-#{tile.dom}"} class="name">
-                  {tile.white || gettext("White")}
-                  <span :if={tile.white_rating} class="rating">{tile.white_rating}</span>
-                </span>
-                <.clock
-                  :if={tile.clock}
-                  ms={tile.clock.white_ms}
-                  running={tile.clock.running == :white}
-                />
-              </div>
-              <div
-                :if={tile.clock_problem && tile.state != :clock_alarm}
-                id={"tile-clock-#{tile.dom}"}
-                class="tile-note"
-              >
-                <.icon name="warning" />{tile.clock_problem}
-              </div>
-              <div class="tile-foot">
-                <%= cond do %>
-                  <% tile.result -> %>
-                    <span class="last">{tile.result}</span>
-                  <% tile.last_san -> %>
-                    <span>{div(tile.count + 1, 2)}{if rem(tile.count, 2) == 1, do: ".", else: "..."}</span>
-                    <span class="last"><.figurine san={tile.last_san} /></span>
-                  <% true -> %>
-                    <span>{gettext("No moves")}</span>
-                <% end %>
-                <span :if={tile.suggestion && !tile.result} class="flag">{gettext("Result? %{r}",
-                  r: tile.suggestion
-                )}</span>
-                <span
-                  :if={tile.board_name}
-                  id={"tile-sticker-#{tile.dom}"}
-                  class="right"
-                  title={tile.board_name}
-                >{tile.sticker}</span>
-              </div>
-            </.link>
-            <details
-              :if={tile.state != :unlinked or tile.count > 0}
-              id={"tile-menu-#{tile.dom}"}
-              class="tile-menu"
-            >
-              <summary>
-                {if tile.finished?, do: gettext("Next game"), else: gettext("Finish game")}
-              </summary>
-              <div class="row">
-                <.button
-                  :for={result <- ["1-0", "1/2-1/2", "0-1"]}
-                  :if={!tile.finished?}
-                  id={"tile-result-#{tile.dom}-#{String.replace(result, "/", "")}"}
-                  small
-                  phx-click="result"
-                  phx-value-t={section.tid}
-                  phx-value-board={tile.no}
-                  phx-value-result={result}
-                >{result}</.button>
-                <.button
-                  :if={!tile.finished?}
-                  id={"tile-result-#{tile.dom}-none"}
-                  small
-                  phx-click="result"
-                  phx-value-t={section.tid}
-                  phx-value-board={tile.no}
-                  phx-value-result="*"
-                  data-confirm={gettext("Close this game without a result?")}
-                >{gettext("No result")}</.button>
-                <.button
-                  id={"tile-new-game-#{tile.dom}"}
-                  small
-                  variant={if tile.finished? and tile.new_kind == :replace, do: "primary"}
-                  phx-click="new_game"
-                  phx-value-t={section.tid}
-                  phx-value-board={tile.no}
-                  phx-value-kind={tile.new_kind}
-                  data-confirm={Words.new_game_confirm(tile.new_kind, tile.finished?)}
-                >
-                  {if tile.new_kind == :replace,
-                    do: gettext("New game"),
-                    else: gettext("An extra game: it stays on this box")}
-                </.button>
-                <.button
-                  :if={tile.new_kind == :extra and tile.paired?}
-                  id={"tile-new-game-replace-#{tile.dom}"}
-                  small
-                  phx-click="new_game"
-                  phx-value-t={section.tid}
-                  phx-value-board={tile.no}
-                  phx-value-kind="replace"
-                  data-confirm={Words.new_game_confirm(:replace_decided, tile.finished?)}
-                >{gettext("It replaces the game of the pairing")}</.button>
-              </div>
-            </details>
-            <div
-              :if={section.site.page && tile.site_url}
-              id={"tile-site-#{tile.dom}"}
-              class="tile-site"
-            >
-              <.site_link id={"tile-site-link-#{tile.dom}"} href={tile.site_url}>
-                {gettext("Live page")}
-              </.site_link>
-            </div>
-            <div :if={tile.stays_home?} id={"tile-local-#{tile.dom}"} class="tile-local">
-              <span>
-                {gettext("This game stays on the box: it is game %{n} on this board.",
-                  n: tile.game_no
-                )}
+          <.tile :for={tile <- section.tiles} tile={tile} section={section} many?={@many?} />
+        </div>
+
+        <%!-- A team event: the boards under their match, in the match's board order. --%>
+        <div :if={section.tiles != [] and section.matches} id={sid("matches", section.tid)}>
+          <section
+            :for={group <- section.matches}
+            id={sid("match", section.tid) <> "-#{group.key}"}
+            class="match-group"
+            aria-label={match_title(group.match)}
+          >
+            <h3 class="match-head">
+              <span id={sid("match-title", section.tid) <> "-#{group.key}"}>
+                {match_title(group.match)}
               </span>
-              <.button
-                id={"tile-send-this-#{tile.dom}"}
-                small
-                phx-click="send_this"
-                phx-value-t={section.tid}
-                phx-value-board={tile.no}
-                data-confirm={Words.send_this_confirm()}
-              >{gettext("Send this one instead")}</.button>
+              <span
+                :if={group.score}
+                id={sid("match-score", section.tid) <> "-#{group.key}"}
+                class="match-score"
+                title={
+                  gettext(
+                    "What the boards saw finish. The match's score is the arbiter's, in OpenPairings."
+                  )
+                }
+              >
+                {gettext("As the boards saw it: %{a} - %{b}",
+                  a: points(group.score.a),
+                  b: points(group.score.b)
+                )}
+                <span class="note">
+                  {gettext("(%{done} of %{of} finished)",
+                    done: group.score.done,
+                    of: group.score.of
+                  )}
+                </span>
+              </span>
+            </h3>
+            <div class={["tiles", length(group.tiles) <= 4 && "few"]}>
+              <.tile :for={tile <- group.tiles} tile={tile} section={section} many?={@many?} />
             </div>
-          </div>
+          </section>
         </div>
       </section>
     </Layouts.app>
@@ -896,6 +822,235 @@ defmodule AlnaslWeb.RoundLive do
     >
       {gettext("Start round %{n}", n: @section.round + 1)}
     </.button>
+    """
+  end
+
+  # One board of the round: the tile, its menu, and what stays on the box.
+  attr :tile, :map, required: true
+  attr :section, :map, required: true
+  attr :many?, :boolean, default: false
+
+  defp tile(assigns) do
+    ~H"""
+    <div id={"tile-wrap-#{@tile.dom}"} class="tile-wrap">
+      <.link
+        id={"tile-#{@tile.dom}"}
+        navigate={Scope.game_path(@section.tid, @section.round, @tile.no)}
+        class={["tile", tone(@tile.state), @tile.pairing_flag && "flagged"]}
+        aria-label={gettext("Board %{n}: %{state}", n: @tile.no, state: state_word(@tile.state))}
+      >
+        <div class="tile-head">
+          <span class="tile-no">{@tile.no}</span>
+          <span
+            :if={@many? and @section.title}
+            id={"tile-tournament-#{@tile.dom}"}
+            class="flag plain"
+          >{@section.title}</span>
+          <span :if={@tile.label} id={"tile-label-#{@tile.dom}"} class="flag plain">
+            {gettext("table %{label}", label: @tile.label)}
+          </span>
+          <span :if={@tile.match} id={"tile-match-#{@tile.dom}"} class="flag plain">
+            {gettext("match %{match}, board %{place}",
+              match: @tile.match.number,
+              place: @tile.match.board
+            )}
+          </span>
+          <span :if={@tile.paused} class="flag plain">{gettext("Not sending")}</span>
+          <span
+            :if={@tile.stays_home?}
+            id={"tile-local-flag-#{@tile.dom}"}
+            class="flag"
+          >{gettext("Stays on the box")}</span>
+          <span :if={@tile.warning} class="flag">{gettext("Move missing?")}</span>
+          <span :for={piece <- @tile.unseen} id={"tile-unseen-#{@tile.dom}"} class="flag">{AlnaslWeb.Words.unseen(
+            piece
+          )}</span>
+          <.state state={@tile.state} />
+        </div>
+        <div
+          :if={@section.outside_titles != [] and @tile.board_name}
+          id={"tile-outside-#{@tile.dom}"}
+          class="tile-note"
+        >
+          <.icon name="warning" />{gettext("Not playing in %{tournament}",
+            tournament: Enum.join(@section.outside_titles, " / ")
+          )}
+        </div>
+        <div :if={@tile.pairing_flag} id={"tile-pairing-#{@tile.dom}"} class="tile-note">
+          <.icon name="warning" />{gettext("Pairing changed in OpenPairings")}
+        </div>
+        <div :if={@tile.alarm} id={"tile-alarm-#{@tile.dom}"} class="tile-note tile-alarm">
+          <.icon name="error" />{@tile.alarm}
+        </div>
+        <div :if={@tile.reconstructed + @tile.guessed > 0} class="tile-marks">
+          <span :if={@tile.guessed > 0} id={"tile-guessed-#{@tile.dom}"} class="flag guess">
+            {AlnaslWeb.Words.marks(:guessed, @tile.guessed)}
+          </span>
+          <span
+            :if={@tile.reconstructed > 0}
+            id={"tile-reconstructed-#{@tile.dom}"}
+            class="flag rec"
+          >
+            {AlnaslWeb.Words.marks(:recovered, @tile.reconstructed)}
+          </span>
+        </div>
+        <div class="side">
+          <span class="dot black"></span>
+          <span
+            id={"tile-black-#{@tile.dom}"}
+            class="name"
+            title={@tile.black_team && "#{@tile.black} (#{@tile.black_team})"}
+          >
+            {@tile.black || gettext("Black")}
+            <span :if={@tile.black_rating} class="rating">{@tile.black_rating}</span>
+            <span
+              :if={@tile.black_team}
+              id={"tile-black-team-#{@tile.dom}"}
+              class="team"
+            >{@tile.black_team}</span>
+          </span>
+          <.clock
+            :if={@tile.clock}
+            ms={@tile.clock.black_ms}
+            running={@tile.clock.running == :black}
+          />
+        </div>
+        <div class="tile-board">
+          <.board
+            position={@tile.position}
+            last={@tile.last}
+            label={gettext("Position on board %{n}", n: @tile.no)}
+          />
+        </div>
+        <div class="side">
+          <span class="dot white"></span>
+          <span
+            id={"tile-white-#{@tile.dom}"}
+            class="name"
+            title={@tile.white_team && "#{@tile.white} (#{@tile.white_team})"}
+          >
+            {@tile.white || gettext("White")}
+            <span :if={@tile.white_rating} class="rating">{@tile.white_rating}</span>
+            <span
+              :if={@tile.white_team}
+              id={"tile-white-team-#{@tile.dom}"}
+              class="team"
+            >{@tile.white_team}</span>
+          </span>
+          <.clock
+            :if={@tile.clock}
+            ms={@tile.clock.white_ms}
+            running={@tile.clock.running == :white}
+          />
+        </div>
+        <div
+          :if={@tile.clock_problem && @tile.state != :clock_alarm}
+          id={"tile-clock-#{@tile.dom}"}
+          class="tile-note"
+        >
+          <.icon name="warning" />{@tile.clock_problem}
+        </div>
+        <div class="tile-foot">
+          <%= cond do %>
+            <% @tile.result -> %>
+              <span class="last">{@tile.result}</span>
+            <% @tile.last_san -> %>
+              <span>{div(@tile.count + 1, 2)}{if rem(@tile.count, 2) == 1, do: ".", else: "..."}</span>
+              <span class="last"><.figurine san={@tile.last_san} /></span>
+            <% true -> %>
+              <span>{gettext("No moves")}</span>
+          <% end %>
+          <span :if={@tile.suggestion && !@tile.result} class="flag">{gettext("Result? %{r}",
+            r: @tile.suggestion
+          )}</span>
+          <span
+            :if={@tile.board_name}
+            id={"tile-sticker-#{@tile.dom}"}
+            class="right"
+            title={@tile.board_name}
+          >{@tile.sticker}</span>
+        </div>
+      </.link>
+      <details
+        :if={@tile.state != :unlinked or @tile.count > 0}
+        id={"tile-menu-#{@tile.dom}"}
+        class="tile-menu"
+      >
+        <summary>
+          {if @tile.finished?, do: gettext("Next game"), else: gettext("Finish game")}
+        </summary>
+        <div class="row">
+          <.button
+            :for={result <- ["1-0", "1/2-1/2", "0-1"]}
+            :if={!@tile.finished?}
+            id={"tile-result-#{@tile.dom}-#{String.replace(result, "/", "")}"}
+            small
+            phx-click="result"
+            phx-value-t={@section.tid}
+            phx-value-board={@tile.no}
+            phx-value-result={result}
+          >{result}</.button>
+          <.button
+            :if={!@tile.finished?}
+            id={"tile-result-#{@tile.dom}-none"}
+            small
+            phx-click="result"
+            phx-value-t={@section.tid}
+            phx-value-board={@tile.no}
+            phx-value-result="*"
+            data-confirm={gettext("Close this game without a result?")}
+          >{gettext("No result")}</.button>
+          <.button
+            id={"tile-new-game-#{@tile.dom}"}
+            small
+            variant={if @tile.finished? and @tile.new_kind == :replace, do: "primary"}
+            phx-click="new_game"
+            phx-value-t={@section.tid}
+            phx-value-board={@tile.no}
+            phx-value-kind={@tile.new_kind}
+            data-confirm={Words.new_game_confirm(@tile.new_kind, @tile.finished?)}
+          >
+            {if @tile.new_kind == :replace,
+              do: gettext("New game"),
+              else: gettext("An extra game: it stays on this box")}
+          </.button>
+          <.button
+            :if={@tile.new_kind == :extra and @tile.paired?}
+            id={"tile-new-game-replace-#{@tile.dom}"}
+            small
+            phx-click="new_game"
+            phx-value-t={@section.tid}
+            phx-value-board={@tile.no}
+            phx-value-kind="replace"
+            data-confirm={Words.new_game_confirm(:replace_decided, @tile.finished?)}
+          >{gettext("It replaces the game of the pairing")}</.button>
+        </div>
+      </details>
+      <div
+        :if={@section.site.page && @tile.site_url}
+        id={"tile-site-#{@tile.dom}"}
+        class="tile-site"
+      >
+        <.site_link id={"tile-site-link-#{@tile.dom}"} href={@tile.site_url}>
+          {gettext("Live page")}
+        </.site_link>
+      </div>
+      <div :if={@tile.stays_home?} id={"tile-local-#{@tile.dom}"} class="tile-local">
+        <span>
+          {gettext("This game stays on the box: it is game %{n} on this board.",
+            n: @tile.game_no
+          )}
+        </span>
+        <.button
+          id={"tile-send-this-#{@tile.dom}"}
+          small
+          phx-click="send_this"
+          phx-value-t={@section.tid}
+          phx-value-board={@tile.no}
+          data-confirm={Words.send_this_confirm()}
+        >{gettext("Send this one instead")}</.button>
+      </div>
+    </div>
     """
   end
 end

@@ -103,6 +103,93 @@ defmodule Alnasl.FakeOpenPairings do
     tournament
   end
 
+  @doc """
+  A team event, as the contract's "Team events" describes it: `teams`
+  teams of `per_match` players each (`team: "Team n"` on every player),
+  round 1 paired as matches of team 1 against 2, 3 against 4, ... Boards
+  are numbered through the round, `(match - 1) * per_match + place`, and
+  each carries its `match`. Team A has White on odd boards of a match.
+  """
+  def add_team_tournament(id, opts \\ []) do
+    name = Keyword.get(opts, :name, "Team event #{id}")
+    per = Keyword.get(opts, :per_match, 4)
+    teams = Keyword.get(opts, :teams, 4)
+
+    players =
+      for team <- 1..teams, place <- 1..per do
+        n = (team - 1) * per + place
+
+        %{
+          "id" => id * 1000 + n,
+          "no" => n,
+          "name" => "#{name} T#{team} P#{place}",
+          "title" => nil,
+          "rating" => 2200 - n,
+          "federation" => "BEL",
+          "fide_id" => nil,
+          "team" => "Team #{team}"
+        }
+      end
+
+    tournament = %{
+      id: id,
+      name: name,
+      label: Keyword.get(opts, :label),
+      state: "running",
+      group: Keyword.get(opts, :group),
+      system: :swiss,
+      team: per,
+      players: players,
+      rounds: [team_round(id, 1, teams, per)],
+      openresults:
+        Keyword.get(opts, :openresults, %{
+          "server_url" => "http://results.test",
+          "slug" => "slug-#{id}",
+          "relay_key" => relay_key(id)
+        }),
+      time_control: Keyword.get(opts, :time_control, "90min+30sec/move")
+    }
+
+    Agent.update(__MODULE__, &put_in(&1.tournaments[id], tournament))
+    tournament
+  end
+
+  defp team_round(id, number, teams, per) do
+    boards =
+      for match <- 1..div(teams, 2), place <- 1..per do
+        {a, b} = {2 * match - 1, 2 * match}
+        player = fn team -> id * 1000 + (team - 1) * per + place end
+        {white, black} = if rem(place, 2) == 1, do: {a, b}, else: {b, a}
+
+        %{
+          "game" => "g#{id}r#{number}m#{match}b#{place}",
+          "board" => (match - 1) * per + place,
+          "label" => to_string((match - 1) * per + place),
+          "kind" => "game",
+          "white" => player.(white),
+          "black" => player.(black),
+          "result" => nil,
+          "match" => %{
+            "number" => match,
+            "board" => place,
+            "team_a" => "Team #{a}",
+            "team_b" => "Team #{b}"
+          }
+        }
+      end
+
+    %{"number" => number, "date" => nil, "chess960_position" => nil, "boards" => boards}
+  end
+
+  @doc "Pairs round `number` of a team event the same way as round 1 (new game ids)."
+  def pair_teams(id, number) do
+    update(id, fn t ->
+      teams = t.players |> Enum.map(& &1["team"]) |> Enum.uniq() |> length()
+      round = team_round(id, number, teams, t.team)
+      %{t | rounds: Enum.reject(t.rounds, &(&1["number"] == number)) ++ [round]}
+    end)
+  end
+
   @doc "A relay key for tournament `id`: not shaped like anybody's real one."
   def relay_key(id), do: "orrk" <> "_fake_" <> String.duplicate("k", 12) <> "#{id}"
 
@@ -171,10 +258,20 @@ defmodule Alnasl.FakeOpenPairings do
     Agent.get_and_update(__MODULE__, fn s ->
       # Built from pieces: a string that looks like a secret has no business
       # in a repository, even a made-up one.
-      secret = prefix <> "_" <> String.duplicate("x", 20) <> "-test-" <> "#{map_size(s.codes)}"
+      secret =
+        prefix <>
+          "_" <> String.duplicate("x", 20) <> "-test-" <> "#{System.unique_integer([:positive])}"
+
       {@root <> "#" <> secret, put_in(s.codes[secret], target)}
     end)
   end
+
+  @doc """
+  The same code under another address of the same program: a desktop copy
+  reached at `127.0.0.1` and at its address on the hall's network. The
+  fake answers whatever the address.
+  """
+  def at(code, root), do: String.replace(code, @root, root)
 
   @doc "The secret part of a code."
   def secret(code), do: code |> String.split("#") |> List.last()
@@ -425,8 +522,8 @@ defmodule Alnasl.FakeOpenPairings do
         "end_date" => "2026-07-06",
         "rounds" => 5,
         "state" => t.state,
-        "team_event" => false,
-        "boards_per_match" => nil,
+        "team_event" => Map.get(t, :team) != nil,
+        "boards_per_match" => Map.get(t, :team),
         "chess960" => false,
         "live_boards" => true,
         "display" =>

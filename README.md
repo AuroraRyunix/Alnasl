@@ -68,6 +68,25 @@ Lichess round.
 - **A connect code** from OpenPairings (Settings, Live boards) is for one
   tournament or for a group. Paste it under Setup, Tournaments. A tournament
   added to the group later appears on the box without a new code.
+- **One tournament is one tournament on the box, however many codes reach
+  it.** A group's code and the tournament's own, or a desktop copy's code
+  for this computer and for the hall's network, used to make two rows that
+  each reported every game. The second code now makes none and says so:
+  "This code reaches Open, which this box already has through ...". The
+  same tournament is known by the pairing program's address and the
+  tournament's id there, or - at another address of the same program - by
+  the listing's version and the game ids. "Use this code for Open" moves
+  the tournament to the new code (a code withdrawn and made again), boards
+  and games and all; the old code goes when it reaches nothing else. A box
+  that already has two rows has them made one at start-up, the later into
+  the first, and the log says what moved.
+- **A team event reads as matches.** The Round page puts each match's
+  boards under "Match 3: Team A - Team B", in board order, with each
+  player's team on the tile and the match's score as the boards saw it
+  finish - labelled so; the score that counts is the arbiter's, in
+  OpenPairings. Tables can keep each match together (on by default), and
+  "Ready for round N?" speaks of matches. The PGN of a team game has
+  `WhiteTeam`, `BlackTeam` and `Round` as `3.6`.
 - **After a code the box takes the obvious step or asks one question.** One
   tournament, and the box's own tournament unused: every board the box
   knows plays there at once (its table number is its board), and the line
@@ -653,7 +672,7 @@ before LiveChess does. The box leaves the boards as LiveChess expects them
 
 ## What is proven, and how
 
-By `mix test` (635 tests), three tools, three sessions with a real board and
+By `mix test` (695 tests), three tools, three sessions with a real board and
 one with a real loop:
 
 **The link, end to end against the real OpenPairings** (`mix
@@ -685,7 +704,12 @@ another board number, the two answers of the arbiter; the report of a game,
 `seq` with its duplicate and stale answers, the queue through an outage;
 each tournament's games to its own results page and Lichess round; the
 migration from a box with one tournament in its settings, on a database of
-its own.
+its own; a team event (boards by match, tables kept together by match even
+when the round is numbered otherwise, the ready list by match, the team
+tags, each destination's key); two codes for one tournament (a group's and
+its own in either order, a tournament joining a group later, two addresses
+of one program, a late match by game id, "use this code", a row its old
+code stops listing, and two rows made one at start-up).
 
 **The tracker**, against 69 games (59 classics before 1930, 7 constructed
 for underpromotion and en passant, 3 more; 4599 plies) played through the
@@ -902,9 +926,17 @@ and names on every page in both languages.
 - **A box elsewhere on the LAN cannot use a desktop OpenPairings.** The
   desktop copy answers on its own computer only; that is its decision, and
   the box says so when such a code gets no answer.
-- **Team events are shown as boards, not as matches.** The board link names
-  the match and the board within it; the box numbers the boards through the
-  round, as the results site does, and does not group the tiles by match.
+- **No real team event has been played through the box.** Matches on the
+  Round page, tables kept together by match, the team tags in the PGN and
+  what goes to each destination are built from the contract and tested
+  against the fake pairing program; neither a real OpenPairings team event
+  nor a results site showing one has been looked at with it. The match
+  score is the boards' view only.
+- **Two codes for one tournament are recognised by what the contract
+  gives**: the address and the id, or the same id with the same version or
+  a shared game id at another address. A tournament reached at two
+  addresses that is never paired and never agrees on a version at the
+  moment of a listing would still make two rows until its first round.
 - **Chess960 from the pairing program is not started.** The round's drawn
   position arrives and is ignored (see below).
 

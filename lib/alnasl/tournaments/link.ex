@@ -14,10 +14,15 @@ defmodule Alnasl.Tournaments.Link do
   `unauthorized` (the code is wrong or was withdrawn), `unsupported` (the
   program speaks a version of the link this box does not know) or
   `unreachable`.
+
+  `elsewhere` is what the code reaches that the box already has through
+  another code: JSON, `{"<id there>": {"tournament_id", "name"}}`. Those
+  tournaments are not made a second time (`Alnasl.OpenPairings.Duplicates`).
   """
   use Ecto.Schema
 
   schema "links" do
+    field :elsewhere, :string
     field :root, :string
     field :secret, :string, redact: true
     field :kind, :string

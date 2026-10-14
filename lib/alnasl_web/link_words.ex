@@ -112,6 +112,22 @@ defmodule AlnaslWeb.LinkWords do
     end
   end
 
+  @doc """
+  What a code reaches that the box has through another code
+  (`Alnasl.OpenPairings.Duplicates.shared/1`), in a sentence per
+  tournament.
+  """
+  def elsewhere(shared) when is_list(shared) do
+    Enum.map_join(shared, " ", fn found ->
+      gettext(
+        "This code reaches %{tournament}, which this box already has through %{other} (code %{hint}).",
+        tournament: found.name || "?",
+        other: about(found.through),
+        hint: Alnasl.Tournaments.secret_hint(found.through)
+      )
+    end)
+  end
+
   @doc "The sentence under a link that does not answer: the reason it last gave."
   def why(%Link{state: "unauthorized"}), do: error(:unauthorized)
 
