@@ -1,4 +1,5 @@
-"""Draws rel/windows/Alnasl.ico from the mark in priv/logo/mark.svg.
+"""Draws rel/windows/Alnasl.ico and rel/macos/Alnasl-icon.png from the mark
+in priv/logo/mark.svg.
 
 The mark is seven squares on a 24-unit grid; they are redrawn here rather
 than rendered from the SVG, because that needs a renderer nobody has
@@ -8,9 +9,9 @@ it knows, and stops when it does not.
 
     python rel/windows/build_icon.py
 
-Needs Pillow. The .ico is committed: the launcher's resource script and
-`vpk pack --icon` both want a file, and CI should not need Python to make a
-release.
+Needs Pillow. Both files are committed: the launcher's resource script and
+`vpk pack --icon` want the .ico, rel/macos/build_app.sh wants the PNG, and CI
+should not need Python to make a release.
 """
 
 import re
@@ -37,10 +38,9 @@ def check_mark():
         raise SystemExit(f"{MARK} no longer has the squares this script draws: {sorted(found)}")
 
 
-def draw(size):
+def draw(size, scale=16):
     # Drawn large and scaled down: the small sizes get their edges from the
     # resampling, not from rounding a 0.67-pixel gap to nothing.
-    scale = 16
     side = 28 * scale
     image = Image.new("RGBA", (side, side), (0, 0, 0, 0))
     pen = ImageDraw.Draw(image)
@@ -54,11 +54,23 @@ def draw(size):
     return image.resize((size, size), Image.LANCZOS)
 
 
+def write_mac_png(path):
+    # macOS draws its icons inside a margin (824 of 1024); a tile that fills
+    # the canvas looks a size too big beside everybody else's in the Dock.
+    # Drawn at 32 units a pixel (896 square) so 824 is a step down, not up.
+    canvas = Image.new("RGBA", (1024, 1024), (0, 0, 0, 0))
+    canvas.paste(draw(824, scale=32), (100, 100))
+    canvas.save(path)
+
+
 def main():
     check_mark()
     sizes = [256, 128, 64, 48, 32, 24, 16]
     draw(256).save(HERE / "Alnasl.ico", format="ICO", sizes=[(s, s) for s in sizes])
     print(f"wrote {HERE / 'Alnasl.ico'}")
+    png = HERE.parent / "macos" / "Alnasl-icon.png"
+    write_mac_png(png)
+    print(f"wrote {png}")
 
 
 if __name__ == "__main__":

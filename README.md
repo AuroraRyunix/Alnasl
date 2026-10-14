@@ -198,9 +198,12 @@ needs a paid developer account, which is coming). The first time:
 - "Alnasl is damaged and can't be opened": it is not. In Terminal:
   `xattr -dr com.apple.quarantine /Applications/Alnasl.app`, then open it.
 
-What starts is a small window that says "Alnasl is running", and your
-browser on `http://localhost:4040`. **The window is the program**, as on
-Windows: *Stop Alnasl* stops it (it asks first). The data is in
+What starts is an Alnasl icon in the Dock, a small window that says
+"Alnasl is running", and your browser on `http://localhost:4040`. It is an
+ordinary Dock app: right-click the icon, *Options > Keep in Dock* to keep it
+there; close the window and click the icon to get it back. *Stop Alnasl*,
+Cmd-Q or the Dock's *Quit* stops it, and asks first, because the boards are
+not read while it is stopped. The data is in
 `~/Library/Application Support/AlnaslData`, never in the app, so replacing
 the app or dragging it to the Bin leaves it alone. Updating is by hand for
 now: download the new zip and put the new app in place of the old one.

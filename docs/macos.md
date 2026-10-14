@@ -1,7 +1,7 @@
 # Alnasl on macOS
 
-Since 2026-10-14 every push to `main` builds **`Alnasl.app`** for both
-kinds of Mac, and a release attaches it. Nobody on the project has a Mac:
+Since 2026-10-14 every push to `main` builds **`Alnasl.app`** for Apple
+Silicon Macs, and a release attaches it. Nobody on the project has a Mac:
 everything here was built and started on GitHub's macOS runners, and the
 [test list](#testing-a-build-on-a-real-mac) at the end is what a person
 with a Mac (and ideally a DGT board) still has to confirm.
@@ -19,28 +19,41 @@ with a Mac (and ideally a DGT board) still has to confirm.
 ```
 Alnasl.app/Contents/
   Info.plist              rel/macos/Info.plist, version from the release's VERSION
-  MacOS/Alnasl            rel/macos/launcher.sh
+  MacOS/Alnasl            rel/macos/Launcher.swift, compiled (arm64, macOS 11+)
+  Resources/launcher.sh   rel/macos/launcher.sh
   Resources/app/          the release (bin/alnasl), whole
-  Resources/Alnasl.icns   from rel/windows/Alnasl.ico
+  Resources/Alnasl.icns   from rel/macos/Alnasl-icon.png
 ```
 
-`rel/macos/build_app.sh` builds it on the runner. The launcher behaves like
-`Alnasl.exe`, as far as a shell script and the Mac's own `osascript` allow:
+`rel/macos/build_app.sh` builds it on the runner and compiles the launcher
+there with `swiftc` (plain AppKit, one file, no Xcode project). The icon is
+`rel/macos/Alnasl-icon.png`, 1024 pixels with Apple's margin, drawn from
+`priv/logo/mark.svg` by `rel/windows/build_icon.py` like the Windows one.
+The two halves:
 
-- a second double-click opens the browser at the running copy instead of a
-  second server;
-- it starts the release, waits until `http://localhost:4040` answers, then
-  opens the browser;
-- it stays as a **small window** - "Alnasl is running at
-  http://localhost:4040", *Open in browser*, *Stop Alnasl* - in English, or
-  Dutch when the Mac's first language is Dutch. **Stop asks first**: while
-  Alnasl is stopped the boards are not read. Logging out or shutting down
-  stops it cleanly too. If it stops by itself, the window says so and
-  names the log.
+- **`Launcher.swift`** is what you see. A normal **Dock icon**: the running
+  dot, *Options > Keep in Dock*, Cmd-Tab. A **small window** - "Alnasl is
+  running at http://localhost:4040", *Open in browser*, *Stop Alnasl* - in
+  English, or Dutch when the Mac's first language is Dutch. Closing the
+  window only hides it; clicking the Dock icon brings it back, and the Dock
+  icon's menu has *Open in browser* too. The browser opens by itself once
+  the site answers.
+- **`launcher.sh`** is what it runs: the release, with distribution off and
+  everything it writes outside the bundle; it waits until the port answers
+  and stops the server on SIGTERM (clean `init:stop()`, twenty seconds, then
+  insists). It also watches its parent: if the app is force-quit, the server
+  goes with it.
 
-The window is AppleScript's `display dialog`: nothing compiled, nothing to
-sign apart. A menu-bar icon needs a Cocoa program nobody here can run. The
-app has no Dock icon; the window is how you find it.
+**Quitting stops the server.** *Stop Alnasl*, Cmd-Q and the Dock's *Quit*
+**ask first**, as on Windows: while Alnasl is stopped the boards are not
+read. Logging out and shutting down do not ask (a question would only hold
+up the logout) and stop it cleanly. A second start opens the browser at the
+running copy instead of a second server. If the server stops by itself, the
+app says so and names the log.
+
+Until 2026-10-14 the launcher was the shell script alone, with an
+AppleScript `display dialog` for a window and `LSUIElement` set: no Dock
+icon, nothing to keep in the Dock. The Swift half exists for that.
 
 Nothing is written into the app: a fresh download runs from a read-only,
 "translocated" copy, and a write would break the bundle's seal. The
@@ -55,7 +68,9 @@ Mac.
 ## Where the data is
 
 `~/Library/Application Support/AlnaslData` - the database, the PGN, the
-recordings, the codes and keys, and `launcher.log`. Never inside the app:
+recordings, the codes and keys, and `logs/server.log` - the server's output
+for the current run (a fresh file on every start; the previous run is kept
+once as `server.log.1`). Never inside the app:
 replacing the app (an update) or binning it (an uninstall) leaves it alone.
 `Alnasl.DataHome` refuses to start with a data folder inside any `.app`
 (`ALNASL_DATA` included), and `test/alnasl/data_home_test.exs` holds the
@@ -141,13 +156,18 @@ and `debug-console` are the Mac's own and never a board.
 
 In the macOS jobs of `.github/workflows/release.yml`:
 
-1. `build_app.sh`: the serial program is in the release; every binary links
-   only to the system; the oldest macOS they accept goes into `Info.plist`;
-   the ad-hoc signature verifies.
+1. `build_app.sh`: `Launcher.swift` compiles (swiftc's errors become
+   annotations on the run); the serial program is in the release; every
+   binary links only to the system - `/usr/lib` (the Swift runtime in
+   `/usr/lib/swift` included) and `/System`; the oldest macOS they accept
+   goes into `Info.plist`; the ad-hoc signature verifies.
 2. The zip is unpacked as an arbiter would, the bundle made read-only, the
    serial library loads from inside it (`Uart.available?()` is `true`).
-3. The launcher (no window, no browser: `ALNASL_LAUNCHER_NO_UI=1`) starts it
-   with a scratch data folder on port 4046. It must serve its help page on
+   `Info.plist` has no `LSUIElement`, and `CFBundleExecutable` is a Mach-O
+   arm64 executable.
+3. The bundle's own executable, with `--headless` (no window, no browser;
+   it runs `launcher.sh` and passes signals on), starts it with a scratch
+   data folder on port 4046. It must serve its help page on
    `127.0.0.1:4046` alone, without `epmd`.
 4. A second start must leave at once.
 5. SIGTERM to the launcher must stop the server, leaving nothing running;
@@ -156,12 +176,12 @@ In the macOS jobs of `.github/workflows/release.yml`:
 
 The zip is uploaded as the workflow artifact `release_assets_macos-aarch64`
 on every push, and attached to the release when one is
-published. What CI cannot check: the window, Gatekeeper on a download, a
-real board. That is the list below.
+published. What CI cannot check: the window, the Dock, Gatekeeper on a
+download, a real board. That is the list below.
 
 ## Testing a build on a real Mac
 
-For the owner's M1 Pro, before anything is released. About twenty
+For the owner's M1 Pro, before anything is released. About twenty-five
 minutes, plus the board.
 
 **Get the build**
@@ -179,7 +199,9 @@ minutes, plus the board.
 
 5. Double-click it. Expect macOS to refuse; follow
    [Opening it the first time](#unsigned-for-now). Note the message you saw.
-6. Expect within about ten seconds: a small window **"Alnasl is running at
+6. Expect within about ten seconds: an Alnasl icon in the **Dock** with a
+   running dot (the white tile with the squares, sized like its
+   neighbours), a small window **"Alnasl is running at
    http://localhost:4040"** (in Dutch if your Mac is in Dutch) with *Stop
    Alnasl* and *Open in browser*, and the browser on Alnasl's site. No
    Terminal window.
@@ -191,7 +213,7 @@ minutes, plus the board.
 
 8. Finder > *Go > Go to Folder...* >
    `~/Library/Application Support/AlnaslData`: `alnasl.db`,
-   `secret_key_base`, `launcher.log`.
+   `secret_key_base`, `logs/server.log`.
 
 **A board**
 
@@ -207,30 +229,39 @@ minutes, plus the board.
 
 **Running, stopping**
 
-12. Close the browser tab, *Open in browser*: it comes back. Double-click
-    the app again: a browser tab, no second window.
-13. **Stop Alnasl**: it asks first ("the boards are not read while it is
-    stopped"). *Keep running* keeps it; *Stop Alnasl* stops it: the window
-    goes, `http://localhost:4040` no longer answers, *Activity Monitor* has
-    no `beam`.
-14. Start it again: no Gatekeeper question; the board is still known by its
-    number.
-15. With it running, log out and back in: it starts normally afterwards.
+12. Close the browser tab, *Open in browser*: it comes back. Cmd-Tab:
+    Alnasl is in the list.
+13. Close the small window (red button): the Dock icon keeps its dot and
+    the board keeps being read. Click the **Dock icon**: the window comes
+    back. Right-click the Dock icon: *Open in browser* opens a tab; choose
+    *Options > Keep in Dock*.
+14. Double-click the app in Applications again: a browser tab, still one
+    Dock icon, no second server.
+15. **Stop Alnasl**: it asks first ("the boards are not read while it is
+    stopped"). *Keep running* keeps it; *Stop Alnasl* stops it: the app
+    goes (the kept icon stays, without a dot), `http://localhost:4040` no
+    longer answers, *Activity Monitor* has no `beam`.
+16. Start it again **from the Dock icon**: no Gatekeeper question; the board
+    is still known by its number. Quit with **Cmd-Q**: the same question,
+    and the same clean stop. Start it again and quit with the Dock icon's
+    *Quit*: likewise.
+17. With it running, log out and back in: no question holds up the logout,
+    and it starts normally afterwards.
 
 **Updates**
 
-16. Setup > Updates: the setting is there; *Look now* says nothing newer for
+18. Setup > Updates: the setting is there; *Look now* says nothing newer for
     the newest build. If a newer release exists, the notice gives the size
     of `alnasl-macos-aarch64.zip` and the Mac line of what to do - no
     *Download and install* button. That is intended on a Mac.
 
 **Removing it**
 
-17. Stop Alnasl, drag it from Applications to the Bin, empty the Bin.
-18. `~/Library/Application Support/AlnaslData` is **still there**.
-19. Install again (3-5): the board and its number are back.
+19. Quit Alnasl, drag it from Applications to the Bin, empty the Bin.
+20. `~/Library/Application Support/AlnaslData` is **still there**.
+21. Install again (3-5): the board and its number are back.
 
 **Report back**: macOS version, the Gatekeeper message (step 5), the
 adapter and whether a driver was needed (step 9), any step that went
-otherwise, and `launcher.log` if something failed. Delete the data folder
+otherwise, and `logs/server.log` if something failed. Delete the data folder
 yourself afterwards if you want everything gone; the app never does.

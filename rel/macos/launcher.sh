@@ -1,37 +1,42 @@
 #!/bin/sh
-# Alnasl.app's front door: copied to Contents/MacOS/Alnasl by
-# rel/macos/build_app.sh, and what Finder runs when the app is opened.
-#
-# It follows Alnasl.exe (rel/windows/launcher.c) in everything an arbiter
-# can see, as far as a shell script and macOS's own `osascript` allow:
+# The server half of Alnasl.app: copied to Contents/Resources/launcher.sh by
+# rel/macos/build_app.sh and run by the app's own executable
+# (rel/macos/Launcher.swift, Contents/MacOS/Alnasl), which is the half you
+# see: the Dock icon, the small window, the browser, the question before
+# stopping. Finder never runs this file directly; a terminal can.
 #
 #   1. Works out where it is from its own path and finds the release in
 #      Contents/Resources/app.
-#   2. If something already answers on the port, offers to open it in the
-#      browser and leaves: a second double-click is not a second server.
+#   2. If something already answers on the port, leaves at once (exit 0): a
+#      second start is not a second server. The app then opens a tab.
 #   3. Starts the release with the data in
 #      ~/Library/Application Support/AlnaslData (unless ALNASL_DATA says
 #      otherwise), Erlang distribution off, and every file it writes OUTSIDE
-#      the bundle (see "Nothing is written into the app").
-#   4. Waits until the port really answers, then opens the browser.
-#   5. Stays, as a small window: "Alnasl is running", with "Open in browser"
-#      and "Stop Alnasl". Stopping asks first, as on Windows: while Alnasl is
-#      stopped the boards are not read.
+#      the bundle (see "Nothing is written into the app"). Its output is this
+#      script's output; the app points that at logs/server.log in the data
+#      folder, a fresh file on every start.
+#   4. Waits until the port really answers, says so, and then waits for the
+#      server for as long as it runs.
 #
-# English, and Dutch when the Mac's first language is Dutch. The site has
-# its own language setting; this window is on screen before anything could
-# read it.
+# ## Exit codes, which the app turns into sentences
 #
-# The window is AppleScript's `display dialog`, run by `osascript`, which
-# every Mac has: nothing compiled, nothing to sign separately. A menu-bar
-# icon needs a real Cocoa program, which nobody here can run.
+#   0  stopped when asked, or another copy already answers
+#   2  the release is missing from inside the app
+#   3  the data folder cannot be created
+#   4  the server stopped while starting
+#   5  no answer within two minutes; the server has been stopped
+#   anything else, once it answered: the server's own exit status
 #
 # ## Stopping
 #
-# SIGTERM to the BEAM - a clean `init:stop()`, the database closed in order
-# - and up to twenty seconds before insisting. Logging out or shutting down
-# sends this script SIGTERM, and the trap passes it on. If the server dies by
-# itself, the window says so and names the log.
+# SIGTERM, SIGINT or SIGHUP to this script sends SIGTERM to the BEAM - a
+# clean `init:stop()`, the database closed in order - and up to twenty
+# seconds before insisting. The app sends the SIGTERM on Quit (after asking),
+# on logout and on shutdown (without asking).
+#
+# If the app itself disappears without that (Force Quit, a crash), this
+# script notices its parent is gone and stops the server anyway: a server
+# nobody can see is a server nobody can stop.
 #
 # ## Nothing is written into the app
 #
@@ -40,18 +45,13 @@
 # goes to the user's temporary folder, the working directory (crash dumps)
 # is the data folder, and the data folder is one no update and no uninstall
 # reaches - `Alnasl.DataHome` refuses any folder inside a `.app`. CI starts
-# this file from a read-only bundle to prove it.
+# the app from a read-only bundle to prove it.
 #
 # ## No updates from here
 #
-# On Windows this launcher's twin applies an update; a Mac app is replaced
-# by hand for now (docs/macos.md). ALNASL_UPDATER=macos-app only tells the
-# Setup page what kind of copy this is.
-#
-# ## Headless (CI)
-#
-# ALNASL_LAUNCHER_NO_UI=1 skips every window and the browser, logs to
-# standard output, and waits for the server.
+# On Windows the launcher applies an update; a Mac app is replaced by hand
+# for now (docs/macos.md). ALNASL_UPDATER=macos-app only tells the Setup page
+# what kind of copy this is.
 
 set -u
 
@@ -62,78 +62,25 @@ release="$app/bin/alnasl"
 PORT=${PORT:-4040}
 url="http://localhost:$PORT"
 ALNASL_DATA=${ALNASL_DATA:-"$HOME/Library/Application Support/AlnaslData"}
-headless=${ALNASL_LAUNCHER_NO_UI:-}
-
-version=$(cat "$app/VERSION" 2>/dev/null)
-title="Alnasl${version:+ $version}"
-
-case "$(defaults read -g AppleLanguages 2>/dev/null | sed -n '2p')" in
-  *'"nl'* | *' nl'*) dutch=1 ;;
-  *) dutch= ;;
-esac
-
-# say <English> <Dutch>
-say() { if [ -n "$dutch" ]; then printf '%s' "$2"; else printf '%s' "$1"; fi; }
-
-t_running=$(say "Alnasl is running at $url." "Alnasl draait op $url.")
-t_running_hint=$(say \
-  "Leave this window open: stopping Alnasl stops reading the boards." \
-  "Laat dit venster open: als je Alnasl stopt, worden de borden niet meer gelezen.")
-t_open=$(say "Open in browser" "Openen in browser")
-t_stop=$(say "Stop Alnasl" "Alnasl stoppen")
-t_keep=$(say "Keep running" "Laten draaien")
-t_confirm=$(say \
-  "Stop Alnasl? The boards are not read while it is stopped: moves played meanwhile have to be put right by hand." \
-  "Alnasl stoppen? Zolang het gestopt is, worden de borden niet gelezen: zetten die intussen gespeeld worden, moet je achteraf met de hand rechtzetten.")
-t_ok=$(say "OK" "OK")
-
-# A dialog with one button. Texts go in as arguments, never into the
-# script: a path with a quote in it must not become AppleScript.
-tell() {
-  if [ "$headless" = 1 ]; then
-    echo "$1" >&2
-    return
-  fi
-  osascript - "$1" "$title" "$t_ok" >/dev/null 2>&1 <<'EOF'
-on run argv
-  activate
-  display dialog (item 1 of argv) with title (item 2 of argv) buttons {item 3 of argv} default button 1 with icon caution
-end run
-EOF
-}
-
-# Two buttons; prints the one chosen (nothing if the dialog went away).
-ask() {
-  osascript - "$1" "$title" "$2" "$3" 2>/dev/null <<'EOF'
-on run argv
-  activate
-  set reply to display dialog (item 1 of argv) with title (item 2 of argv) buttons {item 3 of argv, item 4 of argv} default button 2
-  return button returned of reply
-end run
-EOF
-}
 
 answers() {
   curl -fsS --max-time 2 -o /dev/null "http://127.0.0.1:$PORT/help" 2>/dev/null
 }
 
 if [ ! -x "$release" ]; then
-  tell "$(say \
-    "Alnasl is incomplete: the program is missing from inside the app. Download it again and replace this copy." \
-    "Alnasl is onvolledig: het programma ontbreekt in de app. Download hem opnieuw en vervang deze kopie.")"
-  exit 1
+  echo "Alnasl is incomplete: $release is missing." >&2
+  exit 2
 fi
 
-# Already running: show it, do not start a second one that cannot bind.
+# Already running: do not start a second one that cannot bind.
 if answers; then
-  [ "$headless" = 1 ] || open "$url"
+  echo "Alnasl already answers on $url"
   exit 0
 fi
 
 if ! mkdir -p "$ALNASL_DATA"; then
-  tell "$(say "Alnasl cannot create its data folder: $ALNASL_DATA" \
-    "Alnasl kan zijn gegevensmap niet maken: $ALNASL_DATA")"
-  exit 1
+  echo "Alnasl cannot create its data folder: $ALNASL_DATA" >&2
+  exit 3
 fi
 
 export ALNASL_DATA PORT
@@ -145,19 +92,10 @@ export RELEASE_TMP="${TMPDIR:-/tmp}/Alnasl"
 # Finder starts an app with no locale, and the VM then runs in latin1.
 export LANG="${LANG:-en_US.UTF-8}"
 mkdir -p "$RELEASE_TMP"
-cd "$ALNASL_DATA" || exit 1
+cd "$ALNASL_DATA" || exit 3
 
-if [ "$headless" = 1 ]; then
-  log=/dev/stdout
-  "$release" start &
-else
-  log="$ALNASL_DATA/launcher.log"
-  {
-    echo
-    echo "=== $(date '+%Y-%m-%d %H:%M:%S') $title from $contents"
-  } >>"$log"
-  "$release" start >>"$log" 2>&1 &
-fi
+echo "Starting $release ($url, data in $ALNASL_DATA)"
+"$release" start &
 pid=$!
 
 stop_server() {
@@ -170,89 +108,37 @@ stop_server() {
   kill -KILL "$pid" 2>/dev/null || true
 }
 
+# The parent watch: the app, gone without a word, takes the server with it.
+# Not when the parent is launchd (pid 1), which `kill -0` cannot ask about.
+parent=$PPID
+watcher=
+if [ "$parent" -gt 1 ]; then
+  (
+    while kill -0 "$parent" 2>/dev/null; do sleep 2; done
+    kill -TERM $$ 2>/dev/null
+  ) &
+  watcher=$!
+fi
+
+trap 'if [ -n "$watcher" ]; then kill "$watcher" 2>/dev/null; fi' EXIT
 trap 'stop_server; exit 0' TERM INT HUP
 
 waited=0
 until answers; do
   if ! kill -0 "$pid" 2>/dev/null; then
-    tell "$(say "Alnasl could not start. The reason is at the end of this file: $log" \
-      "Alnasl kon niet starten. De reden staat aan het einde van dit bestand: $log")"
-    exit 1
+    echo "Alnasl could not start." >&2
+    exit 4
   fi
   if [ "$waited" -ge 120 ]; then
     stop_server
-    tell "$(say "Alnasl did not answer within two minutes, and has been stopped. This file says how far it got: $log" \
-      "Alnasl antwoordde niet binnen twee minuten en is gestopt. In dit bestand staat hoe ver het kwam: $log")"
-    exit 1
+    echo "Alnasl did not answer within two minutes, and has been stopped." >&2
+    exit 5
   fi
   sleep 1
   waited=$((waited + 1))
 done
 
-if [ "$headless" = 1 ]; then
-  echo "Alnasl answers on $url"
-  wait "$pid"
-  exit $?
-fi
-
-open "$url"
-
-# The status window, for as long as the server runs. A dialog that cannot
-# be shown at all (no window server) fails at once; three in a row and the
-# launcher stops trying and simply waits.
-answer_file="$RELEASE_TMP/launcher-answer.$$"
-quick_failures=0
-while kill -0 "$pid" 2>/dev/null; do
-  started=$(date +%s)
-  ask "$t_running
-
-$t_running_hint" "$t_stop" "$t_open" >"$answer_file" &
-  dialog=$!
-
-  while kill -0 "$dialog" 2>/dev/null; do
-    if ! kill -0 "$pid" 2>/dev/null; then
-      kill "$dialog" 2>/dev/null
-      break
-    fi
-    sleep 1
-  done
-  wait "$dialog" 2>/dev/null
-  reply=$(cat "$answer_file" 2>/dev/null)
-
-  if ! kill -0 "$pid" 2>/dev/null; then
-    rm -f "$answer_file"
-    tell "$(say "Alnasl has stopped by itself. The reason is at the end of this file: $log" \
-      "Alnasl is vanzelf gestopt. De reden staat aan het einde van dit bestand: $log")"
-    exit 1
-  fi
-
-  case "$reply" in
-    "$t_stop")
-      if [ "$(ask "$t_confirm" "$t_keep" "$t_stop")" = "$t_stop" ]; then
-        rm -f "$answer_file"
-        stop_server
-        exit 0
-      fi
-      ;;
-    "$t_open")
-      quick_failures=0
-      open "$url"
-      ;;
-    *)
-      if [ $(($(date +%s) - started)) -lt 3 ]; then
-        quick_failures=$((quick_failures + 1))
-      else
-        quick_failures=0
-      fi
-      if [ "$quick_failures" -ge 3 ]; then
-        rm -f "$answer_file"
-        wait "$pid"
-        exit $?
-      fi
-      sleep 1
-      ;;
-  esac
-done
-
-rm -f "$answer_file"
-exit 0
+echo "Alnasl answers on $url"
+wait "$pid"
+status=$?
+exit "$status"

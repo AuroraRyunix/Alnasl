@@ -156,7 +156,8 @@ defmodule Alnasl.ReleaseFilesTest do
                "rel/windows/#{name} is missing"
       end
 
-      for name <- ~w(launcher.sh build_app.sh sign_and_notarize.sh Info.plist entitlements.plist) do
+      for name <- ~w(Launcher.swift launcher.sh build_app.sh sign_and_notarize.sh Info.plist
+                     entitlements.plist Alnasl-icon.png) do
         assert File.exists?(Path.join([@root, "rel/macos", name])), "rel/macos/#{name} is missing"
       end
 
@@ -165,8 +166,38 @@ defmodule Alnasl.ReleaseFilesTest do
       assert plist =~ "<string>__VERSION__</string>"
       refute plist =~ ~r{<key>CFBundleShortVersionString</key>\s*<string>\d}
 
-      assert read("rel/macos/build_app.sh") =~
-               ~s(cp "$here/launcher.sh" "$app/Contents/MacOS/Alnasl")
+      # The executable is the compiled Swift launcher; the script that
+      # starts the server sits beside the release as a resource.
+      build = read("rel/macos/build_app.sh")
+      assert plist =~ ~r{<key>CFBundleExecutable</key>\s*<string>Alnasl</string>}
+      assert build =~ ~s(-o "$app/Contents/MacOS/Alnasl" "$swift_source")
+      assert build =~ "-target arm64-apple-macos11"
+      assert build =~ ~s(cp "$here/launcher.sh" "$app/Contents/Resources/launcher.sh")
+      assert build =~ "logo=rel/macos/Alnasl-icon.png"
+    end
+
+    test "the Mac app has a Dock icon, and a launcher that asks before it stops" do
+      # LSUIElement hides the app from the Dock and Cmd-Tab.
+      refute read("rel/macos/Info.plist") =~ "LSUIElement"
+
+      swift = read("rel/macos/Launcher.swift")
+      assert swift =~ ~s(let defaultDataFolder = "Library/Application Support/AlnaslData")
+      assert swift =~ ~s(let dataEnv = "ALNASL_DATA")
+      assert swift =~ ~s(let releaseInResources = "app/bin/alnasl")
+      assert swift =~ ~s(let probePath = "/help")
+      assert swift =~ "let askBeforeStopping = true"
+      assert swift =~ ~s[appendingPathComponent("launcher.sh")]
+      assert swift =~ ~s[contains("--headless")]
+      assert read(".github/workflows/release.yml") =~ ~s("$launcher" --headless)
+
+      imports = Regex.scan(~r/^import (\w+)$/m, swift, capture: :all_but_first)
+      assert Enum.sort(List.flatten(imports)) == ["AppKit", "Foundation"]
+    end
+
+    test "the Mac icon has Apple's margin around the tile" do
+      png = File.read!(Path.join(@root, "rel/macos/Alnasl-icon.png"))
+      assert <<0x89, "PNG", _::binary-size(12), width::32, height::32, _::binary>> = png
+      assert {width, height} == {1024, 1024}
     end
 
     test "the launcher and the program agree on the code that means \"update me\"" do

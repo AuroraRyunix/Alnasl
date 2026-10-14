@@ -375,9 +375,10 @@ jobs:
           Get-ChildItem dist | Select-Object Name, Length
 
       # --- macOS: Alnasl.app, zipped ----------------------------------------
-      # The release inside a bundle whose executable is rel/macos/launcher.sh:
-      # a small window that says Alnasl is running and stops it, the browser
-      # opened once the site answers. build_app.sh also checks that the
+      # The release inside a bundle whose executable is rel/macos/Launcher.swift,
+      # compiled here with swiftc: a Dock icon and a small window that says
+      # Alnasl is running and stops it, the browser opened once the site
+      # answers. It runs rel/macos/launcher.sh to start and stop the server. build_app.sh also checks that the
       # serial program is in, that no binary links to anything but the
       # system (the runner has Homebrew, the hall's Mac does not), and writes
       # the oldest macOS they all accept into Info.plist. docs/macos.md.
@@ -426,7 +427,9 @@ jobs:
 
       # The zip unpacked as an arbiter unpacks it, the bundle made READ-ONLY
       # (a fresh download runs from a read-only, translocated copy), and
-      # started through the file Finder runs. Then, as on Linux: it answers,
+      # started through the file Finder runs (with --headless: no window, no
+      # browser). First, that it is a Dock citizen: no LSUIElement, and the
+      # executable a Mach-O arm64 program. Then, as on Linux: it answers,
       # on loopback alone, without distribution, with the serial library;
       # and, for the app: a second start leaves at once, SIGTERM to the
       # launcher stops the server, nothing is left running, the bundle's
@@ -447,17 +450,32 @@ jobs:
 
           export ALNASL_DATA="$RUNNER_TEMP/alnasl-app-data"
           export PORT=4046
-          export ALNASL_LAUNCHER_NO_UI=1
 
           status=0
           fail() { echo "::error::$1"; status=1; }
+
+          # A Dock icon needs no LSUIElement, and an executable that is a
+          # real program: the compiled launcher, for Apple Silicon.
+          plist="$app/Contents/Info.plist"
+          if /usr/libexec/PlistBuddy -c 'Print :LSUIElement' "$plist" >/dev/null 2>&1; then
+            fail "Info.plist has LSUIElement: the app would have no Dock icon"
+          fi
+          exe=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$plist")
+          [ "$app/Contents/MacOS/$exe" = "$launcher" ] ||
+            fail "CFBundleExecutable is '$exe', not the launcher this test starts"
+          kind=$(file -b "$launcher")
+          echo "Contents/MacOS/$exe: $kind"
+          case "$kind" in
+            "Mach-O 64-bit executable arm64"*) ;;
+            *) fail "Contents/MacOS/$exe is not a Mach-O arm64 executable: $kind" ;;
+          esac
 
           # The serial library, from inside the bundle, as on Linux.
           serial=$(RELEASE_TMP="$RUNNER_TEMP/alnasl-eval" "$app/Contents/Resources/app/bin/alnasl" \
             eval 'IO.puts(Alnasl.Transport.Uart.available?())' | tail -n 1)
           [ "$serial" = true ] || fail "the serial library does not load: $serial"
 
-          "$launcher" > "$RUNNER_TEMP/alnasl.log" 2>&1 &
+          "$launcher" --headless > "$RUNNER_TEMP/alnasl.log" 2>&1 &
           pid=$!
 
           body=""
@@ -485,7 +503,7 @@ jobs:
           [ "$beam" = "127.0.0.1:$PORT" ] ||
             fail "the program listens on '$beam', not on 127.0.0.1:$PORT alone"
 
-          "$launcher" > "$RUNNER_TEMP/alnasl-second.log" 2>&1 &
+          "$launcher" --headless > "$RUNNER_TEMP/alnasl-second.log" 2>&1 &
           second=$!
           for _ in $(seq 1 15); do
             kill -0 "$second" 2>/dev/null || break

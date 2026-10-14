@@ -10,9 +10,16 @@
 # when the certificate exists.
 #
 #   Alnasl.app/Contents/Info.plist         rel/macos/Info.plist, filled in
-#   Alnasl.app/Contents/MacOS/Alnasl       rel/macos/launcher.sh
+#   Alnasl.app/Contents/MacOS/Alnasl       rel/macos/Launcher.swift, compiled
+#   Alnasl.app/Contents/Resources/launcher.sh   rel/macos/launcher.sh
 #   Alnasl.app/Contents/Resources/app/     the release, whole
-#   Alnasl.app/Contents/Resources/Alnasl.icns   from rel/windows/Alnasl.ico
+#   Alnasl.app/Contents/Resources/Alnasl.icns   from rel/macos/Alnasl-icon.png
+#
+# The executable is a small AppKit program (the Dock icon and the window)
+# compiled here with swiftc for arm64 and macOS 11; launcher.sh beside the
+# release is the part that starts and stops the server. A Swift program on
+# macOS 11 and newer links to /usr/lib/swift and the system frameworks
+# only, which the check below allows like any other system library.
 #
 # Checked here, because nothing after this would notice until somebody's Mac
 # refused to start the program:
@@ -52,28 +59,47 @@ mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 
 # ditto, not cp -R: it keeps modes, symlinks and extended attributes.
 ditto "$payload" "$app/Contents/Resources/app"
-cp "$here/launcher.sh" "$app/Contents/MacOS/Alnasl"
-chmod 755 "$app/Contents/MacOS/Alnasl"
+cp "$here/launcher.sh" "$app/Contents/Resources/launcher.sh"
+chmod 755 "$app/Contents/Resources/launcher.sh"
 
-# The icon, from the Windows one (its largest picture). Cosmetic: a failure
-# leaves Finder's generic icon and a warning, not a failed build.
+# The app's executable. swiftc's complaints go to the log in full and, for
+# errors, to the run's summary as annotations on the line they are about:
+# the first compile of this file happens here, on a Mac nobody sits at.
+swift_source="${here#"$PWD"/}/Launcher.swift"
+swift_log=$(mktemp)
+if ! xcrun swiftc -O -swift-version 5 -target arm64-apple-macos11 -framework AppKit \
+  -o "$app/Contents/MacOS/Alnasl" "$swift_source" >"$swift_log" 2>&1; then
+  sed -n 's/^\(.*\.swift\):\([0-9][0-9]*\):\([0-9][0-9]*\): error: \(.*\)$/::error file=\1,line=\2,col=\3::\4/p' "$swift_log"
+  echo "swiftc failed on $swift_source; everything it said:"
+  cat "$swift_log"
+  rm -f "$swift_log"
+  exit 1
+fi
+cat "$swift_log"
+rm -f "$swift_log"
+echo "Launcher compiled: $(file "$app/Contents/MacOS/Alnasl" | cut -d: -f2-)"
+otool -L "$app/Contents/MacOS/Alnasl"
+
+# The Dock icon, from rel/macos/Alnasl-icon.png: 1024px, drawn by
+# rel/windows/build_icon.py from priv/logo/mark.svg with Apple's margin
+# (an 824px tile centred on a transparent canvas). Converting the .ico gave
+# a blurry, edge-to-edge square. Cosmetic: a failure leaves Finder's
+# generic icon and a warning, not a failed build.
 make_icon() {
-  sips -s format png "$1" --out "$2/source.png" >/dev/null || return 1
   for size in 16 32 128 256 512; do
-    sips -z "$size" "$size" "$2/source.png" --out "$2/icon_${size}x${size}.png" >/dev/null ||
+    sips -z "$size" "$size" "$1" --out "$2/icon_${size}x${size}.png" >/dev/null || return 1
+    sips -z $((size * 2)) $((size * 2)) "$1" --out "$2/icon_${size}x${size}@2x.png" >/dev/null ||
       return 1
-    sips -z $((size * 2)) $((size * 2)) "$2/source.png" \
-      --out "$2/icon_${size}x${size}@2x.png" >/dev/null || return 1
   done
-  rm -f "$2/source.png"
   iconutil -c icns "$2" -o "$3"
 }
 
+logo=rel/macos/Alnasl-icon.png
 iconset="$out/Alnasl.iconset"
 rm -rf "$iconset"
 mkdir -p "$iconset"
-if make_icon rel/windows/Alnasl.ico "$iconset" "$app/Contents/Resources/Alnasl.icns"; then
-  echo "Icon made from rel/windows/Alnasl.ico"
+if [ -f "$logo" ] && make_icon "$logo" "$iconset" "$app/Contents/Resources/Alnasl.icns"; then
+  echo "Icon made from $logo"
 else
   echo "::warning::could not make Alnasl.icns; the app gets the generic icon"
 fi
