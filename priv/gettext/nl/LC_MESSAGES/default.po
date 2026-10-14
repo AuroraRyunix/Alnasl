@@ -57,7 +57,7 @@ msgstr "\"Zet ontbreekt?\" op een tegel"
 msgid "%{a} and %{b} are swapped (%{sq_a}, %{sq_b})"
 msgstr "%{a} en %{b} zijn verwisseld (%{sq_a}, %{sq_b})"
 
-#: lib/alnasl_web/components/layouts.ex:300
+#: lib/alnasl_web/components/layouts.ex:303
 #, elixir-autogen, elixir-format
 msgid "%{count} waiting"
 msgstr "%{count} wachtend"
@@ -366,7 +366,7 @@ msgstr "Voor de ronde"
 msgid "Black"
 msgstr "Zwart"
 
-#: lib/alnasl_web/components/layouts.ex:256
+#: lib/alnasl_web/components/layouts.ex:259
 #: lib/alnasl_web/live/boards_live.ex:609
 #: lib/alnasl_web/live/outbox_live.ex:536
 #: lib/alnasl_web/live/pgn_live.ex:366
@@ -539,7 +539,7 @@ msgstr "Verbinden"
 msgid "Connect the board first."
 msgstr "Verbind eerst het bord."
 
-#: lib/alnasl_web/components/layouts.ex:286
+#: lib/alnasl_web/components/layouts.ex:289
 #: lib/alnasl_web/destination_words.ex:32
 #: lib/alnasl_web/link_words.ex:90
 #, elixir-autogen, elixir-format
@@ -804,7 +804,7 @@ msgid "Linking for round"
 msgstr "Koppelen voor ronde"
 
 #: lib/alnasl_web/components/core_components.ex:117
-#: lib/alnasl_web/components/layouts.ex:323
+#: lib/alnasl_web/components/layouts.ex:326
 #: lib/alnasl_web/live/game_live.ex:931
 #, elixir-autogen, elixir-format
 msgid "Live"
@@ -1007,7 +1007,7 @@ msgstr "Niet gekoppeld"
 msgid "Not sending"
 msgstr "Niet versturen"
 
-#: lib/alnasl_web/components/layouts.ex:294
+#: lib/alnasl_web/components/layouts.ex:297
 #: lib/alnasl_web/destination_words.ex:35
 #, elixir-autogen, elixir-format
 msgid "Not set up"
@@ -1056,7 +1056,7 @@ msgstr "Er wacht niets."
 msgid "Nothing recorded yet"
 msgstr "Nog niets opgenomen"
 
-#: lib/alnasl_web/components/layouts.ex:302
+#: lib/alnasl_web/components/layouts.ex:305
 #: lib/alnasl_web/destination_words.ex:38
 #, elixir-autogen, elixir-format
 msgid "Nothing sent yet"
@@ -1077,7 +1077,7 @@ msgstr "Uit: elk resultaat wacht op de arbiter. Aan: een partij die op het bord 
 msgid "Offer mate and stalemate to the results site without waiting for me"
 msgstr "Mat en pat aan de uitslagensite voorstellen zonder op de arbiter te wachten"
 
-#: lib/alnasl_web/components/layouts.ex:289
+#: lib/alnasl_web/components/layouts.ex:292
 #, elixir-autogen, elixir-format
 msgid "Offline, %{count} waiting"
 msgstr "Offline, %{count} wachtend"
@@ -1238,7 +1238,7 @@ msgstr "Klaar"
 msgid "Recordings"
 msgstr "Opnames"
 
-#: lib/alnasl_web/components/layouts.ex:292
+#: lib/alnasl_web/components/layouts.ex:295
 #: lib/alnasl_web/destination_words.ex:34
 #, elixir-autogen, elixir-format
 msgid "Refused"
@@ -2186,7 +2186,7 @@ msgstr "Dit kastje"
 msgid "This box asks for a PIN"
 msgstr "Dit kastje vraagt om een PIN"
 
-#: lib/alnasl_web/components/layouts.ex:354
+#: lib/alnasl_web/components/layouts.ex:357
 #, elixir-autogen, elixir-format
 msgid "This page lost its connection to the box. Trying again..."
 msgstr "Deze pagina verloor de verbinding met het kastje. Er wordt opnieuw geprobeerd..."
@@ -3431,7 +3431,7 @@ msgstr "Uitschakelen"
 msgid "Switch on"
 msgstr "Inschakelen"
 
-#: lib/alnasl_web/components/layouts.ex:296
+#: lib/alnasl_web/components/layouts.ex:299
 #: lib/alnasl_web/destination_words.ex:36
 #, elixir-autogen, elixir-format
 msgid "Switched off"
@@ -3778,36 +3778,36 @@ msgstr "Instellingen heeft \"Bullet / snel spel\" voor partijen van enkele minut
 msgid "Chosen per device and kept in this browser; the box and the other screens are not told. Match device follows the phone or computer, light by day and dark by night."
 msgstr "Per toestel gekozen en in deze browser bewaard; het kastje en de andere schermen krijgen het niet te horen. Volg het toestel doet wat de telefoon of computer doet: licht overdag, donker 's nachts."
 
-#: lib/alnasl_web/components/layouts.ex:217
-#: lib/alnasl_web/components/layouts.ex:228
-#: lib/alnasl_web/components/layouts.ex:229
+#: lib/alnasl_web/components/layouts.ex:220
 #: lib/alnasl_web/components/layouts.ex:231
+#: lib/alnasl_web/components/layouts.ex:232
+#: lib/alnasl_web/components/layouts.ex:234
 #: lib/alnasl_web/live/setup_live.ex:1351
 #, elixir-autogen, elixir-format
 msgid "Colour theme"
 msgstr "Kleurthema"
 
-#: lib/alnasl_web/components/layouts.ex:258
+#: lib/alnasl_web/components/layouts.ex:261
 #, elixir-autogen, elixir-format
 msgid "High contrast"
 msgstr "Hoog contrast"
 
-#: lib/alnasl_web/components/layouts.ex:253
+#: lib/alnasl_web/components/layouts.ex:256
 #, elixir-autogen, elixir-format
 msgid "Match device"
 msgstr "Volg het toestel"
 
-#: lib/alnasl_web/components/layouts.ex:255
+#: lib/alnasl_web/components/layouts.ex:258
 #, elixir-autogen, elixir-format
 msgid "Night"
 msgstr "Nacht"
 
-#: lib/alnasl_web/components/layouts.ex:254
+#: lib/alnasl_web/components/layouts.ex:257
 #, elixir-autogen, elixir-format
 msgid "Paper"
 msgstr "Papier"
 
-#: lib/alnasl_web/components/layouts.ex:257
+#: lib/alnasl_web/components/layouts.ex:260
 #, elixir-autogen, elixir-format
 msgid "Slate"
 msgstr "Leisteen"
@@ -5294,7 +5294,7 @@ msgstr "Gewijzigd. Het gaat in de volgende keer dat Alnasl start."
 msgid "Decided where the program is started (ALNASL_LISTEN), so there is no switch here."
 msgstr "Dit is bepaald waar het programma gestart wordt (ALNASL_LISTEN), dus hier staat geen schakelaar."
 
-#: lib/alnasl_web/components/layouts.ex:151
+#: lib/alnasl_web/components/layouts.ex:154
 #, elixir-autogen, elixir-format
 msgid "Don't ask again"
 msgstr "Niet meer vragen"
@@ -5339,7 +5339,7 @@ msgstr "Nu installeren, terwijl er gespeeld wordt? Zetten die gespeeld worden te
 msgid "Installing, updating, and where your data is"
 msgstr "Installeren, updaten, en waar je gegevens staan"
 
-#: lib/alnasl_web/components/layouts.ex:138
+#: lib/alnasl_web/components/layouts.ex:141
 #, elixir-autogen, elixir-format
 msgid "Later"
 msgstr "Later"
@@ -5419,7 +5419,7 @@ msgstr "Instellingen, \"Toegang vanaf andere machines\": stel een PIN in, laat d
 msgid "Start Alnasl when Windows starts"
 msgstr "Alnasl starten wanneer Windows start"
 
-#: lib/alnasl_web/components/layouts.ex:146
+#: lib/alnasl_web/components/layouts.ex:149
 #, elixir-autogen, elixir-format
 msgid "Stop looking for new versions? You can switch it on again under Setup, Updates."
 msgstr "Niet meer naar nieuwe versies kijken? Je zet het weer aan onder Instellingen, Updates."
@@ -5434,7 +5434,7 @@ msgstr "Het kastje vraagt elk half uur één keer of er een nieuwere versie uit 
 msgid "The box itself is always let in. A browser on another machine in the hall is let in freely, unless a PIN is set here. Other machines can only reach the box at all when that is switched on below."
 msgstr "Het kastje zelf wordt altijd binnengelaten. Een browser op een andere machine in de zaal wordt vrij binnengelaten, tenzij hier een PIN is ingesteld. Andere machines kunnen het kastje alleen bereiken als dat hieronder is aangezet."
 
-#: lib/alnasl_web/components/layouts.ex:127
+#: lib/alnasl_web/components/layouts.ex:130
 #: lib/alnasl_web/live/setup_live.ex:1601
 #, elixir-autogen, elixir-format
 msgid "The download is %{size}."
@@ -5511,7 +5511,7 @@ msgstr "Update naar %{version} gestart door de arbiter, terwijl er gespeeld werd
 msgid "Update to %{version} started by the arbiter."
 msgstr "Update naar %{version} gestart door de arbiter."
 
-#: lib/alnasl_web/components/layouts.ex:135
+#: lib/alnasl_web/components/layouts.ex:138
 #, elixir-autogen, elixir-format
 msgid "Update..."
 msgstr "Updaten..."
@@ -5531,7 +5531,7 @@ msgstr "Updaten"
 msgid "Wait"
 msgstr "Wachten"
 
-#: lib/alnasl_web/components/layouts.ex:132
+#: lib/alnasl_web/components/layouts.ex:135
 #: lib/alnasl_web/live/setup_live.ex:1606
 #, elixir-autogen, elixir-format
 msgid "What is new"
@@ -5783,8 +5783,8 @@ msgstr "Beantwoord in Instellingen"
 msgid "Boards you connect later can be put in them on the Boards page."
 msgstr "Borden die je later aansluit, kun je er op de pagina Borden in zetten."
 
-#: lib/alnasl_web/components/layouts.ex:325
-#: lib/alnasl_web/components/layouts.ex:329
+#: lib/alnasl_web/components/layouts.ex:328
+#: lib/alnasl_web/components/layouts.ex:332
 #, elixir-autogen, elixir-format
 msgid "Connecting..."
 msgstr "Verbinden..."
@@ -5926,7 +5926,7 @@ msgstr "Zet het erin en begin opnieuw"
 msgid "Put it there: these moves are board %{n} of round %{r}%{name}"
 msgstr "Zet het erin: deze zetten zijn bord %{n} van ronde %{r}%{name}"
 
-#: lib/alnasl_web/components/layouts.ex:324
+#: lib/alnasl_web/components/layouts.ex:327
 #, elixir-autogen, elixir-format
 msgid "Reconnecting..."
 msgstr "Opnieuw verbinden..."
@@ -6283,8 +6283,8 @@ msgstr "Er wacht niets van."
 msgid "Open the results page: %{address}"
 msgstr "Open de uitslagenpagina: %{address}"
 
-#: lib/alnasl_web/components/layouts.ex:180
-#: lib/alnasl_web/components/layouts.ex:181
+#: lib/alnasl_web/components/layouts.ex:183
+#: lib/alnasl_web/components/layouts.ex:184
 #: lib/alnasl_web/live/round_live.ex:630
 #, elixir-autogen, elixir-format
 msgid "Open the results site"
@@ -6482,11 +6482,6 @@ msgstr "Wat de borden zagen eindigen. De stand van de wedstrijd is die van de ar
 msgid "match %{match}, board %{place}"
 msgstr "wedstrijd %{match}, bord %{place}"
 
-#: lib/alnasl_web/live/help_live.ex:437
-#, elixir-autogen, elixir-format
-msgid "Download alnasl-macos-aarch64.zip for a Mac with an Apple chip (M1 and later) or alnasl-macos-x86_64.zip for an Intel Mac, open it, and drag Alnasl into Applications. Apple has not signed it yet, so the first time macOS refuses to open it: in System Settings, Privacy & Security, click \"Open Anyway\" beside the message about Alnasl (on macOS 14 or older: right-click the app and choose Open). The small Alnasl window is the program, as on Windows. A DGT board on USB is a port called /dev/cu.usbserial-... or /dev/cu.usbmodem...; the USB adapter of an RS232 board may need its maker's driver before it shows up (FTDI works as it is; Prolific, CH340 and CP210x may not). To update, stop Alnasl and put the new app in place of the old one."
-msgstr "Download alnasl-macos-aarch64.zip voor een Mac met een Apple-chip (M1 en later) of alnasl-macos-x86_64.zip voor een Mac met Intel, open het bestand en sleep Alnasl naar Programma's. Apple heeft het nog niet ondertekend, dus de eerste keer weigert macOS het te openen: klik in Systeeminstellingen, Privacy en beveiliging, op \"Open toch\" naast de melding over Alnasl (op macOS 14 of ouder: klik met de rechtermuisknop op de app en kies Open). Het kleine Alnasl-venster is het programma, zoals op Windows. Een DGT-bord op USB is een poort met de naam /dev/cu.usbserial-... of /dev/cu.usbmodem...; de USB-adapter van een RS232-bord heeft soms eerst het stuurprogramma van zijn fabrikant nodig voor hij verschijnt (FTDI werkt meteen; Prolific, CH340 en CP210x soms niet). Bijwerken: stop Alnasl en zet de nieuwe app in de plaats van de oude."
-
 #: lib/alnasl_web/live/help_live.ex:435
 #, elixir-autogen, elixir-format
 msgid "Mac"
@@ -6511,3 +6506,13 @@ msgstr "De Mac-app (Alnasl.app)"
 #, elixir-autogen, elixir-format
 msgid "Windows: Settings, Apps, Alnasl, Uninstall. Linux: sudo /opt/alnasl/uninstall.sh. Mac: stop Alnasl and drag it from Applications to the Bin. All three remove the program and keep the data; delete the data folder yourself if you mean to."
 msgstr "Windows: Instellingen, Apps, Alnasl, Verwijderen. Linux: sudo /opt/alnasl/uninstall.sh. Mac: stop Alnasl en sleep het van Programma's naar de prullenmand. Alle drie verwijderen ze het programma en laten ze de gegevens staan; de map met gegevens wis je zelf, als je dat wilt."
+
+#: lib/alnasl_web/live/help_live.ex:437
+#, elixir-autogen, elixir-format
+msgid "Download alnasl-macos-aarch64.zip for a Mac with an Apple chip (M1 and later; there is no build for Intel Macs), open it, and drag Alnasl into Applications. Apple has not signed it yet, so the first time macOS refuses to open it: in System Settings, Privacy & Security, click \"Open Anyway\" beside the message about Alnasl (on macOS 14 or older: right-click the app and choose Open). The small Alnasl window is the program, as on Windows. A DGT board on USB is a port called /dev/cu.usbserial-... or /dev/cu.usbmodem...; the USB adapter of an RS232 board may need its maker's driver before it shows up (FTDI works as it is; Prolific, CH340 and CP210x may not). To update, stop Alnasl and put the new app in place of the old one."
+msgstr "Download alnasl-macos-aarch64.zip voor een Mac met een Apple-chip (M1 en later; voor Macs met Intel is er geen versie), open het bestand en sleep Alnasl naar Programma's. Apple heeft het nog niet ondertekend, dus de eerste keer weigert macOS het te openen: klik in Systeeminstellingen, Privacy en beveiliging, op \"Open toch\" naast de melding over Alnasl (op macOS 14 of ouder: klik met de rechtermuisknop op de app en kies Open). Het kleine Alnasl-venster is het programma, zoals op Windows. Een DGT-bord op USB is een poort met de naam /dev/cu.usbserial-... of /dev/cu.usbmodem...; de USB-adapter van een RS232-bord heeft soms eerst het stuurprogramma van zijn fabrikant nodig voor hij verschijnt (FTDI werkt meteen; Prolific, CH340 en CP210x soms niet). Bijwerken: stop Alnasl en zet de nieuwe app in de plaats van de oude."
+
+#: lib/alnasl_web/components/layouts.ex:127
+#, elixir-autogen, elixir-format
+msgid "There is no Mac build for Intel."
+msgstr "Voor Macs met Intel is er geen versie."

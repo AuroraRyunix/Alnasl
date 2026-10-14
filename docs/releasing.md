@@ -45,7 +45,6 @@ is a link that stays right. The version is inside each file.
 | `alnasl-linux-x86_64.tar.gz` | The Linux release, PCs | `install.sh`, `update.sh`, the download page |
 | `alnasl-linux-aarch64.tar.gz` | The Linux release, 64-bit Raspberry Pi and other arm64 | the same |
 | `alnasl-macos-aarch64.zip` | `Alnasl.app` for Apple Silicon (M1 and later), zipped with `ditto` | the download page; a Mac copy's update notice (its size) |
-| `alnasl-macos-x86_64.zip` | `Alnasl.app` for Intel Macs | the same |
 | `install.sh` | The one-line installer | `curl ... \| sudo sh` |
 | `update.sh`, `uninstall.sh` | Copies of what the archive carries, for reading | nobody; a person |
 | `SHA256SUMS` | Checksums of everything above and below | `install.sh`, `update.sh` |
@@ -193,7 +192,7 @@ what holds.
 
 **macOS** (the full list, for a person with a Mac, is in `docs/macos.md`)
 
-- [ ] `macos-15` and `macos-15-intel` build it, `build_app.sh` finds no
+- [ ] `macos-15` builds it, `build_app.sh` finds no
       Homebrew library, and the app starts from a read-only bundle on the
       runner.
 - [ ] Downloaded on a real Mac, it opens after "Open Anyway", shows its

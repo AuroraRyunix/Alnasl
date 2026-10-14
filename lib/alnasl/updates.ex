@@ -178,7 +178,8 @@ defmodule Alnasl.Updates do
            tag: tag,
            url: release["html_url"] || "#{@releases_page}/tag/#{tag}",
            asset: asset && asset["name"],
-           size: asset && asset["size"]
+           size: asset && asset["size"],
+           no_build: no_build?(:os.type())
          }, etag}
       else
         {:current, etag}
@@ -194,8 +195,10 @@ defmodule Alnasl.Updates do
   # Velopack may fetch a smaller delta instead; the full package is the
   # honest upper bound.
   defp asset_for(assets, version) when is_list(assets) do
-    name = asset_name(install_kind(), version)
-    Enum.find(assets, &(is_map(&1) and &1["name"] == name and is_integer(&1["size"])))
+    case asset_name(install_kind(), version) do
+      nil -> nil
+      name -> Enum.find(assets, &(is_map(&1) and &1["name"] == name and is_integer(&1["size"])))
+    end
   end
 
   defp asset_for(_none, _version), do: nil
@@ -208,8 +211,15 @@ defmodule Alnasl.Updates do
   @doc false
   # The system as an argument, so that a test on one can ask about another.
   def asset_name(_kind, _version, {:win32, _}), do: "alnasl-windows-x86_64-portable.zip"
-  def asset_name(_kind, _version, {:unix, :darwin}), do: "alnasl-macos-#{arch()}.zip"
+  # Intel Macs have no build: `nil` names no file, so no link to a missing one.
+  def asset_name(_kind, _version, {:unix, :darwin}) do
+    if arch() == "aarch64", do: "alnasl-macos-aarch64.zip"
+  end
+
   def asset_name(_kind, _version, _unix), do: "alnasl-linux-#{arch()}.tar.gz"
+
+  @doc "True on an Intel Mac, for which no build is made."
+  def no_build?(os), do: os == {:unix, :darwin} and arch() == "x86_64"
 
   @doc "`x86_64` or `aarch64`, as the release assets are named."
   def arch do

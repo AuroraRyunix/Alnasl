@@ -60,9 +60,17 @@ defmodule Alnasl.UpdatesTest do
 
       assert Updates.asset_name(:manual, v, {:unix, :linux}) =~
                ~r/^alnasl-linux-(x86_64|aarch64)\.tar\.gz$/
+    end
 
-      assert Updates.asset_name(:manual, v, {:unix, :darwin}) =~
-               ~r/^alnasl-macos-(x86_64|aarch64)\.zip$/
+    test "an Intel Mac is told there is no build, not sent to a file that does not exist" do
+      assert Updates.no_build?({:unix, :darwin}) == (Updates.arch() == "x86_64")
+      refute Updates.no_build?({:unix, :linux})
+      refute Updates.no_build?({:win32, :nt})
+
+      # The name must be nil exactly when the notice says "no build".
+      name = Updates.asset_name(:manual, newer(), {:unix, :darwin})
+      assert is_nil(name) == Updates.no_build?({:unix, :darwin})
+      assert name in [nil, "alnasl-macos-aarch64.zip"]
     end
 
     test "the Windows installation is told the size of the full package" do

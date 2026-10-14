@@ -123,6 +123,9 @@ defmodule AlnaslWeb.Layouts do
               version: @update.version,
               current: Alnasl.Updates.current_version()
             )}
+            <span :if={Map.get(@update, :no_build)} id="update-banner-no-build">
+              {gettext("There is no Mac build for Intel.")}
+            </span>
             <span :if={@update.size} id="update-banner-size">
               {gettext("The download is %{size}.", size: AlnaslWeb.Words.megabytes(@update.size))}
             </span>

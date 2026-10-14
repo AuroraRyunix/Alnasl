@@ -8,8 +8,7 @@ with a Mac (and ideally a DGT board) still has to confirm.
 
 | | |
 |---|---|
-| Apple Silicon (M1 and later) | `alnasl-macos-aarch64.zip`, built on `macos-15` |
-| Intel | `alnasl-macos-x86_64.zip`, built on `macos-15-intel` (GitHub retired `macos-13` in December 2025) |
+| Apple Silicon only (M1 and later) | `alnasl-macos-aarch64.zip`, built on `macos-15` |
 | Runtime | Erlang/OTP 29.0.5 and Elixir 1.20 from `erlef/setup-beam`, as on Linux and Windows. On macOS that is `erlef/otp_builds`, with OpenSSL linked in, so nothing from Homebrew is needed |
 | Serial library | `circuits_uart`, compiled on the runner (`ALNASL_UART=1`, on by default on any Unix); the build stops if it is missing |
 | Oldest macOS | 11 (Big Sur) is asked for (`MACOSX_DEPLOYMENT_TARGET`); the build log says what the binaries really accept and puts it in `Info.plist` |
@@ -156,7 +155,7 @@ In the macOS jobs of `.github/workflows/release.yml`:
    folder.
 
 The zip is uploaded as the workflow artifact `release_assets_macos-aarch64`
-(and `-x86_64`) on every push, and attached to the release when one is
+on every push, and attached to the release when one is
 published. What CI cannot check: the window, Gatekeeper on a download, a
 real board. That is the list below.
 
