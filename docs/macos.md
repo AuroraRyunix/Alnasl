@@ -65,6 +65,17 @@ There is no "Start with macOS" switch (Windows has one). Add the app to
 *System Settings > General > Login Items* if the box should start with the
 Mac.
 
+## Details
+
+The app's window has a *Details* button (Cmd-D too). It opens a window of its
+own with the numbers the running server reports about itself and the end of
+`logs/server.log`, with *Copy* (numbers plus the last 200 log lines, for a
+mail) and *Open log folder* (Finder, the file selected). The app makes a
+secret at every start and hands it to the server in `ALNASL_LAUNCHER_TOKEN`;
+the server answers `GET /_launcher/stats` only to this machine, only with that
+secret and only without a proxy header. Nothing is written to disk and no port
+is opened. The contract is `docs/launcher-details.md`.
+
 ## Where the data is
 
 `~/Library/Application Support/AlnaslData` - the database, the PGN, the
