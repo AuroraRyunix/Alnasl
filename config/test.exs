@@ -26,6 +26,9 @@ config :alnasl,
   # tests count the packs they installed, and the shipped Toon is not one.
   bundled_themes_dir: Path.expand("../tmp/test/no_bundled_themes", __DIR__),
   autostart: false,
+  # No launcher secret, no token file, no telemetry handler; the tests that
+  # need them start their own `Alnasl.LauncherDetails`.
+  launcher_details: false,
   updates_timer: false,
   install_kind: :manual,
   autostart_cmd: &Alnasl.NoReg.cmd/3,

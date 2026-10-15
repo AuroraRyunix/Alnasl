@@ -135,7 +135,11 @@ then **Run anyway**. Your browser may also ask whether to keep the file.
 What starts is a small window that says "Alnasl is running", and your
 browser on `http://localhost:4040`. **The window is the program**: closing
 it stops Alnasl (it asks first), and while Alnasl is stopped the boards are
-not read. Minimise it instead.
+not read. Minimise it instead. When something is slow or odd, **Details** in
+that window shows the program's own output and a few numbers (version, how
+long it has run, processor, memory, the database, boards connected, the
+results relay); **Copy** puts them and the last 200 log lines on the
+clipboard, ready to mail.
 
 Rather install nothing? **[alnasl-windows-x86_64-portable.zip](https://github.com/AuroraRyunix/Alnasl/releases/latest/download/alnasl-windows-x86_64-portable.zip)**:
 unzip it anywhere and start `Alnasl.exe` in it. (`Alnasl.bat`, beside it,
@@ -167,6 +171,9 @@ with the box and comes back when it falls over. Then
   (or [`-aarch64`](https://github.com/AuroraRyunix/Alnasl/releases/latest/download/alnasl-linux-aarch64.tar.gz)
   for a Pi) at home, and on the box: `tar -xzf alnasl-linux-*.tar.gz && sudo sh alnasl/install.sh`.
 - **Without installing**: unpack the same archive and run `alnasl/alnasl.sh`.
+  `alnasl/alnasl.sh details` (`--once` for one snapshot to paste) shows what
+  the Windows Details panel shows, in the terminal, for a copy started that
+  way.
 
 It needs a **64-bit** system with systemd and glibc 2.35 or newer: Debian
 12, Ubuntu 22.04, Raspberry Pi OS "Bookworm" (64-bit), or later. On a 32-bit
@@ -203,7 +210,9 @@ What starts is an Alnasl icon in the Dock, a small window that says
 ordinary Dock app: right-click the icon, *Options > Keep in Dock* to keep it
 there; close the window and click the icon to get it back. *Stop Alnasl*,
 Cmd-Q or the Dock's *Quit* stops it, and asks first, because the boards are
-not read while it is stopped. The data is in
+not read while it is stopped. *Details* (Cmd-D) opens a window with the
+program's output and the same numbers as on Windows, with *Copy* and *Open
+log folder*. The data is in
 `~/Library/Application Support/AlnaslData`, never in the app, so replacing
 the app or dragging it to the Bin leaves it alone. Updating is by hand for
 now: download the new zip and put the new app in place of the old one.
@@ -596,6 +605,7 @@ themes/<id>/                   theme packs of your own, if you installed any (ne
 secret_key_base                the cookie-signing secret, made on first start (installed and prod)
 listen                         "lan" or "local": Setup's switch for the hall's network
 launcher.log                   Windows: what the program said when it last started
+run/launcher.token             the Details secret of a copy that no launcher started; removed on a clean stop
 tmp/                           Windows: what the runtime writes when it starts
 update/                        Linux, installed: where "Download and install" leaves its request
 backups/before-<version>-*/    Linux, installed: the database as it was before each update (never pruned)

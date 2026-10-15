@@ -15,6 +15,9 @@ defmodule Alnasl.Application do
 
     autostart? = Application.get_env(:alnasl, :autostart, true)
 
+    # The launcher's Details panel: this start's secret (and its file, when
+    # no launcher handed one over), the CPU sample, the slow queries. Before
+    # the endpoint, which asks it.
     children =
       [
         AlnaslWeb.Telemetry,
@@ -33,6 +36,7 @@ defmodule Alnasl.Application do
          name: Alnasl.BoardSupervisor, strategy: :one_for_one, max_restarts: 100, max_seconds: 60}
       ] ++
         [Alnasl.Finder] ++
+        [Alnasl.LauncherDetails] ++
         if(autostart?,
           do:
             Alnasl.Destination.child_specs() ++
