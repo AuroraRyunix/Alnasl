@@ -6,6 +6,10 @@ defmodule Mix.Tasks.Alnasl.ThemeCheck do
 
       mix alnasl.theme_check path/to/my-theme
 
+  `mix alnasl.theme_check --bundled` checks every pack shipped inside the
+  program (`priv/theme_packs`, see `Alnasl.ThemePacks.bundled_dir/0`), which
+  is what CI and a release should do before the pack goes out.
+
   Two passes, the same two the program and its tests apply:
 
     1. `Alnasl.ThemePacks.load/1` - `theme.json` is complete, `theme.css` is
@@ -30,9 +34,29 @@ defmodule Mix.Tasks.Alnasl.ThemeCheck do
   alias AlnaslWeb.ThemeContrast
 
   @impl Mix.Task
+  def run(["--bundled"]) do
+    Mix.Task.run("compile")
+    dir = ThemePacks.bundled_dir()
+
+    folders =
+      case File.ls(dir) do
+        {:ok, entries} -> entries |> Enum.sort() |> Enum.map(&Path.join(dir, &1))
+        _ -> []
+      end
+      |> Enum.filter(&File.dir?/1)
+
+    if folders == [], do: Mix.raise("no bundled packs in #{dir}")
+    Enum.each(folders, &check/1)
+  end
+
   def run([path]) do
     Mix.Task.run("compile")
+    check(path)
+  end
 
+  def run(_), do: Mix.raise("usage: mix alnasl.theme_check PATH | --bundled")
+
+  defp check(path) do
     case ThemePacks.load(path) do
       {:error, reason} ->
         Mix.shell().error("refused: #{reason}")
@@ -56,6 +80,4 @@ defmodule Mix.Tasks.Alnasl.ThemeCheck do
         end
     end
   end
-
-  def run(_), do: Mix.raise("usage: mix alnasl.theme_check PATH")
 end

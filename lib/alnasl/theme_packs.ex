@@ -10,12 +10,17 @@ defmodule Alnasl.ThemePacks do
 
   ## Where packs come from
 
+    * the **bundled** packs, `priv/theme_packs/<id>` inside the program
+      (`bundled_dir/0`), which every build carries;
     * `ALNASL_THEMES_DIR` (config `:themes_dir`), when set;
-    * otherwise `<data dir>/themes`, next to the database (`Alnasl.Paths`);
-    * and if that folder is not there, nowhere: no packs, and the site is
-      exactly the site. Nothing is installed by default, and nothing here
-      creates the folder - a box nobody gave a theme has no reason to grow
-      an empty drawer for one.
+    * otherwise `<data dir>/themes`, next to the database (`Alnasl.Paths`).
+
+  Both are scanned, and a folder in the user's directory with the same name
+  as a bundled one replaces it (the bundled pack is not consulted at all
+  then, even if the user's is refused). Bundled packs go through the same
+  `load/1` and `Scanner` as any other. Nothing here creates the user's
+  folder - a box nobody gave a theme has no reason to grow an empty drawer
+  for one.
 
   ## Nobody in particular
 
@@ -99,6 +104,18 @@ defmodule Alnasl.ThemePacks do
       else: Path.join(data_dir, "themes")
   end
 
+  @doc """
+  The folder of packs shipped inside the program (`priv/theme_packs`). Config
+  `:bundled_themes_dir` points it elsewhere, which only tests do.
+  """
+  @spec bundled_dir() :: String.t()
+  def bundled_dir do
+    case Application.get_env(:alnasl, :bundled_themes_dir) do
+      dir when is_binary(dir) and dir != "" -> dir
+      _ -> Path.join(to_string(:code.priv_dir(:alnasl)), "theme_packs")
+    end
+  end
+
   @doc "Every accepted pack, sorted by name."
   @spec list() :: [pack()]
   def list, do: for({:ok, pack} <- scan(), do: pack)
@@ -136,22 +153,27 @@ defmodule Alnasl.ThemePacks do
   def label(%{name: name}, _locale), do: name
 
   defp scan do
-    dir = dir()
+    # Keyed by folder name, the user's last so that it wins.
+    folders = Map.merge(folders(bundled_dir()), folders(dir()))
 
+    folders
+    |> Enum.sort()
+    |> Enum.map(fn {_name, path} -> load_cached(path) end)
+    |> Enum.sort_by(fn
+      {:ok, pack} -> {0, String.downcase(pack.name)}
+      {:refused, id, _} -> {1, id}
+    end)
+  end
+
+  defp folders(dir) do
     case File.ls(dir) do
       {:ok, entries} ->
-        entries
-        |> Enum.sort()
-        |> Enum.map(&Path.join(dir, &1))
-        |> Enum.filter(&File.dir?/1)
-        |> Enum.map(&load_cached/1)
-        |> Enum.sort_by(fn
-          {:ok, pack} -> {0, String.downcase(pack.name)}
-          {:refused, id, _} -> {1, id}
-        end)
+        for entry <- entries, path = Path.join(dir, entry), File.dir?(path), into: %{} do
+          {entry, path}
+        end
 
       {:error, _} ->
-        []
+        %{}
     end
   end
 

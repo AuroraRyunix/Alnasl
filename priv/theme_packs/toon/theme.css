@@ -1,0 +1,691 @@
+/* TOON - the cartoon theme, for Alnasl.
+
+   The same cartoon as the OpenPairings theme of the same name, redrawn for
+   the box's own class names: the page is a cream sheet laid on a royal-blue
+   table under a faint white grid, the rail is the navy ink itself, panels
+   are stickers with an ink outline and a hard shadow, buttons are solid and
+   squash into their shadow when pressed, and the current place in the rail
+   is a yellow pennant.
+
+   The tokens describe the paper, not the table. Everything the site writes
+   sits on the sheet or on a sticker, so --bg is the cream and --ink the
+   navy; the blue shows only around the sheet, where this file paints white
+   type on it directly. That is why theme.json says "dark": false.
+
+   One rule above all the jokes: what shows live data - tiles, boards,
+   clocks, the move list, the live pill - gets an outline and nothing that
+   moves. An arbiter reads those across a hall, and a tile that wobbles
+   reads as a board that did something.
+
+   Every rule is scoped to [data-theme="toon"]; the box refuses a pack
+   that is not. Fonts: Bangers and Nunito, SIL OFL 1.1 (fonts/OFL.txt). */
+
+@font-face {
+  font-family: "Toon Bangers";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("fonts/bangers-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Toon Bangers";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("fonts/bangers-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Toon Nunito";
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url("fonts/nunito-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Toon Nunito";
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url("fonts/nunito-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* ---------- tokens: the paper ---------- */
+/* The whole palette, as every theme must (mix alnasl.theme_check says so),
+   on :root so it stands level with the built-in blocks it replaces. */
+:root[data-theme="toon"] {
+  --bg: #fff3d1;
+  --panel: #ffffff;
+  --sunken: #ffeab0;
+  --ink: #0a1747;
+  --quiet: #3d4b7c;
+  --rule: #b9c1e0;
+  --accent: #1d40c8;
+  --on-accent: #ffffff;
+  --ok: #1b7443;
+  --ok-bg: #d9f3e3;
+  --warn: #7a4c00;
+  --warn-bg: #ffe8b0;
+  --bad: #b8261b;
+  --bad-bg: #ffe1dc;
+  --idle: #3d4b7c;
+  --idle-bg: #e6e9f6;
+  --reconstructed: #8a3d00;
+  --reconstructed-bg: #ffe2c6;
+  --guessed: #b3002d;
+  --guessed-bg: #ffdce3;
+  --sq-light: #fbeccb;
+  --sq-dark: #8da1dd;
+  --sq-mark: rgba(255, 210, 46, 0.6);
+  --sq-diff: #d1291b;
+  --shadow: 4px 4px 0 #0a1747;
+
+  --radius: 12px;
+  --font: "Toon Nunito", "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* The toon's own: the ink, the table, the go-button yellow. */
+  --toon-ink: #0a1747;
+  --toon-table: #1d40c8;
+  --toon-go: #ffd22e;
+  --toon-go-hover: #ffdc5c;
+  --toon-band: #ffe270;
+  --toon-stop: #ff8f80;
+  --toon-stop-hover: #ffa699;
+  --toon-stripe: #fff8e7;
+  --toon-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --toon-heading: "Toon Bangers", "Bangers", "Impact", sans-serif;
+
+  color-scheme: light;
+  background-color: #1d40c8;
+}
+
+/* ---------- the table under the page ---------- */
+[data-theme="toon"] body {
+  background-color: #1d40c8;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 96px 96px, 96px 96px, 24px 24px, 24px 24px;
+  background-attachment: fixed;
+}
+
+[data-theme="toon"] ::selection {
+  background: #ffd22e;
+  color: #0a1747;
+}
+
+/* ---------- the rail: the ink itself ---------- */
+[data-theme="toon"] .rail {
+  background: #0a1747;
+  color: #ffffff;
+  border-right: 3px solid #0a1747;
+}
+
+[data-theme="toon"] .rail :focus-visible {
+  outline-color: #ffd22e;
+}
+
+[data-theme="toon"] .brand {
+  color: #ffffff;
+  border-bottom: 2px dashed rgba(255, 255, 255, 0.25);
+}
+
+/* The mark is drawn in currentColor with one accent; on the navy, white
+   with the go-button yellow. */
+[data-theme="toon"] .brand svg,
+[data-theme="toon"] .door-brand svg {
+  color: #ffffff;
+  --accent: #ffd22e;
+}
+
+[data-theme="toon"] .brand b {
+  font-family: var(--toon-heading);
+  font-weight: 400;
+  font-size: 1.4rem;
+  letter-spacing: 0.05em;
+  color: #ffd22e;
+}
+
+[data-theme="toon"] .brand span {
+  color: #c9d4ff;
+}
+
+[data-theme="toon"] .nav a {
+  color: #ffffff;
+  font-weight: 700;
+  border-left: 0;
+}
+
+[data-theme="toon"] .nav a svg {
+  color: #c9d4ff;
+}
+
+[data-theme="toon"] .nav a:hover {
+  background: #23358a;
+  color: #ffffff;
+}
+
+/* The current place: a yellow pennant with a swallowtail, which waves once
+   when the page arrives and again when pointed at - and not otherwise. */
+[data-theme="toon"] .nav a[aria-current="page"] {
+  background: #ffd22e;
+  color: #0a1747;
+  font-weight: 800;
+  border-radius: 0;
+  padding-right: 1.4rem;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 50%, 100% 100%, 0 100%);
+  transform-origin: 0 50%;
+  animation: toon-wave 900ms ease-out 150ms 1;
+}
+
+[data-theme="toon"] .nav a[aria-current="page"]:hover {
+  background: #ffdc5c;
+  color: #0a1747;
+  animation: toon-wave-again 900ms ease-out 1;
+}
+
+[data-theme="toon"] .nav a[aria-current="page"] svg {
+  color: #0a1747;
+}
+
+@keyframes toon-wave {
+  0% { transform: rotate(0) skewY(0); }
+  20% { transform: rotate(-3deg) skewY(-2deg); }
+  45% { transform: rotate(2.5deg) skewY(1.5deg); }
+  70% { transform: rotate(-1.2deg) skewY(-0.8deg); }
+  100% { transform: rotate(0) skewY(0); }
+}
+
+/* The same wave under a second name: an animation only restarts when its
+   name changes, and hovering is a change of mind, not of name. */
+@keyframes toon-wave-again {
+  0% { transform: rotate(0) skewY(0); }
+  20% { transform: rotate(-3deg) skewY(-2deg); }
+  45% { transform: rotate(2.5deg) skewY(1.5deg); }
+  70% { transform: rotate(-1.2deg) skewY(-0.8deg); }
+  100% { transform: rotate(0) skewY(0); }
+}
+
+[data-theme="toon"] .nav .count {
+  border: 2px solid #0a1747;
+  font-weight: 800;
+}
+
+[data-theme="toon"] .rail-foot {
+  border-top: 2px dashed rgba(255, 255, 255, 0.25);
+}
+
+/* The language switch on the navy: cream with a yellow rim, the chosen one
+   yellow. */
+[data-theme="toon"] .rail-foot .seg {
+  border: 2.5px solid #ffd22e;
+  box-shadow: 2px 2px 0 #050c2a;
+}
+
+[data-theme="toon"] .rail-foot .seg a {
+  background: #fff3d1;
+  color: #0a1747;
+  border-right-color: #0a1747;
+  font-weight: 800;
+}
+
+[data-theme="toon"] .rail-foot .seg [aria-current="true"] {
+  background: #ffd22e;
+  color: #0a1747;
+}
+
+/* The half-moon: a round cream button with a yellow rim, with the same
+   squash as every other button. */
+[data-theme="toon"] .rail-foot .theme-picker > summary {
+  width: 2.25rem;
+  min-height: 2.25rem;
+  padding: 0;
+  border: 2.5px solid #ffd22e;
+  border-radius: 999px;
+  background: #fff3d1;
+  color: #0a1747;
+  box-shadow: 2px 2px 0 #050c2a;
+  transition: transform 120ms var(--toon-spring), box-shadow 120ms var(--toon-spring);
+}
+
+[data-theme="toon"] .rail-foot .theme-picker > summary:hover {
+  background: #fff3d1;
+  border-color: #ffd22e;
+  transform: translate(-1px, -1px) rotate(-8deg);
+  box-shadow: 3px 3px 0 #050c2a;
+}
+
+[data-theme="toon"] .rail-foot .theme-picker[open] > summary {
+  background: #ffd22e;
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 #050c2a;
+}
+
+/* ---------- the bar: a cream strip pinned over the table ---------- */
+[data-theme="toon"] .bar {
+  top: 0.5rem;
+  margin: 1rem 1.25rem 0;
+  background: #fff3d1;
+  backdrop-filter: none;
+  border: 3px solid var(--toon-ink);
+  border-radius: 16px 20px 14px 18px;
+  box-shadow: 5px 5px 0 var(--toon-ink);
+}
+
+[data-theme="toon"] .bar h1 {
+  font-family: var(--toon-heading);
+  font-weight: 400;
+  font-size: 1.85rem;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+  color: var(--toon-ink);
+  text-shadow: 2px 2px 0 var(--toon-go);
+}
+
+[data-theme="toon"] .bar .sub {
+  font-family: var(--font);
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-shadow: none;
+}
+
+/* ---------- the sheet ---------- */
+[data-theme="toon"] main.page {
+  width: calc(100% - 2.5rem);
+  margin: 1.1rem 1.25rem 2.5rem;
+  background: var(--bg);
+  border: 3px solid var(--toon-ink);
+  border-radius: 22px 28px 20px 26px;
+  box-shadow: 8px 8px 0 var(--toon-ink);
+}
+
+/* Banners stay what they are (a colour and a word), drawn as stickers. */
+[data-theme="toon"] .banner {
+  margin: 1rem 1.25rem 0;
+  border: 2.5px solid var(--toon-ink);
+  border-radius: 14px 16px 12px 15px;
+  box-shadow: 3px 3px 0 var(--toon-ink);
+}
+
+/* ---------- headings: Bangers ---------- */
+[data-theme="toon"] .panel > header h2,
+[data-theme="toon"] .prose h2,
+[data-theme="toon"] .round-head h2 {
+  font-family: var(--toon-heading);
+  font-weight: 400;
+  font-size: 1.35rem;
+  letter-spacing: 0.05em;
+  color: var(--toon-ink);
+}
+
+[data-theme="toon"] .round-head h2 .note {
+  font-family: var(--font);
+  letter-spacing: 0;
+}
+
+/* ---------- stickers ---------- */
+[data-theme="toon"] .panel,
+[data-theme="toon"] .walk-stage {
+  border: 3px solid var(--toon-ink);
+  border-radius: 18px 22px 16px 20px;
+  box-shadow: 6px 6px 0 var(--toon-ink);
+}
+
+[data-theme="toon"] .panel > header {
+  border-bottom: 2.5px solid var(--toon-ink);
+}
+
+[data-theme="toon"] .theme-picker-panel {
+  border: 2.5px solid var(--toon-ink);
+  border-radius: 14px 16px 12px 15px;
+  box-shadow: 4px 4px 0 var(--toon-ink);
+}
+
+/* The flash says its piece with a little pop. Not live data: a message
+   that arrived, once. */
+[data-theme="toon"] .flash {
+  border-style: solid;
+  border-width: 2.5px 2.5px 2.5px 7px;
+  border-top-color: var(--toon-ink);
+  border-right-color: var(--toon-ink);
+  border-bottom-color: var(--toon-ink);
+  border-radius: 14px 16px 12px 15px;
+  font-weight: 700;
+  animation: toon-pop 260ms var(--toon-spring) 1;
+}
+
+@keyframes toon-pop {
+  0% { transform: scale(0.85) rotate(-3deg); opacity: 0; }
+  100% { transform: none; opacity: 1; }
+}
+
+/* ---------- live data: outlined, and still ---------- */
+/* A tile keeps its top edge in the colour of its state; only the other
+   three sides are inked. No lift on hover, no transition: the tile is the
+   board, and the board did not move. */
+[data-theme="toon"] .tile {
+  border-style: solid;
+  border-width: 6px 2.5px 2.5px;
+  border-left-color: var(--toon-ink);
+  border-right-color: var(--toon-ink);
+  border-bottom-color: var(--toon-ink);
+  border-radius: 14px 16px 12px 15px;
+  transition: none;
+}
+
+[data-theme="toon"] .tile:hover {
+  transform: none;
+  border-left-color: var(--toon-ink);
+  border-right-color: var(--toon-ink);
+  border-bottom-color: var(--toon-ink);
+}
+
+[data-theme="toon"] .tile-foot {
+  border-top: 2px dashed var(--rule);
+}
+
+[data-theme="toon"] .board {
+  border-radius: 4px;
+  box-shadow: 0 0 0 2px var(--toon-ink);
+}
+
+[data-theme="toon"] .live-pill {
+  border: 2px solid var(--toon-ink);
+  font-weight: 700;
+}
+
+[data-theme="toon"] .state {
+  border: 2px solid var(--toon-ink);
+  font-weight: 800;
+}
+
+/* ---------- buttons: solid, outlined, hard shadow, springy ---------- */
+[data-theme="toon"] .btn {
+  border: 2.5px solid var(--toon-ink);
+  border-radius: 12px 14px 11px 13px;
+  box-shadow: 3px 3px 0 var(--toon-ink);
+  font-weight: 800;
+  transition: transform 140ms var(--toon-spring), box-shadow 140ms var(--toon-spring), background-color 120ms ease;
+}
+
+[data-theme="toon"] .btn:hover {
+  border-color: var(--toon-ink);
+  transform: translate(-1px, -1px) rotate(-1.5deg);
+  box-shadow: 4px 4px 0 var(--toon-ink);
+}
+
+/* The squash: into the shadow, a little wider and a little flatter. */
+[data-theme="toon"] .btn:active {
+  transform: translate(3px, 3px) scale(1.03, 0.92);
+  box-shadow: 0 0 0 var(--toon-ink);
+}
+
+/* Go: the website's launch-button yellow, whatever the accent. */
+[data-theme="toon"] .btn.primary {
+  background: #ffd22e;
+  border-color: #0a1747;
+  color: #0a1747;
+}
+
+[data-theme="toon"] .btn.primary:hover {
+  background: #ffdc5c;
+  color: #0a1747;
+  filter: none;
+}
+
+/* Stop: salmon with ink on it. A red that white type can sit on would be
+   the darker red the alarms use, and a toon does not whisper "remove". */
+[data-theme="toon"] .btn.danger {
+  background: #ff8f80;
+  border-color: #0a1747;
+  color: #0a1747;
+}
+
+[data-theme="toon"] .btn.danger:hover {
+  background: #ffa699;
+  color: #0a1747;
+}
+
+/* A ghost is a button that has not decided to be one yet. */
+[data-theme="toon"] .btn.ghost {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+[data-theme="toon"] .btn.ghost:hover {
+  border-color: var(--toon-ink);
+  box-shadow: 3px 3px 0 var(--toon-ink);
+}
+
+/* A button that cannot be pressed does not pretend to be pressable. */
+[data-theme="toon"] .btn[disabled],
+[data-theme="toon"] .btn[disabled]:hover,
+[data-theme="toon"] .btn[aria-disabled="true"],
+[data-theme="toon"] .btn[aria-disabled="true"]:hover {
+  transform: none;
+  box-shadow: 3px 3px 0 var(--toon-ink);
+}
+
+/* ---------- fields ---------- */
+[data-theme="toon"] .input,
+[data-theme="toon"] .field input[type="text"],
+[data-theme="toon"] .field input[type="url"],
+[data-theme="toon"] .field input[type="password"],
+[data-theme="toon"] .field input[type="number"],
+[data-theme="toon"] .field select,
+[data-theme="toon"] .field textarea {
+  border: 2px solid var(--toon-ink);
+  border-radius: 10px 12px 9px 11px;
+}
+
+[data-theme="toon"] .field input:hover,
+[data-theme="toon"] .field select:hover,
+[data-theme="toon"] .field textarea:hover {
+  border-color: var(--toon-ink);
+}
+
+[data-theme="toon"] .seg {
+  border: 2px solid var(--toon-ink);
+  border-radius: 12px 14px 11px 13px;
+}
+
+[data-theme="toon"] .seg a,
+[data-theme="toon"] .seg button {
+  border-right: 2px solid var(--toon-ink);
+  font-weight: 800;
+}
+
+[data-theme="toon"] .seg > :last-child {
+  border-right: 0;
+}
+
+[data-theme="toon"] .seg [aria-pressed="true"],
+[data-theme="toon"] .seg [aria-current="true"] {
+  background: #ffd22e;
+  color: #0a1747;
+}
+
+/* ---------- tables: a header band and zebra rows ---------- */
+[data-theme="toon"] th {
+  background: #ffe270;
+  color: #0a1747;
+  border-bottom: 2.5px solid var(--toon-ink);
+  font-weight: 800;
+}
+
+/* `:where` so it costs nothing: a row the site marks (a board just touched,
+   a board sought) keeps its own colour over the stripe, and the phone's
+   board cards keep theirs. */
+[data-theme="toon"] :where(tbody > tr:nth-child(even)) {
+  background: #fff8e7;
+}
+
+/* ---------- boxes inside the stickers ---------- */
+[data-theme="toon"] .callout {
+  border-width: 2.5px 2.5px 2.5px 7px;
+  border-radius: 12px 14px 11px 13px;
+  box-shadow: 3px 3px 0 var(--toon-ink);
+}
+
+[data-theme="toon"] .alarm {
+  border-width: 2.5px;
+  border-radius: 12px 14px 11px 13px;
+}
+
+[data-theme="toon"] .tool,
+[data-theme="toon"] .dest,
+[data-theme="toon"] .choice-option,
+[data-theme="toon"] .tile-local,
+[data-theme="toon"] .walk-list,
+[data-theme="toon"] .site-qr > summary {
+  border: 2px solid var(--toon-ink);
+  border-radius: 12px 14px 11px 13px;
+}
+
+[data-theme="toon"] .choice-option.standing {
+  border-width: 3px;
+  box-shadow: 3px 3px 0 var(--toon-ink);
+}
+
+[data-theme="toon"] .qr {
+  border: 2px solid var(--toon-ink);
+}
+
+[data-theme="toon"] .walk-keys {
+  border-top: 3px solid var(--toon-ink);
+}
+
+/* ---------- the theme picker itself ---------- */
+[data-theme="toon"] .theme-picker-item {
+  border-radius: 9px 11px 8px 10px;
+  font-weight: 700;
+}
+
+[data-theme="toon"] .theme-picker-item:hover {
+  background: #fff0c4;
+}
+
+[data-theme="toon"] .theme-picker-item[aria-pressed="true"] {
+  background: #ffe270;
+  color: #0a1747;
+  box-shadow: inset 0 0 0 2px #0a1747;
+}
+
+[data-theme="toon"] .theme-grid .theme-picker-item {
+  border: 2px solid var(--toon-ink);
+}
+
+[data-theme="toon"] .theme-grid .theme-picker-item[aria-pressed="true"] {
+  border: 2.5px solid var(--toon-ink);
+  box-shadow: 3px 3px 0 var(--toon-ink);
+}
+
+[data-theme="toon"] .theme-dot,
+[data-theme="toon"] .theme-pack-swatch {
+  border-color: var(--toon-ink);
+  box-shadow: 0 0 0 1px var(--toon-ink);
+}
+
+/* ---------- the PIN page and the label sheet ---------- */
+/* Both stand straight on the table, so their loose type needs the white
+   ink of the rail, or a sheet of its own. */
+[data-theme="toon"] .door-brand {
+  color: #ffffff;
+  font-family: var(--toon-heading);
+  font-size: 2rem;
+  letter-spacing: 0.05em;
+}
+
+[data-theme="toon"] .door-brand b {
+  font-weight: 400;
+  color: #ffd22e;
+  text-shadow: 2px 2px 0 #0a1747;
+}
+
+[data-theme="toon"] .labels {
+  margin: 1.5rem auto;
+  background: var(--bg);
+  border: 3px solid var(--toon-ink);
+  border-radius: 22px 28px 20px 26px;
+  box-shadow: 8px 8px 0 var(--toon-ink);
+}
+
+/* ---------- phones: thinner ink, less margin ---------- */
+@media (max-width: 860px) {
+  [data-theme="toon"] .rail {
+    border-right: 0;
+    border-bottom: 3px solid #0a1747;
+  }
+
+  [data-theme="toon"] .nav a {
+    border-bottom: 0;
+  }
+
+  [data-theme="toon"] .bar {
+    margin: 0.75rem 0.5rem 0;
+    border-width: 2.5px;
+    box-shadow: 3px 3px 0 var(--toon-ink);
+  }
+
+  [data-theme="toon"] .bar h1 {
+    font-size: 1.55rem;
+  }
+
+  [data-theme="toon"] main.page {
+    width: calc(100% - 1rem);
+    margin: 0.75rem 0.5rem 1.5rem;
+    border-width: 2.5px;
+    border-radius: 16px 20px 14px 18px;
+    box-shadow: 4px 4px 0 var(--toon-ink);
+  }
+
+  [data-theme="toon"] .banner {
+    margin: 0.75rem 0.5rem 0;
+  }
+
+  [data-theme="toon"] .panel {
+    box-shadow: 4px 4px 0 var(--toon-ink);
+  }
+}
+
+/* ---------- still ---------- */
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="toon"] .btn,
+  [data-theme="toon"] .btn:hover,
+  [data-theme="toon"] .btn:active,
+  [data-theme="toon"] .nav a[aria-current="page"],
+  [data-theme="toon"] .nav a[aria-current="page"]:hover,
+  [data-theme="toon"] .rail-foot .theme-picker > summary,
+  [data-theme="toon"] .rail-foot .theme-picker > summary:hover,
+  [data-theme="toon"] .rail-foot .theme-picker[open] > summary,
+  [data-theme="toon"] .flash {
+    animation: none;
+    transition: none;
+    transform: none;
+  }
+}
+
+/* ---------- paper is paper ---------- */
+@media print {
+  [data-theme="toon"] body {
+    background: #ffffff;
+  }
+
+  [data-theme="toon"] main.page,
+  [data-theme="toon"] .labels,
+  [data-theme="toon"] .bar {
+    width: auto;
+    margin: 0;
+    border: none;
+    box-shadow: none;
+  }
+}
