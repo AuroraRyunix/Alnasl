@@ -19,6 +19,8 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+- [Feature] **Toon, a cartoon theme, comes with every build.** A blue table under a faint grid, a cream sheet with a navy outline and a hard shadow, sticker panels, buttons that squash when pressed, a yellow pennant for the current page; Bangers for headings and Nunito for text, both under the SIL Open Font Licence and shipped with their licence file, so it works in a hall without internet. Tiles, boards, clocks and the move list get outlines and never move. It appears in the picker after the built-in themes (Tekenfilm in Dutch). It lives in `priv/theme_packs/toon`, a new place `Alnasl.ThemePacks` reads besides the user's themes folder, through the same scanner; a pack of your own with the folder name `toon` replaces it. `mix alnasl.theme_check --bundled` checks every bundled pack, and the tests do.
+
 ## [0.1.4] - 2026-10-15
 
 - [Feature] **A Mac app.** Every push builds `Alnasl.app` for Apple Silicon (M1 and later) only, on GitHub's Macs, and a release attaches it as `alnasl-macos-aarch64.zip` (a fixed name, like the others; `SHA256SUMS` covers them). It behaves like the Windows program: a small window says Alnasl is running (in Dutch on a Dutch Mac), the browser opens once the site answers, a second double-click opens a tab instead of a second server, and *Stop Alnasl* asks first because the boards are not read while it is stopped. The serial library is in it. Nobody has opened it on a real Mac yet; `docs/macos.md` has the test list, the README and the Help page say how to install it (English and Dutch).

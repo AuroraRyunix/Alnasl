@@ -1,0 +1,14 @@
+{
+  "id": "toon",
+  "name": "Toon",
+  "name_nl": "Tekenfilm",
+  "author": "Alnasl",
+  "version": "1.0.0",
+  "dark": false,
+  "swatch": [
+    "#1d40c8",
+    "#ffd22e",
+    "#fff3d1",
+    "#0a1747"
+  ]
+}

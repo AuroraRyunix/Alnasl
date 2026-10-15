@@ -473,7 +473,7 @@ defmodule AlnaslWeb.HelpLive do
           </p>
           <p id="help-theme-packs">
             {gettext(
-              "More themes can be added as theme packs: one folder per theme, in the folder \"themes\" inside the data folder (see \"Where your data is\"), or in the folder ALNASL_THEMES_DIR names. On the next page load they are in the same two places, after the built-in themes, with a strip of their colours. A pack the box will not load is listed there in grey, with the reason. Nothing is installed by default; to remove a pack, delete its folder, and a browser that had chosen it goes back to Match device."
+              "More themes can be added as theme packs: one folder per theme, in the folder \"themes\" inside the data folder (see \"Where your data is\"), or in the folder ALNASL_THEMES_DIR names. On the next page load they are in the same two places, after the built-in themes, with a strip of their colours. A pack the box will not load is listed there in grey, with the reason. Toon, a cartoon theme, comes with Alnasl, and a pack of yours named toon replaces it; to remove a pack of your own, delete its folder, and a browser that had chosen it goes back to Match device."
             )}
           </p>
 

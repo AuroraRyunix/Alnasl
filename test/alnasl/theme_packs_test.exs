@@ -45,6 +45,79 @@ defmodule Alnasl.ThemePacksTest do
     end
   end
 
+  describe "the bundled packs" do
+    setup do
+      previous = Application.get_env(:alnasl, :bundled_themes_dir)
+      Application.delete_env(:alnasl, :bundled_themes_dir)
+
+      on_exit(fn ->
+        if previous,
+          do: Application.put_env(:alnasl, :bundled_themes_dir, previous),
+          else: Application.delete_env(:alnasl, :bundled_themes_dir)
+      end)
+    end
+
+    test "live in the program's priv folder" do
+      assert ThemePacks.bundled_dir() ==
+               Path.join(to_string(:code.priv_dir(:alnasl)), "theme_packs")
+
+      assert File.dir?(Path.join(ThemePacks.bundled_dir(), "toon"))
+    end
+
+    test "Toon is listed with no themes folder at all" do
+      previous = Application.get_env(:alnasl, :themes_dir)
+      Application.delete_env(:alnasl, :themes_dir)
+
+      try do
+        refute File.exists?(ThemePacks.dir())
+        assert [%{id: "toon", name: "Toon", dark: false, path: path}] = ThemePacks.list()
+        assert path == Path.join(ThemePacks.bundled_dir(), "toon")
+        assert ThemePacks.refused() == []
+        assert File.regular?(Path.join(path, "fonts/OFL.txt"))
+        refute File.exists?(ThemePacks.dir())
+      after
+        if previous, do: Application.put_env(:alnasl, :themes_dir, previous)
+      end
+    end
+
+    test "passes the scanner and the contrast check" do
+      Mix.shell(Mix.Shell.Process)
+      on_exit(fn -> Mix.shell(Mix.Shell.IO) end)
+
+      assert {:ok, %{id: "toon"}} = ThemePacks.load(Path.join(ThemePacks.bundled_dir(), "toon"))
+      Mix.Tasks.Alnasl.ThemeCheck.run(["--bundled"])
+      assert_received {:mix_shell, :info, ["toon: scan passed (light)"]}
+      assert_received {:mix_shell, :info, ["toon: contrast passed" <> _]}
+    end
+
+    test "every font its stylesheet names is in the pack" do
+      path = Path.join(ThemePacks.bundled_dir(), "toon")
+      css = File.read!(Path.join(path, "theme.css"))
+
+      for [_, file] <- Regex.scan(~r/url\("fonts\/([^"]+)"\)/, css) do
+        assert File.regular?(Path.join([path, "fonts", file])), file
+      end
+    end
+
+    test "a user pack of the same id wins" do
+      %{themes_dir: dir} = themes_dir()
+      install_pack(dir, "toon", meta: %{"name" => "My Toon"})
+      install_pack(dir, "owl")
+
+      assert [%{id: "owl"}, %{id: "toon", name: "My Toon", path: path}] =
+               Enum.sort_by(ThemePacks.list(), & &1.id)
+
+      assert path == Path.join(dir, "toon")
+      assert ThemePacks.get("toon").name == "My Toon"
+    end
+
+    test "bundled and user packs are listed together" do
+      %{themes_dir: dir} = themes_dir()
+      install_pack(dir, "owl")
+      assert Enum.sort(ThemePacks.ids()) == ["owl", "toon"]
+    end
+  end
+
   describe "an installed pack" do
     setup :themes_dir
 

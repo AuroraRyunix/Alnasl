@@ -14,7 +14,21 @@ to Alnasl's rail.
 
 ## Where packs are read from
 
-`Alnasl.ThemePacks.dir/0`:
+Two places are scanned, and the user's wins.
+
+**Bundled.** `priv/theme_packs/<id>/` inside the program
+(`Alnasl.ThemePacks.bundled_dir/0`). It is part of every build: `priv` goes
+into the release whole, so the Windows installer and portable zip, the Linux
+tarball and `Alnasl.app` all carry it, and no workflow needs to know. It is
+read by the same `load/1` and scanner as any pack. Today that is **Toon**
+(`toon`), a cartoon theme in Bangers and Nunito; it is for everybody, and
+nothing restricts a bundled pack. A pack of the user's with the same folder
+name replaces the bundled one outright (even if the user's is refused). Check
+the bundled packs with `mix alnasl.theme_check --bundled`; the tests do.
+A font may only be bundled under a licence that allows redistribution (OFL,
+Apache), with its licence file beside it.
+
+**The user's**, `Alnasl.ThemePacks.dir/0`:
 
 1. `ALNASL_THEMES_DIR` (`config :alnasl, :themes_dir`, set in
    `config/runtime.exs`) if set and non-empty;
@@ -25,8 +39,7 @@ to Alnasl's rail.
    `~/Library/Application Support/AlnaslData/themes`, `./data/themes` from
    `mix phx.server`).
 
-Each subfolder is a candidate. Nothing is installed by default, and the
-folder is never created: no folder, no packs, and the site is the site.
+Each subfolder is a candidate. The user's folder is never created: no folder, no packs, and the site is the site.
 
 A pack is read on the next page load, without a restart, and changing its
 files changes the version on its stylesheet's URL, so browsers fetch it

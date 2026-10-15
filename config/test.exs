@@ -22,6 +22,9 @@ config :alnasl, AlnaslWeb.Endpoint,
 # Print only warnings and errors during test
 config :alnasl,
   data_dir: Path.expand("../tmp/test/data", __DIR__),
+  # No bundled packs unless a test asks for them: the ordinary theme-pack
+  # tests count the packs they installed, and the shipped Toon is not one.
+  bundled_themes_dir: Path.expand("../tmp/test/no_bundled_themes", __DIR__),
   autostart: false,
   updates_timer: false,
   install_kind: :manual,

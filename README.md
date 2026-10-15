@@ -316,8 +316,9 @@ arbiter's laptop on the hall's network. English and Dutch, and the same
 five colour themes as OpenResults (paper, night, board, slate, high contrast)
 plus "match device", chosen per device (rail, or Setup on a phone). More
 themes can be dropped in as **theme packs** - a folder each, in `themes`
-inside the data folder - and are offered after the built-in ones; nothing is
-installed by default. [docs/theme-packs.md](docs/theme-packs.md) has the
+inside the data folder - and are offered after the built-in ones. One comes
+with every build: **Toon**, a cartoon theme (a pack of your own named `toon`
+replaces it). [docs/theme-packs.md](docs/theme-packs.md) has the
 format, the rules a pack's stylesheet must keep, and
 `mix alnasl.theme_check` for checking one.
 
@@ -591,7 +592,7 @@ alnasl.db                      settings, boards, games, the outbox, the log (SQL
 captures/board-<id>/*.jsonl    everything every board delivered, raw: always on, nothing to switch (rotated at 8 MB, capped in Setup)
 pgn/round-<r>/board-<n>.pgn    every game as PGN with clock times, rewritten on every move
 fixtures/*.jsonl               captures exported as test fixtures
-themes/<id>/                   theme packs, if anybody installed one (never created by the box)
+themes/<id>/                   theme packs of your own, if you installed any (never created by the box)
 secret_key_base                the cookie-signing secret, made on first start (installed and prod)
 listen                         "lan" or "local": Setup's switch for the hall's network
 launcher.log                   Windows: what the program said when it last started
