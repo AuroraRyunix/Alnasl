@@ -471,6 +471,11 @@ defmodule AlnaslWeb.HelpLive do
               "The site comes in the same themes as OpenResults: Paper, Night, Board, Slate and High contrast, and Match device, which follows the phone or computer. Choose with the half-moon at the bottom of the left rail, or under Setup (on a phone, the rail is not shown). The choice is kept in that browser only. High contrast is the one for a projector at the back of the hall."
             )}
           </p>
+          <p id="help-theme-packs">
+            {gettext(
+              "More themes can be added as theme packs: one folder per theme, in the folder \"themes\" inside the data folder (see \"Where your data is\"), or in the folder ALNASL_THEMES_DIR names. On the next page load they are in the same two places, after the built-in themes, with a strip of their colours. A pack the box will not load is listed there in grey, with the reason. Nothing is installed by default; to remove a pack, delete its folder, and a browser that had chosen it goes back to Match device."
+            )}
+          </p>
 
           <h2 id="help-trouble">{gettext("When something is wrong")}</h2>
           <dl>

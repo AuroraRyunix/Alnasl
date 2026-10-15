@@ -7,6 +7,8 @@ defmodule AlnaslWeb.Layouts do
 
   use AlnaslWeb, :html
 
+  alias Alnasl.ThemePacks
+
   embed_templates "layouts/*"
 
   @doc """
@@ -207,11 +209,19 @@ defmodule AlnaslWeb.Layouts do
   The colour theme, chosen on the device (`assets/js/theme.js` does the work;
   the choice is kept in this browser and nothing is sent to the box). `popover`
   is the rail's; `grid` is Setup's, where a phone finds it.
+
+  Installed theme packs (`Alnasl.ThemePacks`) follow the built-in themes, each
+  with its swatch; a pack that was refused is listed under them, greyed, with
+  the reason, so whoever installed it finds out here rather than in a log.
+  Their ids are prefixed with the picker's own, because Setup shows both
+  pickers and an id used twice is a page that lies to a screen reader.
   """
   attr :id, :string, required: true
   attr :variant, :atom, default: :popover, values: [:popover, :grid]
 
   def theme_picker(%{variant: :grid} = assigns) do
+    assigns = assign_packs(assigns)
+
     ~H"""
     <div
       id={@id}
@@ -221,11 +231,15 @@ defmodule AlnaslWeb.Layouts do
       phx-update="ignore"
     >
       <.theme_option :for={{key, label} <- themes()} key={key} label={label} />
+      <.pack_option :for={{pack, label} <- @packs} picker={@id} pack={pack} label={label} />
+      <.pack_refused :for={{id, reason} <- @refused} picker={@id} id={id} reason={reason} />
     </div>
     """
   end
 
   def theme_picker(assigns) do
+    assigns = assign_packs(assigns)
+
     ~H"""
     <details id={@id} class="theme-picker" phx-update="ignore">
       <summary class="btn small ghost" title={gettext("Colour theme")}>
@@ -233,9 +247,19 @@ defmodule AlnaslWeb.Layouts do
       </summary>
       <div class="theme-picker-panel" role="group" aria-label={gettext("Colour theme")}>
         <.theme_option :for={{key, label} <- themes()} key={key} label={label} />
+        <.pack_option :for={{pack, label} <- @packs} picker={@id} pack={pack} label={label} />
+        <.pack_refused :for={{id, reason} <- @refused} picker={@id} id={id} reason={reason} />
       </div>
     </details>
     """
+  end
+
+  defp assign_packs(assigns) do
+    locale = Gettext.get_locale(AlnaslWeb.Gettext)
+
+    assigns
+    |> assign(:packs, Enum.map(ThemePacks.list(), &{&1, ThemePacks.label(&1, locale)}))
+    |> assign(:refused, ThemePacks.refused())
   end
 
   attr :key, :string, required: true
@@ -247,6 +271,40 @@ defmodule AlnaslWeb.Layouts do
       <span class={"theme-dot theme-dot-#{@key}"} aria-hidden="true"></span>
       {@label}
     </button>
+    """
+  end
+
+  attr :picker, :string, required: true
+  attr :pack, :map, required: true
+  attr :label, :string, required: true
+
+  defp pack_option(assigns) do
+    ~H"""
+    <button
+      type="button"
+      class="theme-picker-item is-pack"
+      id={"#{@picker}-pack-#{@pack.id}"}
+      data-theme-opt={@pack.id}
+      aria-pressed="false"
+      title={if @pack.author != "", do: gettext("By %{author}", author: @pack.author)}
+    >
+      <span class="theme-pack-swatch" aria-hidden="true">
+        <i :for={colour <- @pack.swatch} style={"background: #{colour}"}></i>
+      </span>
+      {@label}
+    </button>
+    """
+  end
+
+  attr :picker, :string, required: true
+  attr :id, :string, required: true
+  attr :reason, :string, required: true
+
+  defp pack_refused(assigns) do
+    ~H"""
+    <p class="theme-picker-refused" id={"#{@picker}-refused-#{@id}"} title={@reason}>
+      {@id}: {gettext("refused: %{reason}", reason: @reason)}
+    </p>
     """
   end
 

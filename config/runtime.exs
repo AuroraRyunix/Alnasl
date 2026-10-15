@@ -41,6 +41,12 @@ if config_env() != :test do
     http: [ip: listen, port: String.to_integer(System.get_env("PORT", "4040"))]
 end
 
+# Theme packs (`Alnasl.ThemePacks`): `<data dir>/themes` unless this says
+# otherwise. Unset is the normal case; nothing is installed by default.
+if themes_dir = System.get_env("ALNASL_THEMES_DIR") do
+  config :alnasl, themes_dir: Path.expand(themes_dir)
+end
+
 if data_dir do
   config :alnasl, data_dir: data_dir
   config :alnasl, Alnasl.Repo, database: Path.join(data_dir, "alnasl.db")

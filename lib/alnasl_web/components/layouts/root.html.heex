@@ -8,6 +8,12 @@
     <.live_title default="Alnasl" suffix=" · Alnasl">{assigns[:page_title]}</.live_title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
+    <%!-- The installed theme packs (`Alnasl.ThemePacks`) as data for theme.js
+          below: id, dark or not, and the stylesheet to load while it is the
+          chosen theme. An attribute, escaped like any other and read with
+          JSON.parse; it comes first because theme.js runs the moment it is
+          parsed. --%>
+    <meta name="alnasl-theme-packs" content={Alnasl.ThemePacks.bootstrap_json()} />
     <script phx-track-static type="text/javascript" src={~p"/assets/js/theme.js"}>
     </script>
     <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>

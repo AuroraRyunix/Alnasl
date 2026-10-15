@@ -314,7 +314,12 @@ a hall without internet looks like.
 Local, in a browser: full-screen in a kiosk browser on the box, or from the
 arbiter's laptop on the hall's network. English and Dutch, and the same
 five colour themes as OpenResults (paper, night, board, slate, high contrast)
-plus "match device", chosen per device (rail, or Setup on a phone).
+plus "match device", chosen per device (rail, or Setup on a phone). More
+themes can be dropped in as **theme packs** - a folder each, in `themes`
+inside the data folder - and are offered after the built-in ones; nothing is
+installed by default. [docs/theme-packs.md](docs/theme-packs.md) has the
+format, the rules a pack's stylesheet must keep, and
+`mix alnasl.theme_check` for checking one.
 
 | Page | What it is for |
 |---|---|
@@ -572,6 +577,7 @@ release carries the installer, the updater and the systemd units
 | `PORT` | `4040` | The port of the management site |
 | `ALNASL_LISTEN` | (unset: the switch on Setup decides, and a new box answers only itself) | `lan` to let other machines in the hall reach the site - the arbiter's laptop, and the phone the boards are numbered with; `local` to forbid it. Set, it overrules the switch. Set a PIN when you open it |
 | `ALNASL_DATA` | `./data` (dev); installed or `prod`: see [Where your data lives](#where-your-data-lives-and-uninstalling-without-losing-it) | Where everything is kept. Refused when it is inside the program's own folder |
+| `ALNASL_THEMES_DIR` | `<ALNASL_DATA>/themes` | Where theme packs are read from ([docs/theme-packs.md](docs/theme-packs.md)). Nothing is there unless somebody puts it there |
 | `ALNASL_UART` | on for Linux/macOS, off for Windows | `1` / `0`: build the serial library or not |
 
 Everything else is set on the Setup page and stored in the database.
@@ -585,6 +591,7 @@ alnasl.db                      settings, boards, games, the outbox, the log (SQL
 captures/board-<id>/*.jsonl    everything every board delivered, raw: always on, nothing to switch (rotated at 8 MB, capped in Setup)
 pgn/round-<r>/board-<n>.pgn    every game as PGN with clock times, rewritten on every move
 fixtures/*.jsonl               captures exported as test fixtures
+themes/<id>/                   theme packs, if anybody installed one (never created by the box)
 secret_key_base                the cookie-signing secret, made on first start (installed and prod)
 listen                         "lan" or "local": Setup's switch for the hall's network
 launcher.log                   Windows: what the program said when it last started
