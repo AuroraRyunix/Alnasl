@@ -47,7 +47,7 @@ msgstr "\"%{name}\" verwijderd. De partij blijft bewaard."
 msgid "\"%{name}\" unlinked."
 msgstr "\"%{name}\" ontkoppeld."
 
-#: lib/alnasl_web/live/help_live.ex:501
+#: lib/alnasl_web/live/help_live.ex:506
 #, elixir-autogen, elixir-format
 msgid "\"Move missing?\" on a tile"
 msgstr "\"Zet ontbreekt?\" op een tegel"
@@ -57,7 +57,7 @@ msgstr "\"Zet ontbreekt?\" op een tegel"
 msgid "%{a} and %{b} are swapped (%{sq_a}, %{sq_b})"
 msgstr "%{a} en %{b} zijn verwisseld (%{sq_a}, %{sq_b})"
 
-#: lib/alnasl_web/components/layouts.ex:303
+#: lib/alnasl_web/components/layouts.ex:361
 #, elixir-autogen, elixir-format
 msgid "%{count} waiting"
 msgstr "%{count} wachtend"
@@ -170,7 +170,7 @@ msgstr "Een balk bovenaan betekent dat de uitslagensite niet bereikbaar is. Het 
 msgid "A board put back to the position before the last move is a takeback"
 msgstr "Een bord dat is teruggezet naar de stelling vóór de laatste zet is een terugname"
 
-#: lib/alnasl_web/live/help_live.ex:477
+#: lib/alnasl_web/live/help_live.ex:482
 #, elixir-autogen, elixir-format
 msgid "A board shows \"Out of sync\" right after the start"
 msgstr "Een bord toont \"Niet synchroon\" meteen na het begin"
@@ -366,7 +366,7 @@ msgstr "Voor de ronde"
 msgid "Black"
 msgstr "Zwart"
 
-#: lib/alnasl_web/components/layouts.ex:259
+#: lib/alnasl_web/components/layouts.ex:317
 #: lib/alnasl_web/live/boards_live.ex:609
 #: lib/alnasl_web/live/outbox_live.ex:536
 #: lib/alnasl_web/live/pgn_live.ex:366
@@ -421,7 +421,7 @@ msgstr "Bordnummer voor %{name}"
 msgid "Board of round %{n}"
 msgstr "Bord van ronde %{n}"
 
-#: lib/alnasl_web/components/layouts.ex:55
+#: lib/alnasl_web/components/layouts.ex:57
 #: lib/alnasl_web/live/boards_live.ex:48
 #: lib/alnasl_web/live/boards_live.ex:436
 #: lib/alnasl_web/words.ex:1055
@@ -539,7 +539,7 @@ msgstr "Verbinden"
 msgid "Connect the board first."
 msgstr "Verbind eerst het bord."
 
-#: lib/alnasl_web/components/layouts.ex:289
+#: lib/alnasl_web/components/layouts.ex:347
 #: lib/alnasl_web/destination_words.ex:32
 #: lib/alnasl_web/link_words.ex:90
 #, elixir-autogen, elixir-format
@@ -715,7 +715,7 @@ msgstr "Naar Instellingen"
 msgid "Hands"
 msgstr "Handen"
 
-#: lib/alnasl_web/components/layouts.ex:73
+#: lib/alnasl_web/components/layouts.ex:75
 #: lib/alnasl_web/live/help_live.ex:7
 #: lib/alnasl_web/live/help_live.ex:23
 #, elixir-autogen, elixir-format
@@ -762,7 +762,7 @@ msgstr "Houd de pagina Ronde open. Elke tegel toont een vorm en een woord:"
 msgid "Kind"
 msgstr "Soort"
 
-#: lib/alnasl_web/components/layouts.ex:77
+#: lib/alnasl_web/components/layouts.ex:79
 #: lib/alnasl_web/live/setup_live.ex:1374
 #, elixir-autogen, elixir-format
 msgid "Language"
@@ -804,13 +804,13 @@ msgid "Linking for round"
 msgstr "Koppelen voor ronde"
 
 #: lib/alnasl_web/components/core_components.ex:117
-#: lib/alnasl_web/components/layouts.ex:326
+#: lib/alnasl_web/components/layouts.ex:384
 #: lib/alnasl_web/live/game_live.ex:931
 #, elixir-autogen, elixir-format
 msgid "Live"
 msgstr "Live"
 
-#: lib/alnasl_web/components/layouts.ex:67
+#: lib/alnasl_web/components/layouts.ex:69
 #: lib/alnasl_web/live/log_live.ex:19
 #: lib/alnasl_web/live/log_live.ex:102
 #, elixir-autogen, elixir-format
@@ -867,7 +867,7 @@ msgstr "Zetnr. in lijst"
 msgid "Moves"
 msgstr "Zetten"
 
-#: lib/alnasl_web/live/help_live.ex:489
+#: lib/alnasl_web/live/help_live.ex:494
 #, elixir-autogen, elixir-format
 msgid "Moves appear late"
 msgstr "Zetten verschijnen laat"
@@ -945,7 +945,7 @@ msgstr "Nog geen borden"
 msgid "No connection to the results server. Moves are kept."
 msgstr "Geen verbinding met de uitslagensite. Zetten blijven bewaard."
 
-#: lib/alnasl_web/components/layouts.ex:109
+#: lib/alnasl_web/components/layouts.ex:111
 #, elixir-autogen, elixir-format
 msgid "No connection to the results server. Nothing is lost: %{count} waiting."
 msgstr "Geen verbinding met de uitslagensite. Er gaat niets verloren: %{count} wachtend."
@@ -1007,7 +1007,7 @@ msgstr "Niet gekoppeld"
 msgid "Not sending"
 msgstr "Niet versturen"
 
-#: lib/alnasl_web/components/layouts.ex:297
+#: lib/alnasl_web/components/layouts.ex:355
 #: lib/alnasl_web/destination_words.ex:35
 #, elixir-autogen, elixir-format
 msgid "Not set up"
@@ -1056,7 +1056,7 @@ msgstr "Er wacht niets."
 msgid "Nothing recorded yet"
 msgstr "Nog niets opgenomen"
 
-#: lib/alnasl_web/components/layouts.ex:305
+#: lib/alnasl_web/components/layouts.ex:363
 #: lib/alnasl_web/destination_words.ex:38
 #, elixir-autogen, elixir-format
 msgid "Nothing sent yet"
@@ -1077,7 +1077,7 @@ msgstr "Uit: elk resultaat wacht op de arbiter. Aan: een partij die op het bord 
 msgid "Offer mate and stalemate to the results site without waiting for me"
 msgstr "Mat en pat aan de uitslagensite voorstellen zonder op de arbiter te wachten"
 
-#: lib/alnasl_web/components/layouts.ex:292
+#: lib/alnasl_web/components/layouts.ex:350
 #, elixir-autogen, elixir-format
 msgid "Offline, %{count} waiting"
 msgstr "Offline, %{count} wachtend"
@@ -1110,19 +1110,19 @@ msgstr "Niet synchroon"
 msgid "Out of sync: the board does not match the game."
 msgstr "Niet synchroon: het bord komt niet overeen met de partij."
 
-#: lib/alnasl_web/components/layouts.ex:58
+#: lib/alnasl_web/components/layouts.ex:60
 #: lib/alnasl_web/live/outbox_live.ex:20
 #: lib/alnasl_web/live/outbox_live.ex:225
 #, elixir-autogen, elixir-format
 msgid "Outbox"
 msgstr "Wachtrij"
 
-#: lib/alnasl_web/live/help_live.ex:539
+#: lib/alnasl_web/live/help_live.ex:544
 #, elixir-autogen, elixir-format
 msgid "Outbox: is anything waiting, and why? Was the round published from the pairing program? A game is only shown for a published board."
 msgstr "Wachtrij: wacht er iets, en waarom? Is de ronde vanuit het paringsprogramma gepubliceerd? Een partij wordt alleen getoond voor een gepubliceerd bord."
 
-#: lib/alnasl_web/components/layouts.ex:61
+#: lib/alnasl_web/components/layouts.ex:63
 #, elixir-autogen, elixir-format
 msgid "PGN"
 msgstr "PGN"
@@ -1163,7 +1163,7 @@ msgstr "Perfect"
 msgid "Piece off the board: alarm after"
 msgstr "Stuk van het bord: alarm na"
 
-#: lib/alnasl_web/components/layouts.ex:50
+#: lib/alnasl_web/components/layouts.ex:52
 #, elixir-autogen, elixir-format
 msgid "Places"
 msgstr "Plaatsen"
@@ -1231,14 +1231,14 @@ msgstr "Leest"
 msgid "Ready"
 msgstr "Klaar"
 
-#: lib/alnasl_web/components/layouts.ex:64
+#: lib/alnasl_web/components/layouts.ex:66
 #: lib/alnasl_web/live/recordings_live.ex:18
 #: lib/alnasl_web/live/recordings_live.ex:105
 #, elixir-autogen, elixir-format
 msgid "Recordings"
 msgstr "Opnames"
 
-#: lib/alnasl_web/components/layouts.ex:295
+#: lib/alnasl_web/components/layouts.ex:353
 #: lib/alnasl_web/destination_words.ex:34
 #, elixir-autogen, elixir-format
 msgid "Refused"
@@ -1378,7 +1378,7 @@ msgstr "Juist"
 msgid "Rough (knocks, swaps, missed moves)"
 msgstr "Ruw (stoten, verwisselingen, gemiste zetten)"
 
-#: lib/alnasl_web/components/layouts.ex:52
+#: lib/alnasl_web/components/layouts.ex:54
 #: lib/alnasl_web/destination_words.ex:130
 #: lib/alnasl_web/live/outbox_live.ex:535
 #: lib/alnasl_web/live/pgn_live.ex:298
@@ -1506,7 +1506,7 @@ msgstr "Stel eerst de uitslagensite en het toernooi in (Instellingen)."
 msgid "Settling"
 msgstr "Bezig"
 
-#: lib/alnasl_web/components/layouts.ex:70
+#: lib/alnasl_web/components/layouts.ex:72
 #: lib/alnasl_web/live/setup_live.ex:51
 #: lib/alnasl_web/live/setup_live.ex:770
 #, elixir-autogen, elixir-format
@@ -1564,7 +1564,7 @@ msgstr "Simulator (geen hardware)"
 msgid "Size"
 msgstr "Grootte"
 
-#: lib/alnasl_web/components/layouts.ex:40
+#: lib/alnasl_web/components/layouts.ex:42
 #, elixir-autogen, elixir-format
 msgid "Skip to the page"
 msgstr "Naar de pagina springen"
@@ -1598,7 +1598,7 @@ msgstr "Toestand"
 msgid "Stop the simulated game"
 msgstr "De gesimuleerde partij stoppen"
 
-#: lib/alnasl_web/live/help_live.ex:545
+#: lib/alnasl_web/live/help_live.ex:550
 #, elixir-autogen, elixir-format
 msgid "Switch it on. Games, queue and settings are on disk; boards reconnect and carry on."
 msgstr "Zet het aan. Partijen, wachtrij en instellingen staan op schijf; borden verbinden opnieuw en gaan verder."
@@ -1809,7 +1809,7 @@ msgstr "Het kastje heeft nog geen partij voor dat bord."
 msgid "The box has no games for this round yet."
 msgstr "Het kastje heeft nog geen partijen voor deze ronde."
 
-#: lib/alnasl_web/live/help_live.ex:543
+#: lib/alnasl_web/live/help_live.ex:548
 #, elixir-autogen, elixir-format
 msgid "The box was switched off by accident"
 msgstr "Het kastje is per ongeluk uitgezet"
@@ -1829,7 +1829,7 @@ msgstr "De opname is door een verse tracker gehaald. Er is niets opgeslagen of v
 msgid "The clock was pressed %{presses} times for %{plies} moves: a move may be missing."
 msgstr "De klok is %{presses} keer ingedrukt voor %{plies} halve zetten: er kan een zet ontbreken."
 
-#: lib/alnasl_web/live/help_live.ex:503
+#: lib/alnasl_web/live/help_live.ex:508
 #, elixir-autogen, elixir-format
 msgid "The clock was pressed more often than moves were seen. Compare the board with the move list."
 msgstr "De klok is vaker ingedrukt dan er zetten gezien zijn. Vergelijk het bord met de zettenlijst."
@@ -1985,12 +1985,12 @@ msgstr "De uitslagensite is terug. Wat bewaard was, wordt verstuurd."
 msgid "The results server refuses this box. Check the relay key."
 msgstr "De uitslagensite weigert dit kastje. Controleer de relaissleutel."
 
-#: lib/alnasl_web/components/layouts.ex:105
+#: lib/alnasl_web/components/layouts.ex:107
 #, elixir-autogen, elixir-format
 msgid "The results server refuses this box. Nothing is lost: %{count} waiting."
 msgstr "De uitslagensite weigert dit kastje. Er gaat niets verloren: %{count} wachtend."
 
-#: lib/alnasl_web/live/help_live.ex:537
+#: lib/alnasl_web/live/help_live.ex:542
 #, elixir-autogen, elixir-format
 msgid "The results site shows nothing"
 msgstr "De uitslagensite toont niets"
@@ -2141,7 +2141,7 @@ msgstr "De beginstelling is niet juist"
 msgid "The starting position is on the board. The first move starts the game."
 msgstr "De beginstelling staat op het bord. De eerste zet start de partij."
 
-#: lib/alnasl_web/live/help_live.ex:479
+#: lib/alnasl_web/live/help_live.ex:484
 #, elixir-autogen, elixir-format
 msgid "The starting position was wrong or the first moves were made before the board was linked. Use \"Resync from here\"."
 msgstr "De beginstelling was fout of de eerste zetten zijn gedaan voordat het bord gekoppeld was. Gebruik \"Hier hersynchroniseren\"."
@@ -2186,7 +2186,7 @@ msgstr "Dit kastje"
 msgid "This box asks for a PIN"
 msgstr "Dit kastje vraagt om een PIN"
 
-#: lib/alnasl_web/components/layouts.ex:357
+#: lib/alnasl_web/components/layouts.ex:415
 #, elixir-autogen, elixir-format
 msgid "This page lost its connection to the box. Trying again..."
 msgstr "Deze pagina verloor de verbinding met het kastje. Er wordt opnieuw geprobeerd..."
@@ -2330,7 +2330,7 @@ msgstr "Wat er gebeurde"
 msgid "What is certain"
 msgstr "Wat zeker is"
 
-#: lib/alnasl_web/components/layouts.ex:114
+#: lib/alnasl_web/components/layouts.ex:116
 #, elixir-autogen, elixir-format
 msgid "What is waiting"
 msgstr "Wat er wacht"
@@ -2355,7 +2355,7 @@ msgstr "Wat het bord nu leest"
 msgid "What this box does"
 msgstr "Wat dit kastje doet"
 
-#: lib/alnasl_web/live/help_live.ex:475
+#: lib/alnasl_web/live/help_live.ex:480
 #, elixir-autogen, elixir-format
 msgid "When something is wrong"
 msgstr "Als er iets mis is"
@@ -2648,7 +2648,7 @@ msgstr "tot zet %{n} (%{san})"
 msgid "white %{piece}"
 msgstr "%{piece} (wit)"
 
-#: lib/alnasl_web/live/help_live.ex:483
+#: lib/alnasl_web/live/help_live.ex:488
 #, elixir-autogen, elixir-format
 msgid "\"Clock not in starting position\" before the round"
 msgstr "\"Klok niet in beginstelling\" voor de ronde"
@@ -2703,7 +2703,7 @@ msgstr "Klok verkeerd om"
 msgid "Clocks"
 msgstr "Klokken"
 
-#: lib/alnasl_web/live/help_live.ex:485
+#: lib/alnasl_web/live/help_live.ex:490
 #, elixir-autogen, elixir-format
 msgid "The clock always stands to the right of the board, White's display toward White; the cable does not reach anywhere else, and the box cannot be told otherwise. Before the first move the lever must be up on White's side, so that White's time runs first. Turn the clock or tip the lever; the message goes away by itself."
 msgstr "De klok staat altijd rechts van het bord, met het venster van wit naar wit toe; de kabel reikt nergens anders, en het kastje kan niet anders worden ingesteld. Voor de eerste zet moet de wip omhoog staan aan de kant van wit, zodat de tijd van wit eerst loopt. Draai de klok om of zet de wip om; de melding verdwijnt vanzelf."
@@ -3431,7 +3431,7 @@ msgstr "Uitschakelen"
 msgid "Switch on"
 msgstr "Inschakelen"
 
-#: lib/alnasl_web/components/layouts.ex:299
+#: lib/alnasl_web/components/layouts.ex:357
 #: lib/alnasl_web/destination_words.ex:36
 #, elixir-autogen, elixir-format
 msgid "Switched off"
@@ -3758,17 +3758,17 @@ msgstr "Ingesteld op snel spel. Elk bord gebruikt het vanaf zijn volgende lezing
 msgid "Times are in milliseconds. The defaults suit classical and rapid play, time scrambles included; leave them unless a hall teaches you otherwise."
 msgstr "Tijden zijn in milliseconden. De standaardwaarden passen bij klassiek en rapid spel, tijdnood inbegrepen; laat ze staan tenzij een zaal anders leert."
 
-#: lib/alnasl_web/live/help_live.ex:491
+#: lib/alnasl_web/live/help_live.ex:496
 #, elixir-autogen, elixir-format
 msgid "A move is believed once the pieces have stood still for a moment, or as soon as the next player picks up a piece; the move's own clock press makes it immediate. Castling and promotion wait a little longer."
 msgstr "Een zet wordt geloofd zodra de stukken even stil hebben gestaan, of zodra de volgende speler een stuk oppakt; de klokdruk van de zet zelf maakt het onmiddellijk. Rokade en promotie wachten iets langer."
 
-#: lib/alnasl_web/live/help_live.ex:495
+#: lib/alnasl_web/live/help_live.ex:500
 #, elixir-autogen, elixir-format
 msgid "Blitz and bullet"
 msgstr "Blitz en bullet"
 
-#: lib/alnasl_web/live/help_live.ex:497
+#: lib/alnasl_web/live/help_live.ex:502
 #, elixir-autogen, elixir-format
 msgid "Setup has \"Bullet / fast play\" for games of a few minutes or less: a move has to stand for a shorter time, and a board put back is not read as a takeback. The box works out up to two moves it did not see; beyond that the board goes \"Out of sync\" and \"Resync from here\" searches deeper. Everything a real board says is recorded whatever is set (Recordings), so a game can be looked at again afterwards."
 msgstr "Instellingen heeft \"Bullet / snel spel\" voor partijen van enkele minuten of minder: een zet hoeft minder lang te blijven staan, en een teruggezet bord wordt niet als terugname gelezen. Het kastje leidt tot twee zetten af die het niet gezien heeft; daarboven gaat het bord op \"Niet synchroon\" en zoekt \"Hier hersynchroniseren\" dieper. Alles wat een echt bord zegt wordt opgenomen, wat er ook is ingesteld (Opnames), zodat een partij achteraf opnieuw bekeken kan worden."
@@ -3778,36 +3778,36 @@ msgstr "Instellingen heeft \"Bullet / snel spel\" voor partijen van enkele minut
 msgid "Chosen per device and kept in this browser; the box and the other screens are not told. Match device follows the phone or computer, light by day and dark by night."
 msgstr "Per toestel gekozen en in deze browser bewaard; het kastje en de andere schermen krijgen het niet te horen. Volg het toestel doet wat de telefoon of computer doet: licht overdag, donker 's nachts."
 
-#: lib/alnasl_web/components/layouts.ex:220
-#: lib/alnasl_web/components/layouts.ex:231
-#: lib/alnasl_web/components/layouts.ex:232
-#: lib/alnasl_web/components/layouts.ex:234
+#: lib/alnasl_web/components/layouts.ex:230
+#: lib/alnasl_web/components/layouts.ex:245
+#: lib/alnasl_web/components/layouts.ex:246
+#: lib/alnasl_web/components/layouts.ex:248
 #: lib/alnasl_web/live/setup_live.ex:1351
 #, elixir-autogen, elixir-format
 msgid "Colour theme"
 msgstr "Kleurthema"
 
-#: lib/alnasl_web/components/layouts.ex:261
+#: lib/alnasl_web/components/layouts.ex:319
 #, elixir-autogen, elixir-format
 msgid "High contrast"
 msgstr "Hoog contrast"
 
-#: lib/alnasl_web/components/layouts.ex:256
+#: lib/alnasl_web/components/layouts.ex:314
 #, elixir-autogen, elixir-format
 msgid "Match device"
 msgstr "Volg het toestel"
 
-#: lib/alnasl_web/components/layouts.ex:258
+#: lib/alnasl_web/components/layouts.ex:316
 #, elixir-autogen, elixir-format
 msgid "Night"
 msgstr "Nacht"
 
-#: lib/alnasl_web/components/layouts.ex:257
+#: lib/alnasl_web/components/layouts.ex:315
 #, elixir-autogen, elixir-format
 msgid "Paper"
 msgstr "Papier"
 
-#: lib/alnasl_web/components/layouts.ex:260
+#: lib/alnasl_web/components/layouts.ex:318
 #, elixir-autogen, elixir-format
 msgid "Slate"
 msgstr "Leisteen"
@@ -4437,12 +4437,12 @@ msgstr "herschreven"
 msgid "\"%{name}\" plays in %{tournament}."
 msgstr "\"%{name}\" speelt in %{tournament}."
 
-#: lib/alnasl_web/live/help_live.ex:507
+#: lib/alnasl_web/live/help_live.ex:512
 #, elixir-autogen, elixir-format
 msgid "\"Code refused\" under Tournaments in Setup"
 msgstr "\"Code geweigerd\" onder Toernooien in Instellingen"
 
-#: lib/alnasl_web/live/help_live.ex:513
+#: lib/alnasl_web/live/help_live.ex:518
 #, elixir-autogen, elixir-format
 msgid "\"No answer\" under Tournaments in Setup"
 msgstr "\"Geen antwoord\" onder Toernooien in Instellingen"
@@ -4532,7 +4532,7 @@ msgstr "Een koppelcode uit OpenPairings (Instellingen, Live borden) brengt een t
 msgid "A tournament arrived over the link: %{name}."
 msgstr "Er is een toernooi binnengekomen via de koppeling: %{name}."
 
-#: lib/alnasl_web/live/help_live.ex:519
+#: lib/alnasl_web/live/help_live.ex:524
 #, elixir-autogen, elixir-format
 msgid "A tournament has no results page"
 msgstr "Een toernooi heeft geen uitslagenpagina"
@@ -4633,7 +4633,7 @@ msgstr "Geef de eerste en de laatste tafel op: 5 en 8."
 msgid "In OpenPairings: Settings, Live boards, make a connect code - for one tournament, or for a group of tournaments. It is shown once, as a line of text and as a QR code holding the same text."
 msgstr "In OpenPairings: Instellingen, Live borden, maak een koppelcode - voor één toernooi, of voor een groep toernooien. Die wordt één keer getoond, als een regel tekst en als een QR-code met dezelfde tekst."
 
-#: lib/alnasl_web/live/help_live.ex:521
+#: lib/alnasl_web/live/help_live.ex:526
 #, elixir-autogen, elixir-format
 msgid "It is not published from OpenPairings, or no relay key is saved there (Settings, Live boards). Setup says which. Until then its moves go to OpenPairings only; the address and the key arrive by themselves once they are there."
 msgstr "Het is niet gepubliceerd vanuit OpenPairings, of daar is geen relaissleutel opgeslagen (Instellingen, Live borden). Instellingen zegt welke van de twee. Tot dan gaan de zetten alleen naar OpenPairings; het adres en de sleutel komen vanzelf aan zodra ze er zijn."
@@ -4749,7 +4749,7 @@ msgstr "OpenPairings antwoordt."
 msgid "OpenPairings asks to slow down. The box tries again by itself."
 msgstr "OpenPairings vraagt om het rustiger aan te doen. Het kastje probeert het vanzelf opnieuw."
 
-#: lib/alnasl_web/live/help_live.ex:515
+#: lib/alnasl_web/live/help_live.ex:520
 #, elixir-autogen, elixir-format
 msgid "OpenPairings cannot be reached. Nothing is lost: the boards go on with the pairings the box has, the games are kept for it, and the box asks again by itself. A round paired meanwhile is started with \"Start round N\" and takes its names when the connection is back."
 msgstr "OpenPairings is niet bereikbaar. Er gaat niets verloren: de borden gaan door met de paringen die het kastje heeft, de partijen worden ervoor bewaard, en het kastje vraagt vanzelf opnieuw. Een ronde die intussen is gepaard, wordt gestart met \"Ronde N starten\" en krijgt haar namen zodra de verbinding terug is."
@@ -4764,7 +4764,7 @@ msgstr "OpenPairings is niet bereikbaar: %{why}"
 msgid "OpenPairings does not accept the connect code: it is wrong, or it was withdrawn there. Make a new code in OpenPairings (Settings, Live boards) and add it in Setup."
 msgstr "OpenPairings aanvaardt de koppelcode niet: de code is fout, of daar ingetrokken. Maak een nieuwe code in OpenPairings (Instellingen, Live borden) en voeg die toe in Instellingen."
 
-#: lib/alnasl_web/live/help_live.ex:509
+#: lib/alnasl_web/live/help_live.ex:514
 #, elixir-autogen, elixir-format
 msgid "OpenPairings does not accept the connect code: it was withdrawn there, or it is not the whole line. The box has stopped asking, and the boards go on with the pairings it has. Make a new code in OpenPairings (Settings, Live boards), add it, and remove the old one."
 msgstr "OpenPairings aanvaardt de koppelcode niet: de code is daar ingetrokken, of het is niet de hele regel. Het kastje vraagt niet meer, en de borden gaan door met de paringen die het kastje heeft. Maak een nieuwe code in OpenPairings (Instellingen, Live borden), voeg die toe, en verwijder de oude."
@@ -5274,7 +5274,7 @@ msgstr "Alle versies en wat er veranderd is"
 msgid "Alnasl %{version} is out."
 msgstr "Alnasl %{version} is uit."
 
-#: lib/alnasl_web/components/layouts.ex:122
+#: lib/alnasl_web/components/layouts.ex:124
 #, elixir-autogen, elixir-format
 msgid "Alnasl %{version} is out. This box runs %{current}."
 msgstr "Alnasl %{version} is uit. Op dit kastje draait %{current}."
@@ -5294,7 +5294,7 @@ msgstr "Gewijzigd. Het gaat in de volgende keer dat Alnasl start."
 msgid "Decided where the program is started (ALNASL_LISTEN), so there is no switch here."
 msgstr "Dit is bepaald waar het programma gestart wordt (ALNASL_LISTEN), dus hier staat geen schakelaar."
 
-#: lib/alnasl_web/components/layouts.ex:154
+#: lib/alnasl_web/components/layouts.ex:156
 #, elixir-autogen, elixir-format
 msgid "Don't ask again"
 msgstr "Niet meer vragen"
@@ -5339,7 +5339,7 @@ msgstr "Nu installeren, terwijl er gespeeld wordt? Zetten die gespeeld worden te
 msgid "Installing, updating, and where your data is"
 msgstr "Installeren, updaten, en waar je gegevens staan"
 
-#: lib/alnasl_web/components/layouts.ex:141
+#: lib/alnasl_web/components/layouts.ex:143
 #, elixir-autogen, elixir-format
 msgid "Later"
 msgstr "Later"
@@ -5419,7 +5419,7 @@ msgstr "Instellingen, \"Toegang vanaf andere machines\": stel een PIN in, laat d
 msgid "Start Alnasl when Windows starts"
 msgstr "Alnasl starten wanneer Windows start"
 
-#: lib/alnasl_web/components/layouts.ex:149
+#: lib/alnasl_web/components/layouts.ex:151
 #, elixir-autogen, elixir-format
 msgid "Stop looking for new versions? You can switch it on again under Setup, Updates."
 msgstr "Niet meer naar nieuwe versies kijken? Je zet het weer aan onder Instellingen, Updates."
@@ -5434,7 +5434,7 @@ msgstr "Het kastje vraagt elk half uur één keer of er een nieuwere versie uit 
 msgid "The box itself is always let in. A browser on another machine in the hall is let in freely, unless a PIN is set here. Other machines can only reach the box at all when that is switched on below."
 msgstr "Het kastje zelf wordt altijd binnengelaten. Een browser op een andere machine in de zaal wordt vrij binnengelaten, tenzij hier een PIN is ingesteld. Andere machines kunnen het kastje alleen bereiken als dat hieronder is aangezet."
 
-#: lib/alnasl_web/components/layouts.ex:130
+#: lib/alnasl_web/components/layouts.ex:132
 #: lib/alnasl_web/live/setup_live.ex:1601
 #, elixir-autogen, elixir-format
 msgid "The download is %{size}."
@@ -5511,7 +5511,7 @@ msgstr "Update naar %{version} gestart door de arbiter, terwijl er gespeeld werd
 msgid "Update to %{version} started by the arbiter."
 msgstr "Update naar %{version} gestart door de arbiter."
 
-#: lib/alnasl_web/components/layouts.ex:138
+#: lib/alnasl_web/components/layouts.ex:140
 #, elixir-autogen, elixir-format
 msgid "Update..."
 msgstr "Updaten..."
@@ -5531,7 +5531,7 @@ msgstr "Updaten"
 msgid "Wait"
 msgstr "Wachten"
 
-#: lib/alnasl_web/components/layouts.ex:135
+#: lib/alnasl_web/components/layouts.ex:137
 #: lib/alnasl_web/live/setup_live.ex:1606
 #, elixir-autogen, elixir-format
 msgid "What is new"
@@ -5572,7 +5572,7 @@ msgstr "Ja, downloaden en installeren"
 msgid "a board without a number"
 msgstr "een bord zonder nummer"
 
-#: lib/alnasl_web/live/help_live.ex:525
+#: lib/alnasl_web/live/help_live.ex:530
 #, elixir-autogen, elixir-format
 msgid "\"More than one board answers on this port: it is a loop\""
 msgstr "\"Op deze poort antwoordt meer dan één bord: het is een lus\""
@@ -5584,7 +5584,7 @@ msgid_plural "%{port} is a loop: %{count} boards answer on it. Each has its own 
 msgstr[0] "%{port} is een lus: er antwoordt %{count} bord op. Elk heeft nu een eigen rij."
 msgstr[1] "%{port} is een lus: er antwoorden %{count} borden op. Elk heeft nu een eigen rij."
 
-#: lib/alnasl_web/live/help_live.ex:531
+#: lib/alnasl_web/live/help_live.ex:536
 #, elixir-autogen, elixir-format
 msgid "A board on a loop says \"No signal\" and the others do not"
 msgstr "Een bord op een lus zegt \"Geen signaal\" en de andere niet"
@@ -5657,7 +5657,7 @@ msgstr "Als lus lezen"
 msgid "Several boards on one cable (a loop)"
 msgstr "Meerdere borden aan één kabel (een lus)"
 
-#: lib/alnasl_web/live/help_live.ex:533
+#: lib/alnasl_web/live/help_live.ex:538
 #, elixir-autogen, elixir-format
 msgid "That board does not answer: its cable in the chain is out, or it has no power. The boards before it in the chain go on. Nothing has to be done on the box when it is back."
 msgstr "Dat bord antwoordt niet: zijn kabel in de keten zit los, of het heeft geen stroom. De borden die ervoor in de keten zitten, gaan door. Op het kastje hoeft niets te gebeuren als het terug is."
@@ -5679,7 +5679,7 @@ msgstr "De oudere borden zeggen op een lus hun serienummer en zijn daaraan beken
 msgid "The port could not be opened. Try again in a moment."
 msgstr "De poort kon niet worden geopend. Probeer het zo meteen opnieuw."
 
-#: lib/alnasl_web/live/help_live.ex:527
+#: lib/alnasl_web/live/help_live.ex:532
 #, elixir-autogen, elixir-format
 msgid "The port was added while one board was on it, or before this version, and several are on it now. Read as one board they all answer at once and nothing of it makes sense, so the box reads nothing. Press \"Read it as a loop\" on that row: each board gets its own row. A board that had a table number keeps it when the box can tell which one it is."
 msgstr "De poort is toegevoegd toen er één bord op zat, of vóór deze versie, en nu zitten er meerdere op. Als één bord gelezen antwoorden ze allemaal tegelijk en is er geen touw aan vast te knopen, dus leest het kastje niets. Druk op die rij op \"Als lus lezen\": elk bord krijgt een eigen rij. Een bord dat een tafelnummer had, houdt het als het kastje kan zien welk bord het is."
@@ -5783,8 +5783,8 @@ msgstr "Beantwoord in Instellingen"
 msgid "Boards you connect later can be put in them on the Boards page."
 msgstr "Borden die je later aansluit, kun je er op de pagina Borden in zetten."
 
-#: lib/alnasl_web/components/layouts.ex:328
-#: lib/alnasl_web/components/layouts.ex:332
+#: lib/alnasl_web/components/layouts.ex:386
+#: lib/alnasl_web/components/layouts.ex:390
 #, elixir-autogen, elixir-format
 msgid "Connecting..."
 msgstr "Verbinden..."
@@ -5926,7 +5926,7 @@ msgstr "Zet het erin en begin opnieuw"
 msgid "Put it there: these moves are board %{n} of round %{r}%{name}"
 msgstr "Zet het erin: deze zetten zijn bord %{n} van ronde %{r}%{name}"
 
-#: lib/alnasl_web/components/layouts.ex:327
+#: lib/alnasl_web/components/layouts.ex:385
 #, elixir-autogen, elixir-format
 msgid "Reconnecting..."
 msgstr "Opnieuw verbinden..."
@@ -6283,8 +6283,8 @@ msgstr "Er wacht niets van."
 msgid "Open the results page: %{address}"
 msgstr "Open de uitslagenpagina: %{address}"
 
-#: lib/alnasl_web/components/layouts.ex:183
-#: lib/alnasl_web/components/layouts.ex:184
+#: lib/alnasl_web/components/layouts.ex:185
+#: lib/alnasl_web/components/layouts.ex:186
 #: lib/alnasl_web/live/round_live.ex:630
 #, elixir-autogen, elixir-format
 msgid "Open the results site"
@@ -6512,7 +6512,22 @@ msgstr "Windows: Instellingen, Apps, Alnasl, Verwijderen. Linux: sudo /opt/alnas
 msgid "Download alnasl-macos-aarch64.zip for a Mac with an Apple chip (M1 and later; there is no build for Intel Macs), open it, and drag Alnasl into Applications. Apple has not signed it yet, so the first time macOS refuses to open it: in System Settings, Privacy & Security, click \"Open Anyway\" beside the message about Alnasl (on macOS 14 or older: right-click the app and choose Open). Alnasl sits in the Dock like any other app (right-click its icon, Options, Keep in Dock to keep it there). Its small window can be closed and comes back when you click the icon; quitting Alnasl (Cmd-Q, or Quit on the Dock icon) asks first, because while it is stopped the boards are not read. A DGT board on USB is a port called /dev/cu.usbserial-... or /dev/cu.usbmodem...; the USB adapter of an RS232 board may need its maker's driver before it shows up (FTDI works as it is; Prolific, CH340 and CP210x may not). To update, stop Alnasl and put the new app in place of the old one."
 msgstr "Download alnasl-macos-aarch64.zip voor een Mac met een Apple-chip (M1 en later; voor Macs met Intel is er geen versie), open het bestand en sleep Alnasl naar Programma's. Apple heeft het nog niet ondertekend, dus de eerste keer weigert macOS het te openen: klik in Systeeminstellingen, Privacy en beveiliging, op \"Open toch\" naast de melding over Alnasl (op macOS 14 of ouder: klik met de rechtermuisknop op de app en kies Open). Alnasl staat in het Dock zoals elke andere app (klik met de rechtermuisknop op het symbool, Opties, Bewaar in Dock om het daar te houden). Het kleine venster mag je sluiten en komt terug als je op het symbool klikt; als je Alnasl stopt (Cmd-Q, of Stop op het symbool in het Dock), vraagt het eerst, want zolang het gestopt is, worden de borden niet gelezen. Een DGT-bord op USB is een poort met de naam /dev/cu.usbserial-... of /dev/cu.usbmodem...; de USB-adapter van een RS232-bord heeft soms eerst het stuurprogramma van zijn fabrikant nodig voor hij verschijnt (FTDI werkt meteen; Prolific, CH340 en CP210x soms niet). Bijwerken: stop Alnasl en zet de nieuwe app in de plaats van de oude."
 
-#: lib/alnasl_web/components/layouts.ex:127
+#: lib/alnasl_web/components/layouts.ex:129
 #, elixir-autogen, elixir-format
 msgid "There is no Mac build for Intel."
 msgstr "Voor Macs met Intel is er geen versie."
+
+#: lib/alnasl_web/components/layouts.ex:289
+#, elixir-autogen, elixir-format
+msgid "By %{author}"
+msgstr "Door %{author}"
+
+#: lib/alnasl_web/live/help_live.ex:475
+#, elixir-autogen, elixir-format
+msgid "More themes can be added as theme packs: one folder per theme, in the folder \"themes\" inside the data folder (see \"Where your data is\"), or in the folder ALNASL_THEMES_DIR names. On the next page load they are in the same two places, after the built-in themes, with a strip of their colours. A pack the box will not load is listed there in grey, with the reason. Nothing is installed by default; to remove a pack, delete its folder, and a browser that had chosen it goes back to Match device."
+msgstr "Meer thema's kun je toevoegen als themapakket: één map per thema, in de map \"themes\" in de gegevensmap (zie \"Waar je gegevens staan\"), of in de map die ALNASL_THEMES_DIR noemt. Bij het volgende laden van een pagina staan ze op dezelfde twee plekken, na de ingebouwde thema's, met een strookje van hun kleuren. Een pakket dat het kastje niet laadt, staat er grijs bij, met de reden. Standaard is er niets geïnstalleerd; om een pakket weg te halen verwijder je de map, en een browser die het gekozen had gaat terug naar Volg het toestel."
+
+#: lib/alnasl_web/components/layouts.ex:306
+#, elixir-autogen, elixir-format
+msgid "refused: %{reason}"
+msgstr "geweigerd: %{reason}"

@@ -240,6 +240,16 @@
   color-scheme: light;
 }
 
+/* A theme pack (Alnasl.ThemePacks, docs/theme-packs.md) brings its own
+ * palette in its own stylesheet, scoped to its own [data-theme]. The one
+ * thing this file is told about it is whether it is dark: theme.js sets
+ * data-theme-dark on <html> for a pack whose theme.json says so, and the
+ * browser's own controls (scrollbars, form fields) follow. Not a colour, so
+ * the rule above about where colours live stands. */
+:root[data-theme-dark] {
+  color-scheme: dark;
+}
+
 /* --- ground ---------------------------------------------------------------- */
 
 *,
@@ -2449,6 +2459,39 @@ tr.sought td:first-child {
 
 .theme-grid .theme-picker-item[aria-pressed="true"] {
   border: 2px solid var(--accent);
+}
+
+/* An installed theme pack: its own colours as a little bar, since a dot here
+ * cannot know a palette it has never heard of. */
+.theme-pack-swatch {
+  display: inline-flex;
+  width: 1.6rem;
+  height: 0.95rem;
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid var(--quiet);
+  flex: none;
+}
+
+.theme-pack-swatch > i {
+  flex: 1;
+}
+
+/* A pack that was refused, and why: greyed, small, and not a button. */
+.theme-picker-refused {
+  margin: 0;
+  padding: 0.3rem 0.6rem;
+  max-width: 16rem;
+  font-size: 0.75rem;
+  line-height: 1.3;
+  color: var(--quiet);
+  font-style: italic;
+  overflow-wrap: anywhere;
+}
+
+.theme-grid .theme-picker-refused {
+  grid-column: 1 / -1;
+  max-width: none;
 }
 
 /* --- moves the box worked out: orange for one line, red for a guess ---------

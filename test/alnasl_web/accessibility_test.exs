@@ -21,34 +21,10 @@ defmodule AlnaslWeb.AccessibilityTest do
 
   # --- contrast ----------------------------------------------------------------
 
-  # {text token, background token}: every way text is put on a ground.
-  @pairs [
-    {"ink", "bg"},
-    {"ink", "panel"},
-    {"ink", "sunken"},
-    {"quiet", "bg"},
-    {"quiet", "panel"},
-    {"quiet", "sunken"},
-    {"accent", "bg"},
-    {"accent", "panel"},
-    {"on-accent", "accent"},
-    {"ok", "ok-bg"},
-    {"warn", "warn-bg"},
-    {"bad", "bad-bg"},
-    {"idle", "idle-bg"},
-    {"ink", "ok-bg"},
-    {"ink", "warn-bg"},
-    {"ink", "bad-bg"},
-    {"reconstructed", "reconstructed-bg"},
-    {"guessed", "guessed-bg"},
-    {"reconstructed", "panel"},
-    {"guessed", "panel"},
-    {"reconstructed", "bg"},
-    {"guessed", "bg"},
-    {"warn", "panel"},
-    {"bad", "panel"},
-    {"panel", "ink"}
-  ]
+  # {text token, background token}: every way text is put on a ground. Kept
+  # in `AlnaslWeb.ThemeContrast`, so that `mix alnasl.theme_check` holds a
+  # theme pack to exactly these.
+  @pairs AlnaslWeb.ThemeContrast.pairs()
 
   @named ~w(paper night board slate contrast)
 
@@ -96,20 +72,7 @@ defmodule AlnaslWeb.AccessibilityTest do
 
   defp themes, do: Map.new(blocks(), fn {name, b} -> {name, tokens(b)} end)
 
-  defp luminance("#" <> hex) do
-    [r, g, b] =
-      for <<pair::binary-size(2) <- hex>> do
-        c = String.to_integer(pair, 16) / 255
-        if c <= 0.03928, do: c / 12.92, else: :math.pow((c + 0.055) / 1.055, 2.4)
-      end
-
-    0.2126 * r + 0.7152 * g + 0.0722 * b
-  end
-
-  defp ratio(a, b) do
-    [hi, lo] = Enum.sort([luminance(a), luminance(b)], :desc)
-    (hi + 0.05) / (lo + 0.05)
-  end
+  defp ratio(a, b), do: AlnaslWeb.ThemeContrast.ratio(a, b)
 
   test "every text pairing of the tokens reaches 4.5:1 in every theme" do
     themes = themes()

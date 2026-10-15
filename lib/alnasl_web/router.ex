@@ -16,6 +16,15 @@ defmodule AlnaslWeb.Router do
     plug :gate
   end
 
+  # Installed theme packs' stylesheets and fonts (`Alnasl.ThemePacks`). No
+  # pipeline and no PIN: the PIN page wears the theme as well, and the
+  # controller answers 404 to everything that is not a file of an accepted
+  # pack.
+  scope "/themes", AlnaslWeb do
+    get "/:id/theme.css", ThemePackController, :css
+    get "/:id/fonts/:file", ThemePackController, :font
+  end
+
   scope "/", AlnaslWeb do
     pipe_through :browser
 
