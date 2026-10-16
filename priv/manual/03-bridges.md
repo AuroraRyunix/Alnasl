@@ -8,6 +8,13 @@ The hosted server has no boards of its own, so every board on it arrives through
 
 The bridge dials out to Alnasl. Nothing has to be opened in the hall's network: no port forwarding, no fixed address. Its boards appear among the others, with the bridge's name in front of the port, and are numbered, paired and repaired like any board.
 
+## Arkab, the bridge program {#arkab}
+
+**Arkab** is the bridge: Alnasl's board reading and nothing else - the DGT drivers, the serial bus, a queue that keeps every move until the server has it, and the outgoing line to one or more Alnasls. No rounds, no logins, no games of its own. It is a separate program with its own repository, [github.com/AuroraRyunix/Arkab](https://github.com/AuroraRyunix/Arkab), Apache-2.0 like Alnasl, and it shares its board code with Alnasl, so a board reads the same on both.
+
+> [!NOTE] Getting Arkab
+> There is no ready-made download yet: for now Arkab is started from its source with Elixir (`mix deps.get`, then `mix run --no-halt`), as its README describes. A packaged build for a Raspberry Pi is coming. Its page then answers on port 4050 of the machine it runs on.
+
 ## Joining a bridge {#joining}
 
 One action, in one place, and nobody types a key.

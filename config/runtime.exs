@@ -140,7 +140,27 @@ if config_env() == :prod do
           secret
       end
 
+  # The address links are built from: invitations, bridge join links, the
+  # phone's QR code. A hall box is reached on its own port, so the endpoint's
+  # port is right there. The server sits behind a tunnel that speaks https on
+  # 443, and its own port 4006 is a number no visitor can reach - so there
+  # the public address is https on 443, as OpenPairings has it.
+  # ALNASL_PUBLIC_URL (https://alnasl.example.org) overrides both.
+  url =
+    case System.get_env("ALNASL_PUBLIC_URL") do
+      public when public not in [nil, ""] ->
+        %URI{scheme: scheme, host: host, port: port} = URI.parse(public)
+        [host: host, port: port, scheme: scheme]
+
+      _unset ->
+        host = System.get_env("PHX_HOST") || "localhost"
+
+        if System.get_env("ALNASL_NO_LOCAL_BOARDS") in ~w(1 true yes) and host != "localhost",
+          do: [host: host, port: 443, scheme: "https"],
+          else: [host: host]
+    end
+
   config :alnasl, AlnaslWeb.Endpoint,
-    url: [host: System.get_env("PHX_HOST") || "localhost"],
+    url: url,
     secret_key_base: secret
 end
