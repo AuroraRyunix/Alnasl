@@ -44,21 +44,33 @@ defmodule AlnaslWeb.RoundLive do
       end
 
     # One tournament alone when the address names one, or a round.
-    only = if params["tid"] || round, do: Scope.tournament(params).id
+    if params["tid"] || round do
+      case Scope.tournament(params, socket.assigns.current_scope) do
+        nil ->
+          {:noreply,
+           socket
+           |> put_flash(:error, gettext("That tournament is not in one of your halls."))
+           |> push_navigate(to: ~p"/")}
 
-    {:noreply, socket |> assign(only: only, asked_round: round) |> load()}
+        tournament ->
+          {:noreply, socket |> assign(only: tournament.id, asked_round: round) |> load()}
+      end
+    else
+      {:noreply, socket |> assign(only: nil, asked_round: round) |> load()}
+    end
   end
 
   defp load(socket) do
     %{only: only, asked_round: asked} = socket.assigns
-    active = Tournaments.active()
-    snapshots = Boards.snapshots()
+    account = socket.assigns.current_scope
+    active = Alnasl.Halls.active(account)
+    snapshots = Alnasl.Halls.here(account, Boards.snapshots())
 
     shown =
       cond do
         only == nil -> active
         found = Enum.find(active, &(&1.id == only)) -> [found]
-        true -> [Tournaments.get(only) || Tournaments.default()]
+        true -> [Tournaments.get(only) || hd(active ++ [Tournaments.default()])]
       end
 
     sections = Enum.map(shown, &section(&1, asked || &1.round, snapshots))
@@ -330,6 +342,7 @@ defmodule AlnaslWeb.RoundLive do
     if tid == Tournaments.default_id(), do: base, else: "#{base}-t#{tid}"
   end
 
+  # The permit has checked the account may act on it.
   defp tournament_of(%{"t" => text}) do
     case Integer.parse(text || "") do
       {id, ""} -> Tournaments.get(id) || Tournaments.default()
@@ -521,6 +534,7 @@ defmodule AlnaslWeb.RoundLive do
       update={@update}
       box={@box}
       locale={@locale}
+      scope={@current_scope}
       alarms={@alarms}
       title={@title}
       subtitle={

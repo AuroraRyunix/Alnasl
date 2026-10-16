@@ -10,12 +10,15 @@ defmodule AlnaslWeb.LabelsController do
   alias Alnasl.Boards
 
   def index(conn, _params) do
+    # The labels of the hall the pages are about.
+    all = Alnasl.Halls.here(conn.assigns.current_scope, Boards.list())
+
     boards =
-      Boards.list()
+      all
       |> Enum.filter(&(&1.table_no != nil))
       |> Enum.sort_by(& &1.table_no)
 
-    without = Enum.count(Boards.list(), &(&1.table_no == nil))
+    without = Enum.count(all, &(&1.table_no == nil))
 
     render(conn, :index,
       boards: boards,

@@ -27,7 +27,9 @@ defmodule AlnaslWeb.Hall do
 
   use Gettext, backend: AlnaslWeb.Gettext
 
-  alias Alnasl.{Boards, Outbox, Seating, Settings, Tournaments, Updates}
+  alias Alnasl.{Accounts, Boards, Outbox, Seating, Settings, Tournaments, Updates}
+  alias Alnasl.Accounts.Scope
+  alias AlnaslWeb.UserAuth
   alias AlnaslWeb.Status
 
   # --- the plug ----------------------------------------------------------------
@@ -38,19 +40,48 @@ defmodule AlnaslWeb.Hall do
     conn
   end
 
-  @doc "Lets the box in, and anybody else once they have given the PIN."
+  @doc """
+  With accounts (or on the server): the signed-in, and nobody else - the
+  box itself included, because on a server every request arrives from the
+  tunnel on the loopback address. Without: the box, and anybody else once
+  they have given the PIN. Needs `AlnaslWeb.UserAuth.fetch_current_scope/2`
+  before it.
+  """
   def gate(conn, _opts) do
     local? = loopback?(conn.remote_ip)
     conn = put_session(conn, :local, local?)
 
-    if allowed?(local?, get_session(conn, :unlocked)) or conn.request_path == "/unlock" do
-      conn
-    else
-      conn |> Phoenix.Controller.redirect(to: "/unlock") |> halt()
+    cond do
+      Accounts.login_required?() ->
+        case conn.assigns[:current_scope] do
+          %Scope{user: %{must_change_password: true}} ->
+            conn |> Phoenix.Controller.redirect(to: "/account") |> halt()
+
+          %Scope{user: %{}} ->
+            conn
+
+          _nobody ->
+            conn
+            |> then(
+              &if(&1.method == "GET",
+                do: put_session(&1, :user_return_to, &1.request_path),
+                else: &1
+              )
+            )
+            |> Phoenix.Controller.redirect(to: "/log-in")
+            |> halt()
+        end
+
+      allowed?(local?, get_session(conn, :unlocked)) or conn.request_path == "/unlock" ->
+        conn
+
+      true ->
+        conn |> Phoenix.Controller.redirect(to: "/unlock") |> halt()
     end
   end
 
-  defp allowed?(local?, unlocked), do: local? or unlocked == true or not Settings.pin_set?()
+  @doc "May a browser in on a box without accounts: the box itself, the PIN given, or no PIN."
+  def allowed?(local?, unlocked), do: local? or unlocked == true or not Settings.pin_set?()
 
   defp loopback?({127, _, _, _}), do: true
   defp loopback?({0, 0, 0, 0, 0, 0, 0, 1}), do: true
@@ -70,32 +101,85 @@ defmodule AlnaslWeb.Hall do
     locale = locale()
     Gettext.put_locale(AlnaslWeb.Gettext, locale)
 
-    if allowed?(session["local"] == true, session["unlocked"]) do
-      if connected?(socket) do
-        Outbox.subscribe()
-        Settings.subscribe()
-        Updates.subscribe()
-        Tournaments.subscribe()
-      end
+    case mount_scope(session) do
+      # An account in no hall yet has one page: the one that says so.
+      {:ok, %Scope{hall: nil, open?: false}} when socket.view != AlnaslWeb.HallsLive ->
+        {:halt, redirect(socket, to: "/halls")}
 
-      socket =
-        socket
-        |> assign(
-          link: Outbox.status(),
-          box: Settings.get("box_name") || "Alnasl",
-          locale: locale,
-          update: Updates.notice()
-        )
-        |> refresh()
-        |> attach_hook(:hall, :handle_info, &info/2)
-        |> attach_hook(:hall_update, :handle_event, &update_event/3)
-        |> attach_hook(:hall_seating, :handle_event, &seating_event/3)
+      {:ok, scope} ->
+        if connected?(socket) do
+          Outbox.subscribe()
+          Settings.subscribe()
+          Updates.subscribe()
+          Tournaments.subscribe()
+        end
 
-      {:cont, socket}
-    else
-      {:halt, redirect(socket, to: "/unlock")}
+        socket =
+          socket
+          |> assign(
+            current_scope: scope,
+            link: Outbox.status(),
+            box: Settings.get("box_name") || "Alnasl",
+            locale: locale,
+            update: Scope.can?(scope, :admin) && Updates.notice(),
+            phone_signin: nil
+          )
+          |> refresh()
+          # First: nothing below, and no page, sees an event the scope may not send.
+          |> attach_hook(:permit, :handle_event, &AlnaslWeb.Permit.check/3)
+          |> attach_hook(:hall, :handle_info, &info/2)
+          |> attach_hook(:hall_update, :handle_event, &update_event/3)
+          |> attach_hook(:hall_seating, :handle_event, &seating_event/3)
+          |> attach_hook(:hall_phone, :handle_event, &phone_event/3)
+
+        {:cont, socket}
+
+      {:redirect, to} ->
+        {:halt, redirect(socket, to: to)}
     end
   end
+
+  # Who the page is for: `{:ok, scope}`, or where to send the browser.
+  defp mount_scope(session) do
+    if Accounts.login_required?() do
+      case UserAuth.session_user(session) do
+        %{must_change_password: true} -> {:redirect, "/account"}
+        %{} = user -> {:ok, Accounts.scope(user, session["hall_id"])}
+        nil -> {:redirect, "/log-in"}
+      end
+    else
+      if allowed?(session["local"] == true, session["unlocked"]),
+        do: {:ok, Accounts.scope(nil, session["hall_id"])},
+        else: {:redirect, "/unlock"}
+    end
+  end
+
+  # "A sign-in code for a phone": a link that signs the phone in as this
+  # account, once, within five minutes (`Alnasl.Accounts.create_qr_token/1`).
+  defp phone_event("phone_signin", params, socket) do
+    case socket.assigns.current_scope do
+      %Scope{user: %{} = user} ->
+        token = Accounts.create_qr_token(user)
+        to = AlnaslWeb.UserAuth.safe(params["to"])
+
+        {:halt,
+         assign(socket,
+           phone_signin: %{
+             path: "/log-in/qr/" <> token <> "?" <> URI.encode_query(%{"to" => to}),
+             expires_at:
+               DateTime.add(
+                 DateTime.utc_now(:second),
+                 Alnasl.Accounts.UserToken.qr_minutes() * 60
+               )
+           }
+         )}
+
+      _open ->
+        {:halt, socket}
+    end
+  end
+
+  defp phone_event(_event, _params, socket), do: {:cont, socket}
 
   # Keeps the connection badge and the box's name current on every page. The
   # message goes on to the page, which may care too.
@@ -108,7 +192,8 @@ defmodule AlnaslWeb.Hall do
 
     {:cont,
      if(hall,
-       do: assign(socket, hall: %{hall | heads: Status.heads(link)}),
+       do:
+         assign(socket, hall: %{hall | heads: Status.heads(link, socket.assigns[:current_scope])}),
        else: refresh(socket)
      )}
   end
@@ -121,7 +206,12 @@ defmodule AlnaslWeb.Hall do
   # outside, what is asked, what the badges say.
   defp info({:tournament, _id}, socket), do: {:cont, refresh(socket)}
 
-  defp info(:update_changed, socket), do: {:cont, assign(socket, update: Updates.notice())}
+  defp info(:update_changed, socket),
+    do:
+      {:cont,
+       assign(socket,
+         update: Scope.can?(socket.assigns.current_scope, :admin) && Updates.notice()
+       )}
 
   defp info(_other, socket), do: {:cont, socket}
 
@@ -140,7 +230,8 @@ defmodule AlnaslWeb.Hall do
   defp update_event(_event, _params, socket), do: {:cont, socket}
 
   @doc "The badges and the lines about boards, drawn again (a page that changed them says so)."
-  def refresh(socket), do: assign(socket, hall: Status.build(socket.assigns.link))
+  def refresh(socket),
+    do: assign(socket, hall: Status.build(socket.assigns.link, socket.assigns[:current_scope]))
 
   # --- the answers to the lines about boards and tournaments ---------------------
 

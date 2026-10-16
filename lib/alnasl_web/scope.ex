@@ -24,6 +24,22 @@ defmodule AlnaslWeb.Scope do
     end
   end
 
+  @doc """
+  The same, for an account: a tournament the account may not see is not
+  found (`nil`), and an address that names none leads to the current
+  hall's own tournament - the box's own for its own hall.
+  """
+  def tournament(params, account) do
+    tournament = tournament(params)
+
+    cond do
+      Alnasl.Halls.sees?(account, tournament) -> tournament
+      params["tid"] != nil -> nil
+      hall_id = Alnasl.Accounts.Scope.hall_id(account) -> Alnasl.Halls.local_tournament(hall_id)
+      true -> nil
+    end
+  end
+
   defp own?(nil), do: true
   defp own?(id), do: id == Tournaments.default_id()
 

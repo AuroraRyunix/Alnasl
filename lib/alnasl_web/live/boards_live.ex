@@ -40,7 +40,7 @@ defmodule AlnaslWeb.BoardsLive do
 
     # The page is about one tournament at a time: the first one shown, until
     # the arbiter picks another.
-    first = hd(Tournaments.active())
+    first = hd(Alnasl.Halls.active(socket.assigns.current_scope))
 
     {:ok,
      socket
@@ -74,9 +74,10 @@ defmodule AlnaslWeb.BoardsLive do
 
   defp load(socket) do
     %{tid: tid, round: round} = socket.assigns
-    snapshots = Boards.snapshots()
+    scope = socket.assigns.current_scope
+    snapshots = Alnasl.Halls.here(scope, Boards.snapshots())
     checks = Tables.checks(tid, round)
-    tournaments = Tournaments.list() |> Enum.reject(& &1.gone)
+    tournaments = Alnasl.Halls.here(scope, Tournaments.list()) |> Enum.reject(& &1.gone)
 
     assign(socket,
       snapshots: snapshots,
@@ -87,7 +88,7 @@ defmodule AlnaslWeb.BoardsLive do
       numbers: tid |> Tournaments.boards(round) |> Enum.map(& &1.board),
       rounds: Enum.uniq(Tournaments.rounds(tid) ++ [round]) |> Enum.sort(),
       tournaments: tournaments,
-      shown: Tournaments.active(),
+      shown: Alnasl.Halls.active(scope),
       names: Map.new(tournaments, &{&1.id, Tournaments.title(&1) || gettext("This box")}),
       refresh_due?: false
     )
@@ -264,7 +265,13 @@ defmodule AlnaslWeb.BoardsLive do
 
   def handle_event("link_in_order", %{"order" => %{"first" => first}}, socket) do
     first = int(first, 1)
-    Tables.number_in_order(socket.assigns.round, first)
+
+    Tables.number_in_order(
+      socket.assigns.round,
+      first,
+      Alnasl.Halls.filter_id(socket.assigns.current_scope)
+    )
+
     count = length(socket.assigns.snapshots)
 
     {:noreply,
@@ -299,7 +306,7 @@ defmodule AlnaslWeb.BoardsLive do
   end
 
   def handle_event("clear_remaps", _params, socket) do
-    Tables.clear_remaps()
+    Tables.clear_remaps(Alnasl.Halls.filter_id(socket.assigns.current_scope))
 
     {:noreply,
      socket
@@ -433,6 +440,7 @@ defmodule AlnaslWeb.BoardsLive do
       update={@update}
       box={@box}
       locale={@locale}
+      scope={@current_scope}
       title={gettext("Boards")}
       subtitle={gettext("%{n} known", n: length(@snapshots))}
     >
@@ -944,7 +952,12 @@ defmodule AlnaslWeb.BoardsLive do
 
       <div class="cols">
         <.panel id="phone" title={gettext("Open this site on your phone")}>
-          <Access.phone id="phone-access" path="/boards/number" />
+          <Access.phone
+            id="phone-access"
+            path="/boards/number"
+            signin={@phone_signin}
+            accounts?={not @current_scope.open?}
+          />
         </.panel>
 
         <.panel id="add-board" title={gettext("Add a board")}>

@@ -76,19 +76,35 @@ defmodule AlnaslWeb.Access do
     _error -> nil
   end
 
-  @doc "The panel: addresses, the QR code of the first, and what to know about the PIN."
+  @doc """
+  The panel: addresses, the QR code of the first, and what to know about the
+  PIN. With accounts, the code is a sign-in link instead (`signin`, made by
+  the "phone_signin" event every page answers): good once, for five
+  minutes, so a photo of the screen is not a key to the hall. On the server
+  the address is the server's public one, not the machine's own.
+  """
   attr :id, :string, required: true
   attr :path, :string, default: "/", doc: "where on the site the code should lead"
+  attr :accounts?, :boolean, default: false, doc: "login is on: show a sign-in code"
+  attr :signin, :map, default: nil, doc: "`%{path, expires_at}` of the sign-in link on show"
 
   def phone(assigns) do
     info = info()
+
+    info =
+      if Alnasl.Accounts.server?(),
+        do: %{info | lan?: true, urls: [AlnaslWeb.Endpoint.url()]},
+        else: info
+
     url = List.first(info.urls)
+    target = if assigns.signin, do: assigns.signin.path, else: assigns.path
+    show_code? = not assigns.accounts? or assigns.signin != nil
 
     assigns =
       assign(assigns,
         info: info,
-        url: url && url <> assigns.path,
-        code: url && qr(url <> assigns.path),
+        url: url && url <> target,
+        code: url && show_code? && qr(url <> target),
         pin_set?: Settings.pin_set?()
       )
 
@@ -107,22 +123,53 @@ defmodule AlnaslWeb.Access do
           </svg>
         </div>
         <div class="stack">
-          <p>
-            {gettext("Open this address on your phone, or point its camera at the code:")}
-          </p>
-          <ul id={"#{@id}-urls"} class="addresses">
-            <li :for={u <- @info.urls} class="mono">{u <> @path}</li>
-          </ul>
+          <%= if @accounts? do %>
+            <%= if @signin do %>
+              <p>{gettext("Point the phone's camera at the code: it signs the phone in as you.")}</p>
+              <p id={"#{@id}-signin-expiry"} class="note">
+                {gettext(
+                  "Good once, until %{time} (UTC). Do not leave it on a screen others photograph.",
+                  time: Calendar.strftime(@signin.expires_at, "%H:%M")
+                )}
+              </p>
+            <% else %>
+              <p>
+                {gettext(
+                  "A phone signs in with its own account, or with a sign-in code from here: a QR code that signs it in as you, once, within five minutes."
+                )}
+              </p>
+            <% end %>
+            <div>
+              <.button
+                id={"#{@id}-signin"}
+                phx-click="phone_signin"
+                phx-value-to={@path}
+                icon="send"
+              >
+                {if @signin, do: gettext("A fresh code"), else: gettext("Make a sign-in code")}
+              </.button>
+            </div>
+            <ul id={"#{@id}-urls"} class="addresses">
+              <li :for={u <- @info.urls} class="mono">{u <> @path}</li>
+            </ul>
+          <% else %>
+            <p>
+              {gettext("Open this address on your phone, or point its camera at the code:")}
+            </p>
+            <ul id={"#{@id}-urls"} class="addresses">
+              <li :for={u <- @info.urls} class="mono">{u <> @path}</li>
+            </ul>
+          <% end %>
           <p :if={!@info.lan?} id={"#{@id}-local-only"} class="note">
             <.badge tone="warn" icon="warning">{gettext("Not reachable yet")}</.badge>
             {gettext(
               "This box answers only itself, so a phone gets no answer. Setup, \"Access from other machines\": set a PIN, let other machines in, and start Alnasl again."
             )}
           </p>
-          <p :if={@pin_set?} id={"#{@id}-pin-set"} class="note">
+          <p :if={@pin_set? and !@accounts?} id={"#{@id}-pin-set"} class="note">
             {gettext("The phone will be asked for the PIN once.")}
           </p>
-          <p :if={!@pin_set?} id={"#{@id}-pin-hint"} class="note">
+          <p :if={!@pin_set? and !@accounts?} id={"#{@id}-pin-hint"} class="note">
             <.badge tone="warn" icon="warning">{gettext("No PIN")}</.badge>
             {gettext(
               "Anybody on the hall's network who opens this address can renumber the boards. Set a PIN in Setup before the hall fills up."

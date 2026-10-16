@@ -29,6 +29,10 @@ defmodule AlnaslWeb.Layouts do
   attr :update, :any, default: nil, doc: "`Alnasl.Updates.notice/0`"
   attr :alarms, :integer, default: 0
 
+  attr :scope, :any,
+    default: nil,
+    doc: "`current_scope` (`AlnaslWeb.Hall`): the halls and the account"
+
   attr :hall, :map,
     default: nil,
     doc:
@@ -49,6 +53,7 @@ defmodule AlnaslWeb.Layouts do
             <span>{@box}</span>
           </div>
         </.link>
+        <.hall_switcher scope={@scope} />
         <nav class="nav" aria-label={gettext("Places")}>
           <.nav_item to={~p"/"} key={:round} nav={@nav} icon="round" count={@alarms}>
             {gettext("Round")}
@@ -68,6 +73,9 @@ defmodule AlnaslWeb.Layouts do
           <.nav_item to={~p"/log"} key={:log} nav={@nav} icon="log">
             {gettext("Log")}
           </.nav_item>
+          <.nav_item to={~p"/halls"} key={:halls} nav={@nav} icon="boards">
+            {gettext("Halls")}
+          </.nav_item>
           <.nav_item to={~p"/setup"} key={:setup} nav={@nav} icon="setup">
             {gettext("Setup")}
           </.nav_item>
@@ -76,6 +84,7 @@ defmodule AlnaslWeb.Layouts do
           </.nav_item>
         </nav>
         <div class="rail-foot">
+          <.account_line scope={@scope} />
           <div class="seg" role="group" aria-label={gettext("Language")}>
             <a
               id="locale-en"
@@ -390,6 +399,64 @@ defmodule AlnaslWeb.Layouts do
       <span class="live-word">{gettext("Connecting...")}</span>
       <span class="live-ms"></span>
     </span>
+    """
+  end
+
+  @doc """
+  The frame of the pages before the site: signing in, an invitation, the
+  account's password. No rail, nothing about the box but its name.
+  """
+  attr :flash, :map, required: true
+  attr :id, :string, required: true
+  attr :title, :string, required: true
+  slot :inner_block, required: true
+
+  def door(assigns) do
+    ~H"""
+    <main class="door">
+      <p class="door-brand"><.logo /> <b>Alnasl</b></p>
+      <.panel id={@id} title={@title}>
+        {render_slot(@inner_block)}
+      </.panel>
+    </main>
+    <.flash_group flash={@flash} />
+    """
+  end
+
+  @doc """
+  The halls of the account, at the top of the rail: which one the pages are
+  about, and the others to switch to. Nothing on a box with one hall.
+  """
+  attr :scope, :any, default: nil
+
+  def hall_switcher(assigns) do
+    ~H"""
+    <div :if={@scope && length(@scope.halls) > 1} id="hall-switcher" class="hall-switcher">
+      <span class="hint">{gettext("Hall")}</span>
+      <ul>
+        <li :for={hall <- @scope.halls}>
+          <a
+            id={"hall-switch-#{hall.id}"}
+            href={~p"/halls/#{hall.id}/enter"}
+            aria-current={to_string(@scope.hall && @scope.hall.id == hall.id)}
+          >
+            {hall.name}
+          </a>
+        </li>
+      </ul>
+    </div>
+    """
+  end
+
+  @doc "Who is signed in, with the way to the account and out. Nothing on a box without accounts."
+  attr :scope, :any, default: nil
+
+  def account_line(assigns) do
+    ~H"""
+    <div :if={@scope && @scope.user} id="account-line" class="account-line">
+      <a id="account-link" href={~p"/account"} class="mono">{@scope.user.email}</a>
+      <.link id="log-out" href={~p"/log-out"} method="delete">{gettext("Sign out")}</.link>
+    </div>
     """
   end
 

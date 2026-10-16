@@ -30,9 +30,11 @@ defmodule AlnaslWeb.GameLive do
 
   @impl true
   def mount(%{"round" => round, "board" => board} = params, _session, socket) do
-    with {round, ""} <- Integer.parse(round), {board, ""} <- Integer.parse(board) do
+    # A tournament of a hall not the account's is not there, as far as it knows.
+    with {round, ""} <- Integer.parse(round),
+         {board, ""} <- Integer.parse(board),
+         %{} = tournament <- Scope.tournament(params, socket.assigns.current_scope) do
       if connected?(socket), do: Boards.subscribe()
-      tournament = Scope.tournament(params)
 
       {:ok,
        socket
@@ -705,6 +707,7 @@ defmodule AlnaslWeb.GameLive do
       update={@update}
       box={@box}
       locale={@locale}
+      scope={@current_scope}
       title={gettext("Board %{n}", n: @no)}
       subtitle={
         if Tournaments.many?() and Tournaments.title(@tournament),

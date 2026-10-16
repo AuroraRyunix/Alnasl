@@ -19,7 +19,8 @@ defmodule AlnaslWeb.Status do
 
   use Gettext, backend: AlnaslWeb.Gettext
 
-  alias Alnasl.{Destination, Outbox, Seating, Tournaments}
+  alias Alnasl.{Destination, Halls, Outbox, Seating, Tournaments}
+  alias Alnasl.Accounts.Scope
   alias Alnasl.Destination.OpenResults
   alias AlnaslWeb.LinkWords
 
@@ -28,24 +29,41 @@ defmodule AlnaslWeb.Status do
   `%{heads: [head] | :results_only, seating: map, live: true}`. A `head` is
   `%{id, tone, icon, text, to}`.
   """
-  def build(link) do
+  def build(link, scope \\ nil) do
     %{
-      heads: heads(link),
-      seating: %{
-        outside: Seating.outside(),
-        ask: Seating.ask(),
-        auto: Seating.auto()
-      }
+      heads: heads(link, scope),
+      seating:
+        if own_hall?(scope) do
+          %{outside: Seating.outside(), ask: Seating.ask(), auto: Seating.auto()}
+        else
+          %{outside: [], ask: [], auto: nil}
+        end
     }
   end
 
+  # The seating notices are about the box's own ports (`Alnasl.Seating`):
+  # shown on the box's own hall, and on a box without accounts.
+  defp own_hall?(%Scope{open?: false} = scope), do: Scope.hall_id(scope) == Halls.own_id()
+  defp own_hall?(_open), do: true
+
   @doc "The badges of the bar, or `:results_only` for a box with no linked tournament."
-  def heads(link) do
-    case Seating.linked() do
-      [] -> :results_only
-      linked -> [pairing_head(Tournaments.links())] ++ results_head(linked, link)
+  def heads(link, scope \\ nil) do
+    case linked(scope) do
+      [] ->
+        :results_only
+
+      linked ->
+        [pairing_head(Halls.here(scope || %Scope{open?: true}, Tournaments.links()))] ++
+          results_head(linked, link)
     end
   end
+
+  # The linked tournaments of the hall on show.
+  defp linked(%Scope{open?: false} = scope) do
+    Halls.here(scope, Enum.filter(Tournaments.list(), &(&1.kind == "linked" and not &1.gone)))
+  end
+
+  defp linked(_open), do: Seating.linked()
 
   defp pairing_head(links) do
     states = Enum.map(links, & &1.state)

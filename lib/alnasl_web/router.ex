@@ -2,9 +2,11 @@ defmodule AlnaslWeb.Router do
   use AlnaslWeb, :router
 
   import AlnaslWeb.Hall, only: [gate: 2, put_locale: 2]
+  import AlnaslWeb.UserAuth, only: [fetch_current_scope: 2]
 
-  # One pipeline. There are no accounts on the box: who may be here is
-  # decided by where the request comes from and the PIN (`AlnaslWeb.Hall`).
+  # Every page of the site. Who may be here is `AlnaslWeb.Hall.gate/2`'s:
+  # on a box without accounts, where the request comes from and the PIN;
+  # once there is an account (and always on the server), signed in or not.
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
@@ -13,7 +15,41 @@ defmodule AlnaslWeb.Router do
     plug :protect_from_forgery
     plug :put_secure_browser_headers
     plug :put_locale
+    plug :fetch_current_scope
     plug :gate
+  end
+
+  # The pages before the site: signing in, 02cloud, an invitation, the
+  # sign-in link of a QR code, the account's password. Not behind the gate,
+  # or nobody could get past it; each says itself whom it serves.
+  pipeline :door do
+    plug :accepts, ["html"]
+    plug :fetch_session
+    plug :fetch_live_flash
+    plug :put_root_layout, html: {AlnaslWeb.Layouts, :root}
+    plug :protect_from_forgery
+    plug :put_secure_browser_headers
+    plug :put_locale
+    plug :fetch_current_scope
+  end
+
+  scope "/", AlnaslWeb do
+    pipe_through :door
+
+    get "/log-in", SessionController, :new
+    post "/log-in", SessionController, :create
+    delete "/log-out", SessionController, :delete
+    get "/log-in/qr/:token", SessionController, :qr
+
+    get "/auth/keycloak", KeycloakAuthController, :new
+    get "/auth/keycloak/callback", KeycloakAuthController, :callback
+
+    get "/invite/:token", InvitationController, :show
+    post "/invite/:token", InvitationController, :accept
+
+    post "/accounts/first", AccountController, :first
+    get "/account", AccountController, :show
+    put "/account/password", AccountController, :update_password
   end
 
   # A join link opened in a browser: a page that says what it is for. Not
@@ -62,6 +98,7 @@ defmodule AlnaslWeb.Router do
     get "/files/t/:tid/round/:round/board/:board", FileController, :game
     get "/files/capture/:board/:name", FileController, :capture
     get "/files/labels", LabelsController, :index
+    get "/halls/:id/enter", HallController, :enter
 
     # Every page of the site. One session, so moving between them keeps the
     # socket; the hook puts the language, the box's name and the connection
@@ -82,6 +119,8 @@ defmodule AlnaslWeb.Router do
       live "/recordings", RecordingsLive, :index
       live "/log", LogLive, :index
       live "/setup", SetupLive, :index
+      live "/halls", HallsLive, :index
+      live "/halls/:id", HallsLive, :show
       live "/help", HelpLive, :index
     end
   end

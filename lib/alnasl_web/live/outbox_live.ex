@@ -21,19 +21,30 @@ defmodule AlnaslWeb.OutboxLive do
   end
 
   defp load(socket) do
+    account = socket.assigns.current_scope
+    mine = mine(account)
+
     assign(socket,
-      waiting: Outbox.list("pending", 60),
-      rejected: Outbox.list("rejected", 30),
-      sent: Outbox.list("sent", 30),
+      waiting: Enum.filter(Outbox.list("pending", 60), mine),
+      rejected: Enum.filter(Outbox.list("rejected", 30), mine),
+      sent: Enum.filter(Outbox.list("sent", 30), mine),
       counts: Outbox.counts(),
       destinations: Destination.statuses(),
       plans: Map.new(Destination.all(), &{&1.id(), Destination.send_plan(&1)}),
-      linked: Alnasl.Seating.linked(),
-      links: Tournaments.links(),
+      linked:
+        if(Alnasl.Accounts.Scope.everything?(account),
+          do: Alnasl.Seating.linked(),
+          else:
+            Alnasl.Halls.here(
+              account,
+              Enum.filter(Tournaments.list(), &(&1.kind == "linked" and not &1.gone))
+            )
+        ),
+      links: Alnasl.Halls.here(account, Tournaments.links()),
       lichess_refused: LichessBroadcast.refused(),
       pairing_refused: OpenPairings.refused(),
-      tournaments: Tournaments.active(),
-      staying_home: staying_home(),
+      tournaments: Alnasl.Halls.active(account),
+      staying_home: Enum.filter(staying_home(), &Alnasl.Halls.sees?(account, &1.tournament)),
       names: Map.new(Tournaments.list(), &{&1.id, Tournaments.title(&1)}),
       many?: Tournaments.many?(),
       waiting_by: %{
@@ -43,6 +54,17 @@ defmodule AlnaslWeb.OutboxLive do
       },
       refresh_due?: false
     )
+  end
+
+  # What of the queue the account may see: everything for an admin and on a
+  # box without accounts, else what its halls' tournaments send.
+  defp mine(account) do
+    if Alnasl.Accounts.Scope.everything?(account) do
+      fn _entry -> true end
+    else
+      ids = account |> Alnasl.Halls.visible(Tournaments.list()) |> MapSet.new(& &1.id)
+      &MapSet.member?(ids, &1.tournament_id)
+    end
   end
 
   # Boards in the round in play that play a game which stays on the box:
@@ -222,6 +244,7 @@ defmodule AlnaslWeb.OutboxLive do
       update={@update}
       box={@box}
       locale={@locale}
+      scope={@current_scope}
       title={gettext("Outbox")}
     >
       <:actions>

@@ -25,7 +25,7 @@ defmodule AlnaslWeb.PgnLive do
   @impl true
   def mount(_params, _session, socket) do
     # One tournament at a time: the first one shown, until another is picked.
-    first = hd(Tournaments.active())
+    first = hd(Alnasl.Halls.active(socket.assigns.current_scope) ++ [Tournaments.default()])
 
     {:ok,
      socket
@@ -45,7 +45,7 @@ defmodule AlnaslWeb.PgnLive do
 
   defp load(socket) do
     %{tid: tid, round: round} = socket.assigns
-    shown = Tournaments.active()
+    shown = Alnasl.Halls.active(socket.assigns.current_scope)
 
     assign(socket,
       stored: Games.list(tid, round),
@@ -280,6 +280,7 @@ defmodule AlnaslWeb.PgnLive do
       update={@update}
       box={@box}
       locale={@locale}
+      scope={@current_scope}
       title="PGN"
     >
       <:actions>

@@ -20,8 +20,16 @@ defmodule AlnaslWeb.RecordingsLive do
 
   defp load(socket) do
     Recorder.flush()
-    names = Map.new(Boards.list(), &{&1.id, &1.name})
-    captures = Recorder.list()
+    account = socket.assigns.current_scope
+    boards = Alnasl.Halls.visible(account, Boards.list())
+    names = Map.new(boards, &{&1.id, &1.name})
+
+    # A capture of a board in a hall not the account's is not shown; nor,
+    # to anyone but an admin, one of a board since removed.
+    captures =
+      if Alnasl.Accounts.Scope.everything?(account),
+        do: Recorder.list(),
+        else: Enum.filter(Recorder.list(), &Map.has_key?(names, &1.board_id))
 
     assign(socket,
       captures:
@@ -102,6 +110,7 @@ defmodule AlnaslWeb.RecordingsLive do
       update={@update}
       box={@box}
       locale={@locale}
+      scope={@current_scope}
       title={gettext("Recordings")}
       subtitle={gettext("%{n} files, %{size}", n: length(@captures), size: Words.size(@total))}
     >

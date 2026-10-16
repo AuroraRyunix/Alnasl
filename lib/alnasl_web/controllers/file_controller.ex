@@ -9,7 +9,8 @@ defmodule AlnaslWeb.FileController do
   def game(conn, %{"round" => round, "board" => board} = params) do
     with {round, ""} <- Integer.parse(round),
          {board, ""} <- Integer.parse(board),
-         %{} = game <- one(Scope.tournament(params).id, round, board, params["game"]) do
+         %{} = tournament <- Scope.tournament(params, conn.assigns.current_scope),
+         %{} = game <- one(tournament.id, round, board, params["game"]) do
       download(
         conn,
         Games.pgn(game),
@@ -22,11 +23,14 @@ defmodule AlnaslWeb.FileController do
   end
 
   def round(conn, %{"round" => round} = params) do
-    case Integer.parse(round) do
-      {round, ""} ->
+    case {Integer.parse(round), Scope.tournament(params, conn.assigns.current_scope)} do
+      {_bad, nil} ->
+        send_resp(conn, 404, "no such round")
+
+      {{round, ""}, tournament} ->
         download(
           conn,
-          Games.round_pgn(Scope.tournament(params).id, round),
+          Games.round_pgn(tournament.id, round),
           "round-#{round}.pgn",
           "application/x-chess-pgn"
         )
@@ -37,7 +41,12 @@ defmodule AlnaslWeb.FileController do
   end
 
   def capture(conn, %{"board" => board, "name" => name}) do
+    account = conn.assigns.current_scope
+
     with {board, ""} <- Integer.parse(board),
+         true <-
+           Alnasl.Accounts.Scope.everything?(account) or
+             Alnasl.Halls.sees?(account, Alnasl.Boards.get(board)),
          %{path: path} <- Recorder.find(board, name) do
       Recorder.flush()
 

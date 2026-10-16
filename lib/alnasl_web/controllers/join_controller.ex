@@ -22,8 +22,8 @@ defmodule AlnaslWeb.JoinController do
           key: key,
           socket: "/bridge/link",
           server: Bridges.server_name(),
-          # No logins or roles yet: whoever could show the link may make
-          # the bridge forget its boards.
+          # Whoever could show the link was the hall's owner (or the box
+          # had no accounts): that one may make the bridge forget its boards.
           owner: true
         })
 

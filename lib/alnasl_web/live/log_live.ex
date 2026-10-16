@@ -30,10 +30,22 @@ defmodule AlnaslWeb.LogLive do
         board_no: board_no(filter),
         limit: 300
       )
+      |> mine(socket.assigns.current_scope)
 
     socket
     |> assign(form: to_form(filter, as: :filter), count: length(events))
     |> stream(:events, events, reset: true)
+  end
+
+  # The box's own lines (updates, the PIN, setup) are an admin's; the lines
+  # about a board are for whoever sees its hall.
+  defp mine(events, account) do
+    if Alnasl.Accounts.Scope.everything?(account) do
+      events
+    else
+      ids = account |> Alnasl.Halls.visible(Alnasl.Boards.list()) |> MapSet.new(& &1.id)
+      Enum.filter(events, &MapSet.member?(ids, &1.board_id))
+    end
   end
 
   defp board_no(%{"board" => text}) do
@@ -99,6 +111,7 @@ defmodule AlnaslWeb.LogLive do
       update={@update}
       box={@box}
       locale={@locale}
+      scope={@current_scope}
       title={gettext("Log")}
     >
       <.panel id="log-panel" title={gettext("What happened")} flush>

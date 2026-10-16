@@ -824,6 +824,41 @@ defmodule AlnaslWeb.Words do
     do: gettext("The bridge \"%{name}\" was removed; its boards with it.", name: d["name"])
 
   defp log("door.unlocked", d), do: gettext("The PIN was given from %{from}.", from: d["from"])
+
+  defp log("bridge.moved", d),
+    do:
+      gettext("The bridge \"%{name}\" moved to another hall, its boards with it.",
+        name: d["name"]
+      )
+
+  defp log("hall.created", d), do: gettext("A hall was made: %{name}.", name: d["name"])
+
+  defp log("account.first", _d),
+    do: gettext("The box's first account was made. Every page asks who is there from now on.")
+
+  defp log("account.invited", d),
+    do:
+      gettext("Someone was invited to %{hall} as %{role}.",
+        hall: d["hall"],
+        role: role(d["role"])
+      )
+
+  defp log("account.joined", d),
+    do:
+      gettext("An invitation to %{hall} was taken up (%{role}).",
+        hall: d["hall"],
+        role: role(d["role"])
+      )
+
+  defp log("account.made", _d),
+    do: gettext("An admin's account was made at the first 02cloud sign-in.")
+
+  defp log("account.temporary_password", _d),
+    do: gettext("An admin gave an account a temporary password.")
+
+  defp log("account.refused", d),
+    do: gettext("A wrong password was tried from %{from}.", from: d["from"])
+
   defp log("door.refused", d), do: gettext("A wrong PIN was tried from %{from}.", from: d["from"])
   defp log("setup.saved", _d), do: gettext("Setup was changed.")
 
@@ -1105,4 +1140,20 @@ defmodule AlnaslWeb.Words do
   def install_kind(:mac_app), do: gettext("The Mac app (Alnasl.app)")
   def install_kind(:portable), do: gettext("Portable copy (a release folder)")
   def install_kind(:source), do: gettext("From source (a checkout)")
+
+  @doc "A role in a hall, in a word."
+  def role("owner"), do: gettext("owner")
+  def role("arbiter"), do: gettext("arbiter")
+  def role("viewer"), do: gettext("viewer")
+  def role(_none), do: ""
+
+  @doc "What a role may do, in a sentence."
+  def role_means("owner"),
+    do: gettext("Adds and removes bridges, invites people, and everything an arbiter does.")
+
+  def role_means("arbiter"),
+    do: gettext("Games, corrections, rounds, and the links to OpenPairings and the results site.")
+
+  def role_means("viewer"), do: gettext("Follows the games and changes nothing.")
+  def role_means(_none), do: ""
 end

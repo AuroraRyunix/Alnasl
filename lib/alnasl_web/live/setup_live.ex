@@ -77,10 +77,11 @@ defmodule AlnaslWeb.SetupLive do
   def handle_params(_params, uri, socket),
     do: {:noreply, assign(socket, base_url: BridgeComponents.base_url(URI.parse(uri)))}
 
-  defp load_bridges(socket) do
-    bridges = for b <- Alnasl.Bridges.list(), do: %{bridge: b, live: Alnasl.Bridges.live(b.id)}
-    assign(socket, bridges: bridges)
-  end
+  defp load_bridges(socket), do: assign(socket, bridges: BridgeComponents.list(here(socket)))
+
+  # The hall the pages are about (the box's own on a box without accounts).
+  defp here(socket),
+    do: Alnasl.Accounts.Scope.hall_id(socket.assigns.current_scope) || Alnasl.Halls.own_id()
 
   defp load(socket) do
     s =
@@ -89,7 +90,8 @@ defmodule AlnaslWeb.SetupLive do
       )
 
     own = Tournaments.default()
-    tournaments = Tournaments.list()
+    scope = socket.assigns.current_scope
+    tournaments = Alnasl.Halls.here(scope, Tournaments.list())
     # The tournament whose Lichess round the card is about.
     lichess = Enum.find(tournaments, own, &(&1.id == socket.assigns.lichess_tid))
     boards = Enum.frequencies_by(Boards.list(), & &1.tournament_id)
@@ -140,8 +142,15 @@ defmodule AlnaslWeb.SetupLive do
       lichess: lichess,
       own: own,
       tournaments: tournaments,
-      links: Tournaments.links(),
+      links: Alnasl.Halls.here(scope, Tournaments.links()),
       board_counts: boards,
+      # The box itself (its name, PIN, updates, tracker) is an admin's; the
+      # box's own tournament and Lichess card are the own hall's.
+      box_admin?: Alnasl.Accounts.Scope.can?(scope, :admin),
+      own_hall?: here(socket) == Alnasl.Halls.own_id(),
+      accounts?: Alnasl.Accounts.any?(),
+      server?: Alnasl.Accounts.server?(),
+      first_form: to_form(%{"email" => "", "password" => ""}, as: :user),
       tracker_form:
         to_form(
           tracker
@@ -313,7 +322,7 @@ defmodule AlnaslWeb.SetupLive do
     # field holds a secret, so it is not emptied: it is replaced.
     socket = assign(socket, code_key: socket.assigns.code_key + 1)
 
-    case OpenPairings.add_code(text) do
+    case OpenPairings.add_code(text, here(socket)) do
       {:ok, link, tournaments} ->
         shared = Duplicates.shared(link)
 
@@ -426,32 +435,11 @@ defmodule AlnaslWeb.SetupLive do
   end
 
   # A tournament the pairing program no longer lists, taken off by itself.
-  def handle_event("add_bridge", _params, socket) do
-    {:ok, join} = Alnasl.Bridges.create_join()
-    base = socket.assigns.base_url || "http://localhost:4040"
-    {:noreply, assign(socket, bridge_join: BridgeComponents.join(base, join))}
-  end
-
-  def handle_event("bridge_command", %{"id" => id, "cmd" => cmd} = params, socket) do
-    fields = Map.take(params, ["port", "board"])
-
-    message =
-      case Alnasl.Bridges.command(String.to_integer(id), cmd, fields) do
-        {:ok, _id} -> gettext("Sent to the bridge.")
-        {:error, :offline} -> gettext("The bridge is not connected.")
-        {:error, _other} -> gettext("The bridge does not know that.")
-      end
-
-    {:noreply, assign(socket, bridge_message: message)}
-  end
-
-  def handle_event("remove_bridge", %{"id" => id}, socket) do
-    case Alnasl.Bridges.get(String.to_integer(id)) do
-      nil -> :ok
-      bridge -> Alnasl.Bridges.remove(bridge)
-    end
-
-    {:noreply, socket |> assign(bridge_message: nil) |> load_bridges()}
+  # The bridges of the hall the pages are about; the permit has checked the
+  # account owns it.
+  def handle_event(event, params, socket)
+      when event in ~w(add_bridge bridge_command remove_bridge) do
+    {:noreply, BridgeComponents.handle(event, params, socket, here(socket))}
   end
 
   def handle_event("remove_tournament", %{"id" => id}, socket) do
@@ -831,6 +819,7 @@ defmodule AlnaslWeb.SetupLive do
       update={@update}
       box={@box}
       locale={@locale}
+      scope={@current_scope}
       title={gettext("Setup")}
     >
       <div class="cols">
@@ -1222,7 +1211,11 @@ defmodule AlnaslWeb.SetupLive do
           </p>
         </.panel>
 
-        <.panel id="setup-server" title={gettext("Results page of this box's own tournament")}>
+        <.panel
+          :if={@own_hall?}
+          id="setup-server"
+          title={gettext("Results page of this box's own tournament")}
+        >
           <p class="note">
             {gettext(
               "Only for a tournament without a connect code: a tournament of OpenPairings brings its results page and relay key with it. Who plays is then said by hand on each board's page, or read from a PGN - the box does not read pairings from the results site."
@@ -1317,7 +1310,7 @@ defmodule AlnaslWeb.SetupLive do
           </ul>
         </.panel>
 
-        <.panel id="setup-lichess" title={gettext("Lichess broadcast")}>
+        <.panel :if={@own_hall?} id="setup-lichess" title={gettext("Lichess broadcast")}>
           <p class="note">
             {gettext(
               "Optional. The box pushes each game of one round to a Lichess broadcast round as it changes - besides the results site, and without waiting for it. On Lichess, make the broadcast and its round first; leave the round's source empty."
@@ -1459,7 +1452,7 @@ defmodule AlnaslWeb.SetupLive do
           <Layouts.theme_picker id="theme-grid" variant={:grid} />
         </.panel>
 
-        <.panel id="setup-box" title={gettext("This box")}>
+        <.panel :if={@box_admin?} id="setup-box" title={gettext("This box")}>
           <.form for={@box_form} id="box-form" phx-submit="save_box" class="stack">
             <div class="form-grid">
               <.input
@@ -1534,7 +1527,11 @@ defmodule AlnaslWeb.SetupLive do
           </.form>
         </.panel>
 
-        <.panel id="setup-pin" title={gettext("Access from other machines")}>
+        <.panel
+          :if={@box_admin? and not @accounts? and not @server?}
+          id="setup-pin"
+          title={gettext("Access from other machines")}
+        >
           <p class="note">
             {gettext(
               "The box itself is always let in. A browser on another machine in the hall is let in freely, unless a PIN is set here. Other machines can only reach the box at all when that is switched on below."
@@ -1633,7 +1630,7 @@ defmodule AlnaslWeb.SetupLive do
           </.form>
         </.panel>
 
-        <.panel id="setup-updates" title={gettext("Updates")}>
+        <.panel :if={@box_admin?} id="setup-updates" title={gettext("Updates")}>
           <p id="update-version">
             {gettext("This is Alnasl %{version}.", version: Updates.current_version())}
             <a href={Updates.releases_page()} target="_blank" rel="noopener">
@@ -1854,14 +1851,73 @@ defmodule AlnaslWeb.SetupLive do
             bridges={@bridges}
             join={@bridge_join}
             message={@bridge_message}
+            owner?={Alnasl.Accounts.Scope.can?(@current_scope, :owner)}
           />
         </.panel>
 
         <.panel id="setup-phone" title={gettext("Open this site on your phone")}>
-          <Access.phone id="setup-phone-access" />
+          <Access.phone
+            id="setup-phone-access"
+            signin={@phone_signin}
+            accounts?={not @current_scope.open?}
+          />
         </.panel>
 
-        <.panel id="setup-tracker" title={gettext("How patient the tracker is")}>
+        <.panel id="setup-accounts" title={gettext("Accounts")}>
+          <%= cond do %>
+            <% @accounts? or @server? -> %>
+              <p class="note">
+                {gettext(
+                  "Every page asks who you are. People, roles and invitations are on the page of each hall."
+                )}
+              </p>
+              <div class="row">
+                <.button id="setup-halls" navigate={~p"/halls"} icon="boards">
+                  {gettext("Halls")}
+                </.button>
+                <.button id="setup-account" href={~p"/account"} variant="ghost">
+                  {gettext("Your account")}
+                </.button>
+              </div>
+            <% true -> %>
+              <p class="note">
+                {gettext(
+                  "This box has no accounts: everybody on the hall's network may do everything (behind the PIN, if there is one). The first account makes you the box's owner and admin - and from then on every page asks who is there, the box's own screen included."
+                )}
+              </p>
+              <.form
+                for={@first_form}
+                id="first-account-form"
+                action={~p"/accounts/first"}
+                method="post"
+                class="stack"
+              >
+                <.input
+                  field={@first_form[:email]}
+                  type="text"
+                  label={gettext("Email address")}
+                  autocomplete="username"
+                  required
+                />
+                <.input
+                  field={@first_form[:password]}
+                  type="password"
+                  label={
+                    gettext("Password (at least %{n} characters)",
+                      n: Alnasl.Accounts.User.min_password()
+                    )
+                  }
+                  autocomplete="new-password"
+                  required
+                />
+                <.button id="first-account-submit" variant="primary" type="submit">
+                  {gettext("Make the first account")}
+                </.button>
+              </.form>
+          <% end %>
+        </.panel>
+
+        <.panel :if={@box_admin?} id="setup-tracker" title={gettext("How patient the tracker is")}>
           <p class="note">
             {gettext(
               "Times are in milliseconds. The defaults suit classical and rapid play, time scrambles included; leave them unless a hall teaches you otherwise."

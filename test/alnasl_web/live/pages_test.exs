@@ -660,7 +660,8 @@ defmodule AlnaslWeb.PagesTest do
            round.started pairing.changed pairing.gone pairing.board_moved pairing.adopted
            pairing.set_aside destination.forced update.requested loop.read loop.joined
            seating.joined seating.undone table.game_carried table.game_fresh table.game_left
-           bridge.joined bridge.removed)
+           bridge.joined bridge.removed bridge.moved hall.created account.first account.invited
+           account.joined account.made account.temporary_password account.refused)
 
       for kind <- kinds do
         sentence = AlnaslWeb.Words.log(%Alnasl.Log.Event{kind: kind, data: "{}"})

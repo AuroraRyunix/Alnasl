@@ -20,6 +20,7 @@ defmodule AlnaslWeb.HelpLive do
       update={@update}
       box={@box}
       locale={@locale}
+      scope={@current_scope}
       title={gettext("Help")}
     >
       <.panel id="help">
@@ -464,6 +465,85 @@ defmodule AlnaslWeb.HelpLive do
               )}
             </dd>
           </dl>
+
+          <h2 id="help-bridges">{gettext("Boards in another hall: bridges")}</h2>
+          <p>
+            {gettext(
+              "A bridge is Arkab, a small program beside boards somewhere else - a Raspberry Pi in the next room, or in another town - that reads them and sends them here. It dials out to this Alnasl, so nothing has to be opened in the other hall's network. Its boards appear among the others, with the bridge's name in front of the port, and are numbered, paired and repaired like any board."
+            )}
+          </p>
+          <dl>
+            <dt>{gettext("Joining")}</dt>
+            <dd id="help-bridges-join">
+              {gettext(
+                "On the page of the hall the boards are in (Halls, or Setup for the hall you are looking at), \"Add a bridge\" shows a link and its QR code. Paste the link in the bridge's \"Join a server\" field, or scan the code with it. The link is good for one bridge and fifteen minutes; after that the bridge has a key of its own, and only a hash of that key is kept here. Adding a bridge is for the hall's owner."
+              )}
+            </dd>
+            <dt>{gettext("Ports and commands")}</dt>
+            <dd>
+              {gettext(
+                "While a bridge is connected, its panel lists the ports it sees. \"Read\" starts reading one, \"Read again\" asks the line again who is on it, \"Forget\" stops, and \"Send every board again\" has the bridge send what it has from the start. A bridge that is not connected keeps reading and recording; what it saw arrives when it is back."
+              )}
+            </dd>
+            <dt>{gettext("Removing")}</dt>
+            <dd id="help-bridges-remove">
+              {gettext(
+                "\"Remove\" ends the bridge here and on the bridge itself, and its boards go with it. Removing this server on the bridge does the same from the other end. A bridge removed can join again with a new link; it comes back as the same bridge, with a new key. An admin can move a bridge to another hall: its boards follow, into that hall's own tournament, without table numbers."
+              )}
+            </dd>
+          </dl>
+
+          <h2 id="help-accounts">{gettext("Accounts, halls and roles")}</h2>
+          <p>
+            {gettext(
+              "A box without accounts is open: everybody on the hall's network may do everything, behind the PIN if there is one. That is how it was, and an update does not change it. Under Setup, \"Accounts\", you can make the first account: you become the box's owner and admin, and from then on every page asks who is there - the box's own screen included. The PIN has no say any more then."
+            )}
+          </p>
+          <dl>
+            <dt>{gettext("Halls")}</dt>
+            <dd id="help-halls">
+              {gettext(
+                "The box's own ports are one hall; every bridge belongs to a hall, and so do its boards and tournaments. An admin makes more halls on the Halls page. With more than one hall, the switcher at the top says which one the pages are about, and the Halls page shows every hall at a glance: boards live, bridges connected, and what needs an arbiter."
+              )}
+            </dd>
+            <dt>{gettext("Roles")}</dt>
+            <dd id="help-roles">
+              {gettext(
+                "In each hall an account is an owner, an arbiter or a viewer. A viewer follows the games and changes nothing. An arbiter runs them: tables, rounds, results, corrections, the links to OpenPairings and OpenResults. An owner does all that, adds and removes bridges, and invites people. An admin sees every hall and the box itself: its name, updates, the tracker. Each account sees its own halls and nothing of the others."
+              )}
+            </dd>
+            <dt>{gettext("Inviting")}</dt>
+            <dd id="help-invite">
+              {gettext(
+                "On a hall's page, \"Invite\" makes a link for one address and one role, good once and for a week. The box sends no mail: copy the link to the person yourself. Whoever opens it makes the account for that address, with a password or with 02cloud, or signs in and joins the hall. An open invitation can be withdrawn."
+              )}
+            </dd>
+            <dt>{gettext("Phones")}</dt>
+            <dd id="help-phone-signin">
+              {gettext(
+                "With accounts, the QR code under \"Open this site on your phone\" is a sign-in code: \"Make a sign-in code\" shows one that signs the phone in as you, once, within five minutes. A phone stays signed in for thirty days. Each arbiter can also use an account of their own."
+              )}
+            </dd>
+            <dt>{gettext("A forgotten password")}</dt>
+            <dd>
+              {gettext(
+                "There is no mail to reset it with. An admin opens the hall's page and gives the account a temporary password; the next sign-in asks for one of the account's own, and every other browser signed in as it is signed out. Your own password is changed under your account (bottom of the left rail)."
+              )}
+            </dd>
+            <dt>{gettext("Sign in with 02cloud")}</dt>
+            <dd id="help-keycloak">
+              {gettext(
+                "Where the deployment has set it up, the sign-in page has a \"Sign in with 02cloud\" button. It signs in the account with the same verified address, and links the two the first time. It makes no account by itself: a 02cloud login alone gets nobody in, only an invitation or being named an admin by the deployment does."
+              )}
+            </dd>
+          </dl>
+
+          <h2 id="help-server">{gettext("The server instance")}</h2>
+          <p>
+            {gettext(
+              "Alnasl can also run on a server that reads no boards of its own and only takes bridges (ALNASL_NO_LOCAL_BOARDS=true). There every page asks who is there, always; accounts come by invitation only. The addresses in ALNASL_ADMIN_EMAILS are its admins: they sign in with 02cloud before any account exists, and their account is made then. An admin invites the first owners of each hall; an owner may then invite people who already have an account here."
+            )}
+          </p>
 
           <h2 id="help-look">{gettext("Colours")}</h2>
           <p>

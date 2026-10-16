@@ -421,7 +421,7 @@ is read as one board, two or more as a loop.
   line and prints every byte; `--watch` reads the loop for a minute.
   That is for a checkout: an installed copy has no `mix`. There the Boards
   page is the discovery - Add a board asks the port exactly this - and
-  everything it needs (`Alnasl.Dgt.Loop`, the bus driver, the serial
+  everything it needs (`Arkab.Dgt.Loop`, the bus driver, the serial
   program) is in the release.
 
 ### With your phone
@@ -589,6 +589,13 @@ release carries the installer, the updater and the systemd units
 | `ALNASL_DATA` | `./data` (dev); installed or `prod`: see [Where your data lives](#where-your-data-lives-and-uninstalling-without-losing-it) | Where everything is kept. Refused when it is inside the program's own folder |
 | `ALNASL_THEMES_DIR` | `<ALNASL_DATA>/themes` | Where theme packs are read from ([docs/theme-packs.md](docs/theme-packs.md)). Nothing is there unless somebody puts it there |
 | `ALNASL_UART` | on for Linux/macOS, off for Windows | `1` / `0`: build the serial library or not |
+| `ALNASL_NO_LOCAL_BOARDS` | (unset: a box with ports) | `true`: a server that reads no boards of its own and takes bridges only. Every page asks who is there, always, and accounts come by invitation |
+| `ALNASL_ADMIN_EMAILS` | (none) | Comma-separated addresses that are admins: every hall and the box itself. On the server they sign in with 02cloud before any account exists; optional on a box |
+| `ALNASL_KEYCLOAK_CLIENT_SECRET` | (unset: no 02cloud button) | **Secret.** The client secret of the Keycloak client; set, the sign-in page offers "Sign in with 02cloud" |
+| `ALNASL_KEYCLOAK_URL` | `https://auth.zerotwo.cloud` | Keycloak's base address |
+| `ALNASL_KEYCLOAK_REALM` | `zerotwo` | The realm |
+| `ALNASL_KEYCLOAK_CLIENT_ID` | `alnasl` | The client |
+| `ALNASL_KEYCLOAK_REDIRECT_URI` | (the address the browser used, `/auth/keycloak/callback`) | Pin the redirect address when a proxy hides the real one |
 
 Everything else is set on the Setup page and stored in the database.
 
