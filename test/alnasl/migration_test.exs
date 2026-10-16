@@ -18,7 +18,9 @@ defmodule Alnasl.MigrationTest do
     file =
       Path.join(
         System.tmp_dir!(),
-        "alnasl-migration-#{System.unique_integer([:positive])}.db"
+        # The time as well: on Windows a file the pool still holds is not
+        # removed, and the next run's counter starts where this one did.
+        "alnasl-migration-#{System.os_time()}-#{System.unique_integer([:positive])}.db"
       )
 
     {:ok, pid} =
