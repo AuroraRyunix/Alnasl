@@ -681,14 +681,15 @@ defmodule AlnaslWeb.PagesTest do
 
   test "Help is there, in both languages", %{conn: conn} do
     {:ok, view, html} = live(conn, ~p"/help")
+    assert has_element?(view, "#manual-index")
+    assert html =~ "The Alnasl user manual"
 
-    for id <- ~w(help-before help-during help-repair help-after help-trouble),
-        do: assert(has_element?(view, "##{id}"))
-
+    {:ok, view, html} = live(conn, ~p"/help/getting-started")
+    assert has_element?(view, "#before-the-round")
     assert html =~ "Before the round"
 
     Settings.put("locale", "nl")
-    {:ok, _view, html} = live(conn, ~p"/help")
+    {:ok, _view, html} = live(conn, ~p"/help/getting-started")
     assert html =~ "Voor de ronde"
   end
 

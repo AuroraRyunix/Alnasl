@@ -37,7 +37,7 @@ defmodule AlnaslWeb.Permit do
     SetupLive
   }
 
-  @everywhere %{"live_ping" => :viewer, "phone_signin" => :viewer}
+  @everywhere %{"live_ping" => :viewer, "phone_signin" => :viewer, "search" => :viewer}
 
   @levels %{
     RoundLive => %{},

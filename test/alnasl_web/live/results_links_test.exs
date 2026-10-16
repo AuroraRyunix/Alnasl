@@ -284,9 +284,13 @@ defmodule AlnaslWeb.ResultsLinksTest do
   end
 
   test "Help says the public page may be behind on purpose", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/help")
-    assert has_element?(view, "#help-results-links", "Open the results site")
-    assert has_element?(view, "#help-results-lag", "behind on purpose")
-    assert has_element?(view, "#help-new-game", "Send this one instead")
+    {:ok, view, _html} = live(conn, ~p"/help/openpairings-and-openresults")
+    assert has_element?(view, "#results-site")
+    assert has_element?(view, "#manual-chapter-body", "Open the results site")
+    assert has_element?(view, "#manual-chapter-body", "behind on purpose")
+
+    {:ok, view, _html} = live(conn, ~p"/help/following-games")
+    assert has_element?(view, "#new-game", "Another game on the same board")
+    assert has_element?(view, "#manual-chapter-body", "Send this one instead")
   end
 end

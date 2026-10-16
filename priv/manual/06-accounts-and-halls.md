@@ -1,0 +1,57 @@
+# Accounts, halls and roles
+
+Who may see and do what. On a box in a hall there are no accounts until you make one. On the hosted server there are always accounts, and you get one by invitation.
+
+## Open until the first account {#open-until-the-first-account}
+
+A box without accounts is open: everybody on the hall's network may do everything, behind the PIN if there is one. That is how Alnasl has always worked, and an update does not change it.
+
+Under Setup, "Accounts", you can make the first account. You become the box's owner and admin, and from then on every page asks who is there, the box's own screen included. The PIN has no say any more then.
+
+> [!IMPORTANT] This switches the login on
+> Make the first account when you are ready to sign in on every device in the hall, phones included. The phone sign-in below makes that painless.
+
+## The hosted server {#the-hosted-server}
+
+The server at alnasl.zerotwo.cloud reads no boards of its own, so there every page asks who is there, always. Accounts come **by invitation only**: nobody can register. The people the deployment names as admins sign in first, with 02cloud, and their account is made then. An admin invites the first owners of each hall; an owner may then invite people.
+
+A 02cloud login alone gets nobody in. Only an invitation, or being named an admin, does.
+
+## Halls {#halls}
+
+The box's own ports are one hall. Every bridge belongs to a hall, and so do its boards and tournaments. An admin makes more halls on the Halls page. Each account sees its own halls and nothing of the others.
+
+With more than one hall, the switcher at the top says which one the pages are about, and the Halls page shows every hall at a glance: boards live, bridges connected, and what needs an arbiter.
+
+## Roles {#roles}
+
+In each hall an account is an owner, an arbiter or a viewer. The same person can be an owner in one hall and a viewer in the next.
+
+| Role | May |
+| --- | --- |
+| Viewer | Follow the games. Changes nothing |
+| Arbiter | Run them: tables, rounds, results, corrections, the links to OpenPairings and OpenResults |
+| Owner | All that, and add and remove bridges, and invite people |
+| Admin | See every hall and the box itself: its name, updates, the tracker, the Outbox's switches |
+
+A viewer who presses a button that changes something is told that their role lets them follow the games, not change them.
+
+## Inviting people {#inviting}
+
+On a hall's page, "Invite" makes a link for one address and one role, good once and for a week. The box sends no mail: copy the link to the person yourself. Whoever opens it makes the account for that address, with a password or with 02cloud, or signs in and joins the hall. An open invitation can be withdrawn.
+
+A hall keeps at least one owner: you cannot take the last one out. Make someone else owner first.
+
+## Signing in {#signing-in}
+
+### With 02cloud {#sign-in-with-02cloud}
+
+Where the deployment has set it up, the sign-in page has a "Sign in with 02cloud" button. It signs in the account with the same verified address, and links the two the first time. It makes no account by itself.
+
+### Phones: the QR code {#phone-sign-in}
+
+With accounts, the QR code under "Open this site on your phone" (on Boards and Setup) is a sign-in code. "Make a sign-in code" shows one that signs the phone in as you, once, within five minutes. A phone stays signed in for thirty days. Each arbiter can also use an account of their own.
+
+### A forgotten password {#forgotten-password}
+
+There is no mail to reset it with. An admin opens the hall's page and gives the account a temporary password; the next sign-in asks for one of the account's own, and every other browser signed in as it is signed out. Your own password is changed under your account (bottom of the left rail).

@@ -106,6 +106,7 @@ defmodule AlnaslWeb.LogLive do
     <Layouts.app
       flash={@flash}
       nav={:log}
+      help={:log}
       link={@link}
       hall={@hall}
       update={@update}
@@ -146,15 +147,18 @@ defmodule AlnaslWeb.LogLive do
             <.button id="log-clear" small type="button" phx-click="clear_filter">{gettext("Show all")}</.button>
           </.form>
         </:actions>
+
         <ul id="log-lines" class="log" phx-update="stream">
           <li id="log-empty" class="only-empty empty">{gettext("Nothing to show.")}</li>
+
           <li :for={{id, event} <- @streams.events} id={id} class={event.level}>
             <time datetime={DateTime.to_iso8601(event.at)}>{Words.time(event.at)}</time>
             <span class="where">{where(event)}</span>
             <span class="what">
               <span :if={event.level == "error"} class="sr-only">{gettext("Broken:")}</span>
-              <span :if={event.level == "warn"} class="sr-only">{gettext("Attention:")}</span>
-              {Words.log(event)}
+              <span :if={event.level == "warn"} class="sr-only">{gettext("Attention:")}</span> {Words.log(
+                event
+              )}
             </span>
           </li>
         </ul>

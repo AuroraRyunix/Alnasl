@@ -529,6 +529,7 @@ defmodule AlnaslWeb.RoundLive do
     <Layouts.app
       flash={@flash}
       nav={:round}
+      help={:round}
       link={@link}
       hall={@hall}
       update={@update}
@@ -555,6 +556,7 @@ defmodule AlnaslWeb.RoundLive do
           <.link id="filter-all" patch={~p"/"} aria-current={to_string(@only == nil)}>
             {gettext("All")}
           </.link>
+
           <.link
             :for={t <- @active}
             id={"filter-#{t.id}"}
@@ -582,6 +584,7 @@ defmodule AlnaslWeb.RoundLive do
             {section.title || gettext("This box")}
             <span class="note">{gettext("Round %{n}", n: section.round)}</span>
           </h2>
+
           <div class="row"><.section_actions section={section} /></div>
         </header>
 
@@ -622,6 +625,7 @@ defmodule AlnaslWeb.RoundLive do
             <.badge :if={section.ready?} tone="ok" icon="ok">
               {gettext("Ready for round %{n}", n: section.round)}
             </.badge>
+
             <.badge :if={!section.ready?} tone="warn" icon="warning">
               {gettext("Round %{n}: %{count} thing(s) to look at",
                 n: section.round,
@@ -629,9 +633,11 @@ defmodule AlnaslWeb.RoundLive do
               )}
             </.badge>
           </.link>
+
           <span :if={section.time_control} id={sid("round-tc", section.tid)} class="note">
             {section.time_control}
           </span>
+
           <.button
             :if={section.site.round_url}
             id={sid("site-open", section.tid)}
@@ -643,12 +649,14 @@ defmodule AlnaslWeb.RoundLive do
           >
             {gettext("Open the results site")}
           </.button>
+
           <details
             :if={section.site.live}
             id={sid("site-qr", section.tid)}
             class="site-qr"
           >
             <summary aria-label={gettext("QR code of the live page")}>QR</summary>
+
             <.qr_code
               id={sid("site-qr-code", section.tid)}
               text={section.site.live}
@@ -656,6 +664,7 @@ defmodule AlnaslWeb.RoundLive do
             />
             <p id={sid("site-qr-url", section.tid)} class="note mono">{section.site.live}</p>
           </details>
+
           <span
             :if={section.site.why}
             id={sid("site-none", section.tid)}
@@ -663,6 +672,7 @@ defmodule AlnaslWeb.RoundLive do
           >
             {no_site_reason(section.site.why)}
           </span>
+
           <.badge
             :if={section.flagged > 0}
             id={sid("round-flagged", section.tid)}
@@ -715,6 +725,7 @@ defmodule AlnaslWeb.RoundLive do
                 <p>
                   {gettext("Link a board to a board number, or attach a game from a PGN.")}
                 </p>
+
                 <.button
                   id={sid("empty-boards", section.tid)}
                   navigate={~p"/boards"}
@@ -726,6 +737,7 @@ defmodule AlnaslWeb.RoundLive do
                     "Tell the box which tournament it works for first: a connect code from OpenPairings, or a results page."
                   )}
                 </p>
+
                 <.button
                   id={sid("empty-setup", section.tid)}
                   navigate={~p"/setup"}
@@ -746,7 +758,6 @@ defmodule AlnaslWeb.RoundLive do
         >
           <.tile :for={tile <- section.tiles} tile={tile} section={section} many?={@many?} />
         </div>
-
         <%!-- A team event: the boards under their match, in the match's board order. --%>
         <div :if={section.tiles != [] and section.matches} id={sid("matches", section.tid)}>
           <section
@@ -759,6 +770,7 @@ defmodule AlnaslWeb.RoundLive do
               <span id={sid("match-title", section.tid) <> "-#{group.key}"}>
                 {match_title(group.match)}
               </span>
+
               <span
                 :if={group.score}
                 id={sid("match-score", section.tid) <> "-#{group.key}"}
@@ -781,6 +793,7 @@ defmodule AlnaslWeb.RoundLive do
                 </span>
               </span>
             </h3>
+
             <div class={["tiles", length(group.tiles) <= 4 && "few"]}>
               <.tile :for={tile <- group.tiles} tile={tile} section={section} many?={@many?} />
             </div>
@@ -808,6 +821,7 @@ defmodule AlnaslWeb.RoundLive do
         {n}
       </.link>
     </div>
+
     <.button
       :if={@section.linked? and not @section.gone?}
       id={sid("refresh-pairings", @section.tid)}
@@ -863,6 +877,7 @@ defmodule AlnaslWeb.RoundLive do
           <span :if={@tile.label} id={"tile-label-#{@tile.dom}"} class="flag plain">
             {gettext("table %{label}", label: @tile.label)}
           </span>
+
           <span :if={@tile.match} id={"tile-match-#{@tile.dom}"} class="flag plain">
             {gettext("match %{match}, board %{place}",
               match: @tile.match.number,
@@ -878,9 +893,9 @@ defmodule AlnaslWeb.RoundLive do
           <span :if={@tile.warning} class="flag">{gettext("Move missing?")}</span>
           <span :for={piece <- @tile.unseen} id={"tile-unseen-#{@tile.dom}"} class="flag">{AlnaslWeb.Words.unseen(
             piece
-          )}</span>
-          <.state state={@tile.state} />
+          )}</span> <.state state={@tile.state} />
         </div>
+
         <div
           :if={@section.outside_titles != [] and @tile.board_name}
           id={"tile-outside-#{@tile.dom}"}
@@ -890,16 +905,20 @@ defmodule AlnaslWeb.RoundLive do
             tournament: Enum.join(@section.outside_titles, " / ")
           )}
         </div>
+
         <div :if={@tile.pairing_flag} id={"tile-pairing-#{@tile.dom}"} class="tile-note">
           <.icon name="warning" />{gettext("Pairing changed in OpenPairings")}
         </div>
+
         <div :if={@tile.alarm} id={"tile-alarm-#{@tile.dom}"} class="tile-note tile-alarm">
           <.icon name="error" />{@tile.alarm}
         </div>
+
         <div :if={@tile.reconstructed + @tile.guessed > 0} class="tile-marks">
           <span :if={@tile.guessed > 0} id={"tile-guessed-#{@tile.dom}"} class="flag guess">
             {AlnaslWeb.Words.marks(:guessed, @tile.guessed)}
           </span>
+
           <span
             :if={@tile.reconstructed > 0}
             id={"tile-reconstructed-#{@tile.dom}"}
@@ -908,6 +927,7 @@ defmodule AlnaslWeb.RoundLive do
             {AlnaslWeb.Words.marks(:recovered, @tile.reconstructed)}
           </span>
         </div>
+
         <div class="side">
           <span class="dot black"></span>
           <span
@@ -923,12 +943,14 @@ defmodule AlnaslWeb.RoundLive do
               class="team"
             >{@tile.black_team}</span>
           </span>
+
           <.clock
             :if={@tile.clock}
             ms={@tile.clock.black_ms}
             running={@tile.clock.running == :black}
           />
         </div>
+
         <div class="tile-board">
           <.board
             position={@tile.position}
@@ -936,6 +958,7 @@ defmodule AlnaslWeb.RoundLive do
             label={gettext("Position on board %{n}", n: @tile.no)}
           />
         </div>
+
         <div class="side">
           <span class="dot white"></span>
           <span
@@ -951,12 +974,14 @@ defmodule AlnaslWeb.RoundLive do
               class="team"
             >{@tile.white_team}</span>
           </span>
+
           <.clock
             :if={@tile.clock}
             ms={@tile.clock.white_ms}
             running={@tile.clock.running == :white}
           />
         </div>
+
         <div
           :if={@tile.clock_problem && @tile.state != :clock_alarm}
           id={"tile-clock-#{@tile.dom}"}
@@ -964,6 +989,7 @@ defmodule AlnaslWeb.RoundLive do
         >
           <.icon name="warning" />{@tile.clock_problem}
         </div>
+
         <div class="tile-foot">
           <%= cond do %>
             <% @tile.result -> %>
@@ -974,6 +1000,7 @@ defmodule AlnaslWeb.RoundLive do
             <% true -> %>
               <span>{gettext("No moves")}</span>
           <% end %>
+
           <span :if={@tile.suggestion && !@tile.result} class="flag">{gettext("Result? %{r}",
             r: @tile.suggestion
           )}</span>
@@ -985,6 +1012,7 @@ defmodule AlnaslWeb.RoundLive do
           >{@tile.sticker}</span>
         </div>
       </.link>
+
       <details
         :if={@tile.state != :unlinked or @tile.count > 0}
         id={"tile-menu-#{@tile.dom}"}
@@ -993,6 +1021,7 @@ defmodule AlnaslWeb.RoundLive do
         <summary>
           {if @tile.finished?, do: gettext("Next game"), else: gettext("Finish game")}
         </summary>
+
         <div class="row">
           <.button
             :for={result <- ["1-0", "1/2-1/2", "0-1"]}
@@ -1028,6 +1057,7 @@ defmodule AlnaslWeb.RoundLive do
               do: gettext("New game"),
               else: gettext("An extra game: it stays on this box")}
           </.button>
+
           <.button
             :if={@tile.new_kind == :extra and @tile.paired?}
             id={"tile-new-game-replace-#{@tile.dom}"}
@@ -1040,6 +1070,7 @@ defmodule AlnaslWeb.RoundLive do
           >{gettext("It replaces the game of the pairing")}</.button>
         </div>
       </details>
+
       <div
         :if={@section.site.page && @tile.site_url}
         id={"tile-site-#{@tile.dom}"}
@@ -1049,12 +1080,14 @@ defmodule AlnaslWeb.RoundLive do
           {gettext("Live page")}
         </.site_link>
       </div>
+
       <div :if={@tile.stays_home?} id={"tile-local-#{@tile.dom}"} class="tile-local">
         <span>
           {gettext("This game stays on the box: it is game %{n} on this board.",
             n: @tile.game_no
           )}
         </span>
+
         <.button
           id={"tile-send-this-#{@tile.dom}"}
           small

@@ -435,6 +435,7 @@ defmodule AlnaslWeb.BoardsLive do
     <Layouts.app
       flash={@flash}
       nav={:boards}
+      help={:boards}
       link={@link}
       hall={@hall}
       update={@update}
@@ -456,12 +457,14 @@ defmodule AlnaslWeb.BoardsLive do
             <option :for={t <- @shown} value={t.id} selected={t.id == @tid}>{@names[t.id]}</option>
           </select>
         </form>
+
         <form id="boards-round-form" phx-change="round" class="row">
           <label for="boards-round" class="note">{gettext("Linking for round")}</label>
           <select id="boards-round" name="round" class="input" style="width:auto">
             <option :for={n <- @rounds} value={n} selected={n == @round}>{n}</option>
           </select>
         </form>
+
         <.button
           id="find-toggle"
           small
@@ -471,6 +474,7 @@ defmodule AlnaslWeb.BoardsLive do
         >
           {gettext("Which board is this?")}
         </.button>
+
         <.button id="number-by-touch" small navigate={~p"/boards/number"}>
           {gettext("Number by touching")}
         </.button>
@@ -495,14 +499,18 @@ defmodule AlnaslWeb.BoardsLive do
             sticker: TableWords.sticker(target)
           )}
         </b>
+
         <span>
           {gettext(
             "A DGT board carries its serial number on a label underneath. Lift a piece on the board you think it is: the box says whether you are right."
           )}
         </span>
+
         <span :if={@missed} id="seeking-missed" class="flag">
-          <% other = Enum.find(@snapshots, &(&1.id == @missed)) %>
-          {gettext("Not that one - that was \"%{name}\".", name: (other && other.name) || "?")}
+          <% other = Enum.find(@snapshots, &(&1.id == @missed)) %> {gettext(
+            "Not that one - that was \"%{name}\".",
+            name: (other && other.name) || "?"
+          )}
         </span>
         <.button id="stop-seeking" small phx-click="stop_seeking">{gettext("Stop looking")}</.button>
       </div>
@@ -520,15 +528,18 @@ defmodule AlnaslWeb.BoardsLive do
       >
         <:actions>
           <.badge :if={@ready?} id="checks-ready" tone="ok" icon="ok">{gettext("Ready")}</.badge>
+
           <.badge :if={!@ready?} id="checks-not-ready" tone="warn" icon="warning">
             {gettext("Not ready")}
           </.badge>
         </:actions>
+
         <p :if={@checks == []} id="checks-none" class="note">
           {gettext(
             "Every board answers, has its table number, feeds its own board of the round and shows the starting position - the clock too, where there is one."
           )}
         </p>
+
         <ul :if={@checks != []} id="checks-list" class="checks">
           <li
             :for={{check, i} <- Enum.with_index(@checks)}
@@ -539,6 +550,7 @@ defmodule AlnaslWeb.BoardsLive do
             <span>{elem(TableWords.check(check), 1)}</span>
           </li>
         </ul>
+
         <.form
           :if={length(@snapshots) > 1}
           for={@swap_form}
@@ -550,11 +562,13 @@ defmodule AlnaslWeb.BoardsLive do
           <label for="swap-a" class="note">{gettext("For this round, swap the boards of")}</label>
           <select id="swap-a" name="swap[a]" class="input" style="width:auto">
             <option value="">{gettext("choose...")}</option>
+
             <option :for={s <- @snapshots} value={s.id}>{s.name}</option>
           </select>
           <label for="swap-b" class="note">{gettext("and")}</label>
           <select id="swap-b" name="swap[b]" class="input" style="width:auto">
             <option value="">{gettext("choose...")}</option>
+
             <option :for={s <- @snapshots} value={s.id}>{s.name}</option>
           </select>
           <.button id="swap-submit" small type="submit">{gettext("Swap")}</.button>
@@ -615,15 +629,23 @@ defmodule AlnaslWeb.BoardsLive do
             <thead>
               <tr>
                 <th>{gettext("Board")}</th>
+
                 <th>{gettext("Reads")}</th>
+
                 <th>{gettext("State")}</th>
+
                 <th>{gettext("Signal")}</th>
+
                 <th>{gettext("Start position")}</th>
+
                 <th>{gettext("Table")}</th>
+
                 <th>{gettext("Board of round %{n}", n: @round)}</th>
+
                 <th><span class="sr-only">{gettext("Actions")}</span></th>
               </tr>
             </thead>
+
             <tbody>
               <tr
                 :for={s <- @snapshots}
@@ -635,9 +657,11 @@ defmodule AlnaslWeb.BoardsLive do
                   <.badge :if={Tables.new?(s)} id={"new-board-#{s.id}"} tone="warn" icon="warning">
                     {gettext("New board")}
                   </.badge>
+
                   <span :if={@lit && @lit.id == s.id} id={"touched-#{s.id}"} class="flag">
                     {gettext("touched %{t}", t: touched_at(@lit.at))}
                   </span>
+
                   <div class="note">
                     {Words.driver(s.driver)}
                     <span :if={s.driver != "simulator" && s.port}> · {s.port}</span>
@@ -645,6 +669,7 @@ defmodule AlnaslWeb.BoardsLive do
                       · {gettext("answers as %{a}", a: Arkab.Dgt.Bus.number(s.address))}
                     </span>
                   </div>
+
                   <div
                     :if={s.driver == "dgt_bus" && s.serial in [nil, ""] && s.firmware}
                     id={"loop-no-serial-#{s.id}"}
@@ -654,6 +679,7 @@ defmodule AlnaslWeb.BoardsLive do
                       "This board does not say its serial number on a loop. Plug it into a port of its own once, and the box knows it by its serial number from then on."
                     )}
                   </div>
+
                   <div
                     :for={o <- Enum.filter(@hall.seating.outside, &(&1.board.id == s.id))}
                     id={"board-outside-#{s.id}"}
@@ -661,26 +687,31 @@ defmodule AlnaslWeb.BoardsLive do
                   >
                     <AlnaslWeb.SeatingComponents.outside_line entry={o} scope="row-" />
                   </div>
+
                   <div :if={s.serial || s.firmware} id={"identity-#{s.id}"} class="note">
                     <span :if={s.serial}>{gettext("serial %{s}", s: s.serial)}</span>
                     <span :if={s.firmware}> · {gettext("firmware %{v}", v: s.firmware)}</span>
                   </div>
                 </td>
+
                 <td class="b-reads">
                   <div class="mini">
                     <.board position={s.raw} label={gettext("What %{name} reads", name: s.name)} />
                   </div>
                   <span :if={s.flipped} class="flag plain">{gettext("turned round")}</span>
                 </td>
+
                 <td class="b-state" data-label={gettext("State")}>
                   <.state
                     id={"board-state-#{s.id}"}
                     state={if s.running?, do: s.status, else: :no_signal}
                   />
                   <div :if={!s.running?} class="note">{gettext("Disconnected here")}</div>
+
                   <div :if={s.info[:error] && !s.connected?} class="note">
                     {gettext("Cannot open the port")}
                   </div>
+
                   <div
                     :if={s.driver == "dgt_bus" && s.running? && !s.connected? && !s.info[:error]}
                     id={"loop-absent-#{s.id}"}
@@ -690,6 +721,7 @@ defmodule AlnaslWeb.BoardsLive do
                       "Does not answer on the loop: taken off it, switched off, or the cable before it is out. It is back by itself when it answers."
                     )}
                   </div>
+
                   <div :if={s.info[:loop] && !s.connected?} id={"is-a-loop-#{s.id}"} class="stack">
                     <.badge tone="warn" icon="warning">
                       {ngettext(
@@ -698,11 +730,13 @@ defmodule AlnaslWeb.BoardsLive do
                         length(s.info[:loop])
                       )}
                     </.badge>
+
                     <div class="note">
                       {gettext(
                         "Read as one board, a loop gives nonsense: every board answers at once. Nothing is read from it until you say so."
                       )}
                     </div>
+
                     <.button
                       id={"read-as-loop-#{s.id}"}
                       variant="primary"
@@ -712,6 +746,7 @@ defmodule AlnaslWeb.BoardsLive do
                     >{gettext("Read it as a loop")}</.button>
                   </div>
                 </td>
+
                 <td class="b-signal" data-label={gettext("Signal")}>
                   <%= case signal(s.stats) do %>
                     <% {percent, tone} -> %>
@@ -725,12 +760,14 @@ defmodule AlnaslWeb.BoardsLive do
                     <% nil -> %>
                       <span class="note">{gettext("%{n} readings", n: s.stats.positions)}</span>
                   <% end %>
+
                   <div class="note">
                     {gettext("last seen %{t}", t: Words.time(s.last_seen))}
                     <span :if={s.info[:clock]}> · {gettext("clock")}</span>
                     <span :if={s.info[:clock_battery_low]} class="flag">{gettext("clock battery low")}</span>
                   </div>
                 </td>
+
                 <td class="b-start" data-label={gettext("Start position")}>
                   <%= cond do %>
                     <% s.raw == nil -> %>
@@ -744,6 +781,7 @@ defmodule AlnaslWeb.BoardsLive do
                       >
                         {Words.marks(:guessed, Enum.count(s.plies, &(:guessed in &1.flags)))}
                       </span>
+
                       <span
                         :if={Enum.any?(s.plies, &(:recovered in &1.flags))}
                         id={"reconstructed-#{s.id}"}
@@ -751,6 +789,7 @@ defmodule AlnaslWeb.BoardsLive do
                       >
                         {Words.marks(:recovered, Enum.count(s.plies, &(:recovered in &1.flags)))}
                       </span>
+
                       <.badge
                         :for={piece <- s[:unseen] || []}
                         id={"unseen-#{s.id}"}
@@ -763,11 +802,13 @@ defmodule AlnaslWeb.BoardsLive do
                       <.badge id={"start-clock-#{s.id}"} tone="warn" icon="warning">
                         {gettext("Clock wrong")}
                       </.badge>
+
                       <div class="note" style="margin-top:0.2rem">
                         {Words.clock_problem(s[:clock_check])}
                       </div>
                     <% s.problems == [] -> %>
                       <.badge id={"start-ok-#{s.id}"} tone="ok" icon="ok">{gettext("Right")}</.badge>
+
                       <div :if={s[:clock_check] == :ok} id={"start-clock-ok-#{s.id}"} class="note">
                         {gettext("pieces and clock")}
                       </div>
@@ -775,17 +816,21 @@ defmodule AlnaslWeb.BoardsLive do
                       <.badge id={"start-wrong-#{s.id}"} tone="warn" icon="warning">
                         {gettext("%{n} wrong", n: length(s.problems))}
                       </.badge>
+
                       <ul class="note" style="margin:0.2rem 0 0;padding-left:1rem">
                         <li :for={p <- Enum.take(s.problems, 3)}>{Words.problem(p)}</li>
+
                         <li :if={length(s.problems) > 3}>
                           {gettext("...and %{n} more", n: length(s.problems) - 3)}
                         </li>
+
                         <li :if={Words.clock_problem(s[:clock_check])} id={"start-clock-#{s.id}"}>
                           {Words.clock_problem(s[:clock_check])}
                         </li>
                       </ul>
                   <% end %>
                 </td>
+
                 <td class="b-table">
                   <form id={"table-form-#{s.id}"} phx-change="table" phx-submit="table">
                     <input type="hidden" name="board_id" value={s.id} />
@@ -805,6 +850,7 @@ defmodule AlnaslWeb.BoardsLive do
                       phx-debounce="blur"
                     />
                   </form>
+
                   <form
                     :if={length(@tournaments) > 1}
                     id={"tournament-form-#{s.id}"}
@@ -831,6 +877,7 @@ defmodule AlnaslWeb.BoardsLive do
                     </select>
                   </form>
                 </td>
+
                 <td
                   :if={s[:tournament_id] != @tid}
                   id={"elsewhere-#{s.id}"}
@@ -849,6 +896,7 @@ defmodule AlnaslWeb.BoardsLive do
                     <% end %>
                   </span>
                 </td>
+
                 <td
                   :if={s[:tournament_id] == @tid}
                   class="b-link"
@@ -861,6 +909,7 @@ defmodule AlnaslWeb.BoardsLive do
                     )}</label>
                     <select id={"link-#{s.id}"} name="board_no" class="input" style="width:auto">
                       <option value="">{gettext("not linked")}</option>
+
                       <option
                         :for={
                           n <-
@@ -877,10 +926,12 @@ defmodule AlnaslWeb.BoardsLive do
                       </option>
                     </select>
                   </form>
+
                   <div :if={s.round == @round and Tables.remapped?(s)} class="note">
                     <span id={"remapped-#{s.id}"} class="flag plain">
                       {gettext("table %{t} plays board %{b}", t: s.table_no, b: s.board_no)}
                     </span>
+
                     <.button
                       id={"back-to-table-#{s.id}"}
                       small
@@ -891,10 +942,12 @@ defmodule AlnaslWeb.BoardsLive do
                       {gettext("Back to board %{n}", n: Tables.home_board(s) || s.table_no)}
                     </.button>
                   </div>
+
                   <div :if={s.board_no && s.round != @round} class="note">
                     {gettext("linked to round %{r}, board %{n}", r: s.round, n: s.board_no)}
                   </div>
                 </td>
+
                 <td class="act">
                   <.button
                     :if={s.board_no && s.round}
@@ -905,9 +958,11 @@ defmodule AlnaslWeb.BoardsLive do
                   <.button id={"show-me-#{s.id}"} small phx-click="show_me" phx-value-id={s.id}>
                     {gettext("Show me")}
                   </.button>
+
                   <.button id={"toggle-#{s.id}"} small phx-click="toggle" phx-value-id={s.id}>
                     {if s.running?, do: gettext("Disconnect"), else: gettext("Connect")}
                   </.button>
+
                   <.button
                     id={"flip-#{s.id}"}
                     small
@@ -919,6 +974,7 @@ defmodule AlnaslWeb.BoardsLive do
                   >
                     <span class="sr-only">{gettext("Turn round")}</span>
                   </.button>
+
                   <.button
                     id={"delete-#{s.id}"}
                     small
@@ -1030,16 +1086,19 @@ defmodule AlnaslWeb.BoardsLive do
                 />
               <% end %>
             </div>
+
             <p :if={@add_form[:driver].value != "simulator"} id="add-loop-note" class="note">
               {gettext(
                 "One board or a loop of them: the box asks the port who is on it, which takes a few seconds, and gives every board that answers a row of its own."
               )}
             </p>
+
             <p :if={@add_form[:driver].value != "simulator"} id="add-known-note" class="note">
               {gettext(
                 "A board the box already knows is recognised by its serial number, whichever port it is on now: it keeps its table number."
               )}
             </p>
+
             <div class="row">
               <.button
                 id="add-board-submit"
@@ -1055,26 +1114,34 @@ defmodule AlnaslWeb.BoardsLive do
           <:actions>
             <.button id="rescan" small phx-click="rescan">{gettext("Look again")}</.button>
           </:actions>
+
           <p :if={!@found.serial?} id="no-serial" class="note">
             {gettext(
               "The serial port library is not built into this copy of Alnasl, so real boards cannot be opened here. Simulator boards work. The installed versions have it; a copy built from the source code on Windows has it when asked for (README, \"Serial ports\")."
             )}
           </p>
+
           <p :if={@found.serial? and @found.ports == []} class="note">
             {gettext("No serial port found. Plug in the board or its adapter and look again.")}
           </p>
+
           <table :if={@found.ports != []} id="ports-table">
             <thead>
               <tr>
                 <th>{gettext("Port")}</th>
+
                 <th>{gettext("What it says it is")}</th>
+
                 <th>{gettext("Used by")}</th>
               </tr>
             </thead>
+
             <tbody>
               <tr :for={p <- @found.ports}>
                 <td class="mono">{p.port}</td>
+
                 <td>{p.description}</td>
+
                 <td>{p.used_by || "-"}</td>
               </tr>
             </tbody>

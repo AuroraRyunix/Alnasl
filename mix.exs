@@ -190,6 +190,7 @@ defmodule Alnasl.MixProject do
       {:req, "~> 0.5"},
       # The QR code of the box's address, for a phone to scan. Pure Elixir, MIT.
       {:eqrcode, "~> 0.2.1"},
+      {:earmark_parser, "~> 1.4"},
       # The board drivers, the DGT protocol and the capture format, and the
       # bridge that brings a hall's boards here from elsewhere. Pinned by tag,
       # as OpenPairings pins Ainalrami: a new Arkab reaches Alnasl when this

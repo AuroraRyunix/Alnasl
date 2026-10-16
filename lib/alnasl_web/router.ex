@@ -122,6 +122,7 @@ defmodule AlnaslWeb.Router do
       live "/halls", HallsLive, :index
       live "/halls/:id", HallsLive, :show
       live "/help", HelpLive, :index
+      live "/help/:chapter", HelpLive, :chapter
     end
   end
 end

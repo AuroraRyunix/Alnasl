@@ -342,7 +342,7 @@ format, the rules a pack's stylesheet must keep, and
 | **Recordings** | The raw captures per board. Replay one through the tracker as a dry run (what it makes of it, where it lost the thread); export it as a test fixture; download it |
 | **Log** | What happened, in sentences, with filters: board connected, moves recovered, out of sync, repaired by the arbiter, offline, back |
 | **Setup** | This copy (version, how started, data folder); Tournaments: a connect code from OpenPairings (pasted once, never shown again), what each tournament came with, which tables play in it, "Test connection" that really asks and explains failures - a wrong code, a withdrawn one, nobody home, a tournament that is not published; for a box without OpenPairings the results server, tournament and relay key typed in; a Lichess broadcast round and its token per tournament, with a test of its own; the box's name, language, round; a PIN for other machines and the address they open; the tracker's timings, with "Bullet / fast play" for games of a few minutes or less |
-| **Help** | The cycle on one page: before the round, during, after, and when something is wrong |
+| **Help** | The manual, in English and Dutch: seven chapters from getting started to troubleshooting, with a search, and a small *?* on every page that opens the section about it. The chapters are `priv/manual/*.md` (Dutch in `priv/manual/nl/`) |
 
 A banner on every page says so when the results server cannot be reached.
 

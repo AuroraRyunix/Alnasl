@@ -583,18 +583,24 @@ defmodule AlnaslWeb.TablesAndOutputsTest do
 
   test "Help explains which board is which, the phone, and Lichess both ways - in both languages",
        %{conn: conn} do
-    {:ok, view, html} = live(conn, ~p"/help")
+    {:ok, view, html} = live(conn, ~p"/help/boards-and-ports")
 
-    for id <- ~w(help-which help-phone help-lichess),
+    for id <- ~w(which-board-is-which phone-numbering),
         do: assert(has_element?(view, "##{id}"))
 
-    assert html =~ "Number the boards with your phone"
+    assert html =~ "Numbering with your phone"
+
+    {:ok, view, html} = live(conn, ~p"/help/openpairings-and-openresults")
+    assert has_element?(view, "#lichess-push")
+    assert has_element?(view, "#lichess-pull")
     assert html =~ "/live/&lt;round&gt;/pgn"
 
     Settings.put("locale", "nl")
-    {:ok, _view, html} = live(conn, ~p"/help")
+    {:ok, _view, html} = live(conn, ~p"/help/boards-and-ports")
     assert html =~ "Welk bord is welk"
-    assert html =~ "Nummer de borden met je telefoon"
+    assert html =~ "Nummeren met je telefoon"
+
+    {:ok, _view, html} = live(conn, ~p"/help/openpairings-and-openresults")
     assert html =~ "Uitzenden op Lichess"
   end
 end

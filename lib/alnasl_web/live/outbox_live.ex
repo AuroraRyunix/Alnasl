@@ -239,6 +239,7 @@ defmodule AlnaslWeb.OutboxLive do
     <Layouts.app
       flash={@flash}
       nav={:outbox}
+      help={:outbox}
       link={@link}
       hall={@hall}
       update={@update}
@@ -263,12 +264,14 @@ defmodule AlnaslWeb.OutboxLive do
             "These are the tournaments in use. Each is reported to OpenPairings, and sent to its results site when it has one and OpenPairings has given the box a relay key for it."
           )}
         </p>
+
         <ul class="dests">
           <li :for={l <- @links} id={"linked-link-#{l.id}"} class="dest">
             <% {tone, icon, word} = LinkWords.state(l) %>
             <div class="row">
               <b>{LinkWords.about(l)}</b>
               <.badge id={"linked-link-state-#{l.id}"} tone={tone} icon={icon}>{word}</.badge>
+
               <span class="note">
                 {gettext("Last contact: %{t}.",
                   t: if(l.last_ok_at, do: Words.time(l.last_ok_at), else: gettext("never"))
@@ -276,6 +279,7 @@ defmodule AlnaslWeb.OutboxLive do
               </span>
             </div>
           </li>
+
           <li :for={t <- @linked} id={"linked-#{t.id}"} class="dest">
             <% {rtone, rtext} = Status.results_line(t) %>
             <div class="row">
@@ -296,6 +300,7 @@ defmodule AlnaslWeb.OutboxLive do
                 end}
               </.badge>
             </div>
+
             <p
               id={"linked-results-line-#{t.id}"}
               class={["dest-line", rtone == "warn" && "warn-text"]}
@@ -316,6 +321,7 @@ defmodule AlnaslWeb.OutboxLive do
       >
         <dl class="kv">
           <dt>{gettext("State")}</dt>
+
           <dd id="link-word">
             <%= if @linked == [] do %>
               <Layouts.link_state link={@link} />
@@ -329,7 +335,9 @@ defmodule AlnaslWeb.OutboxLive do
               <% end %>
             <% end %>
           </dd>
+
           <dt>{gettext("Server")}</dt>
+
           <dd id="link-targets">
             <div :for={t <- @tournaments} id={"link-target-#{t.id}"}>
               <b :if={@many?}>{@names[t.id] || gettext("This box")}:</b>
@@ -349,31 +357,41 @@ defmodule AlnaslWeb.OutboxLive do
                 >
                   {gettext("Open")}
                 </.site_link>
+
                 <span :if={t.relay_key == ""} class="note">
                   {gettext("- no relay key yet: nothing is sent there")}
                 </span>
               <% end %>
             </div>
           </dd>
+
           <dt>{gettext("Waiting")}</dt>
+
           <dd id="waiting-count">{@link.pending}</dd>
+
           <dt>{gettext("Last success")}</dt>
+
           <dd id="last-ok">
             {if @link.last_ok,
               do: Words.time(@link.last_ok),
               else: gettext("none since the box started")}
           </dd>
+
           <dt :if={@link.last_error && @link.state in [:offline, :blocked]}>{gettext("Why not")}</dt>
+
           <dd :if={@link.last_error && @link.state in [:offline, :blocked]} id="last-error">
             {Words.link_error(@link.last_error)}
           </dd>
+
           <dt :if={@link.next_try_at && @link.state in [:offline, :blocked]}>
             {gettext("Next try")}
           </dt>
+
           <dd :if={@link.next_try_at && @link.state in [:offline, :blocked]}>
             {Words.time(@link.next_try_at)}
           </dd>
         </dl>
+
         <p class="note" style="margin-top:0.8rem">
           {gettext(
             "Every move is written on the box before it is sent, and stays here until the server has answered for it. Without a connection the box simply keeps them; they go out in order when it is back."
@@ -387,22 +405,27 @@ defmodule AlnaslWeb.OutboxLive do
             "Each destination has its own queue and its own patience. One being offline, refused or switched off never holds up another."
           )}
         </p>
+
         <p id="auto-note" class="note">
           {gettext(
             "Sending is automatic: OpenPairings and the results site start by themselves as soon as there is somewhere to send to, and a game recorded before that goes out in full. Send now only nudges a destination that is waiting out a pause."
           )}
         </p>
+
         <ul class="dests">
           <li :for={d <- @destinations} id={"dest-#{d.id}"} class="dest">
             <% {tone, icon, word} = DestinationWords.state(d) %>
             <div class="row">
               <b>{DestinationWords.name(d.id)}</b>
               <.badge id={"dest-state-#{d.id}"} tone={tone} icon={icon}>{word}</.badge>
+
               <span id={"dest-waiting-#{d.id}"} class="note">
                 {gettext("%{n} waiting", n: d.pending)}
               </span>
             </div>
+
             <p class="note">{DestinationWords.about(d.id)}</p>
+
             <p id={"dest-line-#{d.id}"} class="dest-line">
               {gettext("Last success: %{t}.",
                 t:
@@ -414,10 +437,12 @@ defmodule AlnaslWeb.OutboxLive do
               <span :if={d.last_error && d.state in [:offline, :blocked]} id={"dest-error-#{d.id}"}>
                 {DestinationWords.error(d.last_error)}
               </span>
+
               <span :if={d.next_try_at && d.state in [:offline, :blocked]}>
                 {gettext("Next try at %{t}.", t: Words.time(d.next_try_at))}
               </span>
             </p>
+
             <ul :if={d.id == "openresults"} id="dest-sites" class="note dest-sites">
               <li :for={t <- @tournaments} id={"dest-site-#{t.id}"}>
                 <b :if={@many?}>{@names[t.id] || gettext("This box")}:</b>
@@ -431,6 +456,7 @@ defmodule AlnaslWeb.OutboxLive do
                 <% end %>
               </li>
             </ul>
+
             <ul :if={@many?} id={"dest-by-#{d.id}"} class="note">
               <li
                 :for={t <- @tournaments}
@@ -443,6 +469,7 @@ defmodule AlnaslWeb.OutboxLive do
                 )}
               </li>
             </ul>
+
             <ul
               :if={d.id == "openpairings" and @pairing_refused != []}
               id="pairing-refused"
@@ -455,11 +482,13 @@ defmodule AlnaslWeb.OutboxLive do
                 : {DestinationWords.report_error(message)}
               </li>
             </ul>
+
             <ul :if={d.id == "lichess" and @lichess_refused != []} id="lichess-refused" class="note">
               <li :for={{game, message} <- @lichess_refused}>
                 {gettext("Lichess refused board %{n}: %{message}", n: game.board_no, message: message)}
               </li>
             </ul>
+
             <div class="row">
               <.button
                 id={"dest-send-#{d.id}"}
@@ -471,6 +500,7 @@ defmodule AlnaslWeb.OutboxLive do
               >
                 {gettext("Send now")}
               </.button>
+
               <span
                 :if={match?({:quiet, _}, @plans[d.id])}
                 id={"dest-send-why-#{d.id}"}
@@ -478,9 +508,11 @@ defmodule AlnaslWeb.OutboxLive do
               >
                 {DestinationWords.quiet(elem(@plans[d.id], 1))}
               </span>
+
               <.button id={"dest-toggle-#{d.id}"} small phx-click="dest_toggle" phx-value-id={d.id}>
                 {if d.enabled?, do: gettext("Switch off"), else: gettext("Switch on")}
               </.button>
+
               <.button
                 :if={
                   d.id == "openpairings" and
@@ -497,6 +529,7 @@ defmodule AlnaslWeb.OutboxLive do
               >
                 {gettext("Send again, whatever is held")}
               </.button>
+
               <.link :if={d.state == :unconfigured} navigate={~p"/setup"}>
                 {gettext("Set it up")}
               </.link>
@@ -521,6 +554,7 @@ defmodule AlnaslWeb.OutboxLive do
             {gettext("Nothing of it is waiting.")}
           </li>
         </ul>
+
         <div :if={@waiting == []} class="empty">{gettext("Nothing is waiting.")}</div>
         <.entries :if={@waiting != []} id="waiting-table" entries={@waiting} mode={:waiting} />
       </.panel>
@@ -538,6 +572,7 @@ defmodule AlnaslWeb.OutboxLive do
         <:actions>
           <.button :if={@sent != []} id="prune" small phx-click="prune">{gettext("Clear the list")}</.button>
         </:actions>
+
         <div :if={@sent == []} class="empty">{gettext("Nothing has been sent yet.")}</div>
         <.entries :if={@sent != []} id="sent-table" entries={@sent} mode={:sent} />
       </.panel>
@@ -556,22 +591,33 @@ defmodule AlnaslWeb.OutboxLive do
         <thead>
           <tr>
             <th>{gettext("Round")}</th>
+
             <th>{gettext("Board")}</th>
+
             <th>{gettext("What")}</th>
+
             <th>{if @mode == :sent, do: gettext("Sent"), else: gettext("Queued")}</th>
+
             <th :if={@mode != :sent}>{gettext("Tries")}</th>
+
             <th :if={@mode != :waiting}>{gettext("Note")}</th>
           </tr>
         </thead>
+
         <tbody>
           <tr :for={entry <- @entries} id={"#{@id}-#{entry.id}"}>
             <td>{entry.round}</td>
+
             <td>
               <.link navigate={Scope.game_path(entry.tournament_id, entry.round, entry.board_no)}>{entry.board_no}</.link>
             </td>
+
             <td>{what(entry)}</td>
+
             <td>{Words.time(if @mode == :sent, do: entry.sent_at, else: entry.inserted_at)}</td>
+
             <td :if={@mode != :sent}>{entry.attempts}</td>
+
             <td :if={@mode != :waiting}>
               {Words.entry_error(entry.error)}
               <span :if={entry.detail} class="note">{entry.detail}</span>

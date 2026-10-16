@@ -275,6 +275,7 @@ defmodule AlnaslWeb.PgnLive do
     <Layouts.app
       flash={@flash}
       nav={:pgn}
+      help={:pgn}
       link={@link}
       hall={@hall}
       update={@update}
@@ -295,6 +296,7 @@ defmodule AlnaslWeb.PgnLive do
             <option :for={t <- @shown} value={t.id} selected={t.id == @tid}>{@names[t.id]}</option>
           </select>
         </form>
+
         <form id="pgn-round-form" phx-change="round" class="row">
           <label for="pgn-round" class="note">{gettext("Round")}</label>
           <select id="pgn-round" name="round" class="input" style="width:auto">
@@ -311,6 +313,7 @@ defmodule AlnaslWeb.PgnLive do
               <.live_file_input upload={@uploads.pgn} class="input" />
               <span class="hint">{gettext("One file may hold many games.")}</span>
             </div>
+
             <p :for={entry <- @uploads.pgn.entries} class="note">
               {entry.client_name}
               <span
@@ -319,13 +322,16 @@ defmodule AlnaslWeb.PgnLive do
                 style="color:var(--bad)"
               >{upload_error(err)}</span>
             </p>
+
             <p :for={err <- upload_errors(@uploads.pgn)} class="error" style="color:var(--bad)">
               {upload_error(err)}
             </p>
+
             <div class="row">
               <.button id="upload-submit" variant="primary" type="submit">{gettext("Read the file")}</.button>
             </div>
           </form>
+
           <.form
             for={@paste_form}
             id="paste-form"
@@ -358,30 +364,41 @@ defmodule AlnaslWeb.PgnLive do
               download
             >{gettext("Whole round as PGN")}</.button>
           </:actions>
+
           <div :if={@stored == []} class="empty">
             {gettext("The box has no games for this round yet.")}
           </div>
+
           <table :if={@stored != []} id="stored-games">
             <thead>
               <tr>
                 <th>{gettext("Board")}</th>
+
                 <th>{gettext("Players")}</th>
+
                 <th class="num">{gettext("Moves")}</th>
+
                 <th>{gettext("Result")}</th>
+
                 <th><span class="sr-only">{gettext("Actions")}</span></th>
               </tr>
             </thead>
+
             <tbody>
               <tr :for={game <- @stored} id={"stored-#{game.board_no}"}>
                 <td>
                   <.link navigate={Scope.game_path(@tid, @round, game.board_no)}>{game.board_no}</.link>
                 </td>
+
                 <td>{game.white || "?"} - {game.black || "?"}</td>
+
                 <td class="num">{div(length(Games.sans(game)) + 1, 2)}</td>
+
                 <td>
                   {game.result || "*"}
                   <span :if={game.source == "pgn"} class="flag plain">{gettext("from PGN")}</span>
                 </td>
+
                 <td class="act">
                   <.button
                     id={"export-#{game.board_no}"}
@@ -433,9 +450,11 @@ defmodule AlnaslWeb.PgnLive do
               n: div(length(Games.sans(existing)) + 1, 2)
             )}
           </p>
+
           <p :if={!existing || existing.plies == "[]"}>
             {gettext("It will be sent to the results server as that board's game.")}
           </p>
+
           <div class="row" style="margin-top:0.5rem">
             <.button id="attach-yes" variant="primary" phx-click="attach">{gettext("Yes, attach it")}</.button>
             <.button id="attach-no" phx-click="cancel_attach">{gettext("No")}</.button>
@@ -452,37 +471,48 @@ defmodule AlnaslWeb.PgnLive do
         <:actions>
           <.button id="simulate-all" small phx-click="simulate_all">{gettext(
             "Play them all on simulator boards"
-          )}</.button>
-          <.button id="clear-games" small phx-click="clear">{gettext("Clear")}</.button>
+          )}</.button> <.button id="clear-games" small phx-click="clear">{gettext("Clear")}</.button>
         </:actions>
+
         <div class="table-wrap">
           <table id="games-table">
             <thead>
               <tr>
                 <th>#</th>
+
                 <th>{gettext("Players")}</th>
+
                 <th class="num">{gettext("Moves")}</th>
+
                 <th>{gettext("Result")}</th>
+
                 <th>{gettext("Board of round %{n}", n: @round)}</th>
+
                 <th><span class="sr-only">{gettext("Actions")}</span></th>
               </tr>
             </thead>
+
             <tbody>
               <tr :for={{game, i} <- @games} id={"read-#{i}"}>
                 <td>{i}</td>
+
                 <td>
                   {game.headers["White"] || "?"} - {game.headers["Black"] || "?"}
                   <div class="note">{game.headers["Event"]} {game.headers["Date"]}</div>
                   <.verdict :if={@verdicts[i]} id={"verdict-#{i}"} verdict={@verdicts[i]} />
                 </td>
+
                 <td class="num">{div(length(game.moves) + 1, 2)}</td>
+
                 <td>{game.result}</td>
+
                 <td>
                   <form id={"target-form-#{i}"} phx-change="target">
                     <input type="hidden" name="index" value={i} />
                     <label class="sr-only" for={"target-#{i}"}>{gettext("Board for game %{i}", i: i)}</label>
                     <select id={"target-#{i}"} name="board_no" class="input" style="width:auto">
                       <option value="">{gettext("choose...")}</option>
+
                       <option
                         :for={
                           n <- Enum.uniq(@numbers ++ Enum.map(@stored, & &1.board_no)) |> Enum.sort()
@@ -495,6 +525,7 @@ defmodule AlnaslWeb.PgnLive do
                     </select>
                   </form>
                 </td>
+
                 <td class="act">
                   <.button id={"simulate-#{i}"} small phx-click="simulate" phx-value-index={i}>{gettext(
                     "Simulate"
@@ -536,6 +567,7 @@ defmodule AlnaslWeb.PgnLive do
       <.badge tone="warn" icon="warning">
         {gettext("First difference with board %{n}", n: @number)}
       </.badge>
+
       <span>
         {gettext("move %{move} (%{side}): the board has %{mine}, this PGN has %{theirs}",
           move: div(@ply + 1, 2),

@@ -105,6 +105,7 @@ defmodule AlnaslWeb.RecordingsLive do
     <Layouts.app
       flash={@flash}
       nav={:recordings}
+      help={:recordings}
       link={@link}
       hall={@hall}
       update={@update}
@@ -122,22 +123,33 @@ defmodule AlnaslWeb.RecordingsLive do
         <:actions>
           <.button id="close-report" small phx-click="close_report">{gettext("Close")}</.button>
         </:actions>
+
         <p class="note">
           {gettext("The capture was played through a fresh tracker. Nothing was saved or sent.")}
         </p>
+
         <dl class="kv" style="margin-bottom:0.8rem">
           <dt>{gettext("Readings")}</dt>
+
           <dd id="report-events">
             {@report.events}
             <span :if={@report.raw?} class="flag plain">{gettext("decoded from raw bytes")}</span>
           </dd>
+
           <dt>{gettext("Length")}</dt>
+
           <dd>{at(@report.duration_ms)}</dd>
+
           <dt>{gettext("Moves found")}</dt>
+
           <dd id="report-count">{length(@report.moves)}</dd>
+
           <dt>{gettext("Ends")}</dt>
+
           <dd><.state id="report-state" state={@report.status} /></dd>
+
           <dt>{gettext("Out of sync")}</dt>
+
           <dd id="report-alarms">
             <%= if @report.alarms == [] do %>
               {gettext("never")}
@@ -145,12 +157,18 @@ defmodule AlnaslWeb.RecordingsLive do
               <span :for={{t, _why} <- @report.alarms} class="flag" style="margin-right:0.3rem">{at(t)}</span>
             <% end %>
           </dd>
+
           <dt>{gettext("Corrections")}</dt>
+
           <dd>{length(@report.corrections)}</dd>
+
           <dt :if={@report.suggestions != []}>{gettext("Result suggested")}</dt>
+
           <dd :if={@report.suggestions != []}>{@report.suggestions |> List.last() |> elem(1)}</dd>
         </dl>
+
         <p :if={@report.moves == []} class="note">{gettext("The tracker found no moves in it.")}</p>
+
         <p :if={@report.moves != []} id="report-moves" style="line-height:1.9">
           <%= for {ply, index} <- Enum.with_index(@report.plies) do %>
             <span :if={rem(index, 2) == 0} class="quiet">{div(index, 2) + 1}.</span>
@@ -159,6 +177,7 @@ defmodule AlnaslWeb.RecordingsLive do
             }><.figurine san={ply.san} /></span>
           <% end %>
         </p>
+
         <ul :if={@report.notes != []} class="note">
           <li :for={{t, text} <- @report.notes}>{at(t)} - {text}</li>
         </ul>
@@ -169,23 +188,33 @@ defmodule AlnaslWeb.RecordingsLive do
           <b>{gettext("Nothing recorded yet")}</b>
           <p>{gettext("Every connected board is recorded from the moment it is connected.")}</p>
         </div>
+
         <div :if={@captures != []} class="table-wrap">
           <table id="captures-table">
             <thead>
               <tr>
                 <th>{gettext("Board")}</th>
+
                 <th>{gettext("File")}</th>
+
                 <th class="num">{gettext("Size")}</th>
+
                 <th>{gettext("Last written")}</th>
+
                 <th><span class="sr-only">{gettext("Actions")}</span></th>
               </tr>
             </thead>
+
             <tbody>
               <tr :for={c <- @captures} id={"capture-#{c.board_id}-#{Path.rootname(c.name)}"}>
                 <td>{c.board_name}</td>
+
                 <td class="mono">{c.name}</td>
+
                 <td class="num">{Words.size(c.size)}</td>
+
                 <td>{Words.datetime(c.modified)}</td>
+
                 <td class="act">
                   <.button
                     id={"dry-#{c.board_id}-#{Path.rootname(c.name)}"}
@@ -197,6 +226,7 @@ defmodule AlnaslWeb.RecordingsLive do
                   >
                     {gettext("Replay through the tracker")}
                   </.button>
+
                   <.button
                     id={"fixture-#{c.board_id}-#{Path.rootname(c.name)}"}
                     small
@@ -206,6 +236,7 @@ defmodule AlnaslWeb.RecordingsLive do
                   >
                     {gettext("Export as test fixture")}
                   </.button>
+
                   <.button small href={~p"/files/capture/#{c.board_id}/#{c.name}"} download>{gettext(
                     "Download"
                   )}</.button>
