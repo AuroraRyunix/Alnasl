@@ -25,6 +25,11 @@ defmodule Alnasl.OpenPairingsCodeTest do
     group = "oplg" <> "_" <> String.duplicate("b", 43)
     assert {:ok, %{kind: "group", secret: ^group}} = Code.parse("https://p.example/x#" <> group)
 
+    account = "oplu" <> "_" <> String.duplicate("c", 43)
+
+    assert {:ok, %{kind: "account", secret: ^account}} =
+             Code.parse("https://p.example/x#" <> account)
+
     # Opaque: the box does not judge what is after the #, the server does.
     assert {:ok, %{kind: nil, secret: "something#else"}} =
              Code.parse("https://p.example/x#something#else")

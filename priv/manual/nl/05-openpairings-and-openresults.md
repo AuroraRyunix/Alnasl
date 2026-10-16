@@ -25,6 +25,16 @@ Versturen gebeurt vanzelf: naar OpenPairings vanaf het moment dat een toernooi g
 
 Druk op "Verbinding testen": het vraagt echt na en legt mislukkingen in woorden uit (een foute code, een ingetrokken code, niemand thuis, een toernooi dat niet gepubliceerd is).
 
+### Al je toernooien in één keer {#whole-account}
+
+In plaats van een code per toernooi koppel je een heel OpenPairings-account:
+
+1. Op het kastje: Instellingen, Toernooien, **Een OpenPairings-account koppelen**. Typ het adres van je OpenPairings (of `http://127.0.0.1:4000` voor een kopie op deze computer). Het wordt onthouden; op de gehoste server staat het er al.
+2. OpenPairings gaat open. Meld je aan als het dat vraagt, kijk welk kastje het vraagt, en druk op **Toestaan**. Je bent terug op het kastje.
+3. Het kastje heeft nu elk lopend toernooi dat je in OpenPairings mag bewerken, als eigenaar of medewerker - ook de toernooien die je later maakt. Meer dan 14 dagen geleden afgelopen, gearchiveerd of overgedragen: niet. De lijst toont het als *Al je toernooien op* de server, met het aantal.
+
+Eigenaars en arbiters van de zaal kunnen dit. Stoppen doe je in OpenPairings (je accountpagina, Live borden) of door het hier te verwijderen. Een account heeft hoogstens 8 kastjes. De luisteraar voor het zaalnetwerk van een desktopkopie biedt dit niet aan: daar blijven de gewone codes werken.
+
 ### Wat de balk zegt {#statuses}
 
 De balk noemt waar hij over gaat. "OpenPairings: verbonden" is de code die je plakte; "Uitslagensite: ..." is de uitslagenpagina van het toernooi. "Nog geen relaissleutel" betekent dat OpenPairings geen relaissleutel voor het toernooi bewaard heeft: in OpenPairings, Instellingen, Live borden, De uitslagensite. Het kastje begint vanzelf te versturen een paar seconden nadat de sleutel bewaard is. "Live" en het getal ernaast is de verbinding van deze browser met het kastje, niet met het internet.

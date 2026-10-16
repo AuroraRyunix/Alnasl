@@ -81,6 +81,12 @@ if keycloak_secret = System.get_env("ALNASL_KEYCLOAK_CLIENT_SECRET") do
     redirect_uri: System.get_env("ALNASL_KEYCLOAK_REDIRECT_URI")
 end
 
+# The OpenPairings that "Connect an OpenPairings account" on Setup offers
+# first (`Alnasl.OpenPairings.Connect`). Unset on a box in a hall, where the
+# arbiter types it once and it is remembered; the hosted server sets it to
+# its neighbour.
+config :alnasl, openpairings_url: System.get_env("ALNASL_OPENPAIRINGS_URL")
+
 # Theme packs (`Alnasl.ThemePacks`): `<data dir>/themes` unless this says
 # otherwise. Unset is the normal case; nothing is installed by default.
 if themes_dir = System.get_env("ALNASL_THEMES_DIR") do

@@ -25,6 +25,16 @@ Sending is automatic: to OpenPairings from the moment a tournament is linked, to
 
 Press "Test connection": it really asks, and explains failures in words (a wrong code, a withdrawn one, nobody home, a tournament that is not published).
 
+### All your tournaments at once {#whole-account}
+
+Instead of a code per tournament, connect a whole OpenPairings account:
+
+1. On the box: Setup, Tournaments, **Connect an OpenPairings account**. Type the address of your OpenPairings (or `http://127.0.0.1:4000` for a copy on this computer). It is remembered; on the hosted server it is filled in already.
+2. OpenPairings opens. Sign in if it asks, check which box is asking, and press **Allow**. You are back on the box.
+3. The box now has every current tournament you may edit in OpenPairings, as owner or collaborator - including the ones you make later. Finished more than 14 days ago, archived or handed off: left out. The list shows it as *All your tournaments on* the host, with the count.
+
+Owners and arbiters of the hall can do this. To stop it, withdraw it in OpenPairings (your account page, Live boards) or remove it here. One account holds at most 8 boxes. A desktop copy's hall-network listener does not offer this: there the single codes still do the job.
+
 ### What the bar says {#statuses}
 
 The bar names what it is about. "OpenPairings: connected" is the code you pasted; "Results site: ..." is the tournament's results page. "No relay key yet" means OpenPairings has not saved a relay key for the tournament: in OpenPairings, Settings, Live boards, The results site. The box starts sending by itself a few seconds after the key is saved. "Live" and the number beside it is this browser's connection to the box, not to the internet.
