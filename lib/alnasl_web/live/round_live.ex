@@ -73,7 +73,24 @@ defmodule AlnaslWeb.RoundLive do
         true -> [Tournaments.get(only) || hd(active ++ [Tournaments.default()])]
       end
 
-    sections = Enum.map(shown, &section(&1, asked || &1.round, snapshots))
+    # Only what is on the boards here: a tournament with a board of this hall
+    # or a stored game. One that is asked for by name is shown whatever it has,
+    # and a box with a single tournament keeps it, empty state and all.
+    with_games = Games.tournament_ids()
+
+    listed =
+      if match?([_one], active),
+        do: active,
+        else: Enum.filter(active, &on_the_boards?(&1, snapshots, with_games))
+
+    listed_ids = MapSet.new(listed, & &1.id)
+
+    shown_now =
+      if only == nil,
+        do: Enum.filter(shown, &MapSet.member?(listed_ids, &1.id)),
+        else: shown
+
+    sections = Enum.map(shown_now, &section(&1, asked || &1.round, snapshots))
 
     # The same address is drawn once, not three times a second.
     cache =
@@ -92,8 +109,9 @@ defmodule AlnaslWeb.RoundLive do
 
     assign(socket,
       sections: sections,
-      active: active,
-      many?: length(active) > 1,
+      listed: listed,
+      not_here: length(active) - length(listed),
+      many?: length(listed) > 1,
       alarms: alarms,
       title: title,
       page_title: title,
@@ -101,6 +119,11 @@ defmodule AlnaslWeb.RoundLive do
       qr_cache: cache,
       refresh_due?: false
     )
+  end
+
+  defp on_the_boards?(tournament, snapshots, with_games) do
+    MapSet.member?(with_games, tournament.id) or
+      Enum.any?(snapshots, &(&1[:tournament_id] == tournament.id and &1.board_no != nil))
   end
 
   defp put_qr(%{site: %{live: url} = site} = section, cache) when url != nil,
@@ -142,8 +165,10 @@ defmodule AlnaslWeb.RoundLive do
     histories = Enum.group_by(Games.all(tid, round), & &1.board_no)
     pairings = Map.new(Tournaments.boards(tid, round), &{&1.board, &1})
 
-    numbers =
-      Enum.uniq(Map.keys(pairings) ++ Map.keys(here) ++ Map.keys(games)) |> Enum.sort()
+    # A tile is a board that exists here or has a game. A pairing with
+    # neither is only counted.
+    numbers = Enum.uniq(Map.keys(here) ++ Map.keys(games)) |> Enum.sort()
+    unplaced = pairings |> Map.keys() |> Enum.reject(&(&1 in numbers)) |> length()
 
     site = site(tournament, round)
 
@@ -187,6 +212,7 @@ defmodule AlnaslWeb.RoundLive do
       time_control: info.time_control,
       site: site,
       tiles: tiles,
+      unplaced: unplaced,
       matches: if(Tournaments.team_event?(tournament), do: matches(tiles)),
       counts: counts,
       alarms:
@@ -558,7 +584,7 @@ defmodule AlnaslWeb.RoundLive do
           </.link>
 
           <.link
-            :for={t <- @active}
+            :for={t <- @listed}
             id={"filter-#{t.id}"}
             patch={~p"/t/#{t.id}"}
             aria-current={to_string(@only == t.id)}
@@ -711,10 +737,34 @@ defmodule AlnaslWeb.RoundLive do
           </span>
         </div>
 
+        <p
+          :if={section.unplaced > 0 and section.tiles != []}
+          id={sid("round-unplaced", section.tid)}
+          class="note"
+        >
+          {ngettext(
+            "%{count} pairing without a board here",
+            "%{count} pairings without a board here",
+            section.unplaced
+          )}
+        </p>
+
         <div :if={section.tiles == []} id={sid("round-empty", section.tid)} class="panel">
           <div class="empty">
             <b>{gettext("No boards in round %{n} yet", n: section.round)}</b>
             <%= cond do %>
+              <% section.unplaced > 0 -> %>
+                <p>
+                  {gettext(
+                    "The pairings of this round have no board here yet. Link a board to a board number, or attach a game from a PGN."
+                  )}
+                </p>
+
+                <.button
+                  id={sid("empty-boards", section.tid)}
+                  navigate={~p"/boards"}
+                  variant="primary"
+                >{gettext("Go to Boards")}</.button>
               <% section.linked? -> %>
                 <p>
                   {gettext(
@@ -800,6 +850,27 @@ defmodule AlnaslWeb.RoundLive do
           </section>
         </div>
       </section>
+
+      <div :if={@sections == []} id="live-empty" class="panel">
+        <div class="empty">
+          <b>{gettext("Nothing is on the boards here yet")}</b>
+          <p>
+            {gettext("Link a board to a board number, or attach a game from a PGN.")}
+          </p>
+
+          <.button id="live-empty-boards" navigate={~p"/boards"} variant="primary">
+            {gettext("Go to Boards")}
+          </.button>
+        </div>
+      </div>
+
+      <p :if={@not_here > 0} id="not-on-the-boards" class="note">
+        {ngettext(
+          "%{count} more tournament is not on the boards here.",
+          "%{count} more tournaments are not on the boards here.",
+          @not_here
+        )} <.link id="not-on-the-boards-setup" navigate={~p"/setup"}>{gettext("Setup")}</.link>
+      </p>
     </Layouts.app>
     """
   end

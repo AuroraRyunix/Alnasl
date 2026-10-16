@@ -12,9 +12,10 @@ defmodule AlnaslWeb.RoundAndGameTest do
       refute has_element?(view, "#tiles")
     end
 
-    test "shows a tile per board of the round, with the players from the results server", %{
+    test "shows a tile per board that has a game, with the players from the results server", %{
       conn: conn
     } do
+      for n <- 1..4, do: Games.ensure(Alnasl.Tournaments.default_id(), 1, n, %{})
       {:ok, view, _html} = live(conn, ~p"/")
       for n <- 1..4, do: assert(has_element?(view, "#tile-#{n}"))
       assert has_element?(view, "#tile-1 .name", "GM Player 1")

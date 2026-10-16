@@ -215,6 +215,13 @@ defmodule AlnaslWeb.SetupLive do
   # --- events ------------------------------------------------------------------
 
   @impl true
+  # What only a box in a hall can do: on the server the panels are not drawn,
+  # and a hand-made event gets nothing either.
+  def handle_event(event, _params, %{assigns: %{server?: true}} = socket)
+      when event in ~w(save_pin clear_pin set_listen save_update_mode check_update update_start
+                       update_cancel update_apply set_autostart),
+      do: {:noreply, socket}
+
   # One form, two buttons: "Test connection" submits it with `intent=test`
   # and nothing is saved.
   def handle_event("save_server", %{"server" => params, "intent" => "test"}, socket) do
@@ -304,8 +311,13 @@ defmodule AlnaslWeb.SetupLive do
   def handle_event("save_box", %{"box" => params}, socket) do
     name = String.trim(params["box_name"] || "")
 
-    Settings.put_many(%{
-      "box_name" => if(name == "", do: "Alnasl", else: String.slice(name, 0, 40)),
+    # The server has a fixed name; only a box is renamed.
+    names =
+      if socket.assigns.server?,
+        do: %{},
+        else: %{"box_name" => if(name == "", do: "Alnasl", else: String.slice(name, 0, 40))}
+
+    common = %{
       "locale" => if(params["locale"] in ["en", "nl"], do: params["locale"], else: "en"),
       "auto_suggest" => params["auto_suggest"] == "true",
       "new_game_on_setup" =>
@@ -315,7 +327,9 @@ defmodule AlnaslWeb.SetupLive do
         ),
       "capture_cap_mb" => int(params["capture_cap_mb"], 500, 10, 100_000),
       "clock_heartbeat_s" => int(params["clock_heartbeat_s"], 20, 5, 600)
-    })
+    }
+
+    Settings.put_many(Map.merge(common, names))
 
     Tournaments.set_round(Tournaments.default_id(), int(params["round"], 1, 1, 999))
     Log.add(:info, "setup.saved", %{})
@@ -1027,12 +1041,14 @@ defmodule AlnaslWeb.SetupLive do
               </div>
             </.form>
           </div>
+
           <div :if={@may_connect?} id="op-connect" class="callout" style="margin-top:0.8rem">
             <p class="note" style="margin-top:0">
               {gettext(
                 "Or, without a code: connect your OpenPairings account. You sign in there and allow this box once; it then sees every tournament you may edit that is current, including the ones you make later."
               )}
             </p>
+
             <.form
               for={@connect_form}
               id="op-connect-form"
@@ -1570,6 +1586,15 @@ defmodule AlnaslWeb.SetupLive do
 
             <dd id="about-version">{@about.version}</dd>
 
+            <dt>{gettext("Edition")}</dt>
+
+            <dd id="about-edition">
+              {if(@server?,
+                do: gettext("Server (boards come from bridges)"),
+                else: gettext("Box (in a hall)")
+              )}
+            </dd>
+
             <dt>{gettext("Started as")}</dt>
 
             <dd id="about-kind">{Words.install_kind(@about.kind)}</dd>
@@ -1841,10 +1866,15 @@ defmodule AlnaslWeb.SetupLive do
           <Layouts.theme_picker id="theme-grid" variant={:grid} />
         </.panel>
 
-        <.panel :if={@box_admin?} id="setup-box" title={gettext("This box")}>
+        <.panel
+          :if={@box_admin?}
+          id="setup-box"
+          title={if(@server?, do: gettext("This server"), else: gettext("This box"))}
+        >
           <.form for={@box_form} id="box-form" phx-submit="save_box" class="stack">
             <div class="form-grid">
               <.input
+                :if={not @server?}
                 field={@box_form[:box_name]}
                 id="box-name"
                 label={gettext("Name")}
@@ -2019,7 +2049,7 @@ defmodule AlnaslWeb.SetupLive do
           </.form>
         </.panel>
 
-        <.panel :if={@box_admin?} id="setup-updates" title={gettext("Updates")}>
+        <.panel :if={@box_admin? and not @server?} id="setup-updates" title={gettext("Updates")}>
           <p id="update-version">
             {gettext("This is Alnasl %{version}.", version: Updates.current_version())}
             <a href={Updates.releases_page()} target="_blank" rel="noopener">

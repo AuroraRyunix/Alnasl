@@ -31,6 +31,8 @@ It is the same program either way. What differs is where it runs and what is plu
 
 **The hosted server.** The same program runs on a server, at alnasl.zerotwo.cloud. A server has no boards of its own: it has no ports to read. It takes **bridges** instead: Arkab, a small program in a hall that read the boards there and send them on over the internet (see [Bridges](03-bridges.md)). The pages are the ones you know: the round, the games, the corrections. The difference is that every page asks who you are, always, and accounts come by invitation only (see [Accounts, halls and roles](06-accounts-and-halls.md)).
 
+The server leaves out what only a box can do, instead of greying it out: adding boards and the list of serial ports on the Boards page, simulator boards, the Updates panel and starting with Windows, the PIN and the hall network, and the box's name. Setup says which edition you are looking at, under "This copy of Alnasl".
+
 > [!TIP] Which one?
 > Boards in your own hall and you want it simple: a box in the hall. Several halls, an arbiter at home, or nobody wants a computer in the hall: bridges and the server. Both can be used together, because one bridge may feed more than one server.
 

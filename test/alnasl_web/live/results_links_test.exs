@@ -48,6 +48,7 @@ defmodule AlnaslWeb.ResultsLinksTest do
     end
 
     test "each tile has a link to its board's live page", %{conn: conn} do
+      for n <- 1..4, do: Games.ensure(Tournaments.default_id(), 1, n, %{})
       {:ok, view, _html} = live(conn, ~p"/")
       for n <- 1..4, do: assert(new_tab?(view, "tile-site-link-#{n}", @site <> "/live/1/#{n}"))
       # A link beside the tile, not inside the tile's own link.

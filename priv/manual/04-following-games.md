@@ -21,6 +21,8 @@ A banner across the top means the results site cannot be reached. Play goes on a
 
 A tile is the way to the board's own page. Under it: "Finish game" and "New game".
 
+Only boards that exist here get a tile: a board of this hall seated on that board number, or a board that already has a stored game. Pairings without either are counted in one line under the heading ("26 pairings without a board here"). A tournament with no board here and no game at all is not drawn; one line at the bottom says how many there are ("14 more tournaments are not on the boards here") and leads to Setup. With a single tournament nothing is hidden. A tournament you open by its own address is always shown.
+
 ## A board's page {#a-board}
 
 The position large, the move list, and the tools. The Left and Right arrow keys, the buttons under the board, or a tap on a move step back through the game; Home is the start, End or "Live" is the game as it is played. Moves that arrive while you look back are added to the list and do not move the board.

@@ -121,7 +121,7 @@ defmodule Alnasl.Boards do
   its boards arrive from bridges (`Alnasl.Driver.Remote`) and nothing else
   is started, whatever an old row says.
   """
-  def local?, do: Application.get_env(:alnasl, :local_boards, true)
+  def local?, do: Alnasl.edition() == :box
 
   @doc "Connects a board: starts its process and its driver."
   def start(%Board{driver: driver} = board) when driver != "remote" do

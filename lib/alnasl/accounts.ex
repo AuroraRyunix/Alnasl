@@ -27,7 +27,7 @@ defmodule Alnasl.Accounts do
 
   import Ecto.Query, only: [from: 2]
 
-  alias Alnasl.{Boards, Halls, Log, Repo}
+  alias Alnasl.{Halls, Log, Repo}
   alias Alnasl.Accounts.{Invitation, Scope, User, UserToken}
   alias Alnasl.Halls.Hall
 
@@ -36,7 +36,7 @@ defmodule Alnasl.Accounts do
   # --- the box -----------------------------------------------------------------
 
   @doc "The hosted server: boards from bridges only, and never open."
-  def server?, do: not Boards.local?()
+  def server?, do: Alnasl.edition() == :server
 
   @doc "Is there an account at all?"
   def any?, do: Repo.exists?(User)
