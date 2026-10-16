@@ -211,7 +211,7 @@ jobs:
           mkdir -p "$RELEASE_TMP"
           rel=_build/prod/rel/alnasl
 
-          serial=$("$rel/bin/alnasl" eval 'IO.puts(Alnasl.Transport.Uart.available?())' | tail -n 1)
+          serial=$("$rel/bin/alnasl" eval 'IO.puts(Arkab.Transport.Uart.available?())' | tail -n 1)
           [ "$serial" = true ] || { echo "::error::the serial library does not load: $serial"; exit 1; }
 
           "$rel/alnasl.sh" >"$RUNNER_TEMP/alnasl.log" 2>&1 &
@@ -261,7 +261,7 @@ jobs:
           $rel = "_build\prod\rel\alnasl"
           $log = Join-Path $env:RUNNER_TEMP "alnasl.log"
 
-          $serial = (& "$rel\bin\alnasl.bat" eval "IO.puts(Alnasl.Transport.Uart.available?())" | Select-Object -Last 1)
+          $serial = (& "$rel\bin\alnasl.bat" eval "IO.puts(Arkab.Transport.Uart.available?())" | Select-Object -Last 1)
           if ("$serial".Trim() -ne "true") { throw "The serial library does not load: $serial" }
 
           # Through Alnasl.bat, not Alnasl.exe: the same release, and a
@@ -472,7 +472,7 @@ jobs:
 
           # The serial library, from inside the bundle, as on Linux.
           serial=$(RELEASE_TMP="$RUNNER_TEMP/alnasl-eval" "$app/Contents/Resources/app/bin/alnasl" \
-            eval 'IO.puts(Alnasl.Transport.Uart.available?())' | tail -n 1)
+            eval 'IO.puts(Arkab.Transport.Uart.available?())' | tail -n 1)
           [ "$serial" = true ] || fail "the serial library does not load: $serial"
 
           "$launcher" --headless > "$RUNNER_TEMP/alnasl.log" 2>&1 &
