@@ -104,6 +104,11 @@ defmodule Alnasl.Accounts do
   def change_user_registration(attrs \\ %{}),
     do: User.registration_changeset(%User{}, attrs)
 
+  @doc ~S|The language an account reads the site in: "en", "nl", or `nil` for the box's default.|
+  def set_locale(%User{} = user, locale) when locale in ["en", "nl", nil] do
+    user |> User.locale_changeset(%{locale: locale}) |> Repo.update()
+  end
+
   def change_user_password(%User{} = user, attrs \\ %{}),
     do: User.password_changeset(user, attrs)
 

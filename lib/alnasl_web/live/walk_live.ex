@@ -156,6 +156,7 @@ defmodule AlnaslWeb.WalkLive do
       box={@box}
       locale={@locale}
       scope={@current_scope}
+      path={@current_path}
       title={@page_title}
     >
       <:actions>

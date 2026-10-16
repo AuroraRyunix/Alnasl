@@ -4,7 +4,7 @@ Alnasl weet niet wie tegen wie speelt, en het host de pagina van de toeschouwers
 
 ## Waar de partijen heen gaan {#where-the-games-go}
 
-Elke bestemming heeft zijn eigen wachtrij, zijn eigen pauze na een mislukking, zijn eigen regel op de pagina Wachtrij (verbonden of niet, laatste succes, hoeveel er wachten, de laatste fout in woorden), zijn eigen schakelaar en zijn eigen "Nu versturen". Ze wachten niet op elkaar.
+Elke bestemming heeft zijn eigen wachtrij, zijn eigen pauze na een mislukking, zijn eigen regel op de pagina Resultaten (verbonden of niet, laatste succes, hoeveel er wachten, de laatste fout in woorden), zijn eigen schakelaar en zijn eigen "Nu versturen". Ze wachten niet op elkaar.
 
 | Bestemming | Wat ze krijgt |
 | --- | --- |
@@ -14,7 +14,7 @@ Elke bestemming heeft zijn eigen wachtrij, zijn eigen pauze na een mislukking, z
 
 Elke partij gaat naar de plaatsen van haar eigen toernooi: de uitslagenpagina van dat toernooi, de Lichess-ronde van dat toernooi, de OpenPairings waar ze vandaan komt. Een toernooi waarvan de sleutel geweigerd wordt, of dat nog niet gepubliceerd is, houdt niemand anders op.
 
-Versturen gebeurt vanzelf: naar OpenPairings vanaf het moment dat een toernooi gekoppeld is, naar de uitslagensite vanaf het moment dat het een adres en een sleutel heeft (een partij die daarvoor opgenomen werd, gaat volledig weg). Lichess blijft uit tot je een ronde en een token invult. "Nu versturen" op de pagina Wachtrij port enkel een bestemming aan die een pauze uitzit, en zegt altijd wat hij deed of waarom hij niets deed.
+Versturen gebeurt vanzelf: naar OpenPairings vanaf het moment dat een toernooi gekoppeld is, naar de uitslagensite vanaf het moment dat het een adres en een sleutel heeft (een partij die daarvoor opgenomen werd, gaat volledig weg). Lichess blijft uit tot je een ronde en een token invult. "Nu versturen" op de pagina Resultaten port enkel een bestemming aan die een pauze uitzit, en zegt altijd wat hij deed of waarom hij niets deed.
 
 ## Koppelen met OpenPairings {#linking-to-openpairings}
 
@@ -41,7 +41,7 @@ De balk noemt waar hij over gaat. "OpenPairings: verbonden" is de code die je pl
 
 ### Een bord dat nergens speelt {#unlinked}
 
-De regel onder de balk, de pagina Borden, de pagina Ronde en "Klaar voor ronde N?" zeggen allemaal "Bord 1 speelt niet in ...", met een knop om het daar te zetten. Is er een partij bezig, dan biedt de knop "deze zetten zijn bord N van ronde R" aan (de zetten blijven, onder de namen van de paring, en worden volledig verstuurd) of "opnieuw beginnen" (de partij wordt zonder resultaat gesloten en bewaard waar ze was). Een bord dat later wordt aangesloten, voegt zich vanzelf bij het enige gekoppelde toernooi, zolang dat van het kastje zelf niet gebruikt is.
+De regel onder de balk, de pagina Borden, de pagina Live en "Klaar voor ronde N?" zeggen allemaal "Bord 1 speelt niet in ...", met een knop om het daar te zetten. Is er een partij bezig, dan biedt de knop "deze zetten zijn bord N van ronde R" aan (de zetten blijven, onder de namen van de paring, en worden volledig verstuurd) of "opnieuw beginnen" (de partij wordt zonder resultaat gesloten en bewaard waar ze was). Een bord dat later wordt aangesloten, voegt zich vanzelf bij het enige gekoppelde toernooi, zolang dat van het kastje zelf niet gebruikt is.
 
 ### Wat naar OpenPairings teruggaat {#goes-back}
 
@@ -61,7 +61,7 @@ Het kastje werkt toch. Typ de uitslagenpagina in bij Instellingen (het adres van
 
 ## De uitslagensite {#results-site}
 
-OpenResults is waar de toeschouwers de partijen volgen. Om te zien wat zij zien: op de pagina Ronde opent "Open de uitslagensite" de live borden van de ronde in een nieuw tabblad, toont "QR" een code van de livepagina van het toernooi om in de zaal omhoog te houden, en heeft elke tegel een link "Livepagina" naar haar bord. De pagina van een bord heeft "Deze partij op de uitslagensite". Een toernooi dat niet op een uitslagensite staat, heeft geen link en zegt dat.
+OpenResults is waar de toeschouwers de partijen volgen. Om te zien wat zij zien: op de pagina Live opent "Open de uitslagensite" de live borden van de ronde in een nieuw tabblad, toont "Delen" een QR-code van de livepagina van het toernooi om in de zaal omhoog te houden, en heeft elke tegel een link "Livepagina" naar haar bord. De pagina van een bord heeft "Deze partij op de uitslagensite". Een toernooi dat niet op een uitslagensite staat, heeft geen link en zegt dat.
 
 > [!NOTE] De openbare pagina loopt misschien met opzet achter
 > De uitslagensite kan live borden achterhouden met een vertraging die haar beheerder instelt, dus een zet van een minuut geleden staat er misschien nog niet. Dat is geen fout, en er ontbreekt niets.
@@ -77,7 +77,7 @@ Twee manieren, en ze kunnen naast elkaar draaien. In beide gevallen maak je eers
 1. Laat op Lichess de bron van de ronde leeg: de partijen worden gepusht. Kopieer de link naar de ronde.
 2. Maak op Lichess een persoonlijk toegangstoken (lichess.org/account/oauth/token) met het recht om studies en uitzendingen aan te maken en bij te werken. Het wordt één keer getoond: kopieer het.
 3. Op het kastje, Instellingen, "Lichess-uitzending": plak de link en het token, zeg welke ronde van het toernooi het is, vink "De partijen versturen" aan, Bewaren. "Testen" vraagt Lichess of het token en de ronde kloppen, en zegt in woorden wat niet klopt.
-4. Vanaf dan gaat elke zet, correctie en uitslag binnen een paar seconden naar Lichess, met de klokken. De pagina Wachtrij toont Lichess als een bestemming op zich.
+4. Vanaf dan gaat elke zet, correctie en uitslag binnen een paar seconden naar Lichess, met de klokken. De pagina Resultaten toont Lichess als een bestemming op zich.
 
 Het kastje heeft internet nodig. Een nieuwe ronde op Lichess is een nieuw rondenummer: pas het aan bij Instellingen als de ronde verandert.
 

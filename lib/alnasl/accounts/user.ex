@@ -23,6 +23,8 @@ defmodule Alnasl.Accounts.User do
     field :keycloak_sub, :string
     field :admin, :boolean, default: false
     field :must_change_password, :boolean, default: false
+    # The language this person reads the site in; `nil` is the box's default.
+    field :locale, :string
     timestamps(type: :utc_datetime)
   end
 
@@ -42,6 +44,13 @@ defmodule Alnasl.Accounts.User do
     |> cast(attrs, [:email, :keycloak_sub])
     |> validate_email()
     |> unique_constraint(:keycloak_sub)
+  end
+
+  @doc "The language the account's holder chose, or none (`nil`): the box's default."
+  def locale_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:locale])
+    |> validate_inclusion(:locale, ~w(en nl))
   end
 
   @doc "A new password, chosen by the account's holder."

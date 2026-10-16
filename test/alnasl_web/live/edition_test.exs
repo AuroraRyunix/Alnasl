@@ -185,7 +185,7 @@ defmodule AlnaslWeb.EditionTest do
       end
 
       assert has_element?(view, "#not-on-the-boards", "7 more tournaments")
-      assert has_element?(view, "#not-on-the-boards-setup[href='/setup']")
+      assert has_element?(view, "#not-on-the-boards-setup[href='/setup#setup-tournaments']")
       refute has_element?(view, "#live-empty")
     end
 

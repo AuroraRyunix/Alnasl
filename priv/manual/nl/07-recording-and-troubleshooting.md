@@ -18,7 +18,7 @@ Op de pagina Opnames zie je enkel de borden van je eigen zalen.
 
 Wat er gebeurd is, in zinnen, met filters: bord aangesloten, zetten hersteld, niet synchroon, hersteld door de arbiter, offline, terug. Alles wat je op de pagina van een bord doet, een herstel of een correctie, staat er met het tijdstip in.
 
-## De Wachtrij {#the-outbox}
+## De pagina Resultaten {#the-outbox}
 
 De verbindingen, eerlijk: voor de uitslagensite en voor elke andere bestemming, verbonden of niet, laatste succes, hoeveel er wacht en waarom het niet weggaat, in woorden. Elk heeft zijn eigen schakelaar en zijn eigen "Nu versturen". Wat wacht, wat de server weigerde en wat weggegaan is.
 
@@ -58,7 +58,7 @@ Het is niet gepubliceerd vanuit OpenPairings, of daar is geen relaissleutel bewa
 
 ### De uitslagensite toont niets {#results-site-empty}
 
-Kijk in de Wachtrij: wacht er iets, en waarom? Is de ronde gepubliceerd vanuit het paringsprogramma? Een partij wordt enkel getoond voor een gepubliceerd bord.
+Kijk op de pagina Resultaten: wacht er iets, en waarom? Is de ronde gepubliceerd vanuit het paringsprogramma? Een partij wordt enkel getoond voor een gepubliceerd bord.
 
 ### Een brug is "niet verbonden" {#bridge-down}
 

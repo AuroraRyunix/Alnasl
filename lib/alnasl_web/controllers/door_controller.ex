@@ -1,7 +1,7 @@
 defmodule AlnaslWeb.DoorController do
   @moduledoc """
   The two things that are plain requests rather than live pages: giving the
-  PIN from another machine, and switching the language.
+  PIN from another machine, and a person switching their language.
   """
 
   use AlnaslWeb, :controller
@@ -32,24 +32,30 @@ defmodule AlnaslWeb.DoorController do
     conn |> delete_session(:unlocked) |> redirect(to: ~p"/unlock")
   end
 
-  @doc "The language is the box's, not the browser's: one arbiter, one box."
-  def locale(conn, %{"locale" => locale}) when locale in ["en", "nl"] do
-    Settings.put("locale", locale)
+  @doc """
+  A person's language, from the account menu: kept on the account when
+  someone is signed in, in a cookie of this browser when nobody is. It
+  changes nobody else's - the box's default is Setup's, for an admin. A
+  POST, so no link a browser prefetches switches it.
+  """
+  def locale(conn, %{"locale" => locale} = params) when locale in ["en", "nl"] do
+    conn =
+      case conn.assigns[:current_scope] do
+        %{user: %Alnasl.Accounts.User{} = user} ->
+          {:ok, _user} = Alnasl.Accounts.set_locale(user, locale)
+          conn
 
-    back =
-      case get_req_header(conn, "referer") do
-        [referer | _] -> URI.parse(referer).path || "/"
-        [] -> "/"
+        _nobody ->
+          put_resp_cookie(conn, AlnaslWeb.Hall.locale_cookie(), locale,
+            max_age: 365 * 86_400,
+            same_site: "Lax",
+            http_only: true
+          )
       end
 
-    redirect(conn,
-      to:
-        if(String.starts_with?(back, "/") and not String.starts_with?(back, "//"),
-          do: back,
-          else: "/"
-        )
-    )
+    redirect(conn, to: AlnaslWeb.UserAuth.local_path(params["return_to"]))
   end
 
-  def locale(conn, _params), do: redirect(conn, to: ~p"/")
+  def locale(conn, params),
+    do: redirect(conn, to: AlnaslWeb.UserAuth.local_path(params["return_to"]))
 end

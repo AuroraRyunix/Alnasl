@@ -98,6 +98,26 @@ defmodule AlnaslWeb.UserAuth do
 
   def safe(_none), do: "/"
 
+  @doc """
+  A path on this site to go back to, or `"/"`: a `return_to` from a form or
+  a link. Stricter than `safe/1`: no scheme, no host, no backslash (which
+  some browsers read as a slash, making `/\\evil.example` a host) and no
+  control characters. Path and query survive; a fragment does not.
+  """
+  def local_path(path) when is_binary(path) do
+    with "/" <> rest <- path,
+         false <- String.starts_with?(rest, ["/", "\\"]),
+         false <- String.contains?(path, "\\"),
+         false <- String.match?(path, ~r/[\x00-\x1f\x7f]/),
+         %URI{scheme: nil, host: nil, path: "/" <> _ = clean, query: query} <- URI.parse(path) do
+      if query in [nil, ""], do: clean, else: clean <> "?" <> query
+    else
+      _other -> "/"
+    end
+  end
+
+  def local_path(_none), do: "/"
+
   defp renew(conn) do
     delete_csrf_token()
     unlocked = get_session(conn, :unlocked)

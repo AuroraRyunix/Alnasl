@@ -246,6 +246,7 @@ defmodule AlnaslWeb.OutboxLive do
       box={@box}
       locale={@locale}
       scope={@current_scope}
+      path={@current_path}
       title={gettext("Outbox")}
     >
       <:actions>

@@ -113,6 +113,7 @@ defmodule AlnaslWeb.LogLive do
       box={@box}
       locale={@locale}
       scope={@current_scope}
+      path={@current_path}
       title={gettext("Log")}
     >
       <.panel id="log-panel" title={gettext("What happened")} flush>

@@ -6954,3 +6954,148 @@ msgstr "Deze server"
 #, elixir-autogen, elixir-format
 msgid "\"%{board}\" on table %{table} has a game under way in %{tournament}. Nothing was changed: let the game finish, or give this hall other tables."
 msgstr "\"%{board}\" op tafel %{table} heeft een partij aan de gang in %{tournament}. Er is niets veranderd: laat de partij uitspelen, of geef deze zaal andere tafels."
+
+#: lib/alnasl_web/components/layouts.ex:511
+#, elixir-autogen, elixir-format
+msgid "%{count} live"
+msgid_plural "%{count} live"
+msgstr[0] "%{count} live"
+msgstr[1] "%{count} live"
+
+#: lib/alnasl_web/components/layouts.ex:131
+#, elixir-autogen, elixir-format
+msgid "%{count} more notice"
+msgid_plural "%{count} more notices"
+msgstr[0] "nog %{count} melding"
+msgstr[1] "nog %{count} meldingen"
+
+#: lib/alnasl_web/components/seating_components.ex:86
+#, elixir-autogen, elixir-format
+msgid "%{names} and %{count} more"
+msgstr "%{names} en nog %{count}"
+
+#: lib/alnasl_web/components/layouts.ex:571
+#, elixir-autogen, elixir-format
+msgid "%{role} in this hall"
+msgstr "%{role} in deze zaal"
+
+#: lib/alnasl_web/components/layouts.ex:576
+#, elixir-autogen, elixir-format
+msgid "Account"
+msgstr "Account"
+
+#: lib/alnasl_web/components/layouts.ex:501
+#, elixir-autogen, elixir-format
+msgid "All halls"
+msgstr "Alle zalen"
+
+#: lib/alnasl_web/components/layouts.ex:454
+#, elixir-autogen, elixir-format
+msgid "Boards connected"
+msgstr "Verbonden borden"
+
+#: lib/alnasl_web/live/round_live.ex:1068
+#, elixir-autogen, elixir-format
+msgid "Clock"
+msgstr "Klok"
+
+#: lib/alnasl_web/live/setup_live.ex:1880
+#, elixir-autogen, elixir-format
+msgid "Default language"
+msgstr "Standaardtaal"
+
+#: lib/alnasl_web/components/layouts.ex:467
+#: lib/alnasl_web/components/layouts.ex:468
+#, elixir-autogen, elixir-format
+msgid "Find a hall"
+msgstr "Zaal zoeken"
+
+#: lib/alnasl_web/live/setup_live.ex:1882
+#, elixir-autogen, elixir-format
+msgid "For whoever has not chosen one in the account menu. Each person's own choice stands."
+msgstr "Voor wie er in het accountmenu geen koos. Wat iemand zelf koos, blijft staan."
+
+#: lib/alnasl_web/components/layouts.ex:218
+#, elixir-autogen, elixir-format
+msgid "Games"
+msgstr "Partijen"
+
+#: lib/alnasl_web/components/layouts.ex:609
+#, elixir-autogen, elixir-format
+msgid "Kept in this browser."
+msgstr "Bewaard in deze browser."
+
+#: lib/alnasl_web/components/layouts.ex:607
+#, elixir-autogen, elixir-format
+msgid "Kept with your account."
+msgstr "Bewaard bij je account."
+
+#: lib/alnasl_web/live/round_live.ex:1067
+#, elixir-autogen, elixir-format
+msgid "Last move"
+msgstr "Laatste zet"
+
+#: lib/alnasl_web/live/round_live.ex:818
+#, elixir-autogen, elixir-format
+msgid "List"
+msgstr "Lijst"
+
+#: lib/alnasl_web/components/layouts.ex:227
+#, elixir-autogen, elixir-format
+msgid "Look back"
+msgstr "Terugkijken"
+
+#: lib/alnasl_web/components/layouts.ex:222
+#, elixir-autogen, elixir-format
+msgid "Manage"
+msgstr "Beheren"
+
+#: lib/alnasl_web/components/layouts.ex:283
+#, elixir-autogen, elixir-format
+msgid "More"
+msgstr "Meer"
+
+#: lib/alnasl_web/components/layouts.ex:256
+#, elixir-autogen, elixir-format
+msgid "Places on a phone"
+msgstr "Plaatsen op een telefoon"
+
+#: lib/alnasl_web/components/layouts.ex:214
+#, elixir-autogen, elixir-format
+msgid "Play"
+msgstr "Spelen"
+
+#: lib/alnasl_web/components/layouts.ex:220
+#, elixir-autogen, elixir-format
+msgid "Send"
+msgstr "Versturen"
+
+#: lib/alnasl_web/live/round_live.ex:931
+#, elixir-autogen, elixir-format
+msgid "Share"
+msgstr "Delen"
+
+#: lib/alnasl_web/live/round_live.ex:797
+#, elixir-autogen, elixir-format
+msgid "Show the boards as"
+msgstr "Toon de borden als"
+
+#: lib/alnasl_web/live/round_live.ex:960
+#, elixir-autogen, elixir-format
+msgid "The live page on the results site: point a phone at the code."
+msgstr "De livepagina op de uitslagensite: richt een telefoon op de code."
+
+#: lib/alnasl_web/components/seating_components.ex:133
+#, elixir-autogen, elixir-format
+msgid "The other %{count} in Setup"
+msgstr "De andere %{count} in Instellingen"
+
+#: lib/alnasl_web/components/layouts.ex:561
+#, elixir-autogen, elixir-format
+msgid "This browser"
+msgstr "Deze browser"
+
+#: lib/alnasl_web/components/layouts.ex:200
+#, elixir-autogen, elixir-format
+msgid "server"
+msgstr "server"

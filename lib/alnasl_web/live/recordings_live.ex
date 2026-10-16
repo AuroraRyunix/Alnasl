@@ -112,6 +112,7 @@ defmodule AlnaslWeb.RecordingsLive do
       box={@box}
       locale={@locale}
       scope={@current_scope}
+      path={@current_path}
       title={gettext("Recordings")}
       subtitle={gettext("%{n} files, %{size}", n: length(@captures), size: Words.size(@total))}
     >

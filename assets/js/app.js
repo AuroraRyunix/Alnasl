@@ -48,5 +48,18 @@ topbar.config({barColors: {0: "#0a5967"}, shadowColor: "rgba(0, 0, 0, .25)"})
 window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
 window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
 
+// Escape closes the frame's menus (hall picker, account, More): each says how
+// in its data-close, a LiveView JS command, so the page's own record of what
+// is open stays true. Only when one is open, so a page's keys are left alone.
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return
+  document.querySelectorAll(".menu[data-close]").forEach((menu) => {
+    const panel = menu.querySelector(".menu-panel")
+    if (!panel || panel.hidden) return
+    liveSocket.execJS(menu, menu.dataset.close)
+    menu.querySelector(".menu-button, .tab")?.focus()
+  })
+})
+
 liveSocket.connect()
 window.liveSocket = liveSocket

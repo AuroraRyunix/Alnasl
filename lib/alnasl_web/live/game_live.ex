@@ -709,6 +709,7 @@ defmodule AlnaslWeb.GameLive do
       box={@box}
       locale={@locale}
       scope={@current_scope}
+      path={@current_path}
       title={gettext("Board %{n}", n: @no)}
       subtitle={
         if Tournaments.many?() and Tournaments.title(@tournament),

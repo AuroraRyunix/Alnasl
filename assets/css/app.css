@@ -472,15 +472,6 @@ code,
   text-align: center;
 }
 
-.rail-foot {
-  padding: 0.6rem 0.75rem 0.8rem;
-  border-top: 1px solid var(--rule);
-  display: flex;
-  gap: 0.4rem;
-  align-items: center;
-  justify-content: space-between;
-}
-
 .main {
   min-width: 0;
   display: flex;
@@ -666,41 +657,488 @@ code,
   text-decoration-thickness: 2px;
 }
 
+/* --- frame: groups, menus, account, phone bars ------------------------------ */
+
+.nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nav-group + .nav-group {
+  margin-top: 0.55rem;
+}
+
+.nav-head {
+  padding: 0.2rem 0.7rem 0.15rem;
+  font-size: 0.6875rem;
+  font-weight: 650;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--quiet);
+}
+
+.head-link {
+  text-decoration: none;
+}
+
+/* A menu: a button, and a panel that hangs from it. */
+.menu {
+  position: relative;
+}
+
+.menu-button {
+  width: 100%;
+  min-height: 2.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.35rem 0.6rem;
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.menu-button:hover {
+  background: var(--sunken);
+}
+
+.menu-button[aria-expanded="true"] {
+  border-color: var(--accent);
+}
+
+.menu-button > svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  color: var(--quiet);
+  flex: none;
+}
+
+.menu-button > svg:last-child {
+  width: 0.9rem;
+  height: 0.9rem;
+  transition: transform 150ms ease;
+}
+
+.menu-button[aria-expanded="true"] > svg:last-child {
+  transform: rotate(180deg);
+}
+
+.menu-button-text {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.menu-button-text b,
+.menu-button-text .mono {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hint {
+  font-size: 0.75rem;
+  color: var(--quiet);
+}
+
+.live-count {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--quiet);
+  white-space: nowrap;
+}
+
+.menu-panel {
+  position: absolute;
+  z-index: 40;
+  min-width: 100%;
+  max-height: 75vh;
+  overflow-y: auto;
+  padding: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  animation: menu-in 120ms ease-out;
+}
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-panel {
+    animation: none;
+  }
+}
+
+.hall-picker {
+  padding: 0.5rem 0.5rem 0;
+}
+
+.hall-picker .menu-panel {
+  top: calc(100% + 0.3rem);
+  left: 0.5rem;
+  width: max(calc(100% - 1rem), 17rem);
+}
+
+.menu-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.menu-item {
+  min-height: 2.6rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.3rem 0.6rem;
+  color: var(--ink);
+  text-decoration: none;
+  border-radius: var(--radius);
+  transition: background-color 120ms ease;
+}
+
+.menu-item:hover {
+  background: var(--sunken);
+}
+
+.menu-item svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  color: var(--quiet);
+  flex: none;
+}
+
+.menu-item[aria-current="true"],
+.menu-item[aria-current="page"] {
+  background: var(--sunken);
+  color: var(--accent);
+}
+
+.menu-item[aria-current="true"] svg,
+.menu-item[aria-current="page"] svg {
+  color: var(--accent);
+}
+
+.menu-item-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.menu-item .count {
+  margin-left: auto;
+  min-width: 1.5rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: var(--warn-bg);
+  color: var(--warn);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.menu-foot {
+  border-top: 1px solid var(--rule);
+  border-radius: 0 0 var(--radius) var(--radius);
+  margin-top: 0.2rem;
+}
+
+.menu-search {
+  width: 100%;
+  margin-bottom: 0.25rem;
+}
+
+.menu-head {
+  padding: 0.45rem 0.6rem 0.55rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 0.15rem;
+}
+
+.menu-head b {
+  overflow-wrap: anywhere;
+}
+
+.menu-section {
+  padding: 0.5rem 0.6rem 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  border-top: 1px solid var(--rule);
+}
+
+.menu-section .hint {
+  margin: 0;
+}
+
+.menu-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.6875rem;
+  font-weight: 650;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--quiet);
+}
+
+.menu-label svg {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.menu-section .seg {
+  align-self: flex-start;
+}
+
+/* The account, at the foot of the rail. */
+.rail-foot {
+  padding: 0.6rem 0.5rem 0.8rem;
+  border-top: 1px solid var(--rule);
+}
+
+.account-panel {
+  left: 0;
+  bottom: calc(100% + 0.4rem);
+  width: 18.5rem;
+}
+
+.account-panel .theme-grid {
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+}
+
+.account-panel .theme-grid .theme-picker-item {
+  min-height: 2.5rem;
+  font-size: 0.8125rem;
+}
+
+.avatar {
+  width: 1.9rem;
+  height: 1.9rem;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+
+.avatar svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.account-name {
+  font-size: 0.8125rem;
+}
+
+/* The notices: at most two in sight, the rest behind one line. */
+.notices {
+  display: flex;
+  flex-direction: column;
+}
+
+.banner.more-notices {
+  width: 100%;
+  background: var(--sunken);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  cursor: pointer;
+}
+
+.banner.more-notices:hover {
+  text-decoration: underline;
+}
+
+.banner.more-notices[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+/* The tab bar is a phone's; a desk has the rail. */
+.tab-bar {
+  display: none;
+}
+
+/* --- Live: the list, and Share ------------------------------------------- */
+
+.board-list td {
+  vertical-align: middle;
+}
+
+.board-list .row-board a {
+  font-size: 1.125rem;
+  font-weight: 750;
+  text-decoration: none;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+}
+
+.board-list .row-board .note,
+.board-list .row-state .note {
+  display: block;
+  margin: 0;
+}
+
+.board-list tr.bad td:first-child {
+  box-shadow: inset 4px 0 0 var(--bad);
+}
+
+.board-list tr.warn td:first-child {
+  box-shadow: inset 4px 0 0 var(--warn);
+}
+
+.row-player {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+}
+
+.row-clock .clock {
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  padding: 0 0.3rem;
+  border-radius: 3px;
+}
+
+.row-clock .clock.running {
+  background: var(--ink);
+  color: var(--panel);
+  font-weight: 700;
+}
+
+.share-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: 0.8rem;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+
+.share-panel .qr {
+  width: min(13rem, 100%);
+}
+
+.share-panel .mono {
+  overflow-wrap: anywhere;
+}
+
+/* --- the frame on a phone ---------------------------------------------------- */
+
 @media (max-width: 860px) {
   .frame {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .main {
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* The rail is the top bar: brand, hall picker, account. */
   .rail {
-    position: static;
+    position: sticky;
+    top: 0;
+    z-index: 30;
     height: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0.6rem;
     border-right: 0;
     border-bottom: 1px solid var(--rule);
   }
 
   .brand {
+    padding: 0;
     border-bottom: 0;
-    padding-bottom: 0.3rem;
+    flex: none;
+  }
+
+  .brand span {
+    max-width: 6rem;
   }
 
   .nav {
-    flex-direction: row;
-    overflow-x: auto;
-    padding: 0.3rem 0.5rem 0.5rem;
+    display: none;
   }
 
-  .nav a {
-    border-left: 0;
-    border-bottom: 3px solid transparent;
-    white-space: nowrap;
+  .hall-picker {
+    padding: 0;
+    flex: 1;
+    min-width: 0;
   }
 
-  .nav a[aria-current="page"] {
-    border-bottom-color: var(--accent);
+  .hall-picker .menu-button-text .hint {
+    display: none;
   }
 
   .rail-foot {
+    padding: 0;
+    border-top: 0;
+    margin-left: auto;
+    flex: none;
+  }
+
+  .account-button {
+    width: auto;
+    border: 0;
+    padding: 0.25rem;
+    background: transparent;
+  }
+
+  .account-button .account-name,
+  .account-button > svg:last-child {
     display: none;
+  }
+
+  /* On a phone a menu is a sheet across the screen, under the top bar. */
+  .hall-picker .menu-panel,
+  .account-panel {
+    position: fixed;
+    top: 3.5rem;
+    left: 0.5rem;
+    right: 0.5rem;
+    bottom: auto;
+    width: auto;
+    max-height: calc(100vh - 8rem);
   }
 
   .bar {
@@ -711,7 +1149,82 @@ code,
   .page {
     padding: 0.9rem;
   }
+
+  .tab-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--panel);
+    border-top: 1px solid var(--rule);
+  }
+
+  .tab {
+    position: relative;
+    min-height: 3.5rem;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.15rem;
+    background: none;
+    border: 0;
+    color: var(--quiet);
+    font: inherit;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .tab svg {
+    width: 1.3rem;
+    height: 1.3rem;
+  }
+
+  .tab[aria-current="page"] {
+    color: var(--accent);
+    box-shadow: inset 0 3px 0 var(--accent);
+  }
+
+  .tab .count {
+    position: absolute;
+    top: 0.3rem;
+    left: calc(50% + 0.5rem);
+    min-width: 1.25rem;
+    padding: 0 0.3rem;
+    border-radius: 999px;
+    background: var(--warn-bg);
+    color: var(--warn);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  .more-sheet {
+    position: fixed;
+    left: 0.5rem;
+    right: 0.5rem;
+    bottom: calc(3.8rem + env(safe-area-inset-bottom, 0px));
+    width: auto;
+  }
+
+  .board-list .row-clock {
+    display: none;
+  }
 }
+
+@media (max-width: 420px) {
+  .brand div {
+    display: none;
+  }
+}
+
 
 /* --- panels ---------------------------------------------------------------- */
 
@@ -2355,35 +2868,6 @@ tr.sought td:first-child {
 
 /* --- theme picker ---------------------------------------------------------- */
 
-.theme-picker {
-  position: relative;
-}
-
-.theme-picker summary {
-  list-style: none;
-  cursor: pointer;
-}
-
-.theme-picker summary::-webkit-details-marker {
-  display: none;
-}
-
-.theme-picker-panel {
-  position: absolute;
-  left: 0;
-  bottom: calc(100% + 0.4rem);
-  z-index: 30;
-  min-width: 11rem;
-  padding: 0.3rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-  background: var(--panel);
-  border: 1px solid var(--rule);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-}
-
 .theme-picker-item {
   min-height: 2.5rem;
   padding: 0 0.6rem;
@@ -2443,8 +2927,8 @@ tr.sought td:first-child {
   background: linear-gradient(135deg, #ffffff 50%, #0000cc 50%);
 }
 
-/* The same choices as a grid of big buttons: Setup, where a phone finds
-   them (the rail with the popover is not shown on a phone). */
+/* The themes as a grid of buttons: the account menu, on a desk and on a
+   phone alike. */
 .theme-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
@@ -2781,28 +3265,6 @@ tr.sought td:first-child {
   flex-direction: column;
   align-items: flex-start;
   gap: 0.35rem;
-}
-
-.site-qr > summary {
-  min-height: 2.75rem;
-  min-width: 2.75rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 0.7rem;
-  border: 1px solid var(--rule);
-  border-radius: var(--radius);
-  cursor: pointer;
-  font-weight: 650;
-}
-
-.site-qr[open] {
-  flex-basis: 100%;
-}
-
-.site-qr .qr {
-  width: min(13rem, 100%);
-  margin-top: 0.4rem;
 }
 
 .dest-sites {
@@ -3312,6 +3774,7 @@ h1 .manual-help-link, h2 .manual-help-link { transform: translateY(-2px); }
 
 @media print {
   body:has(#manual) .rail,
+  body:has(#manual) .tab-bar,
   body:has(#manual) .bar,
   body:has(#manual) .banner,
   body:has(#manual) .skip,
