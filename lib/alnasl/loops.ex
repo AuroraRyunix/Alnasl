@@ -191,7 +191,16 @@ defmodule Alnasl.Loops do
 
   @doc "The row for the board that answers as `address` on the loop of `port`, connected."
   def row_for(port, address) do
-    rows = Enum.filter(Boards.list(), &(&1.driver in ["dgt_serial", "dgt_bus"]))
+    # The box's own ports are the own hall's: a row another hall has (a
+    # bridge's, or one moved there) is not taken back from it.
+    own = Alnasl.Halls.own_id()
+
+    rows =
+      Enum.filter(
+        Boards.list(),
+        &(&1.driver in ["dgt_serial", "dgt_bus"] and Alnasl.Halls.of(&1) == own)
+      )
+
     here = %{driver: "dgt_bus", port: port, address: address, enabled: true}
 
     known =

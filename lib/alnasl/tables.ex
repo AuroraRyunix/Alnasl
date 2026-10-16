@@ -49,7 +49,7 @@ defmodule Alnasl.Tables do
   a board feed the wrong game or none, each with the board it is about.
   """
 
-  alias Alnasl.{Boards, Log, Repo, Tournaments}
+  alias Alnasl.{Boards, Halls, Log, Repo, Tournaments}
   alias Alnasl.Boards.Board
 
   # The round in play in the board's tournament.
@@ -337,8 +337,15 @@ defmodule Alnasl.Tables do
   # --- a board that comes back -------------------------------------------------
 
   # A board through a bridge is a DGT board too: one that is carried from
-  # the box's own port to a bridge, or back, is recognised by its serial.
+  # the box's own port to a bridge, or back, is recognised by its serial -
+  # within one hall. A serial is a board, but a row is a hall's: its table,
+  # its number and its game belong to the people of that hall. The same
+  # board turning up in another hall is a new board there, and the old
+  # hall's row waits, not connected, for it to come back. Admins included:
+  # this is about whose data it is, not who may touch it.
   @dgt ["dgt_serial", "dgt_bus", "remote"]
+
+  defp same_hall?(%Board{} = a, %Board{} = b), do: Halls.of(a) == Halls.of(b)
 
   @doc """
   What a board's process may write to its row when the board says who it
@@ -400,6 +407,7 @@ defmodule Alnasl.Tables do
           other.id != fresh.id,
           other.serial == serial,
           other.driver in @dgt,
+          same_hall?(other, fresh),
           do: other
 
     {known, _unknown} = Enum.split_with(others, &(not new?(&1)))
@@ -415,7 +423,10 @@ defmodule Alnasl.Tables do
 
   defp other_board(%Board{} = row, seen) do
     owner =
-      Enum.find(Boards.list(), &(&1.id != row.id and &1.serial == seen and &1.driver in @dgt))
+      Enum.find(
+        Boards.list(),
+        &(&1.id != row.id and &1.serial == seen and &1.driver in @dgt and same_hall?(&1, row))
+      )
 
     cond do
       # Two rows on one port, and the board is the other one's: step aside.
@@ -492,7 +503,8 @@ defmodule Alnasl.Tables do
         port: row.port,
         address: row.address,
         options: Board.options(row),
-        serial: seen
+        serial: seen,
+        hall_id: Halls.of(row)
       })
 
     Log.add(
@@ -567,7 +579,10 @@ defmodule Alnasl.Tables do
   def checks(round), do: checks(Tournaments.default_id(), round)
 
   def checks(tournament_id, round, snapshots \\ nil) do
-    all = snapshots || Boards.snapshots()
+    # One hall's boards: another hall's table 1, or the same board read
+    # there as well, is that hall's business.
+    hall = Halls.of(Tournaments.get(tournament_id) || %{})
+    all = Enum.filter(snapshots || Boards.snapshots(), &(Halls.of(&1) == hall))
     # A sticker is on one board and a serial is one board, whatever
     # tournament; the rest is about this tournament's boards.
     snaps = Enum.filter(all, &(&1[:tournament_id] == tournament_id))
