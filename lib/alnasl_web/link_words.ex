@@ -101,6 +101,12 @@ defmodule AlnaslWeb.LinkWords do
     host = Code.host(link.root)
 
     cond do
+      link.kind == "account" ->
+        count =
+          link |> Alnasl.Tournaments.of_link() |> Enum.count(&(not &1.gone))
+
+        gettext("All your tournaments on %{host} (%{count})", host: host, count: count)
+
       link.kind == "group" and link.group_name not in [nil, ""] ->
         gettext("%{host}: the group \"%{group}\"", host: host, group: link.group_name)
 

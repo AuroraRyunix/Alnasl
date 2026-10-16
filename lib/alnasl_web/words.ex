@@ -872,6 +872,12 @@ defmodule AlnaslWeb.Words do
   defp log("link.added", d),
     do: gettext("A connect code for %{server} was added and accepted.", server: d["server"])
 
+  defp log("link.connect_failed", d),
+    do:
+      gettext("Connecting an account on %{server} did not finish: it could not be asked.",
+        server: d["server"]
+      )
+
   defp log("link.removed", d),
     do: gettext("The connect code for %{server} was taken off the box.", server: d["server"])
 

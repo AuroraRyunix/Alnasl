@@ -100,6 +100,14 @@ defmodule AlnaslWeb.Router do
     get "/files/labels", LabelsController, :index
     get "/halls/:id/enter", HallController, :enter
 
+    # "Connect an OpenPairings account" (`Alnasl.OpenPairings.Connect`): out
+    # to OpenPairings' consent page and back with a grant. Controllers, not
+    # the Setup page's socket: both ends need the browser's session (the
+    # `state`) and the first ends in a redirect to another site. Behind the
+    # gate like everything else; the controller checks the hall role itself.
+    post "/setup/openpairings/connect", OpenPairingsConnectController, :start
+    get "/setup/openpairings/callback", OpenPairingsConnectController, :callback
+
     # Every page of the site. One session, so moving between them keeps the
     # socket; the hook puts the language, the box's name and the connection
     # badge on each, and turns away a browser that has not given the PIN.

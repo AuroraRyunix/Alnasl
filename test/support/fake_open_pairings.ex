@@ -42,7 +42,16 @@ defmodule Alnasl.FakeOpenPairings do
   def start_link(_opts \\ []) do
     Agent.start_link(
       fn ->
-        %{tournaments: %{}, codes: %{}, games: %{}, mode: :ok, requests: [], boxes: [], n: 0}
+        %{
+          tournaments: %{},
+          codes: %{},
+          grants: %{},
+          games: %{},
+          mode: :ok,
+          requests: [],
+          boxes: [],
+          n: 0
+        }
       end,
       name: __MODULE__
     )
@@ -267,6 +276,27 @@ defmodule Alnasl.FakeOpenPairings do
   end
 
   @doc """
+  A connect code for an account: the tournaments with the ids given are the
+  ones that account may edit and that are current. The contract's
+  "Connecting an account"; the box gets it through a grant (`grant/1`).
+  """
+  def account_code(ids) when is_list(ids), do: make_code("oplu", {:account, ids})
+
+  @doc "The account changes: it may now edit exactly `ids`."
+  def set_account(code, ids),
+    do: Agent.update(__MODULE__, &put_in(&1.codes[secret(code)], {:account, ids}))
+
+  @doc """
+  What "Allow" on the consent page hands the browser for `code`: a grant,
+  good once at `POST /grant`.
+  """
+  def grant(code) do
+    grant = "grant-" <> Integer.to_string(System.unique_integer([:positive]))
+    Agent.update(__MODULE__, &put_in(&1.grants[grant], code))
+    grant
+  end
+
+  @doc """
   The same code under another address of the same program: a desktop copy
   reached at `127.0.0.1` and at its address on the hall's network. The
   fake answers whatever the address.
@@ -346,6 +376,21 @@ defmodule Alnasl.FakeOpenPairings do
   defp respond(_conn, _body, :not_the_api),
     do: {200, [], {:html, "<html><body>Sign in to the hall's network</body></html>"}}
 
+  # The grant of the account flow: no bearer, the grant is the credential,
+  # good once.
+  defp respond(%{method: "POST", path_info: ["api", "boards", "v1", "grant"]}, body, _mode) do
+    grant = is_map(body) && body["grant"]
+
+    code =
+      Agent.get_and_update(__MODULE__, fn s ->
+        {s.grants[grant], %{s | grants: Map.delete(s.grants, grant)}}
+      end)
+
+    if is_binary(code),
+      do: {200, [], %{"code" => code, "kind" => "account"}},
+      else: error(401, "invalid_grant", "used, run out or never issued")
+  end
+
   defp respond(conn, body, mode) do
     with {:ok, target} <- authenticate(conn) do
       if mode == :rate_limited,
@@ -371,6 +416,7 @@ defmodule Alnasl.FakeOpenPairings do
       case target do
         {:tournament, id} -> List.wrap(s.tournaments[id])
         {:group, name} -> s.tournaments |> Map.values() |> Enum.filter(&(&1.group == name))
+        {:account, ids} -> s.tournaments |> Map.values() |> Enum.filter(&(&1.id in ids))
       end
       |> Enum.sort_by(& &1.id)
     end)
@@ -390,7 +436,12 @@ defmodule Alnasl.FakeOpenPairings do
         end,
       "server" => %{"name" => "OpenPairings", "version" => "0.0.0-fake"},
       "poll_seconds" => 5,
-      "kind" => if(match?({:group, _}, target), do: "group", else: "tournament"),
+      "kind" =>
+        case target do
+          {:group, _} -> "group"
+          {:account, _} -> "account"
+          _one -> "tournament"
+        end,
       "group" =>
         case target do
           {:group, name} -> %{"name" => name}

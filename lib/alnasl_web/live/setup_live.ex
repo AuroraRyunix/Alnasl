@@ -143,6 +143,9 @@ defmodule AlnaslWeb.SetupLive do
       own: own,
       tournaments: tournaments,
       links: Alnasl.Halls.here(scope, Tournaments.links()),
+      connect_form:
+        to_form(%{"address" => Alnasl.OpenPairings.Connect.default_address() || ""}, as: :connect),
+      may_connect?: Alnasl.Accounts.Scope.can?(scope, :arbiter, here(socket)),
       board_counts: boards,
       # The box itself (its name, PIN, updates, tracker) is an admin's; the
       # box's own tournament and Lichess card are the own hall's.
@@ -848,6 +851,36 @@ defmodule AlnaslWeb.SetupLive do
               />
               <div class="row">
                 <.button id="add-code" variant="primary" type="submit">{gettext("Add")}</.button>
+              </div>
+            </.form>
+          </div>
+          <div :if={@may_connect?} id="op-connect" class="callout" style="margin-top:0.8rem">
+            <p class="note" style="margin-top:0">
+              {gettext(
+                "Or, without a code: connect your OpenPairings account. You sign in there and allow this box once; it then sees every tournament you may edit that is current, including the ones you make later."
+              )}
+            </p>
+            <.form
+              for={@connect_form}
+              id="op-connect-form"
+              action={~p"/setup/openpairings/connect"}
+              method="post"
+              class="stack"
+            >
+              <.input
+                field={@connect_form[:address]}
+                id="op-connect-address"
+                type="text"
+                inputmode="url"
+                label={gettext("OpenPairings address")}
+                placeholder="https://pairings.example.org"
+                autocomplete="url"
+                spellcheck="false"
+              />
+              <div class="row">
+                <.button id="op-connect-button" type="submit">
+                  {gettext("Connect an OpenPairings account")}
+                </.button>
               </div>
             </.form>
           </div>

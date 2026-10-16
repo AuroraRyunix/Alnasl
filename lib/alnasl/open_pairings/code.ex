@@ -7,7 +7,9 @@ defmodule Alnasl.OpenPairings.Code do
 
   Everything before the first `#` is where the API answers; everything
   after it is the secret. `oplt_` is a code for one tournament, `oplg_` for
-  a group of them - the box does not care which, the listing says.
+  a group of them, `oplu_` for everything an account may edit (it arrives
+  through `Alnasl.OpenPairings.Connect`, not by pasting, though pasting one
+  works too) - the box does not care which, the listing says.
 
   The address is used as it is written. A desktop copy of OpenPairings
   gives `http://127.0.0.1:<port>/...`, which is right for a box program on
@@ -54,6 +56,7 @@ defmodule Alnasl.OpenPairings.Code do
 
   defp kind("oplt_" <> _rest), do: "tournament"
   defp kind("oplg_" <> _rest), do: "group"
+  defp kind("oplu_" <> _rest), do: "account"
   defp kind(_opaque), do: nil
 
   @doc "Is the address one that only this computer can reach?"
