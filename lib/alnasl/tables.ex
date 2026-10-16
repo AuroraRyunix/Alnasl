@@ -223,7 +223,9 @@ defmodule Alnasl.Tables do
   end
 
   def set_table(%Board{} = board, number) when is_integer(number) and number > 0 do
-    for other <- Boards.list(), other.id != board.id, other.table_no == number do
+    # Table numbers are a hall's: table 3 here and table 3 in the hall a
+    # bridge brings are two tables.
+    for other <- in_hall(board.hall_id), other.id != board.id, other.table_no == number do
       Log.add(
         :info,
         "table.moved",
@@ -235,7 +237,7 @@ defmodule Alnasl.Tables do
     end
 
     # A table inside a tournament's range plays in that tournament.
-    owner = Tournaments.for_table(number)
+    owner = Tournaments.for_table(number, board.hall_id)
     moves? = owner != nil and owner.id != board.tournament_id
 
     follows? =
@@ -263,12 +265,13 @@ defmodule Alnasl.Tables do
   board answers to on a loop, which says nothing of where it stands): table
   and board `first`, `first + 1`, ...
   """
-  def number_in_order(round, first \\ 1) do
-    Boards.list()
+  def number_in_order(round, first \\ 1, hall_id \\ nil) do
+    hall_id
+    |> in_hall()
     |> Enum.sort_by(& &1.id)
     |> Enum.with_index(first)
     |> Enum.each(fn {board, number} ->
-      for other <- Boards.list(), other.id != board.id, other.table_no == number do
+      for other <- in_hall(hall_id), other.id != board.id, other.table_no == number do
         Boards.update(other, %{table_no: nil})
       end
 
@@ -301,8 +304,8 @@ defmodule Alnasl.Tables do
   end
 
   @doc "Every board with a table number back to the board its table stands for."
-  def clear_remaps do
-    for board <- Boards.list(),
+  def clear_remaps(hall_id \\ nil) do
+    for board <- in_hall(hall_id),
         home = home_board(board),
         home != nil,
         remapped?(board) or board.round != round_of(board) do
@@ -690,4 +693,13 @@ defmodule Alnasl.Tables do
 
   defp ref(%Board{} = board),
     do: %{board_id: board.id, round: board.round, board_no: board.board_no}
+
+  # The boards of a hall (the box's own for `nil`). Table numbers are a
+  # hall's: table 3 here and table 3 in the hall a bridge brings are two
+  # tables.
+  defp in_hall(hall_id) do
+    own = Alnasl.Halls.own_id()
+    hall_id = hall_id || own
+    Enum.filter(Boards.list(), &((&1.hall_id || own) == hall_id))
+  end
 end

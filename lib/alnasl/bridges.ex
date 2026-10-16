@@ -8,10 +8,15 @@ defmodule Alnasl.Bridges do
 
   ## Joining
 
-  `create_join/0` makes a code, good for fifteen minutes and one bridge;
-  Setup shows `https://<this box>/join/<code>` as text and as a QR code.
-  The bridge posts who it is to that link and is given its own long key
-  (`redeem/2`). Only the key's hash is kept here.
+  `create_join/2` makes a code for a hall, good for fifteen minutes and one
+  bridge; the hall's page (and Setup, for the hall it is about) shows
+  `https://<this box>/join/<code>` as text and as a QR code. The bridge
+  posts who it is to that link and is given its own long key (`redeem/2`).
+  Only the key's hash is kept here. The bridge is in the code's hall, and
+  so are its boards; an admin can `move/2` it to another.
+
+  The link and the socket are outside the sign-in and the PIN: a bridge has
+  no account. The code and the key are its credentials.
 
   ## Boards
 
@@ -32,7 +37,7 @@ defmodule Alnasl.Bridges do
 
   import Ecto.Query, only: [from: 2]
 
-  alias Alnasl.{Boards, Log, Repo, Settings}
+  alias Alnasl.{Boards, Halls, Log, Repo, Settings}
   alias Alnasl.Boards.Board
   alias Alnasl.Bridges.{Bridge, Join}
 
@@ -49,13 +54,18 @@ defmodule Alnasl.Bridges do
 
   # --- joining -----------------------------------------------------------------
 
-  @doc "A fresh join code: `{:ok, %Join{}}`. Old codes are tidied away on the way."
-  def create_join(now \\ DateTime.utc_now(:second)) do
+  @doc """
+  A fresh join code: `{:ok, %Join{}}`, for a bridge that goes into hall
+  `hall_id` (the box's own hall when nobody says). Old codes are tidied
+  away on the way.
+  """
+  def create_join(now \\ DateTime.utc_now(:second), hall_id \\ nil) do
     Repo.delete_all(from j in Join, where: j.expires_at < ^now)
 
     %Join{
       code: code(),
-      expires_at: DateTime.add(now, @join_minutes * 60)
+      expires_at: DateTime.add(now, @join_minutes * 60),
+      hall_id: hall_id || Halls.own_id()
     }
     |> Repo.insert()
   end
@@ -87,13 +97,21 @@ defmodule Alnasl.Bridges do
             name: String.slice(name, 0, 80),
             software: identity["software"] |> to_string() |> String.slice(0, 80),
             key_hash: hash(key),
-            revoked_at: nil
+            revoked_at: nil,
+            hall_id: join.hall_id || Halls.own_id()
           }
 
           bridge =
             case Repo.get_by(Bridge, uid: uid) do
-              nil -> Repo.insert!(struct(Bridge, Map.put(fields, :uid, uid)))
-              old -> old |> Ecto.Changeset.change(fields) |> Repo.update!()
+              nil ->
+                Repo.insert!(struct(Bridge, Map.put(fields, :uid, uid)))
+
+              old ->
+                bridge = old |> Ecto.Changeset.change(fields) |> Repo.update!()
+                # Joined again from another hall: its boards (if any are
+                # left from before) go with it.
+                if old.hall_id != bridge.hall_id, do: move_rows(bridge)
+                bridge
             end
 
           join |> Ecto.Changeset.change(used_at: now, bridge_id: bridge.id) |> Repo.update!()
@@ -262,7 +280,8 @@ defmodule Alnasl.Bridges do
           driver: "remote",
           port: port,
           address: address,
-          options: %{}
+          options: %{},
+          hall_id: bridge.hall_id || Halls.own_id()
         })
 
       row ->
@@ -275,6 +294,33 @@ defmodule Alnasl.Bridges do
       {_port, nil} -> "#{bridge.name} #{Path.basename(name)}"
       {_port, address} -> "#{bridge.name} #{Arkab.Dgt.Bus.number(address)}"
     end
+  end
+
+  @doc """
+  Puts a bridge in another hall (an admin's move: it takes the bridge's
+  boards from one hall's people to another's). Its boards go with it, into
+  the new hall's own tournament, without table numbers: those were the
+  old hall's.
+  """
+  def move(%Bridge{} = bridge, hall_id) when is_integer(hall_id) do
+    bridge = bridge |> Ecto.Changeset.change(hall_id: hall_id) |> Repo.update!()
+    move_rows(bridge)
+    Log.add(:info, "bridge.moved", %{name: bridge.name}, %{})
+    notify()
+    {:ok, bridge}
+  end
+
+  defp move_rows(%Bridge{hall_id: hall_id} = bridge) do
+    tournament = Halls.local_tournament(hall_id)
+
+    for row <- rows(bridge), row.hall_id != hall_id do
+      row
+      |> Ecto.Changeset.change(hall_id: hall_id)
+      |> Repo.update!()
+      |> Boards.update(%{tournament_id: tournament.id, table_no: nil, round: nil, board_no: nil})
+    end
+
+    :ok
   end
 
   @doc "What the server is called, for the bridge's page."

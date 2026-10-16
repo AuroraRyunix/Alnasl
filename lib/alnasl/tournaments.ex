@@ -45,8 +45,15 @@ defmodule Alnasl.Tournaments do
 
   @doc "The box's own tournament. Made if it is not there."
   def default do
-    case Repo.one(from t in Tournament, where: t.kind == "local", order_by: t.id, limit: 1) do
-      nil -> Repo.insert!(%Tournament{kind: "local"})
+    own = Alnasl.Halls.own_id()
+
+    case Repo.one(
+           from t in Tournament,
+             where: t.kind == "local" and (is_nil(t.hall_id) or t.hall_id == ^own),
+             order_by: t.id,
+             limit: 1
+         ) do
+      nil -> Repo.insert!(%Tournament{kind: "local", hall_id: own})
       tournament -> tournament
     end
   end
@@ -225,14 +232,19 @@ defmodule Alnasl.Tournaments do
   def assign_tables_carry(_tournament, _from, _to), do: {:error, :range}
 
   @doc "The tournament whose range of tables holds table `number`, if any."
-  def for_table(number) when is_integer(number) do
+  def for_table(number, hall_id \\ nil)
+
+  def for_table(number, hall_id) when is_integer(number) do
+    own = Alnasl.Halls.own_id()
+    hall_id = hall_id || own
+
     Enum.find(list(), fn t ->
-      not t.gone and t.table_from != nil and number >= t.table_from and
-        number <= (t.table_to || t.table_from)
+      (t.hall_id || own) == hall_id and not t.gone and t.table_from != nil and
+        number >= t.table_from and number <= (t.table_to || t.table_from)
     end)
   end
 
-  def for_table(_none), do: nil
+  def for_table(_none, _hall_id), do: nil
 
   @doc """
   The board of the round that table `number` stands for in this tournament:

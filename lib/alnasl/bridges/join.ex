@@ -11,6 +11,8 @@ defmodule Alnasl.Bridges.Join do
     field :expires_at, :utc_datetime
     field :used_at, :utc_datetime
     field :bridge_id, :integer
+    # The hall the bridge goes into.
+    field :hall_id, :integer
     timestamps(type: :utc_datetime)
   end
 end

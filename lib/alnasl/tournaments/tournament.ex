@@ -47,6 +47,8 @@ defmodule Alnasl.Tournaments.Tournament do
     field :lichess_round_id, :string
     field :lichess_token, :string, redact: true
     field :lichess_round, :integer
+    # The hall it belongs to (`Alnasl.Halls`). Set by the box, never cast.
+    field :hall_id, :integer
     timestamps(type: :utc_datetime)
   end
 

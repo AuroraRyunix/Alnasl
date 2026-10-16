@@ -43,9 +43,37 @@ defmodule Alnasl.Seating do
 
   # --- what is linked ----------------------------------------------------------
 
-  @doc "The linked tournaments the pairing program still names."
+  @doc """
+  The linked tournaments the pairing program still names, in the box's own
+  hall. What this module does by itself - boards outside, the question,
+  seating after a code - it does for the boards on the box's own ports; a
+  hall that is a bridge's seats its boards by its tables
+  (`Alnasl.Tables`), and is never mixed with this one.
+  """
   def linked do
-    Enum.filter(Tournaments.list(), &(&1.kind == "linked" and not &1.gone))
+    own = Alnasl.Halls.own_id()
+
+    Enum.filter(
+      Tournaments.list(),
+      &(&1.kind == "linked" and not &1.gone and (&1.hall_id || own) == own)
+    )
+  end
+
+  # The boards on the box's own hall.
+  defp own_boards do
+    own = Alnasl.Halls.own_id()
+    Enum.filter(Boards.list(), &((&1.hall_id || own) == own))
+  end
+
+  # The boards and tournaments of a hall.
+  defp hall_boards(hall_id) do
+    own = Alnasl.Halls.own_id()
+    Enum.filter(Boards.list(), &((&1.hall_id || own) == (hall_id || own)))
+  end
+
+  defp hall_tournaments(hall_id) do
+    own = Alnasl.Halls.own_id()
+    Enum.filter(Tournaments.list(), &((&1.hall_id || own) == (hall_id || own)))
   end
 
   @doc """
@@ -79,10 +107,11 @@ defmodule Alnasl.Seating do
   # not inside another tournament's range. A range of its own is made to
   # reach it.
   defp free_table(%Tournament{} = tournament) do
-    taken = for b <- Boards.list(), b.table_no, into: MapSet.new(), do: b.table_no
+    taken =
+      for b <- hall_boards(tournament.hall_id), b.table_no, into: MapSet.new(), do: b.table_no
 
     others =
-      for t <- Tournaments.list(),
+      for t <- hall_tournaments(tournament.hall_id),
           t.id != tournament.id,
           t.table_from,
           do: t.table_from..(t.table_to || t.table_from)
@@ -121,7 +150,7 @@ defmodule Alnasl.Seating do
     if linked == [] do
       []
     else
-      for board <- Boards.list(), board.tournament_id not in ids do
+      for board <- own_boards(), board.tournament_id not in ids do
         %{
           board: board,
           game: under_way(board),
@@ -176,8 +205,15 @@ defmodule Alnasl.Seating do
     * `:nothing` - nothing to decide (no boards, or no tournament).
   """
   def after_code(tournaments) do
-    tournaments = Enum.filter(tournaments, &(&1.kind == "linked" and not &1.gone))
-    boards = Boards.list()
+    own = Alnasl.Halls.own_id()
+
+    tournaments =
+      Enum.filter(
+        tournaments,
+        &(&1.kind == "linked" and not &1.gone and (&1.hall_id || own) == own)
+      )
+
+    boards = own_boards()
     stray = strays(boards)
 
     cond do
@@ -279,13 +315,13 @@ defmodule Alnasl.Seating do
 
   @doc "Tournaments whose tables are not said yet, with the ranges the box would suggest: `[%{tournament, from, to}]`."
   def ask do
-    stray = strays(Boards.list())
+    stray = strays(own_boards())
     declined = Settings.get(@declined_key) || []
 
     open =
       Enum.filter(linked(), fn t ->
         t.table_from == nil and t.id not in declined and
-          not Enum.any?(Boards.list(), &(&1.tournament_id == t.id))
+          not Enum.any?(own_boards(), &(&1.tournament_id == t.id))
       end)
 
     if stray == [] or open == [], do: [], else: suggest(open, stray)

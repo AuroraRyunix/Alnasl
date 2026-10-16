@@ -4,7 +4,8 @@ defmodule Alnasl.Bridges.Bridge do
   it is called, the hash of its key, and the highest event number taken
   from it (`seen_seq`). `revoked_at` is set when it is removed here; the
   row stays so that the bridge, dialling in later, is told to forget this
-  server instead of being merely turned away. `hall_id` waits for halls.
+  server instead of being merely turned away. `hall_id` is the hall its
+  boards are in (`Alnasl.Halls`).
   """
 
   use Ecto.Schema

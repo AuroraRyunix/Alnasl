@@ -29,6 +29,8 @@ defmodule Alnasl.Boards.Board do
     field :table_no, :integer
     field :serial, :string
     field :firmware, :string
+    # The hall it is in (`Alnasl.Halls`): set when the row is made, never cast.
+    field :hall_id, :integer
     timestamps(type: :utc_datetime)
   end
 

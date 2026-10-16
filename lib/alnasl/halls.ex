@@ -1,0 +1,233 @@
+defmodule Alnasl.Halls do
+  @moduledoc """
+  Halls: places with boards, and who may do what in each.
+
+  The box's own serial ports are one hall (`own/0`), made when the box was
+  upgraded and never removed. Every bridge is in a hall (`bridges.hall_id`),
+  and so is every board (`boards.hall_id`: a bridge's boards are in its
+  hall, the box's own in the own hall), every tournament and every connect
+  code. A hall other than the own one has a tournament of its own as well
+  (`local_tournament/1`): where its boards play until a pairing program
+  says otherwise, as the box's own tournament is for the box's own boards.
+
+  A box with no accounts has one hall that matters and nobody to scope by:
+  `Alnasl.Accounts.Scope` is `open?` there and every filter here lets
+  everything through.
+  """
+
+  import Ecto.Query, only: [from: 2]
+
+  alias Alnasl.{Log, Repo, Tournaments}
+  alias Alnasl.Accounts.{Scope, User}
+  alias Alnasl.Halls.{Hall, Member}
+  alias Alnasl.Tournaments.Tournament
+
+  @topic "halls"
+
+  def subscribe, do: Phoenix.PubSub.subscribe(Alnasl.PubSub, @topic)
+
+  @doc false
+  def notify, do: Phoenix.PubSub.broadcast(Alnasl.PubSub, @topic, {:halls, :changed})
+
+  # --- halls -------------------------------------------------------------------
+
+  @doc "The hall of the box's own ports. Made if it is not there (a database made before halls by hand)."
+  def own do
+    case Repo.one(from h in Hall, where: h.own, order_by: h.id, limit: 1) do
+      nil -> Repo.insert!(%Hall{name: Alnasl.Settings.get("box_name") || "Alnasl", own: true})
+      hall -> hall
+    end
+  end
+
+  def own_id, do: own().id
+
+  @doc "Every hall, the own one first."
+  def list, do: Repo.all(from h in Hall, order_by: [desc: h.own, asc: h.id])
+
+  def get(nil), do: nil
+  def get(id), do: Repo.get(Hall, id)
+
+  @doc "The hall a row is in: its `hall_id`, or the own hall for a row from before halls."
+  def of(%{hall_id: id}) when is_integer(id), do: id
+  def of(_row), do: own_id()
+
+  @doc "A new hall, with its own tournament. Only an admin makes halls."
+  def create(%Scope{} = scope, attrs) do
+    if Scope.can?(scope, :admin) do
+      with {:ok, hall} <- %Hall{} |> Hall.changeset(attrs) |> Repo.insert() do
+        local_tournament(hall)
+        Log.add(:info, "hall.created", %{name: hall.name}, %{})
+        notify()
+        {:ok, hall}
+      end
+    else
+      {:error, :forbidden}
+    end
+  end
+
+  @doc "Renames a hall (its owner)."
+  def rename(%Scope{} = scope, %Hall{} = hall, attrs) do
+    if Scope.can?(scope, :owner, hall.id) do
+      with {:ok, hall} <- hall |> Hall.changeset(attrs) |> Repo.update() do
+        notify()
+        {:ok, hall}
+      end
+    else
+      {:error, :forbidden}
+    end
+  end
+
+  @doc """
+  The tournament a hall's boards play in when nobody said otherwise: for
+  the own hall the box's own tournament, for another its own local one
+  (made the first time it is asked for).
+  """
+  def local_tournament(%Hall{own: true}), do: Tournaments.default()
+
+  def local_tournament(%Hall{id: id}) do
+    case Repo.one(
+           from t in Tournament,
+             where: t.kind == "local" and t.hall_id == ^id,
+             order_by: t.id,
+             limit: 1
+         ) do
+      nil -> Repo.insert!(%Tournament{kind: "local", hall_id: id})
+      tournament -> tournament
+    end
+  end
+
+  def local_tournament(id) when is_integer(id) do
+    case get(id) do
+      nil -> Tournaments.default()
+      hall -> local_tournament(hall)
+    end
+  end
+
+  def local_tournament(nil), do: Tournaments.default()
+
+  # --- what a scope sees -------------------------------------------------------
+
+  @doc """
+  Keeps the rows (anything with a `hall_id`) in the scope's current hall.
+  Everything passes on a box with no accounts.
+  """
+  def here(%Scope{open?: true}, rows), do: rows
+
+  def here(%Scope{} = scope, rows) do
+    id = Scope.hall_id(scope)
+    own = own_id()
+    Enum.filter(rows, &(hall_or_own(&1, own) == id))
+  end
+
+  def here(_none, _rows), do: []
+
+  @doc """
+  The tournaments in play in the scope's current hall
+  (`Alnasl.Tournaments.active/0`, of this hall), never empty: a hall with
+  none in play has its own local one.
+  """
+  def active(%Scope{open?: true}), do: Tournaments.active()
+
+  def active(%Scope{} = scope) do
+    case {here(scope, Tournaments.active()), Scope.hall_id(scope)} do
+      {[], nil} -> []
+      {[], id} -> [local_tournament(id)]
+      {list, _id} -> list
+    end
+  end
+
+  def active(_none), do: []
+
+  @doc "The hall a box-wide action (numbering, remaps) keeps to: `nil` (all) on a box without accounts."
+  def filter_id(%Scope{open?: true}), do: nil
+  def filter_id(%Scope{} = scope), do: Scope.hall_id(scope)
+  def filter_id(_none), do: nil
+
+  @doc "Keeps the rows in any hall the scope may see."
+  def visible(%Scope{open?: true}, rows), do: rows
+
+  def visible(%Scope{} = scope, rows) do
+    ids = Scope.hall_ids(scope)
+    own = own_id()
+    Enum.filter(rows, &(hall_or_own(&1, own) in ids))
+  end
+
+  def visible(_none, _rows), do: []
+
+  @doc "May the scope see this row (a board, a tournament, a bridge, a code)?"
+  def sees?(%Scope{open?: true}, _row), do: true
+  def sees?(%Scope{} = scope, row), do: row != nil and Scope.sees?(scope, of(row))
+  def sees?(_none, _row), do: false
+
+  defp hall_or_own(%{hall_id: id}, _own) when is_integer(id), do: id
+  defp hall_or_own(_row, own), do: own
+
+  # --- members -----------------------------------------------------------------
+
+  @doc "The members of a hall, with their accounts, owners first."
+  def members(%Hall{id: id}) do
+    Repo.all(
+      from m in Member,
+        where: m.hall_id == ^id,
+        join: u in assoc(m, :user),
+        preload: [user: u],
+        order_by: [
+          asc: fragment("CASE ? WHEN 'owner' THEN 0 WHEN 'arbiter' THEN 1 ELSE 2 END", m.role),
+          asc: u.email
+        ]
+    )
+  end
+
+  @doc "`%{hall_id => role}` of an account."
+  def roles(%User{id: id}) do
+    Repo.all(from m in Member, where: m.user_id == ^id, select: {m.hall_id, m.role})
+    |> Map.new()
+  end
+
+  @doc "Makes `user` a member of `hall` with `role`, or changes the role it has there."
+  def put_member(%Hall{id: hall_id}, %User{id: user_id}, role)
+      when role in ["owner", "arbiter", "viewer"] do
+    case Repo.get_by(Member, hall_id: hall_id, user_id: user_id) do
+      nil -> Repo.insert(%Member{hall_id: hall_id, user_id: user_id, role: role})
+      member -> member |> Ecto.Changeset.change(role: role) |> Repo.update()
+    end
+    |> tap(fn _ -> notify() end)
+  end
+
+  @doc "An owner changes someone's role, or takes them out of the hall (`nil`)."
+  def set_role(%Scope{} = scope, %Hall{} = hall, member_id, role) do
+    with true <- Scope.can?(scope, :owner, hall.id) || {:error, :forbidden},
+         %Member{} = member <-
+           Repo.get_by(Member, id: member_id, hall_id: hall.id) || {:error, :not_found},
+         :ok <- keeps_an_owner(hall, member, role) do
+      result =
+        case role do
+          nil ->
+            Repo.delete(member)
+
+          role when role in ["owner", "arbiter", "viewer"] ->
+            member |> Ecto.Changeset.change(role: role) |> Repo.update()
+
+          _other ->
+            {:error, :role}
+        end
+
+      notify()
+      result
+    end
+  end
+
+  # A hall is never left without an owner by its owners: the last one cannot
+  # step down or be taken out. An admin can always put one back.
+  defp keeps_an_owner(hall, %Member{role: "owner", id: id}, role) when role != "owner" do
+    others =
+      Repo.aggregate(
+        from(m in Member, where: m.hall_id == ^hall.id and m.role == "owner" and m.id != ^id),
+        :count
+      )
+
+    if others > 0, do: :ok, else: {:error, :last_owner}
+  end
+
+  defp keeps_an_owner(_hall, _member, _role), do: :ok
+end

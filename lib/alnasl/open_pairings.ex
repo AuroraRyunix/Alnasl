@@ -52,11 +52,20 @@ defmodule Alnasl.OpenPairings do
     `:no_secret`, `:not_an_address`), the box has it already (`:already`),
     the pairing program refused it (`:unauthorized`) or speaks another
     version of the link (`{:unsupported, api}`).
+
+  The code, and every tournament it reaches, is in `hall_id` (the hall of
+  the arbiter who added it; the box's own hall when nobody says).
   """
-  def add_code(text) do
+  def add_code(text, hall_id \\ nil) do
     with {:ok, code} <- Code.parse(text),
          nil <- Repo.get_by(Link, root: code.root, secret: code.secret) do
-      link = Repo.insert!(%Link{root: code.root, secret: code.secret, kind: code.kind})
+      link =
+        Repo.insert!(%Link{
+          root: code.root,
+          secret: code.secret,
+          kind: code.kind,
+          hall_id: hall_id || Alnasl.Halls.own_id()
+        })
 
       case poll(link, force: true) do
         {:ok, link} ->
@@ -213,7 +222,12 @@ defmodule Alnasl.OpenPairings do
         case held[entry["id"]] || Duplicates.holder(link, entry) do
           nil ->
             tournament =
-              %Tournament{kind: "linked", link_id: link.id, remote_id: entry["id"]}
+              %Tournament{
+                kind: "linked",
+                link_id: link.id,
+                remote_id: entry["id"],
+                hall_id: link.hall_id || Alnasl.Halls.own_id()
+              }
               |> Tournament.changeset(changes)
               |> Repo.insert!()
 

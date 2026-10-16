@@ -50,6 +50,37 @@ if System.get_env("ALNASL_NO_LOCAL_BOARDS") in ~w(1 true yes) do
   config :alnasl, local_boards: false
 end
 
+# Who is an admin of this installation - everything, every hall - without
+# a row saying so: the addresses here, comma-separated. On the server they
+# are the people who may invite others, and who may sign in with 02cloud
+# before they have an account. Optional on a box in a hall, whose first
+# account is its admin anyway.
+config :alnasl,
+  admin_emails:
+    (System.get_env("ALNASL_ADMIN_EMAILS") || "")
+    |> String.split(",", trim: true)
+    |> Enum.map(&(&1 |> String.trim() |> String.downcase()))
+    |> Enum.reject(&(&1 == ""))
+
+# "Sign in with 02cloud" (Keycloak, `Alnasl.Keycloak`): shown only when a
+# client secret is set. The secret goes in a file only root reads (the
+# deploy script does that for every name with SECRET in it).
+if keycloak_secret = System.get_env("ALNASL_KEYCLOAK_CLIENT_SECRET") do
+  keycloak_url =
+    (System.get_env("ALNASL_KEYCLOAK_URL") || "https://auth.zerotwo.cloud")
+    |> String.trim_trailing("/")
+
+  realm = System.get_env("ALNASL_KEYCLOAK_REALM") || "zerotwo"
+
+  config :alnasl, :keycloak,
+    issuer: "#{keycloak_url}/realms/#{realm}",
+    client_id: System.get_env("ALNASL_KEYCLOAK_CLIENT_ID") || "alnasl",
+    client_secret: keycloak_secret,
+    # Unset: built from the address the browser used, so a box in a hall
+    # and the server need nothing more.
+    redirect_uri: System.get_env("ALNASL_KEYCLOAK_REDIRECT_URI")
+end
+
 # Theme packs (`Alnasl.ThemePacks`): `<data dir>/themes` unless this says
 # otherwise. Unset is the normal case; nothing is installed by default.
 if themes_dir = System.get_env("ALNASL_THEMES_DIR") do

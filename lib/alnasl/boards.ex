@@ -38,9 +38,13 @@ defmodule Alnasl.Boards do
   def get!(id), do: Repo.get!(Board, id)
 
   def create(attrs) do
-    attrs = attrs |> Map.new() |> encode_options() |> in_a_tournament()
+    attrs = Map.new(attrs)
+    hall_id = attrs[:hall_id] || attrs["hall_id"] || Alnasl.Halls.own_id()
 
-    with {:ok, board} <- %Board{} |> Board.changeset(attrs) |> Repo.insert() do
+    attrs =
+      attrs |> Map.drop([:hall_id, "hall_id"]) |> encode_options() |> in_a_tournament(hall_id)
+
+    with {:ok, board} <- %Board{hall_id: hall_id} |> Board.changeset(attrs) |> Repo.insert() do
       Log.add(:info, "board.added", %{name: board.name, driver: board.driver}, %{
         board_id: board.id
       })
@@ -83,13 +87,19 @@ defmodule Alnasl.Boards do
   # A board belongs to a tournament from the start: the one whoever adds it
   # names; else the only linked tournament there is, while the box's own has
   # never been used (`Alnasl.Seating.default_tournament/0`); else the box's
-  # own.
-  defp in_a_tournament(attrs) do
-    if attrs[:tournament_id] || attrs["tournament_id"] do
-      attrs
-    else
-      tournament = Alnasl.Seating.default_tournament() || Tournaments.default()
-      Map.put(attrs, :tournament_id, tournament.id)
+  # own. A board in another hall than the box's own (a bridge's) plays in
+  # that hall's tournament: a hall's boards do not wander into another's.
+  defp in_a_tournament(attrs, hall_id) do
+    cond do
+      attrs[:tournament_id] || attrs["tournament_id"] ->
+        attrs
+
+      hall_id == Alnasl.Halls.own_id() ->
+        tournament = Alnasl.Seating.default_tournament() || Tournaments.default()
+        Map.put(attrs, :tournament_id, tournament.id)
+
+      true ->
+        Map.put(attrs, :tournament_id, Alnasl.Halls.local_tournament(hall_id).id)
     end
   end
 
@@ -175,6 +185,9 @@ defmodule Alnasl.Boards do
       nil -> offline(board)
       snapshot -> snapshot
     end
+    # The hall from the row, not the server's copy: a bridge moved to another
+    # hall is there at once.
+    |> Map.put(:hall_id, board.hall_id)
   end
 
   def snapshot(id) when is_integer(id) do

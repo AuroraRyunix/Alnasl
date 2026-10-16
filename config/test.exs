@@ -36,6 +36,10 @@ config :alnasl,
 
 config :logger, level: :warning
 
+# Password hashes that take a millisecond, not a third of a second, and
+# Keycloak's answers from a stub, never from auth.zerotwo.cloud.
+config :alnasl, pbkdf2_iterations: 1_000, keycloak_req_plug: Alnasl.KeycloakStub
+
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
 

@@ -35,6 +35,8 @@ defmodule Alnasl.Tournaments.Link do
     field :error, :string
     field :last_ok_at, :utc_datetime
     field :last_try_at, :utc_datetime
+    # The hall whose arbiter added it; its tournaments are that hall's.
+    field :hall_id, :integer
     timestamps(type: :utc_datetime)
   end
 end
