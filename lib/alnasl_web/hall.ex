@@ -257,10 +257,11 @@ defmodule AlnaslWeb.Hall do
 
     with %{} = tournament <- Tournaments.get(id),
          true <- from != nil,
-         {:ok, tournament, carried} <- Seating.assign_range(tournament, from, to) do
+         hall_id = Scope.hall_id(socket.assigns[:current_scope]),
+         {:ok, tournament, carried} <- Seating.assign_range(tournament, from, to, hall_id) do
       {:halt,
        socket
-       |> put_flash(:info, range_words(tournament, from, to, carried))
+       |> put_flash(:info, range_words(tournament, from, to, carried, hall_id))
        |> refresh()}
     else
       _bad ->
@@ -308,12 +309,26 @@ defmodule AlnaslWeb.Hall do
   end
 
   @doc "What was done when a range of tables was given to a tournament."
-  def range_words(tournament, from, to, carried) do
-    gettext("Tables %{from}-%{to} play in %{name}: table %{from} is its board 1.",
-      from: from,
-      to: to,
-      name: Tournaments.title(tournament) || gettext("this box's own tournament")
-    ) <> Enum.join(Enum.map(carried, &carried_words/1))
+  def range_words(tournament, from, to, carried, hall_id \\ nil) do
+    name = Tournaments.title(tournament) || gettext("this box's own tournament")
+
+    # Board 1, unless the tournament's first boards are played in another hall.
+    case Alnasl.Placements.in_hall(tournament, hall_id || Alnasl.Halls.of(tournament)) do
+      %{first_board: first} when first > 1 ->
+        gettext("Tables %{from}-%{to} play in %{name}: table %{from} is its board %{first}.",
+          from: from,
+          to: to,
+          name: name,
+          first: first
+        )
+
+      _first ->
+        gettext("Tables %{from}-%{to} play in %{name}: table %{from} is its board 1.",
+          from: from,
+          to: to,
+          name: name
+        )
+    end <> Enum.join(Enum.map(carried, &carried_words/1))
   end
 
   @doc "A game that was under way on a board that moved, and what became of it."

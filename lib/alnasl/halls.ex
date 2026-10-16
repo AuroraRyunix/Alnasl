@@ -108,15 +108,15 @@ defmodule Alnasl.Halls do
   # --- what a scope sees -------------------------------------------------------
 
   @doc """
-  Keeps the rows (anything with a `hall_id`) in the scope's current hall.
+  Keeps the rows (anything with a `hall_id`) in the scope's current hall;
+  a tournament is in every hall it is placed in (`Alnasl.Placements`).
   Everything passes on a box with no accounts.
   """
   def here(%Scope{open?: true}, rows), do: rows
 
   def here(%Scope{} = scope, rows) do
     id = Scope.hall_id(scope)
-    own = own_id()
-    Enum.filter(rows, &(hall_or_own(&1, own) == id))
+    Enum.filter(rows, &Alnasl.Placements.in_hall?(&1, id))
   end
 
   def here(_none, _rows), do: []
@@ -148,19 +148,18 @@ defmodule Alnasl.Halls do
 
   def visible(%Scope{} = scope, rows) do
     ids = Scope.hall_ids(scope)
-    own = own_id()
-    Enum.filter(rows, &(hall_or_own(&1, own) in ids))
+    Enum.filter(rows, fn row -> Enum.any?(Alnasl.Placements.halls_of(row), &(&1 in ids)) end)
   end
 
   def visible(_none, _rows), do: []
 
   @doc "May the scope see this row (a board, a tournament, a bridge, a code)?"
   def sees?(%Scope{open?: true}, _row), do: true
-  def sees?(%Scope{} = scope, row), do: row != nil and Scope.sees?(scope, of(row))
-  def sees?(_none, _row), do: false
 
-  defp hall_or_own(%{hall_id: id}, _own) when is_integer(id), do: id
-  defp hall_or_own(_row, own), do: own
+  def sees?(%Scope{} = scope, row),
+    do: row != nil and Enum.any?(Alnasl.Placements.halls_of(row), &Scope.sees?(scope, &1))
+
+  def sees?(_none, _row), do: false
 
   # --- members -----------------------------------------------------------------
 

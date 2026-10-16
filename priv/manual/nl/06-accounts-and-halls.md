@@ -23,6 +23,19 @@ De poorten van het kastje zelf zijn één zaal. Elke brug hoort bij een zaal, en
 
 Bij meer dan één zaal zegt de wisselaar bovenaan over welke de pagina's gaan, en toont de pagina Zalen elke zaal in één oogopslag: borden live, bruggen verbonden, en wat een arbiter nodig heeft.
 
+## Toernooien en zalen {#placements}
+
+Waar een toernooi gespeeld wordt, zeg je in Instellingen, onder het toernooi: **Zalen en tafels**. Elke rij is één zaal, met de tafels van en tot en het eerste bord dat die tafels spelen. De twee gewone gevallen:
+
+- **Twee toernooien, één zaal.** De Open op tafels 1 tot 8, de min-twaalfjarigen op tafels 9 tot 16: elk toernooi heeft één rij in de zaal, en tafel 9 is bord 1 van de min-twaalfjarigen. Dat deed "Tafels van ... tot ..." altijd al, en doet het nog.
+- **Eén toernooi, twee zalen.** Borden 1 tot 8 in de grote zaal op haar tafels 1 tot 8, borden 9 tot 16 in de zaal ernaast op haar tafels 1 tot 8: de Open heeft twee rijen, de tweede begint bij bord 9. Tafel 4 van de zaal ernaast speelt bord 12.
+
+**Zaal toevoegen** toont alleen de zalen waar je arbiter of eigenaar bent (een beheerder ziet ze allemaal). Een zaal die je toevoegt, krijgt daar de volgende vrije tafels en het bord na het hoogste dat al een plaats heeft; pas het gerust aan voor de ronde. Een toernooi zonder tafels in een zaal heeft daar elke tafel die bij geen ander toernooi hoort.
+
+Wat niet kan: twee toernooien op dezelfde tafel van één zaal, hetzelfde bord in twee zalen, en een toernooi uit de laatste zaal halen waarin het gespeeld wordt. Haal je een zaal weg, dan gaan haar borden terug naar het eigen toernooi van die zaal; de partijen blijven.
+
+Een toernooi staat in de lijst en opent in elke zaal waarin het gespeeld wordt. Een bord wordt nog altijd alleen in zijn eigen zaal herkend aan zijn serienummer: één toernooi in twee zalen maakt daar geen één ruimte van.
+
 ## Rollen {#roles}
 
 In elke zaal is een account eigenaar, arbiter of kijker. Dezelfde persoon kan in de ene zaal eigenaar zijn en in de volgende kijker.
@@ -33,6 +46,8 @@ In elke zaal is een account eigenaar, arbiter of kijker. Dezelfde persoon kan in
 | Arbiter | Ze leiden: tafels, rondes, resultaten, correcties, de koppelingen met OpenPairings en OpenResults |
 | Eigenaar | Dat alles, en bruggen toevoegen en verwijderen, en mensen uitnodigen |
 | Beheerder | Elke zaal zien en het kastje zelf: zijn naam, updates, de tracker, de schakelaars van de Wachtrij |
+
+Voor een toernooi dat in meer dan één zaal gespeeld wordt, telt de hoogste rol die je in een van die zalen hebt.
 
 Een kijker die op een knop drukt die iets verandert, krijgt te horen dat zijn rol hem de partijen laat volgen, niet wijzigen.
 

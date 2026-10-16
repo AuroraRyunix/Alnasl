@@ -57,7 +57,7 @@ defmodule AlnaslWeb.FirstLinkTest do
       assert Boards.get!(a.id).tournament_id == open.id
       assert Boards.get!(b.id).tournament_id == open.id
       assert {Boards.get!(a.id).round, Boards.get!(a.id).board_no} == {1, 1}
-      assert {open.table_from, open.table_to} == {1, 2}
+      assert Tournaments.tables(open) == {1, 2}
       assert Seating.outside() == []
 
       assert has_element?(view, "#auto-notice", "All 2 boards now play in Open")
@@ -65,7 +65,7 @@ defmodule AlnaslWeb.FirstLinkTest do
       view |> element("#auto-undo") |> render_click()
       refute has_element?(view, "#auto-notice")
       assert Boards.get!(a.id).tournament_id == own().id
-      assert again(open).table_from == nil
+      assert Tournaments.tables(again(open)) == {nil, nil}
     end
 
     test "a board without a table number gets the next free one", %{conn: conn} do

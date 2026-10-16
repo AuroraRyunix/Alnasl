@@ -49,7 +49,7 @@ Per game: the moves, the clocks, the PGN, and the result the board saw, with how
 
 ### Two codes for one tournament {#two-codes}
 
-Two codes that reach one tournament, a group's and the tournament's own, or a desktop copy's code for this computer and for the hall's network, make one tournament on the box, not two. The second code says "This code reaches ..., which this box already has through ...". When the old code was withdrawn and a new one made, press "Use this code" under the new one: the tournament keeps its boards and games, and the old code goes when it reaches nothing else.
+Two codes that reach one tournament, a group's and the tournament's own, or a desktop copy's code for this computer and for the hall's network, make one tournament on the box, not two. The second code says "This code reaches ..., which this box already has through ...". When the old code was withdrawn and a new one made, press "Use this code" under the new one: the tournament keeps its boards and games, and the old code goes when it reaches nothing else. When the new code is another hall's and the tournament is not played there yet, the same place offers "Also play it in this hall": still one tournament, now in both halls (see [Tournaments and halls](06-accounts-and-halls.md#placements)).
 
 ### A desktop copy of OpenPairings {#desktop}
 

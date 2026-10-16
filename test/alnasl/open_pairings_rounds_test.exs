@@ -93,8 +93,8 @@ defmodule Alnasl.OpenPairingsRoundsTest do
       %{open: open, u12: u12} = ctx
       hall(ctx)
       {:ok, _} = Tournaments.assign_tables(u12, 2, 4)
-      assert %{table_from: nil, table_to: nil} = again(open)
-      assert %{table_from: 2, table_to: 4} = again(u12)
+      assert Tournaments.tables(again(open)) == {nil, nil}
+      assert Tournaments.tables(again(u12)) == {2, 4}
       assert {:error, :range} = Tournaments.assign_tables(u12, 4, 2)
     end
   end

@@ -99,7 +99,7 @@ defmodule AlnaslWeb.TeamsAndCodesTest do
       |> render_submit()
 
       refute Tournaments.get!(event.id).keep_matches
-      assert %{table_from: 1, table_to: 8} = Tournaments.get!(event.id)
+      assert Tournaments.tables(Tournaments.get!(event.id)) == {1, 8}
       refute has_element?(view, "#tables-keep-#{event.id}[checked]")
 
       open = linked(17, name: "Open", boards: 2)

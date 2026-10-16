@@ -23,7 +23,7 @@ defmodule AlnaslWeb.Permit do
 
   import Phoenix.LiveView, only: [put_flash: 3]
 
-  alias Alnasl.{Boards, Bridges, Halls, Tournaments}
+  alias Alnasl.{Boards, Bridges, Placements, Tournaments}
   alias Alnasl.Accounts.Scope
 
   alias AlnaslWeb.{
@@ -133,14 +133,13 @@ defmodule AlnaslWeb.Permit do
       :admin ->
         Scope.can?(scope, :admin)
 
+      # A tournament played in several halls is the business of each: the
+      # highest role in any of them counts (`Alnasl.Placements.role/2`).
       level ->
-        halls =
-          case refs(view, event, params, assigns) do
-            [] -> [Scope.hall_id(scope)]
-            rows -> Enum.map(rows, &Halls.of/1)
-          end
-
-        Enum.all?(halls, &Scope.can?(scope, level, &1))
+        case refs(view, event, params, assigns) do
+          [] -> Scope.can?(scope, level, Scope.hall_id(scope))
+          rows -> Enum.all?(rows, &Placements.can?(scope, level, &1))
+        end
     end
   end
 
@@ -226,6 +225,12 @@ defmodule AlnaslWeb.Permit do
   defp ref(SetupLive, event, "id", value)
        when event in ~w(test_link use_code retry_link remove_link),
        do: with(id when is_integer(id) <- int(value), do: Tournaments.get_link(id))
+
+  # The hall a tournament is placed in, or is to be: an arbiter there, as
+  # well as for the tournament.
+  defp ref(SetupLive, event, "hall", value)
+       when event in ~w(placement_add placement_save placement_remove),
+       do: with(id when is_integer(id) <- int(value), do: Alnasl.Halls.get(id))
 
   defp ref(SetupLive, event, "id", value) when event in ~w(remove_bridge bridge_command),
     do: with(id when is_integer(id) <- int(value), do: Bridges.get(id))
