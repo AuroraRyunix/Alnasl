@@ -35,6 +35,7 @@ defmodule Alnasl.NoLocalBoardsTest do
   test "unset: the box runs its buses and reads what is plugged in, as it always has" do
     children = Alnasl.Application.children(autostart: true, local_boards: true)
     assert Arkab.Drivers in children
+    assert Enum.any?(children, &match?({Alnasl.Updates.Checker, _opts}, &1))
     assert Process.whereis(Arkab.BusSupervisor)
 
     {:ok, sim} = Boards.create(%{name: "Sim", driver: "simulator", options: %{"game" => 1}})
@@ -44,6 +45,8 @@ defmodule Alnasl.NoLocalBoardsTest do
   test "set: no buses, no serial port, no simulator - and a board through a bridge runs as ever" do
     children = Alnasl.Application.children(autostart: true, local_boards: false)
     refute Arkab.Drivers in children
+    # A server is updated by whoever deploys it: nobody asks GitHub.
+    refute Enum.any?(children, &match?({Alnasl.Updates.Checker, _opts}, &1))
     assert AlnaslWeb.Endpoint in children
     assert Alnasl.Finder in children
 

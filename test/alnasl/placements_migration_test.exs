@@ -111,5 +111,16 @@ defmodule Alnasl.PlacementsMigrationTest do
     assert Tournaments.for_table(20, own) == nil
 
     assert Enum.map(Placements.list(3), & &1.hall_id) == [own]
+
+    # And back: every range on its tournament again, the one from before
+    # halls included.
+    Ecto.Migrator.run(Repo, @path, :down, to: @placements, dynamic_repo: pid, log: false)
+
+    ranges =
+      Repo.query!("SELECT id, table_from, table_to FROM tournaments ORDER BY id").rows
+
+    assert [2, 1, 8] in ranges
+    assert [5, 5, 5] in ranges
+    assert [6, 3, 4] in ranges
   end
 end

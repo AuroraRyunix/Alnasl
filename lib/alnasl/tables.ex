@@ -164,6 +164,9 @@ defmodule Alnasl.Tables do
     end
   end
 
+  @doc "Is a game under way on the board in a tournament other than `tournament`?"
+  def under_way?(%Board{} = board, tournament), do: under_way(board, tournament) != nil
+
   # The game being played on the board in another tournament, if there is one.
   defp under_way(%Board{tournament_id: from, round: round, board_no: no}, tournament)
        when is_integer(round) and is_integer(no) and from != tournament.id do
@@ -581,12 +584,20 @@ defmodule Alnasl.Tables do
   """
   def checks(round), do: checks(Tournaments.default_id(), round)
 
-  def checks(tournament_id, round, snapshots \\ nil) do
+  def checks(tournament_id, round, snapshots \\ nil, placements \\ nil) do
+    # Asked once, not once a board: the tournament, its placements, and the
+    # own hall a row from before halls is in.
+    tournament = Tournaments.get(tournament_id)
+    placements = placements || Alnasl.Placements.list(tournament)
+    own = Halls.own_id()
+    hall = fn s -> hall_of(s, own) end
+    home = fn s -> home_in(s, tournament, placements, hall.(s)) end
+
     # The boards of the halls the tournament is played in. A sticker and a
     # serial are a hall's: another hall's table 1, or the same board read
     # there as well, is that hall's business.
-    halls = Alnasl.Placements.halls_of(Tournaments.get(tournament_id))
-    all = Enum.filter(snapshots || Boards.snapshots(), &(Halls.of(&1) in halls))
+    halls = placements |> Enum.map(& &1.hall_id) |> Enum.uniq()
+    all = Enum.filter(snapshots || Boards.snapshots(), &(hall.(&1) in halls))
     # A sticker is on one board and a serial is one board, whatever
     # tournament; the rest is about this tournament's boards.
     snaps = Enum.filter(all, &(&1[:tournament_id] == tournament_id))
@@ -597,14 +608,15 @@ defmodule Alnasl.Tables do
     in_match = Map.new(pairings, &{&1.board, &1.match})
     top = here |> Enum.map(& &1.board_no) |> Enum.max(fn -> 0 end)
 
-    per_hall(all, &duplicates(&1, fn s -> s[:table_no] end, :duplicate_table)) ++
+    per_hall(all, hall, &duplicates(&1, fn s -> s[:table_no] end, :duplicate_table)) ++
       duplicates(here, & &1.board_no, :duplicate_board) ++
       per_hall(
         Enum.filter(all, &(&1.driver in @dgt)),
+        hall,
         &duplicates(&1, fn s -> serial(s) end, :same_serial)
       ) ++
-      outside_checks(tournament_id, snaps) ++
-      Enum.flat_map(snaps, &board_checks(&1, round)) ++
+      outside_checks(tournament, snaps) ++
+      Enum.flat_map(snaps, &board_checks(&1, round, home)) ++
       for(n <- paired, n < top, not is_map_key(by_no, n), do: issue(:warn, gap(n, in_match[n]))) ++
       match_checks(pairings, by_no) ++
       case Enum.count(paired, &(&1 > top)) do
@@ -637,8 +649,8 @@ defmodule Alnasl.Tables do
 
   # A board in the box's own tournament while a linked one exists: it reads
   # a game that goes nowhere.
-  defp outside_checks(tournament_id, snaps) do
-    with %Tournaments.Tournament{kind: "local"} <- Tournaments.get(tournament_id),
+  defp outside_checks(tournament, snaps) do
+    with %Tournaments.Tournament{kind: "local"} <- tournament,
          [_ | _] = linked <- Alnasl.Seating.linked() do
       titles = Enum.map(linked, &(Tournaments.title(&1) || ""))
       for s <- snaps, do: issue(:warn, {:outside, s.name, titles}, s.id)
@@ -647,9 +659,9 @@ defmodule Alnasl.Tables do
     end
   end
 
-  defp per_hall(snaps, fun) do
+  defp per_hall(snaps, hall, fun) do
     snaps
-    |> Enum.group_by(&Halls.of/1)
+    |> Enum.group_by(hall)
     |> Enum.sort()
     |> Enum.flat_map(fn {_hall, group} -> fun.(group) end)
   end
@@ -667,7 +679,7 @@ defmodule Alnasl.Tables do
     end)
   end
 
-  defp board_checks(s, round) do
+  defp board_checks(s, round, home) do
     here? = s.round == round and s.board_no != nil
 
     List.flatten([
@@ -698,12 +710,22 @@ defmodule Alnasl.Tables do
         else: []
       ),
       if(here? and s.flipped, do: issue(:info, {:turned, s.name, s.board_no}, s.id), else: []),
-      if(here? and s[:table_no] != nil and home_board(s) != s.board_no,
+      if(here? and s[:table_no] != nil and home.(s) != s.board_no,
         do: issue(:info, {:remapped, s.name, s[:table_no], s.board_no}, s.id),
         else: []
       )
     ])
   end
+
+  defp hall_of(%{hall_id: id}, _own) when is_integer(id), do: id
+  defp hall_of(_row, own), do: own
+
+  # `home_board/1` with what `checks/4` has in hand already.
+  defp home_in(%{table_no: nil}, _tournament, _placements, _hall_id), do: nil
+  defp home_in(%{table_no: table}, nil, _placements, _hall_id), do: table
+
+  defp home_in(%{table_no: table}, tournament, placements, hall_id),
+    do: Tournaments.board_of_table_in(tournament, table, nil, hall_id, placements)
 
   defp other_serial?(%{serial: serial, info: %{serial: seen}})
        when is_binary(serial) and serial != "" and is_binary(seen),

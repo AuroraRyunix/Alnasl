@@ -529,6 +529,9 @@ defmodule AlnaslWeb.SetupLive do
        |> Hall.refresh()
        |> load()}
     else
+      {:error, :busy, board} ->
+        {:noreply, put_flash(socket, :error, AlnaslWeb.TableWords.busy(board))}
+
       {:error, reason} ->
         {:noreply, socket |> put_flash(:error, placement_error(reason)) |> load()}
 

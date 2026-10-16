@@ -49,13 +49,18 @@ defmodule Alnasl.Repo.Migrations.TournamentPlacements do
       add :table_to, :integer
     end
 
-    # Back to one range a tournament: the one in its own hall.
+    # Back to one range a tournament: the one in its own hall - the own hall
+    # for a row from before halls, as `up` read it.
     execute("""
     UPDATE tournaments SET
       table_from = (SELECT p.table_from FROM tournament_placements p
-                    WHERE p.tournament_id = tournaments.id AND p.hall_id = tournaments.hall_id),
+                    WHERE p.tournament_id = tournaments.id
+                      AND p.hall_id = COALESCE(tournaments.hall_id,
+                        (SELECT id FROM halls WHERE own = 1 ORDER BY id LIMIT 1))),
       table_to = (SELECT p.table_to FROM tournament_placements p
-                  WHERE p.tournament_id = tournaments.id AND p.hall_id = tournaments.hall_id)
+                  WHERE p.tournament_id = tournaments.id
+                    AND p.hall_id = COALESCE(tournaments.hall_id,
+                      (SELECT id FROM halls WHERE own = 1 ORDER BY id LIMIT 1)))
     """)
 
     drop table(:tournament_placements)

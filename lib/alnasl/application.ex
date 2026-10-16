@@ -36,6 +36,8 @@ defmodule Alnasl.Application do
     # The launcher's Details panel: this start's secret (and its file, when
     # no launcher handed one over), the CPU sample, the slow queries. Before
     # the endpoint, which asks it.
+    # The box asks GitHub for a newer version of itself; a server is
+    # updated by whoever deploys it, and has no business asking.
     [
       AlnaslWeb.Telemetry,
       Alnasl.Repo,
@@ -48,10 +50,15 @@ defmodule Alnasl.Application do
       {Registry, keys: :unique, name: Alnasl.BridgeRegistry},
       {Registry, keys: :unique, name: Alnasl.RemoteRegistry},
       {Task.Supervisor, name: Alnasl.TaskSupervisor},
-      Alnasl.Recorder,
-      {Alnasl.Updates.Checker, timer: Application.get_env(:alnasl, :updates_timer, true)}
+      Alnasl.Recorder
     ] ++
-      if(local?, do: [Arkab.Drivers], else: []) ++
+      if(local?,
+        do: [
+          {Alnasl.Updates.Checker, timer: Application.get_env(:alnasl, :updates_timer, true)},
+          Arkab.Drivers
+        ],
+        else: []
+      ) ++
       [
         {DynamicSupervisor,
          name: Alnasl.BoardSupervisor, strategy: :one_for_one, max_restarts: 100, max_seconds: 60},

@@ -368,7 +368,7 @@ defmodule Alnasl.OpenPairings.Duplicates do
   elsewhere, so it does not make the row again.
   """
   def merge(%Tournament{} = later, %Tournament{} = first) do
-    {boards, games} =
+    {boards, games, shifted} =
       Repo.transaction(fn ->
         games = for game <- games_of(later.id), do: move_game(game, first.id)
 
@@ -384,15 +384,18 @@ defmodule Alnasl.OpenPairings.Duplicates do
         first = Repo.get!(Tournament, first.id)
         first |> Ecto.Changeset.change(taken_over(first, later)) |> Repo.update!()
         # The halls and tables it is played on go with it.
-        Alnasl.Placements.merge(later, first)
+        {:ok, shifted} = Alnasl.Placements.merge(later, first)
 
         with %Link{} = link <- Repo.get(Link, later.link_id),
              do: add_note(link, later.remote_id, first, later.name)
 
         Repo.delete!(later)
-        {boards, Enum.count(games, &(&1 != :dropped))}
+        {boards, Enum.count(games, &(&1 != :dropped)), shifted}
       end)
       |> elem(1)
+
+    # A hall that moved over to later boards plays them now.
+    Alnasl.Placements.reseat(first, shifted)
 
     # A board that is running holds its tournament in its process: it is
     # told, once the rows are what they will be.

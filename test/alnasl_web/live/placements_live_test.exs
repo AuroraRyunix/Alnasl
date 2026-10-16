@@ -127,4 +127,66 @@ defmodule AlnaslWeb.PlacementsLiveTest do
     # Its "tables from" is the annex's range.
     assert has_element?(view, "#tables-from-#{open.id}[value='1']")
   end
+
+  test "an arbiter of the annex only gets the button, and the button works", ctx do
+    %{conn: conn, a: a, b: b} = ctx
+    Alnasl.LinkHelpers.pairing_program()
+
+    Alnasl.FakeOpenPairings.add_tournament(17,
+      group: "Festival",
+      name: "Festival Open",
+      boards: 2
+    )
+
+    {:ok, _group, [festival]} =
+      Alnasl.OpenPairings.add_code(Alnasl.FakeOpenPairings.group_code("Festival"), a.id)
+
+    {:ok, annex_link, []} =
+      Alnasl.OpenPairings.add_code(Alnasl.FakeOpenPairings.code(17), b.id)
+
+    # No role in the main hall, so none for the tournament: only the code.
+    annex = user_fixture("annex@example.org")
+    member(b, annex, "arbiter")
+
+    {:ok, view, _html} = live(log_in(conn, annex, b), ~p"/setup")
+    view |> element("#link-also-here-#{annex_link.id}-17") |> render_click()
+
+    assert Placements.halls_of(festival) == [a.id, b.id]
+    refute has_element?(view, "#flash-error")
+
+    # Without a code of the annex's reaching it, the same event is refused.
+    other =
+      Repo.insert!(%Tournament{kind: "linked", name: "Other", label: "Other", hall_id: a.id})
+
+    render_click(view, "placement_add", %{"t" => "#{other.id}", "hall" => "#{b.id}"})
+    assert Placements.halls_of(other) == [a.id]
+  end
+
+  test "an arbiter of the annex standing in the main hall does not seat the annex's tournament there",
+       ctx do
+    %{conn: conn, a: a, b: b, open: open} = ctx
+
+    blitz =
+      Repo.insert!(%Tournament{kind: "linked", name: "Blitz", label: "Blitz", hall_id: b.id})
+
+    {:ok, _} = Tournaments.assign_tables(blitz, 1, 8, b.id)
+
+    user = user_fixture("both@example.org")
+    member(a, user, "viewer")
+    member(b, user, "arbiter")
+
+    {:ok, view, _html} = live(log_in(conn, user, a), ~p"/setup")
+
+    render_click(view, "assign_tables", %{
+      "tables" => %{"id" => "#{blitz.id}", "from" => "1", "to" => "8"}
+    })
+
+    render_click(view, "seat_tables", %{
+      "seat" => %{"id" => "#{blitz.id}", "from" => "1", "to" => "8"}
+    })
+
+    assert has_element?(view, "#flash-error")
+    assert Placements.halls_of(Tournaments.get!(blitz.id)) == [b.id]
+    assert Tournaments.tables(Tournaments.get!(open.id), a.id) == {1, 8}
+  end
 end

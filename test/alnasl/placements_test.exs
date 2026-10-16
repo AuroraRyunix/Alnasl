@@ -243,12 +243,13 @@ defmodule Alnasl.PlacementsTest do
       assert Placements.can?(account, :arbiter, open)
       refute Placements.can?(account, :owner, open)
 
-      # The permit agrees, even looking at the hall where the account only watches.
+      # The permit agrees for the annex's own placement, even looking at the
+      # hall where the account only watches.
       assert AlnaslWeb.Permit.allowed?(
                account,
                AlnaslWeb.SetupLive,
-               "auto_start",
-               %{"id" => "#{open.id}"},
+               "placement_save",
+               %{"place" => %{"t" => "#{open.id}", "hall" => "#{b.id}", "from" => "1"}},
                %{}
              )
 
@@ -259,6 +260,65 @@ defmodule Alnasl.PlacementsTest do
                AlnaslWeb.SetupLive,
                "auto_start",
                %{"id" => "#{open.id}"},
+               %{}
+             )
+    end
+
+    test "the best role is for the annex's share; the tournament, the main hall and its boards are not",
+         %{a: a, b: b, open: open} do
+      {:ok, _, _} = Placements.add(open, b.id)
+      blitz = tournament("Blitz", b.id, 4)
+      account = scope(%{a.id => "viewer", b.id => "arbiter"}, a)
+      allowed? = &AlnaslWeb.Permit.allowed?(account, &1, &2, &3, %{})
+
+      # Tournament-wide and credentials: the home hall (the main hall) says.
+      for event <- ~w(remove_tournament auto_start) do
+        refute allowed?.(AlnaslWeb.SetupLive, event, %{"id" => "#{open.id}"})
+      end
+
+      refute allowed?.(AlnaslWeb.RoundLive, "next_round", %{"t" => "#{open.id}"})
+
+      refute AlnaslWeb.Permit.allowed?(account, AlnaslWeb.SetupLive, "clear_lichess", %{}, %{
+               lichess: open
+             })
+
+      # Board 3 is in the main hall, board 11 in the annex.
+      refute allowed?.(AlnaslWeb.RoundLive, "result", %{
+               "t" => "#{open.id}",
+               "board" => "3",
+               "result" => "1-0"
+             })
+
+      assert allowed?.(AlnaslWeb.RoundLive, "result", %{
+               "t" => "#{open.id}",
+               "board" => "11",
+               "result" => "1-0"
+             })
+
+      refute allowed?.(AlnaslWeb.RoundLive, "new_game", %{"t" => "#{open.id}", "board" => "3"})
+
+      # The annex's own tournament is the annex's to run.
+      assert allowed?.(AlnaslWeb.RoundLive, "next_round", %{"t" => "#{blitz.id}"})
+
+      # Standing in the main hall, the annex's tournament does not take its tables.
+      refute allowed?.(AlnaslWeb.SetupLive, "assign_tables", %{
+               "tables" => %{"id" => "#{blitz.id}", "from" => "1", "to" => "8"}
+             })
+
+      refute allowed?.(AlnaslWeb.SetupLive, "seat_tables", %{
+               "seat" => %{"id" => "#{blitz.id}", "from" => "1", "to" => "8"}
+             })
+
+      # Standing in the annex, it does.
+      in_b = scope(%{a.id => "viewer", b.id => "arbiter"}, b)
+
+      assert AlnaslWeb.Permit.allowed?(
+               in_b,
+               AlnaslWeb.SetupLive,
+               "assign_tables",
+               %{
+                 "tables" => %{"id" => "#{blitz.id}", "from" => "1", "to" => "8"}
+               },
                %{}
              )
     end
@@ -287,6 +347,86 @@ defmodule Alnasl.PlacementsTest do
                %{"t" => "#{open.id}", "hall" => "#{b.id}"},
                %{}
              )
+    end
+  end
+
+  describe "what adding, merging and deleting leave behind" do
+    setup do
+      a = Halls.own()
+      b = hall("Annex")
+      open = tournament("Open", a.id)
+      {:ok, _} = Tournaments.assign_tables(open, 1, 8, a.id)
+      %{a: a, b: b, open: Tournaments.get!(open.id)}
+    end
+
+    test "a hall added does not land on a table where another tournament is playing", %{
+      b: b,
+      open: open
+    } do
+      # The annex plays the U12 on every table, no range: table 1 has a game on.
+      u12 = tournament("U12", b.id, 4)
+      busy = board(b.id, "busy")
+
+      {:ok, busy} =
+        Boards.update(busy, %{table_no: 1, tournament_id: u12.id, round: 1, board_no: 1})
+
+      game = Alnasl.Games.ensure(u12.id, 1, 1, %{})
+      moves = for san <- ~w(e4 e5 Nf3), do: %{san: san, flags: [], clock: nil}
+      {_game, _} = Alnasl.Games.apply_event(game, {:moves, moves}, 1_000)
+
+      # The suggestion starts after the U12's tables...
+      assert %{table_from: 2} = Placements.suggest(open, b.id)
+
+      # ...and asking for its table anyway is refused, in so many words.
+      assert {:error, :busy, %{id: id}} =
+               Placements.add(open, b.id, %{table_from: 1, table_to: 8})
+
+      assert id == busy.id
+      assert Placements.in_hall(open, b.id) == nil
+      assert %{tournament_id: tid, board_no: 1} = Boards.get!(busy.id)
+      assert tid == u12.id
+      assert AlnaslWeb.TableWords.busy(Boards.get!(busy.id)) =~ "U12"
+    end
+
+    test "a hall whose own tournament is played next door is not deleted from under it", %{
+      a: a,
+      b: b
+    } do
+      local = Halls.local_tournament(b)
+      assert Halls.leftovers(b).tournaments == 0
+
+      {:ok, _, _} = Placements.add(local, a.id, %{table_from: 20, table_to: 21})
+      assert Halls.leftovers(b).tournaments == 1
+
+      owner = scope(%{b.id => "owner"}, b)
+      assert {:error, {:not_empty, _}} = Halls.delete(owner, b)
+    end
+
+    test "a hall that moves over in a merge plays its new boards at once", %{b: b, open: open} do
+      link =
+        Repo.insert!(%Alnasl.Tournaments.Link{
+          root: "http://annex.example/api/boards/v1",
+          secret: "s",
+          kind: "tournament",
+          hall_id: b.id
+        })
+
+      # The annex's own row of the Open, counted from board 1 on its tables 1-8.
+      later = tournament("Open", b.id)
+      later = later |> Ecto.Changeset.change(link_id: link.id) |> Repo.update!()
+      {:ok, _} = Tournaments.assign_tables(later, 1, 8, b.id)
+
+      there = board(b.id, "there")
+      {:ok, _} = Tables.set_table(there, 2)
+      assert %{board_no: 2} = Boards.get!(there.id)
+
+      :ok = Alnasl.OpenPairings.Duplicates.merge(Tournaments.get!(later.id), open)
+
+      # Boards 1-8 are the main hall's: the annex's table 2 is board 10 now.
+      assert %{first_board: 9} = Placements.in_hall(open, b.id)
+      assert %{tournament_id: tid, round: 1, board_no: 10} = Boards.get!(there.id)
+      assert tid == open.id
+      assert Tables.home_board(Boards.get!(there.id)) == 10
     end
   end
 end

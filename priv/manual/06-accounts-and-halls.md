@@ -30,7 +30,7 @@ Where a tournament is played is said on Setup, under the tournament: **Halls and
 - **Two tournaments, one hall.** The Open on tables 1 to 8, the under-twelves on tables 9 to 16: each tournament has one row in the hall, and table 9 is board 1 of the under-twelves. This is what "Tables from ... to ..." has always done, and still does.
 - **One tournament, two halls.** Boards 1 to 8 in the main hall on its tables 1 to 8, boards 9 to 16 in the annex on its tables 1 to 8: the Open has two rows, the second starting at board 9. Table 4 of the annex plays board 12.
 
-**Add a hall** lists only the halls where you are an arbiter or an owner (an admin sees them all). A hall added takes the next free tables there and the board after the highest one already placed; change either before the round. A tournament without a range in a hall has every table there that no other range holds.
+**Add a hall** lists only the halls where you are an arbiter or an owner (an admin sees them all). A hall added takes the next free tables there - after every other tournament's range, and after the tables where another tournament's boards sit - and the board after the highest one already placed; change either before the round. A table whose board has a game under way in another tournament is never taken by adding a hall: the box says which board, and changes nothing. A tournament without a range in a hall has every table there that no other range holds.
 
 What is refused: two tournaments on the same table of one hall, the same board in two halls, and taking a tournament out of the last hall it is in. A hall taken away sends its boards back to that hall's own tournament; the games stay.
 
@@ -47,7 +47,13 @@ In each hall an account is an owner, an arbiter or a viewer. The same person can
 | Owner | All that, and add and remove bridges, and invite people |
 | Admin | See every hall and the box itself: its name, updates, the tracker, the Outbox's switches |
 
-For a tournament played in more than one hall, the highest role you have in any of them counts.
+For a tournament played in more than one hall, the highest role you have in any of them counts - for what happens to it in that hall. The rest needs the role where it happens:
+
+- **The hall you are standing in.** Giving its tables to a tournament, adding a code, its bridges: your role in this hall, whatever you are in the tournament's other halls.
+- **The whole tournament.** Removing it, its Lichess round and key, starting it by itself, the next round: your role in its home hall, the hall it came from.
+- **One board.** A result or a new game on the Round page, or anything on a board's page: your role in the hall that board is played in.
+
+"Also play it in this hall" needs only an arbiter's role in the hall whose own code reaches the tournament: having the code is the permission.
 
 A viewer who presses a button that changes something is told that their role lets them follow the games, not change them.
 

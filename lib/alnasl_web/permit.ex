@@ -15,6 +15,13 @@ defmodule AlnaslWeb.Permit do
   about when it names none. So an arbiter in one hall who sends another
   hall's board id with a hand-made event is refused like a viewer.
 
+  A tournament placed in several halls lends the best role in any of them,
+  but only for what happens to the tournament there. An event that changes
+  the hall the page is about needs the role there too; one about the whole
+  tournament (removing it, its Lichess key, its rounds) needs it in the
+  tournament's home hall; one about board N needs it in the hall board N
+  is played in.
+
   On a box with no accounts everybody is the owner of everything, and this
   lets everything through, as before there were accounts.
   """
@@ -135,11 +142,96 @@ defmodule AlnaslWeb.Permit do
 
       # A tournament played in several halls is the business of each: the
       # highest role in any of them counts (`Alnasl.Placements.role/2`).
+      # That is for what happens in one of them. What happens in a
+      # particular hall needs the role in that hall as well (`halls/5`).
       level ->
-        case refs(view, event, params, assigns) do
-          [] -> Scope.can?(scope, level, Scope.hall_id(scope))
-          rows -> Enum.all?(rows, &Placements.can?(scope, level, &1))
-        end
+        rows = refs(view, event, params, assigns)
+
+        named =
+          case rows do
+            [] -> Scope.can?(scope, level, here(scope))
+            rows -> Enum.all?(rows, &Placements.can?(scope, level, &1))
+          end
+
+        named and
+          Enum.all?(halls(view, event, params, assigns, scope, rows, level), fn hall_id ->
+            Scope.can?(scope, level, hall_id)
+          end)
+    end
+  end
+
+  defp here(scope), do: Scope.hall_id(scope) || Alnasl.Halls.own_id()
+
+  # Events that change the hall the page is about, whatever they name: an
+  # arbiter of the Open in the annex is not one in the main hall because
+  # the Open is played there too.
+  @here_events %{
+    SetupLive => ~w(assign_tables add_code add_bridge bridge_command remove_bridge),
+    BoardsLive => ~w(link_in_order clear_remaps swap)
+  }
+  @here_everywhere ~w(seat_tables)
+
+  # Events about the whole tournament, credentials included: its home hall
+  # (`tournaments.hall_id`, the own hall for a row from before halls) says,
+  # not the best role in any hall it borrowed tables in.
+  @home_events %{
+    SetupLive => ~w(remove_tournament save_lichess clear_lichess auto_start),
+    RoundLive => ~w(next_round follow make_current)
+  }
+
+  # Events about one board of a tournament, named by its number: the hall
+  # that board is played in says.
+  @board_events %{RoundLive => ~w(result new_game send_this)}
+
+  # The halls an event needs the role in besides the rows it names.
+  defp halls(_view, _event, _params, _assigns, _scope, _rows, :viewer), do: []
+
+  defp halls(view, event, params, assigns, scope, rows, _level) do
+    here =
+      if event in @here_everywhere or event in Map.get(@here_events, view, []),
+        do: [here(scope)],
+        else: []
+
+    home =
+      if event in Map.get(@home_events, view, []),
+        do: for(%Tournaments.Tournament{} = t <- rows, do: Alnasl.Halls.of(t)),
+        else: []
+
+    here ++ home ++ board_halls(view, event, params, assigns)
+  end
+
+  defp board_halls(RoundLive, event, params, _assigns) do
+    if event in @board_events[RoundLive] do
+      with id when is_integer(id) <- int(params["t"] || params["tid"]),
+           %Tournaments.Tournament{} = t <- Tournaments.get(id),
+           n when is_integer(n) <- int(params["board"]) do
+        [board_hall(t, n)]
+      else
+        # The tile's button without a tournament is about the box's own.
+        _none ->
+          case int(params["board"]) do
+            n when is_integer(n) -> [board_hall(Tournaments.default(), n)]
+            _none -> []
+          end
+      end
+    else
+      []
+    end
+  end
+
+  # The board's own page: every change is to that one board.
+  defp board_halls(GameLive, _event, _params, %{tournament: %Tournaments.Tournament{} = t, no: n})
+       when is_integer(n),
+       do: [board_hall(t, n)]
+
+  defp board_halls(_view, _event, _params, _assigns), do: []
+
+  # Board n is played where its placement puts it; a board beyond every
+  # placement is the home hall's business.
+  defp board_hall(tournament, n) do
+    case Placements.place_of(tournament, n) do
+      {hall_id, _table} -> hall_id
+      nil -> Alnasl.Halls.of(tournament)
     end
   end
 
@@ -160,7 +252,31 @@ defmodule AlnaslWeb.Permit do
           row = page_tournament(value),
           do: row
 
-    named ++ page ++ implicit(view, event, params, assigns)
+    reached(view, event, named ++ page ++ implicit(view, event, params, assigns))
+  end
+
+  # "Also play it in this hall": offered to an arbiter of the hall whose own
+  # code reaches the tournament, who may hold no role for it yet. Holding
+  # the code is the authorisation; the role in the hall named is still
+  # checked.
+  defp reached(SetupLive, "placement_add", rows) do
+    case Enum.find(rows, &match?(%Alnasl.Halls.Hall{}, &1)) do
+      %Alnasl.Halls.Hall{id: hall_id} ->
+        Enum.reject(rows, &(match?(%Tournaments.Tournament{}, &1) and reached?(&1, hall_id)))
+
+      nil ->
+        rows
+    end
+  end
+
+  defp reached(_view, _event, rows), do: rows
+
+  defp reached?(%Tournaments.Tournament{} = t, hall_id) do
+    Enum.any?(Tournaments.links(), fn link ->
+      Alnasl.Halls.of(link) == hall_id and
+        (t.link_id == link.id or
+           Enum.any?(Alnasl.OpenPairings.Duplicates.shared(link), &(&1.tournament.id == t.id)))
+    end)
   end
 
   # What an event acts on without naming it: the box's own tournament or
@@ -213,6 +329,10 @@ defmodule AlnaslWeb.Permit do
     do: with(id when is_integer(id) <- int(value), do: Boards.get(id))
 
   defp ref(BoardsLive, _event, "id", value),
+    do: with(id when is_integer(id) <- int(value), do: Boards.get(id))
+
+  # Two boards changing places.
+  defp ref(BoardsLive, "swap", key, value) when key in ["a", "b"],
     do: with(id when is_integer(id) <- int(value), do: Boards.get(id))
 
   defp ref(RecordingsLive, _event, "board", value),

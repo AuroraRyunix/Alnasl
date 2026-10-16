@@ -21,7 +21,7 @@ A banner across the top means the results site cannot be reached. Play goes on a
 
 A tile is the way to the board's own page. Under it: "Finish game" and "New game".
 
-Only boards that exist here get a tile: a board of this hall seated on that board number, or a board that already has a stored game. Pairings without either are counted in one line under the heading ("26 pairings without a board here"). A tournament with no board here and no game at all is not drawn; one line at the bottom says how many there are ("14 more tournaments are not on the boards here") and leads to Setup. With a single tournament nothing is hidden. A tournament you open by its own address is always shown.
+Only boards that exist here get a tile: a board of this hall seated on that board number, or a board that already has a stored game. Pairings without either are counted in one line under the heading ("26 pairings without a board here"). A tournament with no board here and no game at all is not drawn; one line at the bottom says how many there are ("14 more tournaments are not on the boards here") and leads to Setup. With a single tournament nothing is hidden: every pairing gets a tile, board or no board, and a box that has no pairings yet still says so. A tournament you open by its own address is always shown, counted the same way as above.
 
 ## A board's page {#a-board}
 

@@ -77,6 +77,16 @@ defmodule Alnasl.Games do
     Game |> select([g], g.tournament_id) |> distinct(true) |> Repo.all() |> MapSet.new()
   end
 
+  @doc "Which of `ids` have at least one game stored: the same question, asked of a few."
+  def tournament_ids(ids) when is_list(ids) do
+    Game
+    |> where([g], g.tournament_id in ^ids)
+    |> select([g], g.tournament_id)
+    |> distinct(true)
+    |> Repo.all()
+    |> MapSet.new()
+  end
+
   @doc "The rounds a tournament has games of."
   def rounds(tournament_id) do
     Game
