@@ -49,8 +49,8 @@ config :phoenix,
 
 # A real loop is listened to for a second after a ping to everybody, asked
 # again a millisecond after each answer and looked over for new boards every
-# ten seconds. The emulated ones answer at once.
-config :alnasl,
+# ten seconds. The emulated ones answer at once. (The loop is Arkab's.)
+config :arkab,
   loop_ping_window_ms: 30,
   loop_reply_ms: 80,
   loop_gap_ms: 5,

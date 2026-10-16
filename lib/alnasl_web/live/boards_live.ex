@@ -634,7 +634,7 @@ defmodule AlnaslWeb.BoardsLive do
                     {Words.driver(s.driver)}
                     <span :if={s.driver != "simulator" && s.port}> · {s.port}</span>
                     <span :if={s.driver == "dgt_bus" && s.address} id={"loop-number-#{s.id}"}>
-                      · {gettext("answers as %{a}", a: Alnasl.Dgt.Bus.number(s.address))}
+                      · {gettext("answers as %{a}", a: Arkab.Dgt.Bus.number(s.address))}
                     </span>
                   </div>
                   <div

@@ -3,7 +3,7 @@ defmodule Alnasl.LoopsTest do
   A port is added, and the box works out what is on it: one board or a loop.
   Nobody types an address.
 
-  The boards are emulated (`Alnasl.Dgt.Emulator`), set up as the two real
+  The boards are emulated (`Arkab.Dgt.Emulator`), set up as the two real
   ones of 2026-10-12 were: 06310 with firmware 1.9, whose address is its
   serial number, and a newer one that answers as 12799 and whose serial
   number is something else.
@@ -12,8 +12,8 @@ defmodule Alnasl.LoopsTest do
   use Alnasl.HallCase
 
   alias Alnasl.{Loops, Tables}
-  alias Alnasl.Dgt.{Bus, Emulator, Loop}
-  alias Alnasl.Transport.Fake
+  alias Arkab.Dgt.{Bus, Emulator, Loop}
+  alias Arkab.Transport.Fake
 
   defp old_board(attrs \\ []),
     do: Emulator.new(Keyword.merge([serial: "06310", version: "1.9"], attrs))

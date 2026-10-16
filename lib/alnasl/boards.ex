@@ -25,7 +25,8 @@ defmodule Alnasl.Boards do
 
   import Ecto.Query, only: [order_by: 3]
 
-  alias Alnasl.{BoardServer, Games, Log, Outbox, Pgn, Repo, Tables, Tournaments, Transport}
+  alias Alnasl.{BoardServer, Games, Log, Outbox, Pgn, Repo, Tables, Tournaments}
+  alias Arkab.Transport
   alias Alnasl.Boards.Board
 
   def subscribe, do: BoardServer.subscribe()

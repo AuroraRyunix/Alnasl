@@ -8,7 +8,7 @@ defmodule Alnasl.RecorderTest do
   use Alnasl.DataCase, async: false
 
   alias Alnasl.{Chess, Position, Recorder}
-  alias Alnasl.Dgt.Protocol
+  alias Arkab.Dgt.Protocol
   alias Alnasl.Simulator.Script
 
   setup do

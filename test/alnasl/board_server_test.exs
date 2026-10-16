@@ -215,12 +215,12 @@ defmodule Alnasl.BoardServerTest do
       eventually(fn -> Boards.snapshot(board.id).connected? end)
       played = play_on("FAKE1", board.id, ~w(e4 e5))
 
-      Alnasl.Transport.Fake.unplug("FAKE1")
+      Arkab.Transport.Fake.unplug("FAKE1")
       eventually(fn -> Boards.snapshot(board.id).status == :no_signal end)
 
       # Two moves are made while nobody listens.
       set_pieces("FAKE1", List.last(boards_after(played ++ ~w(Nf3 Nc6))))
-      Alnasl.Transport.Fake.replug("FAKE1")
+      Arkab.Transport.Fake.replug("FAKE1")
       eventually(fn -> sans(board.id) == played ++ ~w(Nf3 Nc6) end, 10_000)
 
       snapshot = Boards.snapshot(board.id)
@@ -239,9 +239,9 @@ defmodule Alnasl.BoardServerTest do
       eventually(fn -> Boards.snapshot(board.id).connected? end)
 
       clock = fn white, black, running ->
-        Alnasl.Transport.Fake.update(
+        Arkab.Transport.Fake.update(
           "FAKE1",
-          &Alnasl.Dgt.Emulator.set_clock(&1, %{white_ms: white, black_ms: black, running: running})
+          &Arkab.Dgt.Emulator.set_clock(&1, %{white_ms: white, black_ms: black, running: running})
         )
       end
 

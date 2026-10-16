@@ -7,6 +7,10 @@ defmodule Alnasl.Position do
   63 = h1, each entry `nil` or `{colour, kind}`. As text it is 64 characters,
   FEN letters and `.` for an empty square, which is how the capture files and
   the database hold it.
+
+  The text, the turning round and the difference are `Arkab.Board`'s, the
+  drivers' own notion of a board; what needs chess (the start, a FEN) is
+  here.
   """
 
   alias Alnasl.Chess
@@ -27,13 +31,12 @@ defmodule Alnasl.Position do
     {:b, :q} => ?q,
     {:b, :k} => ?k
   }
-  @pieces Map.new(@letters, fn {piece, letter} -> {letter, piece} end)
 
   @doc "The starting position, as a board."
   def start, do: Chess.start().board
 
   @doc "A board with nothing on it."
-  def empty, do: Tuple.duplicate(nil, 64)
+  defdelegate empty, to: Arkab.Board
 
   @doc "The board of a FEN, or `nil` when it is not one."
   def from_fen(fen) do
@@ -44,30 +47,10 @@ defmodule Alnasl.Position do
   end
 
   @doc "64 characters: FEN letters, `.` for empty."
-  def to_text(board) when is_tuple(board) do
-    for i <- 0..63, into: "" do
-      case elem(board, i) do
-        nil -> "."
-        piece -> <<Map.fetch!(@letters, piece)>>
-      end
-    end
-  end
+  defdelegate to_text(board), to: Arkab.Board
 
   @doc "Reads what `to_text/1` writes. `:error` for anything else."
-  def from_text(<<text::binary-size(64)>>) do
-    squares =
-      for <<c <- text>> do
-        cond do
-          c == ?. -> nil
-          is_map_key(@pieces, c) -> Map.fetch!(@pieces, c)
-          true -> :bad
-        end
-      end
-
-    if :bad in squares, do: :error, else: {:ok, List.to_tuple(squares)}
-  end
-
-  def from_text(_other), do: :error
+  defdelegate from_text(text), to: Arkab.Board
 
   @doc "The piece-placement field of a FEN."
   def placement(board) do
@@ -110,10 +93,10 @@ defmodule Alnasl.Position do
   end
 
   @doc "The board as seen from the other side: a board plugged in turned round."
-  def rotate(board), do: board |> Tuple.to_list() |> Enum.reverse() |> List.to_tuple()
+  defdelegate rotate(board), to: Arkab.Board
 
   @doc "The squares on which two boards differ."
-  def diff(a, b), do: for(i <- 0..63, elem(a, i) != elem(b, i), do: i)
+  defdelegate diff(a, b), to: Arkab.Board
 
   @doc "How many pieces stand on the board."
   def count(board), do: Enum.count(Tuple.to_list(board), & &1)

@@ -3,7 +3,7 @@ defmodule Alnasl.Loops do
   Boards on a loop, as rows: who is on a port, and a row for each.
 
   The arbiter never types a number for this. He picks the port; the box
-  asks the line who is there (`Alnasl.Dgt.Loop`) and makes of it what it is:
+  asks the line who is there (`Arkab.Dgt.Loop`) and makes of it what it is:
 
   - nobody answers, or one board: a single board on its own port
     (`dgt_serial`), as before. (One board on a loop cable is read that way
@@ -26,7 +26,7 @@ defmodule Alnasl.Loops do
   4. a new row, "Board 06310".
 
   A board with firmware 1.x then says its serial number (its address IS
-  its serial number: `Alnasl.Dgt.Bus.serial/2`), and the usual recognition
+  its serial number: `Arkab.Dgt.Bus.serial/2`), and the usual recognition
   takes over (`Alnasl.Tables.recognise/4`): a row the box already has for
   that serial takes the place. A newer board's address says nothing about
   its serial number; on a loop it is known by the address until it has been
@@ -34,16 +34,17 @@ defmodule Alnasl.Loops do
 
   ## A board added to the loop later
 
-  The bus notices (`Alnasl.Driver.DgtBus`, every ten seconds, without
+  The bus notices (`Arkab.Driver.DgtBus`, every ten seconds, without
   stopping the reading) and calls `stranger/2`: the board gets its row, and
   the log says so. A board taken off the loop stops answering: its row
   stays, says "No signal", and is back when the board is.
   """
 
-  alias Alnasl.{Boards, Log, Transport}
+  alias Alnasl.{Boards, Log}
+  alias Arkab.Transport
   alias Alnasl.Boards.Board
-  alias Alnasl.Dgt.{Bus, Loop}
-  alias Alnasl.Driver.DgtBus
+  alias Arkab.Dgt.{Bus, Loop}
+  alias Arkab.Driver.DgtBus
 
   @doc """
   Asks the line on `port` who is there: `{:ok, addresses}` or `{:error,
@@ -65,7 +66,7 @@ defmodule Alnasl.Loops do
   defp ask(port, tries) do
     transport = Transport.for_port(port)
 
-    case transport.open(port, baud: Alnasl.Dgt.Protocol.baud()) do
+    case transport.open(port, baud: Arkab.Dgt.Protocol.baud()) do
       {:ok, handle} ->
         try do
           addresses = Loop.discover(transport, handle)

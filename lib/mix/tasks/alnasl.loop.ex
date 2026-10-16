@@ -17,13 +17,13 @@ defmodule Mix.Tasks.Alnasl.Loop do
   ## --discover
 
   What the box does when a port is added: the bus-mode byte, then a ping to
-  everybody until nobody new answers (`Alnasl.Dgt.Loop`). Then each board
+  everybody until nobody new answers (`Arkab.Dgt.Loop`). Then each board
   found is asked its version and its position, and gets a line.
 
   ## --watch
 
   Discovers, then lets go of the port and starts the real bus driver on it
-  (`Alnasl.Driver.DgtBus`) for the boards found, for `--seconds` (60):
+  (`Arkab.Driver.DgtBus`) for the boards found, for `--seconds` (60):
   prints every position, clock reading and missed poll, every byte that
   said something, a board that was plugged in since - and at the end how
   many questions each board answered and how long they took.
@@ -65,8 +65,9 @@ defmodule Mix.Tasks.Alnasl.Loop do
 
   import Bitwise
 
-  alias Alnasl.Dgt.{Bus, Loop}
-  alias Alnasl.{Position, Transport}
+  alias Arkab.Dgt.{Bus, Loop}
+  alias Alnasl.Position
+  alias Arkab.Transport
 
   # Single-board commands that ask or switch modes. 0x48 and 0x4E and up are
   # not on the list: the published header has a bootloader in that range.
@@ -111,7 +112,7 @@ defmodule Mix.Tasks.Alnasl.Loop do
     File.mkdir_p!(Path.dirname(out))
     {:ok, file} = File.open(out, [:write, :binary])
 
-    case transport.open(port, baud: Alnasl.Dgt.Protocol.baud()) do
+    case transport.open(port, baud: Arkab.Dgt.Protocol.baud()) do
       {:ok, handle} ->
         io = %{
           transport: transport,
@@ -327,14 +328,14 @@ defmodule Mix.Tasks.Alnasl.Loop do
     io.transport.close(io.handle)
     say(io, "found", Enum.map_join(addresses, ", ", &Bus.number/1))
 
-    {:ok, _} = Registry.start_link(keys: :unique, name: Alnasl.BusRegistry)
-    {:ok, _} = DynamicSupervisor.start_link(name: Alnasl.BusSupervisor, strategy: :one_for_one)
+    {:ok, _} = Registry.start_link(keys: :unique, name: Arkab.BusRegistry)
+    {:ok, _} = DynamicSupervisor.start_link(name: Arkab.BusSupervisor, strategy: :one_for_one)
     me = self()
 
     drivers =
       for address <- addresses do
         {:ok, pid} =
-          Alnasl.Driver.DgtBus.start_link(
+          Arkab.Driver.DgtBus.start_link(
             owner: me,
             id: address,
             port: opts[:port],
@@ -347,10 +348,10 @@ defmodule Mix.Tasks.Alnasl.Loop do
 
     Process.send_after(self(), :stop, max(seconds - 6, 1) * 1000)
     watching(io)
-    bus = Alnasl.Driver.DgtBus.whereis(opts[:port])
+    bus = Arkab.Driver.DgtBus.whereis(opts[:port])
 
     if bus do
-      for s <- Alnasl.Driver.DgtBus.stats(bus) do
+      for s <- Arkab.Driver.DgtBus.stats(bus) do
         say(
           io,
           "board",
@@ -359,7 +360,7 @@ defmodule Mix.Tasks.Alnasl.Loop do
         )
       end
 
-      t = Alnasl.Driver.DgtBus.timing(bus)
+      t = Arkab.Driver.DgtBus.timing(bus)
 
       say(
         io,
@@ -370,7 +371,7 @@ defmodule Mix.Tasks.Alnasl.Loop do
 
       ref = Process.monitor(bus)
       for pid <- drivers, do: Agent.stop(pid)
-      for address <- addresses, do: Alnasl.Driver.DgtBus.detach(bus, address)
+      for address <- addresses, do: Arkab.Driver.DgtBus.detach(bus, address)
 
       receive do
         {:DOWN, ^ref, :process, _pid, _reason} -> :ok

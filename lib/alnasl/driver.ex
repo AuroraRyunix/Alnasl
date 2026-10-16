@@ -15,25 +15,25 @@ defmodule Alnasl.Driver do
   | `{:raw, :rx \\| :tx, binary}` | the bytes on the wire, for the capture file |
 
   A driver that plays recorded or simulated time wraps each event as
-  `{:at, t_ms, speed, next_t_ms, event}`; see `Alnasl.Driver.Player`.
+  `{:at, t_ms, speed, next_t_ms, event}`; see `Arkab.Driver.Player`.
 
   Full positions, not moves and not changes: what a move is, is the
   tracker's business, and a driver that reports the whole board cannot
   drift from it.
 
   The drivers: `Alnasl.Driver.Simulator` (PGN games played by an invisible
-  hand, with faults), `Alnasl.Driver.Replay` (a capture file played back),
-  `Alnasl.Driver.DgtSerial` (one DGT board on a serial port) and
-  `Alnasl.Driver.DgtBus` (a loop of DGT boards).
+  hand, with faults), `Arkab.Driver.Replay` (a capture file played back),
+  `Arkab.Driver.DgtSerial` (one DGT board on a serial port) and
+  `Arkab.Driver.DgtBus` (a loop of DGT boards).
   """
 
   @callback start_link(keyword()) :: GenServer.on_start()
 
   @doc "The module for a board's `driver` field."
   def module("simulator"), do: Alnasl.Driver.Simulator
-  def module("replay"), do: Alnasl.Driver.Replay
-  def module("dgt_serial"), do: Alnasl.Driver.DgtSerial
-  def module("dgt_bus"), do: Alnasl.Driver.DgtBus
+  def module("replay"), do: Arkab.Driver.Replay
+  def module("dgt_serial"), do: Arkab.Driver.DgtSerial
+  def module("dgt_bus"), do: Arkab.Driver.DgtBus
 
   @doc "Sends an event to a driver's owner."
   def emit(owner, id, event), do: send(owner, {:driver, id, event})

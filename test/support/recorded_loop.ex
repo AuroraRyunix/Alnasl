@@ -1,6 +1,6 @@
 defmodule Alnasl.RecordedLoop do
   @moduledoc """
-  The loop of 2026-10-12 as a device for `Alnasl.Transport.Fake`: every bus
+  The loop of 2026-10-12 as a device for `Arkab.Transport.Fake`: every bus
   command is answered with the bytes a real board answered that command
   with, taken from the recordings in `test/fixtures/captures/real-loop-*.jsonl`.
 
@@ -70,7 +70,7 @@ defmodule Alnasl.RecordedLoop do
   end
 
   defp whole?(rx),
-    do: match?({[{address, _message}], <<>>} when is_integer(address), Alnasl.Dgt.Bus.parse(rx))
+    do: match?({[{address, _message}], <<>>} when is_integer(address), Arkab.Dgt.Bus.parse(rx))
 
   def handle(state, bytes) do
     for <<frame::binary-size(4) <- strip(bytes)>>, reduce: {<<>>, state} do
@@ -124,7 +124,7 @@ defmodule Alnasl.RecordedLoop do
     |> Enum.filter(fn {tx, _rx} -> tx == @ping_all end)
     |> Enum.map(&elem(&1, 1))
     |> Enum.find(fn rx ->
-      {answers, _rest} = Alnasl.Dgt.Bus.parse(rx)
+      {answers, _rest} = Arkab.Dgt.Bus.parse(rx)
       Enum.any?(answers, &match?({:bad_checksum, _}, &1))
     end)
   end

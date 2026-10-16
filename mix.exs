@@ -189,7 +189,13 @@ defmodule Alnasl.MixProject do
       {:bandit, "~> 1.5"},
       {:req, "~> 0.5"},
       # The QR code of the box's address, for a phone to scan. Pure Elixir, MIT.
-      {:eqrcode, "~> 0.2.1"}
+      {:eqrcode, "~> 0.2.1"},
+      # The board drivers, the DGT protocol and the capture format, and the
+      # bridge that brings a hall's boards here from elsewhere. A path while
+      # both are built side by side; a git tag pin
+      # ({:arkab, git: "https://github.com/AuroraRyunix/Arkab.git", tag: "v0.1.0"})
+      # once Arkab has a repository and a first tag.
+      {:arkab, path: "../arkab"}
     ] ++ uart()
   end
 

@@ -9,8 +9,8 @@ defmodule AlnaslWeb.TablesAndOutputsTest do
 
   alias Alnasl.{Destination, FakeLichess, Finder, Tables}
   alias Alnasl.Destination.LichessBroadcast
-  alias Alnasl.Dgt.Emulator
-  alias Alnasl.Transport.Fake
+  alias Arkab.Dgt.Emulator
+  alias Arkab.Transport.Fake
 
   setup do
     Finder.reset()

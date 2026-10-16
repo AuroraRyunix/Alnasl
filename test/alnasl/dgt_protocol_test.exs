@@ -1,4 +1,4 @@
-defmodule Alnasl.Dgt.ProtocolTest do
+defmodule Alnasl.DgtProtocolTest do
   @moduledoc """
   The single-board DGT protocol, pinned with bytes written out by hand.
 
@@ -12,7 +12,7 @@ defmodule Alnasl.Dgt.ProtocolTest do
 
   use ExUnit.Case, async: true
 
-  alias Alnasl.Dgt.Protocol
+  alias Arkab.Dgt.Protocol
   alias Alnasl.Position
 
   # The start position as a board dump: header 0x86, size 67 = 0x00 0x43.

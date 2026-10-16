@@ -23,7 +23,8 @@ defmodule Alnasl.Driver.Simulator do
 
   @behaviour Alnasl.Driver
 
-  alias Alnasl.{Driver.Player, Pgn}
+  alias Alnasl.Pgn
+  alias Arkab.Driver.Player
   alias Alnasl.Simulator.Script
 
   @fault_atoms %{

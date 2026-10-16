@@ -33,7 +33,8 @@ defmodule Mix.Tasks.Alnasl.Dgt do
 
   use Mix.Task
 
-  alias Alnasl.{Position, Transport}
+  alias Alnasl.Position
+  alias Arkab.Transport
 
   @impl Mix.Task
   def run(args) do
@@ -98,7 +99,7 @@ defmodule Mix.Tasks.Alnasl.Dgt do
     Process.flag(:trap_exit, true)
     Logger.configure(level: :warning)
 
-    {:ok, _} = Alnasl.Driver.DgtSerial.start_link(owner: self(), id: 0, port: port)
+    {:ok, _} = Arkab.Driver.DgtSerial.start_link(owner: self(), id: 0, port: port)
 
     seconds = if opts[:seconds] == nil, do: 60, else: opts[:seconds]
     if seconds > 0, do: Process.send_after(self(), :stop, seconds * 1000)

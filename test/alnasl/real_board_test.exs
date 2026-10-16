@@ -10,7 +10,7 @@ defmodule Alnasl.RealBoardTest do
   clock while they were written.
 
   Each is pushed through the real serial driver over a stand-in line that
-  never answers (`Alnasl.Transport.Fake`), and the driver's events are what
+  never answers (`Arkab.Transport.Fake`), and the driver's events are what
   is asserted. Nothing here was written by hand from a protocol description;
   where the driver once decoded these bytes differently, the capture won.
   """
@@ -18,8 +18,8 @@ defmodule Alnasl.RealBoardTest do
   use ExUnit.Case, async: true
 
   alias Alnasl.{Clock, Position, Recorder, Session}
-  alias Alnasl.Driver.DgtSerial
-  alias Alnasl.Transport.Fake
+  alias Arkab.Driver.DgtSerial
+  alias Arkab.Transport.Fake
 
   @dir "test/fixtures/captures"
 

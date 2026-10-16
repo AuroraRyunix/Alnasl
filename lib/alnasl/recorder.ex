@@ -26,64 +26,42 @@ defmodule Alnasl.Recorder do
 
   Any game can be rebuilt from its capture, and any failure exported as a
   test fixture: `read/1` gives back the timed events a driver would deliver,
-  which is what `Alnasl.Driver.Replay` plays and `dry_run/2` judges.
+  which is what `Arkab.Driver.Replay` plays and `dry_run/2` judges.
+
+  The writing and the format live in Arkab (`Arkab.Recorder`,
+  `Arkab.Capture`), where the bridge writes its own captures the same way;
+  what is Alnasl's is where the files go, the cap from Setup, and what a
+  capture is good for afterwards: the list, the dry run, the fixture.
   """
 
-  use GenServer
-
   alias Alnasl.{Paths, Position, Session, Settings, Tracker}
-  alias Alnasl.Dgt.Protocol
 
-  @rotate_bytes 8_000_000
+  @doc false
+  def child_spec(opts) do
+    opts =
+      Keyword.merge(
+        [
+          name: __MODULE__,
+          root: &Paths.captures/0,
+          cap: fn -> (Settings.get("capture_cap_mb") || 500) * 1_000_000 end
+        ],
+        opts
+      )
 
-  def start_link(opts \\ []),
-    do: GenServer.start_link(__MODULE__, opts, name: Keyword.get(opts, :name, __MODULE__))
+    %{id: Keyword.get(opts, :name), start: {Arkab.Recorder, :start_link, [opts]}}
+  end
 
   # --- writing -----------------------------------------------------------------
 
   @doc "Appends what board `board_id` delivered. Never blocks the caller and never fails it."
-  def record(board_id, event, server \\ __MODULE__) do
-    case line(event) do
-      nil ->
-        :ok
-
-      fields ->
-        GenServer.cast(
-          server,
-          {:record, board_id, Map.put(fields, "t", System.os_time(:millisecond))}
-        )
-    end
-  end
+  def record(board_id, event, server \\ __MODULE__),
+    do: Arkab.Recorder.record(server, board_id, event)
 
   @doc "Closes the open files, so what was written can be read back. For tests and before listing."
-  def flush(server \\ __MODULE__), do: GenServer.call(server, :flush, 15_000)
-
-  defp line({:position, board}), do: %{"k" => "pos", "b" => Position.to_text(board)}
-
-  defp line({:clock, :off}), do: %{"k" => "clk", "r" => "off"}
-  defp line({:clock, reading}), do: clock_line(reading)
-
-  defp line({:status, status}), do: %{"k" => "st", "v" => to_string(status)}
-
-  defp line({:raw, direction, bytes}),
-    do: %{"k" => to_string(direction), "h" => Base.encode16(bytes, case: :lower)}
-
-  defp line({:cfg, fields}),
-    do: Map.put(Map.new(fields, fn {k, v} -> {to_string(k), v} end), "k", "cfg")
-
-  defp line({:note, text}), do: %{"k" => "note", "text" => text}
-  defp line(_other), do: nil
+  def flush(server \\ __MODULE__), do: Arkab.Recorder.flush(server)
 
   @doc "A clock reading as the fields of a `clk` line. `mix alnasl.dgt` writes the same."
-  def clock_line(reading) do
-    %{
-      "k" => "clk",
-      "w" => reading[:white_ms],
-      "b" => reading[:black_ms],
-      "r" => to_string(reading[:running] || :none)
-    }
-    |> then(&if(reading[:armed], do: Map.put(&1, "l", to_string(reading.armed)), else: &1))
-  end
+  defdelegate clock_line(reading), to: Arkab.Capture
 
   # --- reading -----------------------------------------------------------------
 
@@ -117,138 +95,9 @@ defmodule Alnasl.Recorder do
 
   @doc """
   Reads a capture: `{:ok, %{events, cfg, notes, lines, raw?}}` where `events`
-  is `[{ms_since_first_line, driver_event}]`. A capture that holds raw bytes
-  and no positions (a recording of a real board, or a log written by
-  `tools/serial_proxy.py`) is decoded with the DGT protocol on the way.
+  is `[{ms_since_first_line, driver_event}]`. See `Arkab.Capture.read/2`.
   """
-  def read(path, address \\ nil) do
-    with {:ok, text} <- File.read(path) do
-      # A capture of a loop (`mix alnasl.loop --watch`) marks each line with the
-      # address it belongs to (`"a"`); `address` picks one board out of it.
-      lines =
-        text
-        |> String.split("\n", trim: true)
-        |> Enum.map(&parse_line/1)
-        |> Enum.reject(&(is_nil(&1) or (address != nil and &1["a"] not in [nil, address])))
-
-      case lines do
-        [] ->
-          {:error, :empty}
-
-        [%{"t" => t0} | _] ->
-          positions? = Enum.any?(lines, &(&1["k"] == "pos"))
-          raw? = Enum.any?(lines, &(&1["k"] == "rx"))
-
-          events = if positions?, do: from_positions(lines, t0), else: from_bytes(lines, t0)
-
-          {:ok,
-           %{
-             events: events,
-             cfg: lines |> Enum.filter(&(&1["k"] == "cfg")) |> List.first() || %{},
-             notes: for(%{"k" => "note", "t" => t, "text" => text} <- lines, do: {t - t0, text}),
-             lines: length(lines),
-             raw?: raw? and not positions?
-           }}
-      end
-    end
-  end
-
-  defp parse_line(line) do
-    case Jason.decode(line) do
-      {:ok, %{"t" => t, "k" => _} = fields} when is_integer(t) -> fields
-      _not_ours -> proxy_line(line)
-    end
-  end
-
-  # tools/serial_proxy.py: "   12.345678  BRD>APP  86 00 43 ..." and "# 12.3  NOTE  text".
-  defp proxy_line(line) do
-    case Regex.run(~r/^\s*(\d+\.\d+)\s+(APP>BRD|BRD>APP)\s+([0-9a-fA-F ]+)$/, line) do
-      [_, seconds, direction, hex] ->
-        %{
-          "t" => round(String.to_float(seconds) * 1000),
-          "k" => if(direction == "BRD>APP", do: "rx", else: "tx"),
-          "h" => String.replace(hex, " ", "")
-        }
-
-      nil ->
-        case Regex.run(~r/^#\s*(\d+\.\d+)\s+NOTE\s+(.*)$/, line) do
-          [_, seconds, text] ->
-            %{"t" => round(String.to_float(seconds) * 1000), "k" => "note", "text" => text}
-
-          nil ->
-            nil
-        end
-    end
-  end
-
-  defp from_positions(lines, t0) do
-    Enum.flat_map(lines, fn
-      %{"k" => "pos", "t" => t, "b" => text} ->
-        case Position.from_text(text) do
-          {:ok, board} -> [{t - t0, {:position, board}}]
-          :error -> []
-        end
-
-      %{"k" => "clk", "t" => t, "r" => "off"} ->
-        [{t - t0, {:info, %{clock: false}}}]
-
-      %{"k" => "clk", "t" => t} = line ->
-        reading = %{white_ms: line["w"], black_ms: line["b"], running: running(line["r"])}
-
-        reading =
-          case line["l"] do
-            "white" -> Map.put(reading, :armed, :white)
-            "black" -> Map.put(reading, :armed, :black)
-            _none -> reading
-          end
-
-        [{t - t0, {:clock, reading}}]
-
-      %{"k" => "st", "t" => t, "v" => "connected"} ->
-        [{t - t0, :connected}]
-
-      %{"k" => "st", "t" => t, "v" => "disconnected"} ->
-        [{t - t0, :disconnected}]
-
-      _other ->
-        []
-    end)
-  end
-
-  # Raw bytes only: run them through the protocol parser and the same small
-  # board model the serial driver keeps.
-  defp from_bytes(lines, t0) do
-    {events, _state} =
-      lines
-      |> Enum.filter(&(&1["k"] == "rx"))
-      |> Enum.flat_map_reduce({<<>>, nil}, fn %{"t" => t, "h" => hex}, {buffer, board} ->
-        bytes =
-          case Base.decode16(hex, case: :mixed) do
-            {:ok, bytes} -> bytes
-            :error -> <<>>
-          end
-
-        {messages, rest} = Protocol.parse(buffer <> bytes)
-
-        {events, board} =
-          Enum.flat_map_reduce(messages, board, fn message, board ->
-            case Protocol.apply_message(message, board) do
-              {:position, board} -> {[{t - t0, {:position, board}}], board}
-              {:clock, reading} -> {[{t - t0, {:clock, reading}}], board}
-              {:info, %{clock: false} = off} -> {[{t - t0, {:info, off}}], board}
-              _other -> {[], board}
-            end
-          end)
-
-        {events, {rest, board}}
-      end)
-
-    events
-  end
-
-  defp running("white"), do: :white
-  defp running("black"), do: :black
-  defp running(_other), do: :none
+  defdelegate read(path, address \\ nil), to: Arkab.Capture
 
   @doc """
   Plays a capture through a fresh tracker without touching anything: what
@@ -337,94 +186,4 @@ defmodule Alnasl.Recorder do
       error -> error
     end
   end
-
-  # --- the process -------------------------------------------------------------
-
-  @impl true
-  def init(opts) do
-    Process.flag(:trap_exit, true)
-
-    {:ok,
-     %{
-       files: %{},
-       rotate: Keyword.get(opts, :rotate_bytes, @rotate_bytes),
-       dir: Keyword.get(opts, :dir)
-     }}
-  end
-
-  @impl true
-  def handle_cast({:record, board_id, fields}, state) do
-    {:noreply, write(state, board_id, fields)}
-  rescue
-    _error -> {:noreply, state}
-  end
-
-  @impl true
-  def handle_call(:flush, _from, state) do
-    for {_id, %{io: io}} <- state.files, do: File.close(io)
-    {:reply, :ok, %{state | files: %{}}}
-  end
-
-  @impl true
-  def terminate(_reason, state) do
-    for {_id, %{io: io}} <- state.files, do: File.close(io)
-    :ok
-  end
-
-  defp write(state, board_id, fields) do
-    data = [Jason.encode_to_iodata!(fields), ?\n]
-    size = IO.iodata_length(data)
-
-    file =
-      case state.files[board_id] do
-        %{bytes: bytes} = file when bytes + size <= state.rotate ->
-          file
-
-        stale ->
-          if stale, do: File.close(stale.io)
-          open(state, board_id)
-      end
-
-    IO.binwrite(file.io, data)
-    %{state | files: Map.put(state.files, board_id, %{file | bytes: file.bytes + size})}
-  end
-
-  defp open(state, board_id) do
-    dir = Path.join(state.dir || Paths.captures(), "board-#{board_id}")
-    File.mkdir_p!(dir)
-    stamp = Calendar.strftime(DateTime.utc_now(), "%Y%m%d-%H%M%S")
-    path = unique(dir, stamp, 0)
-    {:ok, io} = File.open(path, [:append, :binary, {:delayed_write, 64_000, 500}])
-    enforce_cap(state)
-    %{io: io, bytes: 0, path: path}
-  end
-
-  defp unique(dir, stamp, n) do
-    path = Path.join(dir, if(n == 0, do: "#{stamp}.jsonl", else: "#{stamp}-#{n}.jsonl"))
-    if File.exists?(path), do: unique(dir, stamp, n + 1), else: path
-  end
-
-  # The cap is on everything together; the oldest file goes first.
-  defp enforce_cap(%{dir: nil}) do
-    cap = (Settings.get("capture_cap_mb") || 500) * 1_000_000
-    files = Enum.reverse(list())
-    total = files |> Enum.map(& &1.size) |> Enum.sum()
-
-    Enum.reduce_while(files, total, fn file, total ->
-      if total > cap do
-        File.rm(file.path)
-        {:cont, total - file.size}
-      else
-        {:halt, total}
-      end
-    end)
-
-    :ok
-  rescue
-    _error -> :ok
-  catch
-    :exit, _reason -> :ok
-  end
-
-  defp enforce_cap(_state), do: :ok
 end

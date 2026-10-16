@@ -11,8 +11,8 @@ defmodule Alnasl.HallCase do
   use ExUnit.CaseTemplate
 
   alias Alnasl.{Boards, Chess, FakeIngest, Position, Settings}
-  alias Alnasl.Dgt.Emulator
-  alias Alnasl.Transport.Fake
+  alias Arkab.Dgt.Emulator
+  alias Arkab.Transport.Fake
 
   using do
     quote do
@@ -54,8 +54,8 @@ defmodule Alnasl.HallCase do
         DynamicSupervisor.terminate_child(Alnasl.BoardSupervisor, pid)
       end
 
-      for {_, pid, _, _} <- DynamicSupervisor.which_children(Alnasl.BusSupervisor) do
-        DynamicSupervisor.terminate_child(Alnasl.BusSupervisor, pid)
+      for {_, pid, _, _} <- DynamicSupervisor.which_children(Arkab.BusSupervisor) do
+        DynamicSupervisor.terminate_child(Arkab.BusSupervisor, pid)
       end
 
       Alnasl.Recorder.flush()

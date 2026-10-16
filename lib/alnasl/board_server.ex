@@ -770,7 +770,7 @@ defmodule Alnasl.BoardServer do
 
   defp player(%{driver: pid, board: %{driver: driver}}, action)
        when is_pid(pid) and driver in ["simulator", "replay"] do
-    apply(Alnasl.Driver.Player, action, [pid])
+    apply(Arkab.Driver.Player, action, [pid])
   end
 
   defp player(_state, _action), do: {:error, :not_a_player}
@@ -992,7 +992,7 @@ defmodule Alnasl.BoardServer do
       warning: state.warning,
       player:
         if(is_pid(state.driver) and board.driver in ["simulator", "replay"],
-          do: Alnasl.Driver.Player.progress(state.driver)
+          do: Arkab.Driver.Player.progress(state.driver)
         ),
       linked?: tracker != nil
     }

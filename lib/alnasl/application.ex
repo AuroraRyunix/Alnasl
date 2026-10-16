@@ -27,11 +27,11 @@ defmodule Alnasl.Application do
          repos: Application.fetch_env!(:alnasl, :ecto_repos), skip: skip_migrations?()},
         {Phoenix.PubSub, name: Alnasl.PubSub},
         {Registry, keys: :unique, name: Alnasl.BoardRegistry},
-        {Registry, keys: :unique, name: Alnasl.BusRegistry},
+        {Registry, keys: :unique, name: Arkab.BusRegistry},
         {Task.Supervisor, name: Alnasl.TaskSupervisor},
         Alnasl.Recorder,
         {Alnasl.Updates.Checker, timer: Application.get_env(:alnasl, :updates_timer, true)},
-        {DynamicSupervisor, name: Alnasl.BusSupervisor, strategy: :one_for_one},
+        {DynamicSupervisor, name: Arkab.BusSupervisor, strategy: :one_for_one},
         {DynamicSupervisor,
          name: Alnasl.BoardSupervisor, strategy: :one_for_one, max_restarts: 100, max_seconds: 60}
       ] ++

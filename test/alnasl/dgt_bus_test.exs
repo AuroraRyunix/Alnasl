@@ -4,19 +4,19 @@ defmodule Alnasl.DgtBusTest do
   of 2026-10-12 could not be asked, because nobody was at the boards.
 
   What a real loop DID show is in `Alnasl.RealLoopTest`, from its
-  recordings; the emulator (`Alnasl.Dgt.Emulator`) answers the way those
+  recordings; the emulator (`Arkab.Dgt.Emulator`) answers the way those
   recordings do. What is tested here on top of that - a move arriving as a
   change, a clock, a board leaving and coming back, a board joining - is the
-  driver against what `Alnasl.Dgt.Bus` still calls ASSUMED. The driver asks
+  driver against what `Arkab.Dgt.Bus` still calls ASSUMED. The driver asks
   for the whole board as well, so that these may turn out slower on a real
   loop but not wrong.
   """
 
   use Alnasl.HallCase
 
-  alias Alnasl.Dgt.{Bus, Emulator}
-  alias Alnasl.Driver.DgtBus
-  alias Alnasl.Transport.Fake
+  alias Arkab.Dgt.{Bus, Emulator}
+  alias Arkab.Driver.DgtBus
+  alias Arkab.Transport.Fake
 
   describe "what the module says of itself" do
     test "it has met a real loop, and names what that loop did not show" do

@@ -23,6 +23,10 @@ config :alnasl, updates_timer: true
 # application. Off in tests, which drive both by hand.
 config :alnasl, autostart: true
 
+# A board that answers on a loop nobody reads it on yet is the box's to
+# make a row of: Arkab's bus driver tells `Alnasl.Loops`.
+config :arkab, loop_stranger: {Alnasl.Loops, :stranger}
+
 # SQLite, in WAL mode, and with every commit forced to the disk before it
 # counts: "written first" has to survive the plug being pulled. The box
 # writes a few rows a move; it can afford the fsync.

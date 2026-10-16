@@ -63,6 +63,7 @@ It includes the following, which keep their own notices:
    and en passant.
 
 Alnasl is not affiliated with or endorsed by DGT (Digital Game Technology
-B.V.). "DGT" is their trademark. The serial protocol implemented in
-lib/alnasl/dgt/ follows DGT's published protocol description for
+B.V.). "DGT" is their trademark. The serial protocol Alnasl reads boards
+with is implemented in Arkab (a dependency, by the same author, Apache-2.0,
+lib/arkab/dgt/ there), following DGT's published protocol description for
 single-board communication; no DGT code is included.

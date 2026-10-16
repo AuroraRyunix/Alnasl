@@ -8,7 +8,7 @@ defmodule Alnasl.RealLoopTest do
   nobody at the boards. `docs/real-loop-2026-10-12.md` says what each
   recording asked.
 
-  First the bytes are read by `Alnasl.Dgt.Bus` and compared with what was
+  First the bytes are read by `Arkab.Dgt.Bus` and compared with what was
   seen that day. Then the recorded answers are made a device
   (`Alnasl.RecordedLoop`) and the discovery and the bus driver are run
   against it: they ask in their own order, and get what the real boards
@@ -17,10 +17,10 @@ defmodule Alnasl.RealLoopTest do
 
   use ExUnit.Case, async: true
 
-  alias Alnasl.Dgt.{Bus, Loop}
-  alias Alnasl.Driver.DgtBus
+  alias Arkab.Dgt.{Bus, Loop}
+  alias Arkab.Driver.DgtBus
   alias Alnasl.{Position, RecordedLoop}
-  alias Alnasl.Transport.Fake
+  alias Arkab.Transport.Fake
 
   @old 6310
   @new 12_799
@@ -128,7 +128,7 @@ defmodule Alnasl.RealLoopTest do
         assert {:clock, %{connected?: false} = clock} =
                  answer_to(file, Bus.command(:clock, address))
 
-        assert Alnasl.Dgt.Protocol.reading(clock) == nil
+        assert Arkab.Dgt.Protocol.reading(clock) == nil
       end
     end
 

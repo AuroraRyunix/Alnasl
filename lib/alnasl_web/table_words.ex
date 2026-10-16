@@ -12,7 +12,7 @@ defmodule AlnaslWeb.TableWords do
   def identity(board) do
     case Tables.identity(board) do
       {:serial, serial} -> gettext("serial %{s}", s: serial)
-      {:address, address} -> gettext("no. %{a} on the loop", a: Alnasl.Dgt.Bus.number(address))
+      {:address, address} -> gettext("no. %{a} on the loop", a: Arkab.Dgt.Bus.number(address))
       {:slot, slot} -> gettext("slot %{s}", s: slot)
       {:port, nil} -> gettext("no port")
       {:port, port} -> gettext("port %{p}", p: port)

@@ -6,7 +6,7 @@ defmodule Alnasl.UartPortsTest do
 
   use ExUnit.Case, async: true
 
-  alias Alnasl.Transport.Uart
+  alias Arkab.Transport.Uart
 
   defp ports(names), do: Enum.map(names, &%{port: &1, description: ""})
 

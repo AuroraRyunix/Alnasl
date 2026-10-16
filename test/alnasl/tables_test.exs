@@ -9,8 +9,8 @@ defmodule Alnasl.TablesTest do
   use Alnasl.HallCase
 
   alias Alnasl.{Finder, Tables}
-  alias Alnasl.Dgt.Emulator
-  alias Alnasl.Transport.Fake
+  alias Arkab.Dgt.Emulator
+  alias Arkab.Transport.Fake
 
   setup do
     Finder.reset()
