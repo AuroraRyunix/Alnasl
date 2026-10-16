@@ -19,6 +19,8 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+- [Security] Bandit 1.12.5 → 1.13.1 (EEF-CVE-2026-105660, EEF-CVE-2026-105659). The relay's web server took the same bad advice as everyone else's; it no longer does. No behaviour changes.
+
 ## [0.1.5] - 2026-10-15
 
 - [Feature] **A *Details* button in the launcher window, on Windows and on the Mac.** It shows the program's own output (the end of `launcher.log`, or `logs/server.log` on a Mac, refreshed every second, left alone while you scroll up or select) over a few numbers in words: version, uptime, processor, memory, how long the database takes to answer, slow queries, pages open, tournaments, boards connected out of boards set up, DGT buses open, messages waiting for the results site, and the relay's state. *Copy* puts the numbers and the last 200 log lines on the clipboard; *Open log folder* shows the file. The Mac window follows the Mac's language, the Windows one follows Windows'. Counting the buses reads a registry and opens no serial port.
