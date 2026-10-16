@@ -105,6 +105,19 @@ defmodule AlnaslWeb.DeleteHallTest do
     assert {:error, {:not_empty, %{links: 1}}} = Halls.delete(scope(owner, hall), hall)
   end
 
+  test "another hall's tournament played here keeps the hall", %{hall: hall, owner: owner} do
+    t = Repo.insert!(%Tournament{kind: "remote", hall_id: Halls.own_id(), name: "Open"})
+
+    Repo.insert!(%Alnasl.Tournaments.Placement{
+      tournament_id: t.id,
+      hall_id: hall.id,
+      first_board: 9
+    })
+
+    assert {:error, {:not_empty, %{tournaments: 1}}} = Halls.delete(scope(owner, hall), hall)
+    assert Halls.get(hall.id)
+  end
+
   test "the name has to be typed before the button works", ctx do
     %{hall: hall, owner: owner, conn: conn} = ctx
     view = open_dialog(conn, owner, hall)

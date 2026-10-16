@@ -655,7 +655,7 @@ defmodule AlnaslWeb.PagesTest do
            table.set table.cleared table.moved table.remapped table.swapped board.recognised
            board.other_serial board.replaced piece.unseen piece.accounted game.new game.switched move.rewritten move.out_of_turn move.illegal
            link.added link.removed link.ok link.unreachable link.unauthorized link.unsupported link.connect_failed
-           tournament.added tournament.back tournament.gone tournament.tables table.tournament
+           tournament.added tournament.back tournament.gone tournament.tables tournament.hall_removed table.tournament
            tournament.elsewhere tournament.code_replaced tournament.merged tournament.merge_failed
            round.started pairing.changed pairing.gone pairing.board_moved pairing.adopted
            pairing.set_aside destination.forced update.requested loop.read loop.joined

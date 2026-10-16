@@ -954,6 +954,13 @@ defmodule AlnaslWeb.Words do
         name: tournament(d)
       )
 
+  defp log("tournament.hall_removed", d),
+    do:
+      gettext("%{name} is no longer played in %{hall}.",
+        name: tournament(d),
+        hall: d["hall"] || ""
+      )
+
   defp log("table.tournament", d),
     do: gettext("\"%{name}\" plays in %{tournament}.", name: d["name"], tournament: tournament(d))
 

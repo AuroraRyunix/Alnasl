@@ -92,6 +92,7 @@ defmodule AlnaslWeb.SetupLive do
     own = Tournaments.default()
     scope = socket.assigns.current_scope
     tournaments = Alnasl.Halls.here(scope, Tournaments.list())
+    links = Alnasl.Halls.here(scope, Tournaments.links())
     # The tournament whose Lichess round the card is about.
     lichess = Enum.find(tournaments, own, &(&1.id == socket.assigns.lichess_tid))
     boards = Enum.frequencies_by(Boards.list(), & &1.tournament_id)
@@ -142,7 +143,11 @@ defmodule AlnaslWeb.SetupLive do
       lichess: lichess,
       own: own,
       tournaments: tournaments,
-      links: Alnasl.Halls.here(scope, Tournaments.links()),
+      ranges: Map.new(tournaments, &{&1.id, Tournaments.tables(&1, here(socket))}),
+      placements: Map.new(tournaments, &{&1.id, placement_rows(&1, scope)}),
+      addable: Map.new(tournaments, &{&1.id, Alnasl.Placements.addable_halls(scope, &1)}),
+      links: links,
+      also_here: also_here(links, scope),
       connect_form:
         to_form(%{"address" => Alnasl.OpenPairings.Connect.default_address() || ""}, as: :connect),
       may_connect?: Alnasl.Accounts.Scope.can?(scope, :arbiter, here(socket)),
@@ -466,11 +471,12 @@ defmodule AlnaslWeb.SetupLive do
           tournament
       end
 
+    # The tables of the hall the page is about.
     result =
       cond do
         tournament == nil -> {:error, :range}
-        from == nil -> Tournaments.assign_tables(tournament, nil, nil)
-        true -> Seating.assign_range(tournament, from, to)
+        from == nil -> Tournaments.assign_tables(tournament, nil, nil, here(socket))
+        true -> Seating.assign_range(tournament, from, to, here(socket))
       end
 
     case result do
@@ -480,13 +486,99 @@ defmodule AlnaslWeb.SetupLive do
       {:ok, tournament, carried} ->
         {:noreply,
          socket
-         |> put_flash(:info, Hall.range_words(tournament, from, to, carried))
+         |> put_flash(:info, Hall.range_words(tournament, from, to, carried, here(socket)))
          |> Hall.refresh()
          |> load()}
+
+      {:error, :boards} ->
+        {:noreply, put_flash(socket, :error, placement_error(:boards))}
 
       _error ->
         {:noreply,
          put_flash(socket, :error, gettext("Give the first and the last table: 5 and 8."))}
+    end
+  end
+
+  # --- halls and tables of a tournament -----------------------------------------
+
+  # The permit has checked the account is an arbiter for the tournament and
+  # in the hall named.
+  def handle_event("placement_add", params, socket) do
+    params = Map.get(params, "add", params)
+
+    with %{} = tournament <- Tournaments.get(params["t"]),
+         %{} = hall <- Alnasl.Halls.get(params["hall"]),
+         {:ok, placement, carried} <- Alnasl.Placements.add(tournament, hall.id) do
+      {:noreply,
+       socket
+       |> put_flash(:info, placed_words(tournament, hall, placement, carried))
+       |> Hall.refresh()
+       |> load()}
+    else
+      {:error, reason} ->
+        {:noreply, socket |> put_flash(:error, placement_error(reason)) |> load()}
+
+      {:error, :tables, other} ->
+        {:noreply, put_flash(socket, :error, tables_taken(other))}
+
+      _none ->
+        {:noreply, socket |> put_flash(:error, gettext("That could not be done.")) |> load()}
+    end
+  end
+
+  def handle_event("placement_save", %{"place" => params}, socket) do
+    from = optional_int(params["from"])
+    to = if from, do: optional_int(params["to"]) || from
+    first = optional_int(params["first"]) || 1
+
+    with %{} = tournament <- Tournaments.get(params["t"]),
+         %{} = hall <- Alnasl.Halls.get(params["hall"]),
+         {:ok, placement, carried} <-
+           Alnasl.Placements.put(tournament, hall.id, %{
+             table_from: from,
+             table_to: to,
+             first_board: first
+           }) do
+      {:noreply,
+       socket
+       |> put_flash(:info, placed_words(tournament, hall, placement, carried))
+       |> Hall.refresh()
+       |> load()}
+    else
+      {:error, :tables, other} ->
+        {:noreply, put_flash(socket, :error, tables_taken(other))}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, placement_error(reason))}
+
+      _none ->
+        {:noreply, socket |> put_flash(:error, gettext("That could not be done.")) |> load()}
+    end
+  end
+
+  def handle_event("placement_remove", %{"t" => tid, "hall" => hall_id}, socket) do
+    with %{} = tournament <- Tournaments.get(tid),
+         %{} = hall <- Alnasl.Halls.get(hall_id),
+         %{} = placement <- Alnasl.Placements.in_hall(tournament, hall.id),
+         :ok <- Alnasl.Placements.remove(placement) do
+      {:noreply,
+       socket
+       |> put_flash(
+         :info,
+         gettext(
+           "%{name} is no longer played in %{hall}. Its boards there are back in the hall's own tournament.",
+           name: Tournaments.title(tournament) || "",
+           hall: hall.name
+         )
+       )
+       |> Hall.refresh()
+       |> load()}
+    else
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, placement_error(reason))}
+
+      _none ->
+        {:noreply, socket |> put_flash(:error, gettext("That could not be done.")) |> load()}
     end
   end
 
@@ -679,6 +771,83 @@ defmodule AlnaslWeb.SetupLive do
     {:noreply,
      socket |> put_flash(:info, gettext("The tracker is back to its defaults.")) |> load()}
   end
+
+  # What a code reaches that the box has through another hall's code, and
+  # is not played in this code's hall: `%{{link, id there} => %{hall, may?}}`.
+  defp also_here(links, scope) do
+    for link <- links,
+        hall = Alnasl.Halls.of(link),
+        found <- Duplicates.shared(link),
+        not Alnasl.Placements.in_hall?(found.tournament, hall),
+        into: %{} do
+      {{link.id, found.remote_id},
+       %{hall: hall, may?: Alnasl.Accounts.Scope.can?(scope, :arbiter, hall)}}
+    end
+  end
+
+  # The halls a tournament is played in, as rows of the card: the hall, the
+  # placement, the boards it holds, and whether the account may change it.
+  defp placement_rows(tournament, scope) do
+    all = Alnasl.Placements.list(tournament)
+
+    for p <- all do
+      %{
+        placement: p,
+        hall: Alnasl.Halls.get(p.hall_id),
+        boards: Alnasl.Placements.boards(p, all),
+        may?: Alnasl.Accounts.Scope.can?(scope, :arbiter, p.hall_id),
+        last?: length(all) == 1
+      }
+    end
+  end
+
+  @doc false
+  def boards_words({first, :infinity}), do: gettext("boards %{first} and up", first: first)
+  def boards_words({same, same}), do: gettext("board %{first}", first: same)
+
+  def boards_words({first, last}),
+    do: gettext("boards %{first} to %{last}", first: first, last: last)
+
+  @doc false
+  def tables_words(%{table_from: nil}), do: gettext("every free table")
+
+  def tables_words(%{table_from: from, table_to: to}) when to in [nil, from],
+    do: gettext("table %{from}", from: from)
+
+  def tables_words(%{table_from: from, table_to: to}),
+    do: gettext("tables %{from} to %{to}", from: from, to: to)
+
+  defp placed_words(tournament, hall, placement, carried) do
+    all = Alnasl.Placements.list(tournament)
+    this = Enum.find(all, &(&1.hall_id == placement.hall_id)) || placement
+
+    gettext("%{name} in %{hall}: %{tables}, %{boards}.",
+      name: Tournaments.title(tournament) || gettext("This box's own tournament"),
+      hall: hall.name,
+      tables: tables_words(this),
+      boards: boards_words(Alnasl.Placements.boards(this, all))
+    ) <> Enum.map_join(carried, &Hall.carried_words/1)
+  end
+
+  defp placement_error(:boards),
+    do:
+      gettext(
+        "Those boards are played in another hall already. Start this hall at a board after them."
+      )
+
+  defp placement_error(:last),
+    do:
+      gettext("This is the only hall the tournament is played in. It has to be played somewhere.")
+
+  defp placement_error(:already), do: gettext("The tournament is played in that hall already.")
+  defp placement_error(:range), do: gettext("Give the first and the last table: 5 and 8.")
+  defp placement_error(_other), do: gettext("That could not be done.")
+
+  defp tables_taken(other),
+    do:
+      gettext("Some of those tables are %{name}'s in that hall. Give other tables.",
+        name: (other && Tournaments.title(other)) || gettext("another tournament")
+      )
 
   defp optional_int(text) do
     case Integer.parse(String.trim(text || "")) do
@@ -931,6 +1100,28 @@ defmodule AlnaslWeb.SetupLive do
                   phx-value-id={link.id}
                   phx-value-remote={found.remote_id}
                 >{gettext("Use this code for %{name}", name: found.name)}</.button>
+
+                <%!-- Reached from another hall's code: the same tournament,
+                  played here as well, is one more hall, not one more row. --%>
+                <% also = @also_here[{link.id, found.remote_id}] %>
+                <p
+                  :if={also != nil}
+                  id={"link-elsewhere-hall-#{link.id}-#{found.remote_id}"}
+                  class="note"
+                >
+                  {gettext(
+                    "It is played in another hall. If some of its boards are in this one, play it here as well: it stays one tournament."
+                  )}
+                </p>
+
+                <.button
+                  :if={also != nil and also.may?}
+                  id={"link-also-here-#{link.id}-#{found.remote_id}"}
+                  small
+                  phx-click="placement_add"
+                  phx-value-t={found.tournament.id}
+                  phx-value-hall={also.hall}
+                >{gettext("Also play it in this hall")}</.button>
               </div>
 
               <div class="row">
@@ -1107,10 +1298,9 @@ defmodule AlnaslWeb.SetupLive do
                 </.site_link>
               </p>
 
+              <% {table_from, table_to} = @ranges[t.id] || {nil, nil} %>
               <.form
-                for={
-                  to_form(%{"id" => t.id, "from" => t.table_from, "to" => t.table_to}, as: :tables)
-                }
+                for={to_form(%{"id" => t.id, "from" => table_from, "to" => table_to}, as: :tables)}
                 id={"tables-form-#{t.id}"}
                 phx-submit="assign_tables"
                 class="row"
@@ -1126,7 +1316,7 @@ defmodule AlnaslWeb.SetupLive do
                     inputmode="numeric"
                     min="1"
                     max="9999"
-                    value={t.table_from}
+                    value={table_from}
                     class="input table-no"
                   />
                 </div>
@@ -1140,7 +1330,7 @@ defmodule AlnaslWeb.SetupLive do
                     inputmode="numeric"
                     min="1"
                     max="9999"
-                    value={t.table_to}
+                    value={table_to}
                     class="input table-no"
                   />
                 </div>
@@ -1166,6 +1356,165 @@ defmodule AlnaslWeb.SetupLive do
                   {gettext("%{count} board(s) now", count: Map.get(@board_counts, t.id, 0))}
                 </span>
               </.form>
+
+              <details
+                id={"placements-#{t.id}"}
+                class="placements"
+                open={length(@placements[t.id]) > 1}
+              >
+                <summary>
+                  {gettext("Halls and tables")}
+                  <span class="note">
+                    {ngettext(
+                      "played in %{count} hall",
+                      "played in %{count} halls",
+                      length(@placements[t.id])
+                    )}
+                  </span>
+                </summary>
+
+                <ul id={"placement-rows-#{t.id}"} class="placement-rows">
+                  <li
+                    :for={row <- @placements[t.id]}
+                    id={"placement-#{t.id}-#{row.placement.hall_id}"}
+                    class="placement-row"
+                  >
+                    <%= if row.may? do %>
+                      <.form
+                        for={
+                          to_form(
+                            %{
+                              "t" => t.id,
+                              "hall" => row.placement.hall_id,
+                              "from" => row.placement.table_from,
+                              "to" => row.placement.table_to,
+                              "first" => row.placement.first_board
+                            },
+                            as: :place
+                          )
+                        }
+                        id={"placement-form-#{t.id}-#{row.placement.hall_id}"}
+                        phx-submit="placement_save"
+                        class="row"
+                        style="align-items:flex-end"
+                      >
+                        <b class="placement-hall">{(row.hall && row.hall.name) || "?"}</b>
+                        <input type="hidden" name="place[t]" value={t.id} />
+                        <input type="hidden" name="place[hall]" value={row.placement.hall_id} />
+                        <div class="field">
+                          <label for={"place-from-#{t.id}-#{row.placement.hall_id}"}>
+                            {gettext("Tables from")}
+                          </label>
+                          <input
+                            id={"place-from-#{t.id}-#{row.placement.hall_id}"}
+                            name="place[from]"
+                            type="number"
+                            inputmode="numeric"
+                            min="1"
+                            max="9999"
+                            value={row.placement.table_from}
+                            class="input table-no"
+                          />
+                        </div>
+
+                        <div class="field">
+                          <label for={"place-to-#{t.id}-#{row.placement.hall_id}"}>
+                            {gettext("to")}
+                          </label>
+                          <input
+                            id={"place-to-#{t.id}-#{row.placement.hall_id}"}
+                            name="place[to]"
+                            type="number"
+                            inputmode="numeric"
+                            min="1"
+                            max="9999"
+                            value={row.placement.table_to}
+                            class="input table-no"
+                          />
+                        </div>
+
+                        <div class="field">
+                          <label for={"place-first-#{t.id}-#{row.placement.hall_id}"}>
+                            {gettext("First board")}
+                          </label>
+                          <input
+                            id={"place-first-#{t.id}-#{row.placement.hall_id}"}
+                            name="place[first]"
+                            type="number"
+                            inputmode="numeric"
+                            min="1"
+                            max="9999"
+                            value={row.placement.first_board}
+                            class="input table-no"
+                          />
+                        </div>
+
+                        <span id={"placement-boards-#{t.id}-#{row.placement.hall_id}"} class="note">
+                          {boards_words(row.boards)}
+                        </span>
+
+                        <.button
+                          id={"placement-save-#{t.id}-#{row.placement.hall_id}"}
+                          small
+                          type="submit"
+                        >
+                          {gettext("Save")}
+                        </.button>
+
+                        <.button
+                          :if={not row.last?}
+                          id={"placement-remove-#{t.id}-#{row.placement.hall_id}"}
+                          small
+                          type="button"
+                          variant="danger"
+                          phx-click="placement_remove"
+                          phx-value-t={t.id}
+                          phx-value-hall={row.placement.hall_id}
+                          data-confirm={
+                            gettext(
+                              "Stop playing this tournament in this hall? Its boards there go back to the hall's own tournament, not linked; its games stay."
+                            )
+                          }
+                        >
+                          {gettext("Remove")}
+                        </.button>
+                      </.form>
+                    <% else %>
+                      <p class="row">
+                        <b class="placement-hall">{(row.hall && row.hall.name) || "?"}</b>
+                        <span>{tables_words(row.placement)}, {boards_words(row.boards)}</span>
+                      </p>
+                    <% end %>
+                  </li>
+                </ul>
+
+                <.form
+                  :if={@addable[t.id] != []}
+                  for={to_form(%{"t" => t.id}, as: :add)}
+                  id={"placement-add-#{t.id}"}
+                  phx-submit="placement_add"
+                  class="row"
+                  style="align-items:flex-end"
+                >
+                  <input type="hidden" name="add[t]" value={t.id} />
+                  <div class="field">
+                    <label for={"placement-add-hall-#{t.id}"}>{gettext("Add a hall")}</label>
+                    <select id={"placement-add-hall-#{t.id}"} name="add[hall]" class="input">
+                      <option :for={hall <- @addable[t.id]} value={hall.id}>{hall.name}</option>
+                    </select>
+                  </div>
+
+                  <.button id={"placement-add-button-#{t.id}"} small type="submit">
+                    {gettext("Add a hall")}
+                  </.button>
+                </.form>
+
+                <p class="note">
+                  {gettext(
+                    "A hall added takes the next free tables there and the boards after the last one placed: boards 1-8 here and 9-16 next door. Change either before the round."
+                  )}
+                </p>
+              </details>
 
               <div class="row">
                 <.button

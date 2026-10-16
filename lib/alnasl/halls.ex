@@ -22,7 +22,7 @@ defmodule Alnasl.Halls do
   alias Alnasl.Bridges.{Bridge, Join}
   alias Alnasl.Games.Game
   alias Alnasl.Halls.{Hall, Member}
-  alias Alnasl.Tournaments.{Link, Tournament}
+  alias Alnasl.Tournaments.{Link, Placement, Tournament}
 
   @topic "halls"
 
@@ -83,7 +83,9 @@ defmodule Alnasl.Halls do
   What still keeps a hall from being deleted: `%{bridges, tournaments,
   links}`, counts. A bridge that was removed does not count; a hall's own
   local tournament counts only once games were played in it, and a link
-  (a code, an account) counts because it brings tournaments.
+  (a code, an account) counts because it brings tournaments. A tournament
+  from another hall that is also played here counts too: take its tables
+  away in Setup first, or the hall would vanish from under its boards.
   """
   def leftovers(%Hall{id: id}) do
     local_with_games =
@@ -106,7 +108,15 @@ defmodule Alnasl.Halls do
           from(t in Tournament, where: t.hall_id == ^id and t.kind != "local"),
           :count
         ) +
-          Repo.aggregate(local_with_games, :count),
+          Repo.aggregate(local_with_games, :count) +
+          Repo.aggregate(
+            from(p in Placement,
+              join: t in Tournament,
+              on: t.id == p.tournament_id,
+              where: p.hall_id == ^id and (is_nil(t.hall_id) or t.hall_id != ^id)
+            ),
+            :count
+          ),
       links: Repo.aggregate(from(l in Link, where: l.hall_id == ^id), :count)
     }
   end
@@ -142,6 +152,7 @@ defmodule Alnasl.Halls do
           Repo.delete_all(from m in Member, where: m.hall_id == ^id)
           Repo.delete_all(from b in Boards.Board, where: b.hall_id == ^id)
           Repo.delete_all(from b in Bridge, where: b.hall_id == ^id)
+          Repo.delete_all(from p in Placement, where: p.hall_id == ^id)
           Repo.delete_all(from t in Tournament, where: t.hall_id == ^id and t.kind == "local")
           Repo.delete!(hall)
         end
@@ -189,15 +200,15 @@ defmodule Alnasl.Halls do
   # --- what a scope sees -------------------------------------------------------
 
   @doc """
-  Keeps the rows (anything with a `hall_id`) in the scope's current hall.
+  Keeps the rows (anything with a `hall_id`) in the scope's current hall;
+  a tournament is in every hall it is placed in (`Alnasl.Placements`).
   Everything passes on a box with no accounts.
   """
   def here(%Scope{open?: true}, rows), do: rows
 
   def here(%Scope{} = scope, rows) do
     id = Scope.hall_id(scope)
-    own = own_id()
-    Enum.filter(rows, &(hall_or_own(&1, own) == id))
+    Enum.filter(rows, &Alnasl.Placements.in_hall?(&1, id))
   end
 
   def here(_none, _rows), do: []
@@ -229,19 +240,18 @@ defmodule Alnasl.Halls do
 
   def visible(%Scope{} = scope, rows) do
     ids = Scope.hall_ids(scope)
-    own = own_id()
-    Enum.filter(rows, &(hall_or_own(&1, own) in ids))
+    Enum.filter(rows, fn row -> Enum.any?(Alnasl.Placements.halls_of(row), &(&1 in ids)) end)
   end
 
   def visible(_none, _rows), do: []
 
   @doc "May the scope see this row (a board, a tournament, a bridge, a code)?"
   def sees?(%Scope{open?: true}, _row), do: true
-  def sees?(%Scope{} = scope, row), do: row != nil and Scope.sees?(scope, of(row))
-  def sees?(_none, _row), do: false
 
-  defp hall_or_own(%{hall_id: id}, _own) when is_integer(id), do: id
-  defp hall_or_own(_row, own), do: own
+  def sees?(%Scope{} = scope, row),
+    do: row != nil and Enum.any?(Alnasl.Placements.halls_of(row), &Scope.sees?(scope, &1))
+
+  def sees?(_none, _row), do: false
 
   # --- members -----------------------------------------------------------------
 

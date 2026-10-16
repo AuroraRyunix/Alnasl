@@ -49,7 +49,7 @@ Per partij: de zetten, de klokken, de PGN en het resultaat dat het bord zag, met
 
 ### Twee codes voor één toernooi {#two-codes}
 
-Twee codes die bij één toernooi komen, die van een groep en die van het toernooi zelf, of de code van een desktopkopie voor deze computer en voor het netwerk van de zaal, maken één toernooi op het kastje, geen twee. De tweede code zegt "Deze code bereikt ..., dat dit kastje al heeft via ...". Is de oude code ingetrokken en een nieuwe gemaakt, druk dan onder de nieuwe op "Deze code gebruiken": het toernooi houdt zijn borden en partijen, en de oude code verdwijnt als hij niets anders meer bereikt.
+Twee codes die bij één toernooi komen, die van een groep en die van het toernooi zelf, of de code van een desktopkopie voor deze computer en voor het netwerk van de zaal, maken één toernooi op het kastje, geen twee. De tweede code zegt "Deze code bereikt ..., dat dit kastje al heeft via ...". Is de oude code ingetrokken en een nieuwe gemaakt, druk dan onder de nieuwe op "Deze code gebruiken": het toernooi houdt zijn borden en partijen, en de oude code verdwijnt als hij niets anders meer bereikt. Hoort de nieuwe code bij een andere zaal en wordt het toernooi daar nog niet gespeeld, dan staat op dezelfde plek "Speel het ook in deze zaal": nog altijd één toernooi, nu in beide zalen (zie [Toernooien en zalen](06-accounts-and-halls.md#placements)).
 
 ### Een desktopkopie van OpenPairings {#desktop}
 

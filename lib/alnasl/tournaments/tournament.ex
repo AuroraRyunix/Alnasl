@@ -38,8 +38,6 @@ defmodule Alnasl.Tournaments.Tournament do
     field :round, :integer, default: 1
     field :remote_round, :integer
     field :auto_start, :boolean, default: true
-    field :table_from, :integer
-    field :table_to, :integer
     field :keep_matches, :boolean, default: true
     field :server_url, :string, default: ""
     field :slug, :string, default: ""
@@ -47,7 +45,10 @@ defmodule Alnasl.Tournaments.Tournament do
     field :lichess_round_id, :string
     field :lichess_token, :string, redact: true
     field :lichess_round, :integer
-    # The hall it belongs to (`Alnasl.Halls`). Set by the box, never cast.
+    # The hall it comes from (`Alnasl.Halls`): the one whose code brought
+    # it, or whose own tournament it is. Where it is played - which halls,
+    # which tables - is its placements' (`Alnasl.Placements`). Set by the
+    # box, never cast.
     field :hall_id, :integer
     timestamps(type: :utc_datetime)
   end
@@ -57,8 +58,6 @@ defmodule Alnasl.Tournaments.Tournament do
     tournament
     |> cast(attrs, fields(), empty_values: [])
     |> validate_number(:round, greater_than: 0, less_than: 1000)
-    |> validate_number(:table_from, greater_than: 0, less_than: 10_000)
-    |> validate_number(:table_to, greater_than: 0, less_than: 10_000)
   end
 
   defp fields do
@@ -74,8 +73,6 @@ defmodule Alnasl.Tournaments.Tournament do
       :round,
       :remote_round,
       :auto_start,
-      :table_from,
-      :table_to,
       :keep_matches,
       :server_url,
       :slug,

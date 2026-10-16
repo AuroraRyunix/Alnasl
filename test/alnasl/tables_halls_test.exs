@@ -76,6 +76,31 @@ defmodule Alnasl.TablesHallsTest do
     assert Boards.get!(own_row.id).port == "FAKE-A"
   end
 
+  test "one tournament played in two halls does not make them one hall for a serial" do
+    b = hall("Annex")
+    c = hall("Cellar")
+
+    open =
+      Repo.insert!(%Alnasl.Tournaments.Tournament{kind: "linked", name: "Open", hall_id: b.id})
+
+    {:ok, _} = Alnasl.Tournaments.assign_tables(open, 1, 8, b.id)
+    {:ok, _, _} = Alnasl.Placements.add(open, c.id)
+
+    {:ok, first} = Bridges.board_row(bridge(b, "pi-annex"), "COM1")
+    {:ok, first} = Boards.update(first, %{serial: "06310"})
+    {:ok, first} = Tables.set_table(first, 5)
+    assert first.tournament_id == open.id
+
+    {:ok, second} = Bridges.board_row(bridge(c, "pi-cellar"), "COM1")
+    refute Boards.snapshot(first.id).connected?
+
+    # The same tournament, another hall: a new board there, not the annex's.
+    assert Tables.recognise(second.id, second.port, second.address, "06310") == :new
+    assert Boards.get!(first.id).hall_id == b.id
+    assert Boards.get!(first.id).table_no == 5
+    assert Boards.get!(second.id).hall_id == c.id
+  end
+
   test "carried between two bridges of one hall it is recognised and keeps its table" do
     b = hall("Annex")
     {:ok, first} = Bridges.board_row(bridge(b, "pi-one"), "COM1")

@@ -9,8 +9,10 @@ defmodule Alnasl.Tournaments do
   5-8 the under-twelves. Each is a row (`Alnasl.Tournaments.Tournament`)
   with its own pairings, its own round in play, its own results page and
   Lichess round. Which table plays in which tournament is said here, on the
-  box (`assign_tables/3`, `Alnasl.Tables`); board numbers begin again at 1
-  in each, so table 5 can be board 1.
+  box (`assign_tables/4`, `Alnasl.Tables`); board numbers begin again at 1
+  in each, so table 5 can be board 1. And one tournament can be played in
+  more than one hall: boards 1-8 here, 9-16 next door
+  (`Alnasl.Placements`).
 
   ## The box's own
 
@@ -31,7 +33,7 @@ defmodule Alnasl.Tournaments do
 
   import Ecto.Query, only: [from: 2, order_by: 3, select: 3, distinct: 2, where: 3]
 
-  alias Alnasl.Repo
+  alias Alnasl.{Placements, Repo}
   alias Alnasl.Tournaments.{Link, Tournament}
 
   @topic "tournaments"
@@ -130,6 +132,7 @@ defmodule Alnasl.Tournaments do
     end
 
     Repo.delete_all(from g in Alnasl.Games.Game, where: g.tournament_id == ^tournament.id)
+    Placements.delete_all(tournament.id)
     Repo.delete!(tournament)
     notify(tournament.id)
     :ok
@@ -181,74 +184,82 @@ defmodule Alnasl.Tournaments do
   # --- tables ------------------------------------------------------------------
 
   @doc """
-  Tables `from` to `to` play in this tournament, table `from` being its
-  board 1. Every board that carries one of those numbers moves over, to the
-  board its table now stands for; a range another tournament had that
-  overlaps is given up there. `nil, nil` forgets the range.
+  The range of tables the tournament has in hall `hall_id` (its own hall
+  when none is named): `{from, to}`, `{nil, nil}` for every free table,
+  `nil` when it is not played there. See `Alnasl.Placements`.
   """
-  def assign_tables(%Tournament{} = tournament, nil, nil) do
-    {:ok, update!(tournament, %{table_from: nil, table_to: nil})}
+  def tables(%Tournament{} = tournament, hall_id \\ nil) do
+    case Placements.in_hall(tournament, hall_id || Alnasl.Halls.of(tournament)) do
+      nil -> nil
+      placement -> {placement.table_from, placement.table_to}
+    end
   end
 
-  def assign_tables(%Tournament{} = tournament, from, to)
+  @doc """
+  Tables `from` to `to` of hall `hall_id` (the tournament's own hall when
+  none is named) play in this tournament, table `from` being the first
+  board it has there (board 1, unless it is played in another hall as
+  well). Every board of that hall that carries one of those numbers moves
+  over, to the board its table now stands for; a range another tournament
+  had there that overlaps is given up. `nil, nil` forgets the range: every
+  table no other range holds.
+  """
+  def assign_tables(tournament, from, to, hall_id \\ nil)
+
+  def assign_tables(%Tournament{} = tournament, nil, nil, hall_id) do
+    hall_id = hall_id || Alnasl.Halls.of(tournament)
+
+    with {:ok, _placement, _carried} <-
+           Placements.put(tournament, hall_id, %{table_from: nil, table_to: nil}) do
+      {:ok, get!(tournament.id)}
+    end
+  end
+
+  def assign_tables(%Tournament{} = tournament, from, to, hall_id)
       when is_integer(from) and is_integer(to) and from > 0 and to >= from do
-    with {:ok, tournament, _carried} <- assign_tables_carry(tournament, from, to),
+    with {:ok, tournament, _carried} <- assign_tables_carry(tournament, from, to, hall_id),
          do: {:ok, tournament}
   end
 
-  def assign_tables(_tournament, _from, _to), do: {:error, :range}
+  def assign_tables(_tournament, _from, _to, _hall_id), do: {:error, :range}
 
   @doc """
-  `assign_tables/3`, and what became of a game under way on a board that
+  `assign_tables/4`, and what became of a game under way on a board that
   moved with its table: `{:ok, tournament, [carried]}`, each
-  `Alnasl.Tables.assign_carry/3`'s account of it.
+  `Alnasl.Tables.assign_carry/3`'s account of it. `{:error, :boards}` when
+  the range would hold boards the tournament plays in another hall.
   """
-  def assign_tables_carry(%Tournament{} = tournament, from, to)
+  def assign_tables_carry(tournament, from, to, hall_id \\ nil)
+
+  def assign_tables_carry(%Tournament{} = tournament, from, to, hall_id)
       when is_integer(from) and is_integer(to) and from > 0 and to >= from do
-    for other <- list(),
-        other.id != tournament.id,
-        other.table_from != nil,
-        other.table_from <= to and (other.table_to || other.table_from) >= from do
-      update!(other, %{table_from: nil, table_to: nil})
+    hall_id = hall_id || Alnasl.Halls.of(tournament)
+
+    with {:ok, _placement, carried} <-
+           Placements.put(tournament, hall_id, %{table_from: from, table_to: to}, give_up: true) do
+      tournament = get!(tournament.id)
+
+      Alnasl.Log.add(:info, "tournament.tables", %{
+        tournament: title(tournament) || "",
+        from: from,
+        to: to
+      })
+
+      {:ok, tournament, carried}
     end
-
-    tournament = update!(tournament, %{table_from: from, table_to: to})
-
-    carried =
-      for board <- Alnasl.Boards.list(), board.table_no != nil, board.table_no in from..to do
-        {:ok, _board, carried} = Alnasl.Tables.assign_carry(board, tournament)
-        carried
-      end
-
-    Alnasl.Log.add(:info, "tournament.tables", %{
-      tournament: title(tournament) || "",
-      from: from,
-      to: to
-    })
-
-    {:ok, tournament, Enum.reject(carried, &is_nil/1)}
   end
 
-  def assign_tables_carry(_tournament, _from, _to), do: {:error, :range}
+  def assign_tables_carry(_tournament, _from, _to, _hall_id), do: {:error, :range}
 
-  @doc "The tournament whose range of tables holds table `number`, if any."
-  def for_table(number, hall_id \\ nil)
-
-  def for_table(number, hall_id) when is_integer(number) do
-    own = Alnasl.Halls.own_id()
-    hall_id = hall_id || own
-
-    Enum.find(list(), fn t ->
-      (t.hall_id || own) == hall_id and not t.gone and t.table_from != nil and
-        number >= t.table_from and number <= (t.table_to || t.table_from)
-    end)
-  end
-
-  def for_table(_none, _hall_id), do: nil
+  @doc "The tournament whose range of tables in hall `hall_id` holds table `number`, if any."
+  def for_table(number, hall_id \\ nil), do: Placements.for_table(number, hall_id)
 
   @doc """
-  The board of the round that table `number` stands for in this tournament:
-  the tables are counted from its first one, table `from` being its board 1.
+  The board of the round that table `number` of hall `hall_id` stands for
+  in this tournament: the tables are counted from the first one its
+  placement there has, that table being the placement's first board
+  (`Alnasl.Placements.board_at/3`). `hall_id` is the tournament's own hall
+  when none is named.
 
   In a team event that keeps each match together (`keep_matches`, on by
   default) the count is in matches and then boards: with four boards a
@@ -258,17 +269,17 @@ defmodule Alnasl.Tournaments do
   it would have in a round numbered match by match. `round` is the round
   the table is wanted for (the one on the boards by default).
   """
-  def board_of_table(tournament, number, round \\ nil)
+  def board_of_table(tournament, number, round \\ nil, hall_id \\ nil)
 
-  def board_of_table(%Tournament{table_from: from} = tournament, number, round)
-      when is_integer(from) and is_integer(number) and number >= from,
-      do: by_match(tournament, number - from + 1, round)
+  def board_of_table(%Tournament{} = tournament, number, round, hall_id)
+      when is_integer(number) do
+    case Placements.board_at(tournament, hall_id || Alnasl.Halls.of(tournament), number) do
+      nil -> nil
+      k -> by_match(tournament, k, round)
+    end
+  end
 
-  def board_of_table(%Tournament{table_from: nil} = tournament, number, round)
-      when is_integer(number),
-      do: by_match(tournament, number, round)
-
-  def board_of_table(_tournament, _number, _round), do: nil
+  def board_of_table(_tournament, _number, _round, _hall_id), do: nil
 
   defp by_match(%Tournament{keep_matches: true, kind: "linked"} = tournament, k, round) do
     with true <- team_event?(tournament),

@@ -35,7 +35,7 @@ defmodule Alnasl.Seating do
   `Alnasl.Boards.create/1`).
   """
 
-  alias Alnasl.{Boards, Games, Log, Settings, Tables, Tournaments}
+  alias Alnasl.{Boards, Games, Log, Placements, Settings, Tables, Tournaments}
   alias Alnasl.Tournaments.Tournament
 
   @auto_key "seating_auto"
@@ -55,7 +55,7 @@ defmodule Alnasl.Seating do
 
     Enum.filter(
       Tournaments.list(),
-      &(&1.kind == "linked" and not &1.gone and (&1.hall_id || own) == own)
+      &(&1.kind == "linked" and not &1.gone and Placements.in_hall?(&1, own))
     )
   end
 
@@ -69,11 +69,6 @@ defmodule Alnasl.Seating do
   defp hall_boards(hall_id) do
     own = Alnasl.Halls.own_id()
     Enum.filter(Boards.list(), &((&1.hall_id || own) == (hall_id || own)))
-  end
-
-  defp hall_tournaments(hall_id) do
-    own = Alnasl.Halls.own_id()
-    Enum.filter(Tournaments.list(), &((&1.hall_id || own) == (hall_id || own)))
   end
 
   @doc """
@@ -103,30 +98,37 @@ defmodule Alnasl.Seating do
 
   # --- tables ------------------------------------------------------------------
 
-  # The smallest table number free for this tournament: not on any board and
-  # not inside another tournament's range. A range of its own is made to
-  # reach it.
-  defp free_table(%Tournament{} = tournament) do
-    taken =
-      for b <- hall_boards(tournament.hall_id), b.table_no, into: MapSet.new(), do: b.table_no
+  # The smallest table number of the hall free for this tournament: not on
+  # any board and not inside another tournament's range. A range of its own
+  # there is made to reach it.
+  defp free_table(%Tournament{} = tournament, hall_id) do
+    taken = for b <- hall_boards(hall_id), b.table_no, into: MapSet.new(), do: b.table_no
 
     others =
-      for t <- hall_tournaments(tournament.hall_id),
+      for t <- Tournaments.list(),
           t.id != tournament.id,
-          t.table_from,
-          do: t.table_from..(t.table_to || t.table_from)
+          %{table_from: from, table_to: to} when from != nil <- [Placements.in_hall(t, hall_id)],
+          do: from..(to || from)
 
-    start = tournament.table_from || 1
+    start =
+      case Placements.in_hall(tournament, hall_id) do
+        %{table_from: from} when is_integer(from) -> from
+        _none -> 1
+      end
 
     Stream.iterate(start, &(&1 + 1))
     |> Enum.find(fn n -> not MapSet.member?(taken, n) and not Enum.any?(others, &(n in &1)) end)
   end
 
   defp numbered(%Boards.Board{table_no: nil} = board, tournament) do
-    number = free_table(tournament)
+    hall_id = Alnasl.Halls.of(board)
+    number = free_table(tournament, hall_id)
 
-    if tournament.table_from && number > (tournament.table_to || tournament.table_from),
-      do: Tournaments.update!(tournament, %{table_to: number})
+    with %{table_from: from, table_to: to} when is_integer(from) <-
+           Placements.in_hall(tournament, hall_id),
+         true <- number > (to || from) do
+      Placements.put(tournament, hall_id, %{table_to: number})
+    end
 
     {:ok, board} = Boards.update(board, %{table_no: number})
     board
@@ -171,8 +173,9 @@ defmodule Alnasl.Seating do
   defp under_way(_board), do: nil
 
   defp target(board, tournament) do
-    number = board.table_no || free_table(tournament)
-    no = Tournaments.board_of_table(tournament, number)
+    hall_id = Alnasl.Halls.of(board)
+    number = board.table_no || free_table(tournament, hall_id)
+    no = Tournaments.board_of_table(tournament, number, nil, hall_id)
 
     %{
       tournament: tournament,
@@ -210,7 +213,7 @@ defmodule Alnasl.Seating do
     tournaments =
       Enum.filter(
         tournaments,
-        &(&1.kind == "linked" and not &1.gone and (&1.hall_id || own) == own)
+        &(&1.kind == "linked" and not &1.gone and Placements.in_hall?(&1, own))
       )
 
     boards = own_boards()
@@ -247,12 +250,15 @@ defmodule Alnasl.Seating do
 
     # The range is what the boards stand on, so a board that comes later
     # with the next number is inside it.
-    if tables != [] and tournament.table_from == nil,
+    own = Alnasl.Halls.own_id()
+
+    if tables != [] and Tournaments.tables(tournament, own) == {nil, nil},
       do:
         Tournaments.assign_tables(
           Tournaments.get!(tournament.id),
           Enum.min(tables),
-          Enum.max(tables)
+          Enum.max(tables),
+          own
         )
 
     Settings.put(@auto_key, %{
@@ -294,7 +300,7 @@ defmodule Alnasl.Seating do
   def undo_auto do
     with %{"tournament_id" => tid, "previous" => previous} <- Settings.get(@auto_key),
          %Tournament{} = tournament <- Tournaments.get(tid) do
-      Tournaments.assign_tables(tournament, nil, nil)
+      Tournaments.assign_tables(tournament, nil, nil, Alnasl.Halls.own_id())
 
       for %{"id" => id, "tournament_id" => from} <- previous,
           board = Boards.get(id),
@@ -318,9 +324,11 @@ defmodule Alnasl.Seating do
     stray = strays(own_boards())
     declined = Settings.get(@declined_key) || []
 
+    own = Alnasl.Halls.own_id()
+
     open =
       Enum.filter(linked(), fn t ->
-        t.table_from == nil and t.id not in declined and
+        Tournaments.tables(t, own) == {nil, nil} and t.id not in declined and
           not Enum.any?(own_boards(), &(&1.tournament_id == t.id))
       end)
 
@@ -372,9 +380,10 @@ defmodule Alnasl.Seating do
   end
 
   @doc """
-  Gives a range of tables to a tournament, and says what became of games
-  under way on the boards that moved with it: `{:ok, tournament, [carried]}`.
+  Gives a range of tables of hall `hall_id` (the tournament's own hall when
+  none is named) to a tournament, and says what became of games under way
+  on the boards that moved with it: `{:ok, tournament, [carried]}`.
   """
-  def assign_range(%Tournament{} = tournament, from, to),
-    do: Tournaments.assign_tables_carry(tournament, from, to)
+  def assign_range(%Tournament{} = tournament, from, to, hall_id \\ nil),
+    do: Tournaments.assign_tables_carry(tournament, from, to, hall_id)
 end

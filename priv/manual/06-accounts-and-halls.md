@@ -23,6 +23,19 @@ The box's own ports are one hall. Every bridge belongs to a hall, and so do its 
 
 With more than one hall, the switcher at the top says which one the pages are about, and the Halls page shows every hall at a glance: boards live, bridges connected, and what needs an arbiter.
 
+## Tournaments and halls {#placements}
+
+Where a tournament is played is said on Setup, under the tournament: **Halls and tables**. Each row is one hall, with its tables from and to and the first board those tables play. The two common cases:
+
+- **Two tournaments, one hall.** The Open on tables 1 to 8, the under-twelves on tables 9 to 16: each tournament has one row in the hall, and table 9 is board 1 of the under-twelves. This is what "Tables from ... to ..." has always done, and still does.
+- **One tournament, two halls.** Boards 1 to 8 in the main hall on its tables 1 to 8, boards 9 to 16 in the annex on its tables 1 to 8: the Open has two rows, the second starting at board 9. Table 4 of the annex plays board 12.
+
+**Add a hall** lists only the halls where you are an arbiter or an owner (an admin sees them all). A hall added takes the next free tables there and the board after the highest one already placed; change either before the round. A tournament without a range in a hall has every table there that no other range holds.
+
+What is refused: two tournaments on the same table of one hall, the same board in two halls, and taking a tournament out of the last hall it is in. A hall taken away sends its boards back to that hall's own tournament; the games stay.
+
+A tournament is listed and opened in every hall it is played in. A board is still recognised by its serial only in its own hall: one tournament in two halls does not make them one room.
+
 ## Roles {#roles}
 
 In each hall an account is an owner, an arbiter or a viewer. The same person can be an owner in one hall and a viewer in the next.
@@ -33,6 +46,8 @@ In each hall an account is an owner, an arbiter or a viewer. The same person can
 | Arbiter | Run them: tables, rounds, results, corrections, the links to OpenPairings and OpenResults |
 | Owner | All that, and add and remove bridges, and invite people |
 | Admin | See every hall and the box itself: its name, updates, the tracker, the Outbox's switches |
+
+For a tournament played in more than one hall, the highest role you have in any of them counts.
 
 A viewer who presses a button that changes something is told that their role lets them follow the games, not change them.
 

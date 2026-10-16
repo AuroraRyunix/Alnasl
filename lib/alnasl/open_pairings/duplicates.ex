@@ -383,6 +383,8 @@ defmodule Alnasl.OpenPairings.Duplicates do
 
         first = Repo.get!(Tournament, first.id)
         first |> Ecto.Changeset.change(taken_over(first, later)) |> Repo.update!()
+        # The halls and tables it is played on go with it.
+        Alnasl.Placements.merge(later, first)
 
         with %Link{} = link <- Repo.get(Link, later.link_id),
              do: add_note(link, later.remote_id, first, later.name)
@@ -454,9 +456,6 @@ defmodule Alnasl.OpenPairings.Duplicates do
 
   defp taken_over(first, later) do
     [
-      if(first.table_from == nil and later.table_from != nil,
-        do: %{table_from: later.table_from, table_to: later.table_to}
-      ),
       if(first.lichess_round_id in [nil, ""] and later.lichess_round_id not in [nil, ""],
         do: %{
           lichess_round_id: later.lichess_round_id,

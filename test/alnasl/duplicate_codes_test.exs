@@ -228,10 +228,10 @@ defmodule Alnasl.DuplicateCodesTest do
           listed_version: first.version,
           server_url: first.server_url,
           slug: first.slug,
-          relay_key: first.relay_key,
-          table_from: 3,
-          table_to: 4
+          relay_key: first.relay_key
         })
+
+      {:ok, _} = Tournaments.assign_tables(second, 3, 4)
 
       {group, first, second_link, second}
     end
@@ -272,7 +272,8 @@ defmodule Alnasl.DuplicateCodesTest do
       assert Repo.aggregate(from(e in Alnasl.Outbox.Entry, where: e.game_id == ^b.id), :count) > 0
 
       # The first row had no tables: it takes the second's.
-      assert %{table_from: 3, table_to: 4} = Tournaments.get!(first.id)
+      assert Tournaments.tables(Tournaments.get!(first.id)) == {3, 4}
+      assert [_one] = Alnasl.Placements.list(first.id)
 
       assert [event] = Enum.filter(Log.list(), &(&1.kind == "tournament.merged"))
       assert %{"boards" => 1, "games" => 2, "tournament" => "Open"} = Jason.decode!(event.data)

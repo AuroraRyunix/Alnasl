@@ -22,12 +22,14 @@ defmodule Alnasl.Tables do
 
   A hall with two tournaments has one row of tables and two sets of board
   numbers. A tournament can be given a range of tables
-  (`Alnasl.Tournaments.assign_tables/3`): tables 5 to 8 are the under-twelves,
+  (`Alnasl.Tournaments.assign_tables/4`): tables 5 to 8 are the under-twelves,
   and table 5 is their board 1. So "the board its table stands for"
   (`home_board/1`) is the table number counted from the first table of the
-  board's tournament. A board given a table number inside a tournament's
-  range joins that tournament; a single board can also be put in a
-  tournament by hand (`assign/2`).
+  board's tournament in the board's hall - and from the board that table
+  plays, when the tournament is played in another hall as well
+  (`Alnasl.Placements`). A board given a table number inside a
+  tournament's range joins that tournament; a single board can also be put
+  in a tournament by hand (`assign/2`).
 
   ## A board that comes back
 
@@ -95,7 +97,7 @@ defmodule Alnasl.Tables do
   def home_board(%{table_no: table} = board, round) do
     case Tournaments.get(Map.get(board, :tournament_id)) do
       nil -> table
-      tournament -> Tournaments.board_of_table(tournament, table, round)
+      tournament -> Tournaments.board_of_table(tournament, table, round, Halls.of(board))
     end
   end
 
@@ -133,7 +135,8 @@ defmodule Alnasl.Tables do
   """
   def assign_carry(%Board{} = board, %Tournaments.Tournament{} = tournament, opts \\ []) do
     if board.tournament_id == tournament.id and board.round == tournament.round and
-         board.board_no == Tournaments.board_of_table(tournament, board.table_no) do
+         board.board_no ==
+           Tournaments.board_of_table(tournament, board.table_no, nil, Halls.of(board)) do
       {:ok, board, nil}
     else
       under_way = under_way(board, tournament)
@@ -579,10 +582,11 @@ defmodule Alnasl.Tables do
   def checks(round), do: checks(Tournaments.default_id(), round)
 
   def checks(tournament_id, round, snapshots \\ nil) do
-    # One hall's boards: another hall's table 1, or the same board read
+    # The boards of the halls the tournament is played in. A sticker and a
+    # serial are a hall's: another hall's table 1, or the same board read
     # there as well, is that hall's business.
-    hall = Halls.of(Tournaments.get(tournament_id) || %{})
-    all = Enum.filter(snapshots || Boards.snapshots(), &(Halls.of(&1) == hall))
+    halls = Alnasl.Placements.halls_of(Tournaments.get(tournament_id))
+    all = Enum.filter(snapshots || Boards.snapshots(), &(Halls.of(&1) in halls))
     # A sticker is on one board and a serial is one board, whatever
     # tournament; the rest is about this tournament's boards.
     snaps = Enum.filter(all, &(&1[:tournament_id] == tournament_id))
@@ -593,12 +597,11 @@ defmodule Alnasl.Tables do
     in_match = Map.new(pairings, &{&1.board, &1.match})
     top = here |> Enum.map(& &1.board_no) |> Enum.max(fn -> 0 end)
 
-    duplicates(all, & &1[:table_no], :duplicate_table) ++
+    per_hall(all, &duplicates(&1, fn s -> s[:table_no] end, :duplicate_table)) ++
       duplicates(here, & &1.board_no, :duplicate_board) ++
-      duplicates(
+      per_hall(
         Enum.filter(all, &(&1.driver in @dgt)),
-        &serial/1,
-        :same_serial
+        &duplicates(&1, fn s -> serial(s) end, :same_serial)
       ) ++
       outside_checks(tournament_id, snaps) ++
       Enum.flat_map(snaps, &board_checks(&1, round)) ++
@@ -642,6 +645,13 @@ defmodule Alnasl.Tables do
     else
       _fine -> []
     end
+  end
+
+  defp per_hall(snaps, fun) do
+    snaps
+    |> Enum.group_by(&Halls.of/1)
+    |> Enum.sort()
+    |> Enum.flat_map(fn {_hall, group} -> fun.(group) end)
   end
 
   defp serial(%{serial: serial}) when is_binary(serial) and serial != "", do: serial
