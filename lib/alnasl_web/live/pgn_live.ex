@@ -31,6 +31,7 @@ defmodule AlnaslWeb.PgnLive do
      socket
      |> assign(
        page_title: "PGN",
+       server?: Alnasl.Accounts.server?(),
        games: [],
        problems: [],
        tid: first.id,
@@ -132,6 +133,11 @@ defmodule AlnaslWeb.PgnLive do
        confirm: nil
      )}
   end
+
+  # Simulator boards are a box's; the server has none to offer.
+  def handle_event(event, _params, %{assigns: %{server?: true}} = socket)
+      when event in ~w(simulate simulate_all),
+      do: {:noreply, socket}
 
   def handle_event("simulate", %{"index" => index}, socket) do
     with {game, i} <- find(socket, index) do
@@ -469,7 +475,7 @@ defmodule AlnaslWeb.PgnLive do
         flush
       >
         <:actions>
-          <.button id="simulate-all" small phx-click="simulate_all">{gettext(
+          <.button :if={not @server?} id="simulate-all" small phx-click="simulate_all">{gettext(
             "Play them all on simulator boards"
           )}</.button> <.button id="clear-games" small phx-click="clear">{gettext("Clear")}</.button>
         </:actions>
@@ -527,9 +533,13 @@ defmodule AlnaslWeb.PgnLive do
                 </td>
 
                 <td class="act">
-                  <.button id={"simulate-#{i}"} small phx-click="simulate" phx-value-index={i}>{gettext(
-                    "Simulate"
-                  )}</.button>
+                  <.button
+                    :if={not @server?}
+                    id={"simulate-#{i}"}
+                    small
+                    phx-click="simulate"
+                    phx-value-index={i}
+                  >{gettext("Simulate")}</.button>
                   <.button id={"compare-#{i}"} small phx-click="compare" phx-value-index={i}>{gettext(
                     "Compare"
                   )}</.button>

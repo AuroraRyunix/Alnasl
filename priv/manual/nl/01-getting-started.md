@@ -31,6 +31,8 @@ Het is beide keren hetzelfde programma. Het verschil is waar het draait en wat e
 
 **De gehoste server.** Hetzelfde programma draait op een server, op alnasl.zerotwo.cloud. Een server heeft zelf geen borden: hij heeft geen poorten om te lezen. In plaats daarvan neemt hij **bruggen** aan: Arkab, een klein programma in een zaal dat de borden daar leest en via internet doorsturen (zie [Bruggen](03-bridges.md)). De pagina's zijn die je kent: de ronde, de partijen, de correcties. Het verschil is dat elke pagina altijd vraagt wie je bent, en dat accounts alleen op uitnodiging bestaan (zie [Accounts, zalen en rollen](06-accounts-and-halls.md)).
 
+De server laat weg wat alleen een kastje kan, in plaats van het grijs te maken: borden toevoegen en de lijst met seriële poorten op de pagina Borden, simulatorborden, het paneel Updates en meestarten met Windows, de pincode en het zaalnetwerk, en de naam van het kastje. Instellingen zegt welke editie je ziet, onder "Deze kopie van Alnasl".
+
 > [!TIP] Welke kies je?
 > Borden in je eigen zaal en je wilt het simpel: een kastje in de zaal. Meerdere zalen, een arbiter thuis, of niemand wil een computer in de zaal: bruggen en de server. Je kunt ze samen gebruiken, want één brug mag meer dan één server voeden.
 

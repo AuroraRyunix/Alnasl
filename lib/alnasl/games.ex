@@ -72,6 +72,11 @@ defmodule Alnasl.Games do
     |> Repo.all()
   end
 
+  @doc "The ids of the tournaments that have at least one game stored."
+  def tournament_ids do
+    Game |> select([g], g.tournament_id) |> distinct(true) |> Repo.all() |> MapSet.new()
+  end
+
   @doc "The rounds a tournament has games of."
   def rounds(tournament_id) do
     Game

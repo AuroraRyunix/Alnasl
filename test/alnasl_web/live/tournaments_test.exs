@@ -265,8 +265,10 @@ defmodule AlnaslWeb.TournamentsTest do
       assert has_element?(view, "#tile-white-t#{open.id}-1 .rating", "2001")
       assert has_element?(view, "#tile-black-t#{u12.id}-2", "U12 Player 4")
       assert has_element?(view, "#round-tc-t#{open.id}", "90min+30sec/move")
-      # The Open has three boards paired and two electronic boards.
-      assert has_element?(view, "#tile-t#{open.id}-3")
+      # The Open has three boards paired and two electronic boards: the third
+      # pairing is counted, not drawn.
+      refute has_element?(view, "#tile-t#{open.id}-3")
+      assert has_element?(view, "#round-unplaced-t#{open.id}", "1 pairing without a board here")
 
       # "Ready for round N?" is asked of each.
       assert has_element?(view, "#round-ready-t#{open.id}")

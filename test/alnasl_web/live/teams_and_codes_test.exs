@@ -30,10 +30,19 @@ defmodule AlnaslWeb.TeamsAndCodesTest do
     |> Games.finish(result)
   end
 
+  # The Round page draws boards that exist here or have a game; these have a game.
+  defp seat_games(tournament, boards) do
+    for n <- boards do
+      pairing = Tournaments.board(tournament.id, 1, n)
+      Games.ensure(tournament.id, 1, n, Games.pairing_attrs(pairing))
+    end
+  end
+
   describe "Round: a team event" do
     test "boards stand under their match, with the teams and the score as the boards saw it",
          %{conn: conn} do
       event = team_event()
+      seat_games(event, 1..8)
       {:ok, view, _html} = live(conn, ~p"/t/#{event.id}")
 
       refute has_element?(view, "#tiles-t#{event.id}")
@@ -75,6 +84,7 @@ defmodule AlnaslWeb.TeamsAndCodesTest do
 
     test "an individual tournament looks as it did", %{conn: conn} do
       open = linked(17, name: "Open", boards: 2)
+      seat_games(open, 1..2)
       {:ok, view, _html} = live(conn, ~p"/t/#{open.id}")
       assert has_element?(view, "#tiles-t#{open.id}")
       refute has_element?(view, "#matches-t#{open.id}")

@@ -47,6 +47,7 @@ defmodule AlnaslWeb.BoardsLive do
      |> assign(
        page_title: gettext("Boards"),
        refresh_due?: false,
+       server?: Alnasl.Accounts.server?(),
        tid: first.id,
        round: first.round,
        find?: false,
@@ -133,6 +134,12 @@ defmodule AlnaslWeb.BoardsLive do
   # --- events ------------------------------------------------------------------
 
   @impl true
+  # Adding boards and reading ports is for a box with ports of its own; the
+  # server's panels are not drawn, and these events get nothing.
+  def handle_event(event, _params, %{assigns: %{server?: true}} = socket)
+      when event in ~w(change_add add read_as_loop rescan),
+      do: {:noreply, socket}
+
   def handle_event("change_add", %{"board" => params}, socket),
     do: {:noreply, assign(socket, add_form: add_form(params))}
 
@@ -1016,7 +1023,7 @@ defmodule AlnaslWeb.BoardsLive do
           />
         </.panel>
 
-        <.panel id="add-board" title={gettext("Add a board")}>
+        <.panel :if={not @server?} id="add-board" title={gettext("Add a board")}>
           <.form
             for={@add_form}
             id="add-board-form"
@@ -1110,7 +1117,7 @@ defmodule AlnaslWeb.BoardsLive do
           </.form>
         </.panel>
 
-        <.panel id="ports" title={gettext("Serial ports on this machine")}>
+        <.panel :if={not @server?} id="ports" title={gettext("Serial ports on this machine")}>
           <:actions>
             <.button id="rescan" small phx-click="rescan">{gettext("Look again")}</.button>
           </:actions>

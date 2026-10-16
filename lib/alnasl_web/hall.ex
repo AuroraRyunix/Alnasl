@@ -121,7 +121,7 @@ defmodule AlnaslWeb.Hall do
             link: Outbox.status(),
             box: Settings.get("box_name") || "Alnasl",
             locale: locale,
-            update: Scope.can?(scope, :admin) && Updates.notice(),
+            update: Scope.can?(scope, :admin) && not Accounts.server?() && Updates.notice(),
             phone_signin: nil
           )
           |> refresh()
@@ -210,24 +210,30 @@ defmodule AlnaslWeb.Hall do
     do:
       {:cont,
        assign(socket,
-         update: Scope.can?(socket.assigns.current_scope, :admin) && Updates.notice()
+         update:
+           Scope.can?(socket.assigns.current_scope, :admin) and not Accounts.server?() and
+             Updates.notice()
        )}
 
   defp info(_other, socket), do: {:cont, socket}
 
   # Both halt: no page has a clause for them, and a second click on a notice
   # that is already gone must not be a page's crash.
-  defp update_event("update_later", _params, socket) do
+  defp update_event(event, _params, socket) when event in ~w(update_later update_never) do
+    if Accounts.server?(), do: {:halt, socket}, else: update_event(event, socket)
+  end
+
+  defp update_event(_event, _params, socket), do: {:cont, socket}
+
+  defp update_event("update_later", socket) do
     with %{version: version} <- socket.assigns[:update], do: Updates.later(version)
     {:halt, assign(socket, update: nil)}
   end
 
-  defp update_event("update_never", _params, socket) do
+  defp update_event("update_never", socket) do
     Updates.put_mode("never")
     {:halt, assign(socket, update: nil)}
   end
-
-  defp update_event(_event, _params, socket), do: {:cont, socket}
 
   @doc "The badges and the lines about boards, drawn again (a page that changed them says so)."
   def refresh(socket),
