@@ -318,7 +318,9 @@ defmodule AlnaslWeb.HallsLive do
                 {ngettext(
                   "%{live} of %{count} board live",
                   "%{live} of %{count} boards live",
-                  row.boards, live: row.live)}
+                  row.boards,
+                  live: row.live
+                )}
               </p>
               <p :if={row.bridges > 0} id={"hall-#{row.hall.id}-bridges"} class="note">
                 {ngettext(
