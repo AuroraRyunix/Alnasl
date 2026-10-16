@@ -19,6 +19,8 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-10-16
+
 - [Security] Bandit 1.12.5 → 1.13.1 (EEF-CVE-2026-105660, EEF-CVE-2026-105659). The relay's web server took the same bad advice as everyone else's; it no longer does. No behaviour changes.
 
 ## [0.1.5] - 2026-10-15
