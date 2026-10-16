@@ -8,10 +8,25 @@ defmodule AlnaslWeb.RoundLive do
   the top. A tile is a link to the board's own page, where the repair tools
   are.
 
-  A box that serves several tournaments shows them one under the other,
-  each at its own round, with its own "start round" and its own "ready or
-  not" - and a row of names at the top to look at one of them alone. A box
-  with one tournament looks as it always did.
+  Only what plays in the hall on show: the tournaments placed in it
+  (`Alnasl.Placements`), and of those the boards of this hall and the games
+  played here - a tournament split over two halls shows each hall its own
+  half. The other tournaments the links bring are one line at the bottom.
+
+  A hall with several tournaments shows them one under the other, each at
+  its own round, with its own "start round" and its own "ready or not" -
+  and a row of names at the top to look at one of them alone. A hall with
+  one tournament has no row of names.
+
+  Two views, kept per browser (a colocated hook and localStorage): tiles,
+  or a list with a row per board. From 24 boards a browser that chose
+  nothing gets the list. The QR code of the live page is made when Share
+  is pressed, not on every redraw.
+
+  A board that moves redraws its own tile: the page collects the boards
+  that changed and, at most three times a second, makes their tiles and
+  their sections' counts again. A board that changed place, a new board or
+  a tournament that changed redraws the page.
 
   A team event reads like one: the boards stand under their match ("Match
   3: Team A - Team B"), in the match's board order, each tile naming the
@@ -22,8 +37,23 @@ defmodule AlnaslWeb.RoundLive do
 
   use AlnaslWeb, :live_view
 
-  alias Alnasl.{Boards, Games, OpenPairings, Outbox, Position, ResultsSite, Tables, Tournaments}
+  alias Alnasl.{
+    Boards,
+    Games,
+    Halls,
+    OpenPairings,
+    Outbox,
+    Placements,
+    Position,
+    ResultsSite,
+    Tables,
+    Tournaments
+  }
+
   alias AlnaslWeb.{Scope, TableWords, Words}
+
+  # From this many tiles a browser that chose nothing sees the list.
+  @list_from 24
 
   @impl true
   def mount(_params, _session, socket) do
@@ -32,7 +62,15 @@ defmodule AlnaslWeb.RoundLive do
       Tournaments.subscribe()
     end
 
-    {:ok, assign(socket, refresh_due?: false, qr_cache: %{})}
+    {:ok,
+     assign(socket,
+       refresh_due?: false,
+       dirty: MapSet.new(),
+       full?: false,
+       snaps: %{},
+       view: nil,
+       shared: nil
+     )}
   end
 
   @impl true
@@ -63,8 +101,12 @@ defmodule AlnaslWeb.RoundLive do
   defp load(socket) do
     %{only: only, asked_round: asked} = socket.assigns
     account = socket.assigns.current_scope
-    active = Alnasl.Halls.active(account)
-    snapshots = Alnasl.Halls.here(account, Boards.snapshots())
+    hall_id = Alnasl.Accounts.Scope.hall_id(account) || Halls.own_id()
+
+    # The tournaments placed in this hall, and the boards of this hall: a
+    # tournament split over two halls is two halves, and this is one.
+    active = account |> Halls.active() |> Enum.filter(&Placements.in_hall?(&1, hall_id))
+    snapshots = Enum.filter(Boards.snapshots(), &(Halls.of(&1) == hall_id))
 
     shown =
       cond do
@@ -74,14 +116,12 @@ defmodule AlnaslWeb.RoundLive do
       end
 
     # Only what is on the boards here: a tournament with a board of this hall
-    # or a stored game. One that is asked for by name is shown whatever it has,
-    # and a box with a single tournament keeps it, empty state and all.
-    with_games = Games.tournament_ids()
-
+    # or a game played in it. One that is asked for by name is shown whatever
+    # it has, and a hall with a single tournament keeps it, empty state and all.
     listed =
       if match?([_one], active),
         do: active,
-        else: Enum.filter(active, &on_the_boards?(&1, snapshots, with_games))
+        else: Enum.filter(active, &on_the_boards?(&1, snapshots, hall_id))
 
     listed_ids = MapSet.new(listed, & &1.id)
 
@@ -90,16 +130,7 @@ defmodule AlnaslWeb.RoundLive do
         do: Enum.filter(shown, &MapSet.member?(listed_ids, &1.id)),
         else: shown
 
-    sections = Enum.map(shown_now, &section(&1, asked || &1.round, snapshots))
-
-    # The same address is drawn once, not three times a second.
-    cache =
-      for %{site: %{live: url}} <- sections, url != nil, into: %{} do
-        {url, socket.assigns.qr_cache[url] || AlnaslWeb.Access.qr(url)}
-      end
-
-    sections = Enum.map(sections, &put_qr(&1, cache))
-    alarms = sections |> Enum.map(& &1.alarms) |> Enum.sum()
+    sections = Enum.map(shown_now, &section(&1, asked || &1.round, snapshots, hall_id))
 
     title =
       case sections do
@@ -107,32 +138,53 @@ defmodule AlnaslWeb.RoundLive do
         _several -> gettext("Rounds")
       end
 
-    assign(socket,
-      sections: sections,
+    # Every tournament the scope's links bring that is not on the boards
+    # here: a line, not a section each.
+    others =
+      account
+      |> Halls.visible(Tournaments.active())
+      |> Enum.reject(&MapSet.member?(listed_ids, &1.id))
+
+    socket
+    |> assign(
+      hall_id: hall_id,
+      snaps: Map.new(snapshots, &{&1.id, &1}),
       listed: listed,
-      not_here: length(active) - length(listed),
+      not_here: length(others),
       many?: length(listed) > 1,
-      alarms: alarms,
       title: title,
       page_title: title,
       configured?: Outbox.configured?() or Tournaments.links() != [],
-      qr_cache: cache,
+      dirty: MapSet.new(),
+      full?: false,
       refresh_due?: false
+    )
+    |> put_sections(sections)
+  end
+
+  # The sections, and what is counted over all of them.
+  defp put_sections(socket, sections) do
+    assign(socket,
+      sections: sections,
+      alarms: sections |> Enum.map(& &1.alarms) |> Enum.sum(),
+      tile_count: sections |> Enum.map(&length(&1.tiles)) |> Enum.sum()
     )
   end
 
-  defp on_the_boards?(tournament, snapshots, with_games) do
-    MapSet.member?(with_games, tournament.id) or
-      Enum.any?(snapshots, &(&1[:tournament_id] == tournament.id and &1.board_no != nil))
+  defp on_the_boards?(tournament, snapshots, hall_id) do
+    Enum.any?(snapshots, &(&1[:tournament_id] == tournament.id and &1.board_no != nil)) or
+      case Games.board_numbers(tournament.id) do
+        [] ->
+          false
+
+        numbers ->
+          placements = Placements.list(tournament)
+          Enum.any?(numbers, &Placements.board_here?(placements, &1, hall_id))
+      end
   end
 
-  defp put_qr(%{site: %{live: url} = site} = section, cache) when url != nil,
-    do: %{section | site: Map.put(site, :qr, cache[url])}
-
-  defp put_qr(section, _cache), do: section
-
   # Where the results site shows this tournament: the live boards of the
-  # round on the page, the live page (which the QR code leads to), and -
+  # round on the page, the live page (which Share draws as a QR code), and -
   # when there is nothing to link to - why.
   defp site(tournament, round) do
     case ResultsSite.why_not(tournament) do
@@ -150,8 +202,10 @@ defmodule AlnaslWeb.RoundLive do
     end
   end
 
-  defp section(tournament, round, snapshots) do
+  defp section(tournament, round, snapshots, hall_id) do
     tid = tournament.id
+    placements = Placements.list(tournament)
+    here_board? = &Placements.board_here?(placements, &1, hall_id)
 
     here =
       for s <- snapshots,
@@ -161,16 +215,27 @@ defmodule AlnaslWeb.RoundLive do
           into: %{},
           do: {s.board_no, s}
 
-    games = Map.new(Games.list(tid, round), &{&1.board_no, &1})
+    # A game counts when it was played here: on a board of this hall, or on
+    # a board number this hall's placement holds. The other hall's half of
+    # the tournament is the other hall's page.
+    games =
+      for game <- Games.list(tid, round),
+          is_map_key(here, game.board_no) or here_board?.(game.board_no),
+          into: %{},
+          do: {game.board_no, game}
+
     histories = Enum.group_by(Games.all(tid, round), & &1.board_no)
     pairings = Map.new(Tournaments.boards(tid, round), &{&1.board, &1})
 
-    # A tile is a board that exists here or has a game. A pairing with
-    # neither is only counted.
+    # A tile is a board that exists here or has a game. A pairing of this
+    # hall with neither is only counted.
     numbers = Enum.uniq(Map.keys(here) ++ Map.keys(games)) |> Enum.sort()
-    unplaced = pairings |> Map.keys() |> Enum.reject(&(&1 in numbers)) |> length()
+
+    unplaced =
+      pairings |> Map.keys() |> Enum.count(&(&1 not in numbers and here_board?.(&1)))
 
     site = site(tournament, round)
+    title = Tournaments.title(tournament)
 
     tiles =
       for no <- numbers,
@@ -186,14 +251,12 @@ defmodule AlnaslWeb.RoundLive do
               site
             )
 
-    counts = Enum.frequencies_by(tiles, & &1.state)
-    checks = Tables.checks(tid, round, snapshots)
     info = Tournaments.info(tid)
 
     %{
       tournament: tournament,
       tid: tid,
-      title: Tournaments.title(tournament),
+      title: title,
       linked?: Tournaments.linked?(tournament),
       round: round,
       current?: round == tournament.round,
@@ -203,29 +266,120 @@ defmodule AlnaslWeb.RoundLive do
           do: tournament.remote_round
         ),
       gone?: tournament.gone,
-      # Names of the linked tournaments a board of the box's own plays outside of.
-      outside_titles:
-        if(tournament.kind == "local",
-          do: Enum.map(Alnasl.Seating.linked(), &(Tournaments.title(&1) || "")),
-          else: []
-        ),
       time_control: info.time_control,
       site: site,
-      tiles: tiles,
+      # What a tile needs of its section, and nothing that moves with the
+      # other tiles: a tile is redrawn when it changes, not when its
+      # neighbour does.
+      ctx: %{
+        tid: tid,
+        round: round,
+        title: title,
+        site?: site.page != nil,
+        # Names of the linked tournaments a board of the box's own plays outside of.
+        outside:
+          if(tournament.kind == "local",
+            do:
+              AlnaslWeb.SeatingComponents.few_names(
+                Enum.map(Alnasl.Seating.linked(), &(Tournaments.title(&1) || "")),
+                3,
+                " / "
+              )
+          )
+      },
+      pairings: pairings,
       unplaced: unplaced,
-      matches: if(Tournaments.team_event?(tournament), do: matches(tiles)),
+      team?: Tournaments.team_event?(tournament),
+      rounds:
+        Enum.uniq(Tournaments.rounds(tid) ++ Games.rounds(tid) ++ [round, tournament.round])
+        |> Enum.sort()
+    }
+    |> put_tiles(tiles, snapshots)
+  end
+
+  # The tiles of a section and everything counted from them: the states,
+  # the alarms, the matches of a team event, and whether the round is ready.
+  defp put_tiles(section, tiles, snapshots) do
+    counts = Enum.frequencies_by(tiles, & &1.state)
+    checks = Tables.checks(section.tid, section.round, snapshots)
+
+    Map.merge(section, %{
+      tiles: tiles,
+      matches: if(section.team?, do: matches(tiles)),
       counts: counts,
       alarms:
         Map.get(counts, :out_of_sync, 0) + Map.get(counts, :no_signal, 0) +
           Map.get(counts, :clock_alarm, 0),
       flagged: Enum.count(tiles, & &1.pairing_flag),
-      rounds:
-        Enum.uniq(Tournaments.rounds(tid) ++ Games.rounds(tid) ++ [round, tournament.round])
-        |> Enum.sort(),
       ready?: Tables.ready?(checks),
       not_ready: Enum.count(checks, &(&1.level in [:bad, :warn])),
-      has_boards?: Enum.any?(snapshots, &(&1[:tournament_id] == tid))
-    }
+      has_boards?: Enum.any?(snapshots, &(&1[:tournament_id] == section.tid))
+    })
+  end
+
+  # --- one board changed ------------------------------------------------------
+
+  # A board moved: its tile is made again, and its section's counts, and
+  # nothing else. A board that changed place (another tournament, round or
+  # board number), or one that is new here, redraws the page.
+  defp refresh_tiles(socket, ids) do
+    Enum.reduce_while(ids, {:ok, socket}, fn id, {:ok, socket} ->
+      case refresh_tile(socket, id) do
+        {:ok, socket} -> {:cont, {:ok, socket}}
+        :full -> {:halt, :full}
+      end
+    end)
+  end
+
+  defp refresh_tile(socket, id) do
+    old = socket.assigns.snaps[id]
+    snap = Boards.snapshot(id)
+    here? = snap != nil and Halls.of(snap) == socket.assigns.hall_id
+
+    cond do
+      not here? and old == nil -> {:ok, socket}
+      not here? or old == nil -> :full
+      place(old) != place(snap) -> :full
+      true -> {:ok, put_tile(socket, snap)}
+    end
+  end
+
+  defp place(snap), do: {snap[:tournament_id], snap.round, snap.board_no}
+
+  defp put_tile(socket, snap) do
+    snaps = Map.put(socket.assigns.snaps, snap.id, snap)
+    socket = assign(socket, snaps: snaps)
+    index = Enum.find_index(socket.assigns.sections, &(&1.tid == snap[:tournament_id]))
+    section = index && Enum.at(socket.assigns.sections, index)
+
+    if section && section.round == snap.round && snap.board_no != nil do
+      %{tid: tid, round: round} = section
+      no = snap.board_no
+      history = Games.history(tid, round, no)
+
+      tile =
+        tile(
+          tid,
+          round,
+          no,
+          snap,
+          List.last(history),
+          section.pairings[no] || %{},
+          history,
+          section.site
+        )
+
+      tiles =
+        section.tiles
+        |> Enum.reject(&(&1.no == no))
+        |> Kernel.++([tile])
+        |> Enum.sort_by(& &1.no)
+
+      section = put_tiles(section, tiles, Map.values(snaps))
+      put_sections(socket, List.replace_at(socket.assigns.sections, index, section))
+    else
+      socket
+    end
   end
 
   defp tile(tid, round, no, snap, game, pairing, history, site) do
@@ -519,6 +673,33 @@ defmodule AlnaslWeb.RoundLive do
     end
   end
 
+  # Tiles or a list: this browser's choice, which the page's hook keeps
+  # (and tells again when the page opens).
+  def handle_event("set_view", %{"view" => view}, socket) when view in ~w(boards list),
+    do: {:noreply, assign(socket, view: view)}
+
+  def handle_event("set_view", _params, socket), do: {:noreply, socket}
+
+  # The QR code of a tournament's live page, drawn when asked for.
+  def handle_event("share", params, socket) do
+    tournament = tournament_of(params)
+
+    case Enum.find(socket.assigns.sections, &(&1.tid == tournament.id)) do
+      %{site: %{live: url}} when is_binary(url) ->
+        shared =
+          if socket.assigns.shared && socket.assigns.shared.tid == tournament.id,
+            do: nil,
+            else: %{tid: tournament.id, url: url, qr: AlnaslWeb.Access.qr(url)}
+
+        {:noreply, assign(socket, shared: shared)}
+
+      _none ->
+        {:noreply, socket}
+    end
+  end
+
+  def handle_event("unshare", _params, socket), do: {:noreply, assign(socket, shared: nil)}
+
   def handle_event("make_current", params, socket) do
     tournament = tournament_of(params)
     round = section_round(socket, tournament.id)
@@ -530,22 +711,36 @@ defmodule AlnaslWeb.RoundLive do
      |> load()}
   end
 
-  # Boards change several times a second during a move; the grid is redrawn
-  # at most three times a second.
+  # Boards change several times a second during a move. What changed is
+  # collected and, at most three times a second, the tiles of those boards
+  # are made again - not the page. A tournament that changed, or a board
+  # that moved, still redraws everything.
   @impl true
-  def handle_info({:board, _id}, %{assigns: %{refresh_due?: true}} = socket),
-    do: {:noreply, socket}
+  def handle_info({:board, id}, socket) when is_integer(id),
+    do: socket |> assign(dirty: MapSet.put(socket.assigns.dirty, id)) |> schedule()
 
-  def handle_info({:board, _id}, socket) do
+  def handle_info({:board, _all}, socket), do: socket |> assign(full?: true) |> schedule()
+
+  # A round started by the pairing program, a tournament that appeared.
+  def handle_info({:tournament, _id}, socket), do: socket |> assign(full?: true) |> schedule()
+
+  def handle_info(:refresh, %{assigns: %{full?: true}} = socket), do: {:noreply, load(socket)}
+
+  def handle_info(:refresh, socket) do
+    case refresh_tiles(socket, MapSet.to_list(socket.assigns.dirty)) do
+      {:ok, socket} -> {:noreply, assign(socket, dirty: MapSet.new(), refresh_due?: false)}
+      :full -> {:noreply, load(socket)}
+    end
+  end
+
+  def handle_info(_other, socket), do: {:noreply, socket}
+
+  defp schedule(%{assigns: %{refresh_due?: true}} = socket), do: {:noreply, socket}
+
+  defp schedule(socket) do
     Process.send_after(self(), :refresh, 300)
     {:noreply, assign(socket, refresh_due?: true)}
   end
-
-  # A round started by the pairing program, a tournament that appeared.
-  def handle_info({:tournament, _id}, socket), do: handle_info({:board, nil}, socket)
-
-  def handle_info(:refresh, socket), do: {:noreply, load(socket)}
-  def handle_info(_other, socket), do: {:noreply, socket}
 
   # --- page --------------------------------------------------------------------
 
@@ -562,6 +757,7 @@ defmodule AlnaslWeb.RoundLive do
       box={@box}
       locale={@locale}
       scope={@current_scope}
+      path={@current_path}
       alarms={@alarms}
       title={@title}
       subtitle={
@@ -593,6 +789,53 @@ defmodule AlnaslWeb.RoundLive do
           </.link>
         </div>
         <.section_actions :if={match?([_one], @sections)} section={hd(@sections)} />
+        <div
+          :if={@tile_count > 0}
+          id="live-view"
+          class="seg"
+          role="group"
+          aria-label={gettext("Show the boards as")}
+          phx-hook=".ViewChoice"
+        >
+          <button
+            id="view-boards"
+            type="button"
+            phx-click="set_view"
+            phx-value-view="boards"
+            data-view="boards"
+            aria-pressed={to_string(shown_view(@view, @tile_count) == "boards")}
+          >
+            <.icon name="grid" /> {gettext("Boards")}
+          </button>
+          <button
+            id="view-list"
+            type="button"
+            phx-click="set_view"
+            phx-value-view="list"
+            data-view="list"
+            aria-pressed={to_string(shown_view(@view, @tile_count) == "list")}
+          >
+            <.icon name="list" /> {gettext("List")}
+          </button>
+        </div>
+        <script :type={Phoenix.LiveView.ColocatedHook} name=".ViewChoice">
+          // Tiles or a list, remembered in this browser. Storage may be
+          // missing or refused (a private window): then the page decides.
+          const KEY = "alnasl-live-view"
+          export default {
+            mounted() {
+              let stored = null
+              try { stored = localStorage.getItem(KEY) } catch (_e) { stored = null }
+              if (stored === "boards" || stored === "list") this.pushEvent("set_view", {view: stored})
+
+              this.el.addEventListener("click", (event) => {
+                const button = event.target.closest("[data-view]")
+                if (!button) return
+                try { localStorage.setItem(KEY, button.dataset.view) } catch (_e) { /* not kept */ }
+              })
+            }
+          }
+        </script>
       </:actions>
 
       <section
@@ -676,20 +919,17 @@ defmodule AlnaslWeb.RoundLive do
             {gettext("Open the results site")}
           </.button>
 
-          <details
+          <.button
             :if={section.site.live}
-            id={sid("site-qr", section.tid)}
-            class="site-qr"
+            id={sid("share", section.tid)}
+            small
+            icon="share"
+            phx-click="share"
+            phx-value-t={section.tid}
+            aria-expanded={to_string(@shared != nil and @shared.tid == section.tid)}
           >
-            <summary aria-label={gettext("QR code of the live page")}>QR</summary>
-
-            <.qr_code
-              id={sid("site-qr-code", section.tid)}
-              text={section.site.live}
-              code={section.site[:qr]}
-            />
-            <p id={sid("site-qr-url", section.tid)} class="note mono">{section.site.live}</p>
-          </details>
+            {gettext("Share")}
+          </.button>
 
           <span
             :if={section.site.why}
@@ -707,6 +947,23 @@ defmodule AlnaslWeb.RoundLive do
           >
             {gettext("%{count} board(s): pairing changed", count: section.flagged)}
           </.badge>
+        </div>
+
+        <div
+          :if={@shared && @shared.tid == section.tid}
+          id={sid("share-panel", section.tid)}
+          class="share-panel"
+        >
+          <.qr_code id={sid("site-qr-code", section.tid)} text={@shared.url} code={@shared.qr} />
+          <div class="stack">
+            <p class="note">
+              {gettext("The live page on the results site: point a phone at the code.")}
+            </p>
+            <p id={sid("site-qr-url", section.tid)} class="note mono">{@shared.url}</p>
+            <.button id={sid("share-close", section.tid)} small phx-click="unshare">
+              {gettext("Close")}
+            </.button>
+          </div>
         </div>
 
         <div
@@ -798,7 +1055,31 @@ defmodule AlnaslWeb.RoundLive do
         </div>
 
         <div
-          :if={section.tiles != [] and section.matches == nil}
+          :if={section.tiles != [] and shown_view(@view, @tile_count) == "list"}
+          id={sid("board-list-wrap", section.tid)}
+          class="table-wrap"
+        >
+          <table id={sid("board-list", section.tid)} class="board-list">
+            <thead>
+              <tr>
+                <th scope="col">{gettext("Board")}</th>
+                <th scope="col">{gettext("Players")}</th>
+                <th scope="col">{gettext("Last move")}</th>
+                <th scope="col">{gettext("Clock")}</th>
+                <th scope="col">{gettext("State")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <.board_row :for={tile <- section.tiles} :key={tile.dom} tile={tile} ctx={section.ctx} />
+            </tbody>
+          </table>
+        </div>
+
+        <div
+          :if={
+            section.tiles != [] and section.matches == nil and
+              shown_view(@view, @tile_count) == "boards"
+          }
           id={sid("tiles", section.tid)}
           class={[
             "tiles",
@@ -806,10 +1087,22 @@ defmodule AlnaslWeb.RoundLive do
             length(section.tiles) > 12 && "many"
           ]}
         >
-          <.tile :for={tile <- section.tiles} tile={tile} section={section} many?={@many?} />
+          <.tile
+            :for={tile <- section.tiles}
+            :key={tile.dom}
+            tile={tile}
+            ctx={section.ctx}
+            many?={@many?}
+          />
         </div>
         <%!-- A team event: the boards under their match, in the match's board order. --%>
-        <div :if={section.tiles != [] and section.matches} id={sid("matches", section.tid)}>
+        <div
+          :if={
+            section.tiles != [] and section.matches != nil and
+              shown_view(@view, @tile_count) == "boards"
+          }
+          id={sid("matches", section.tid)}
+        >
           <section
             :for={group <- section.matches}
             id={sid("match", section.tid) <> "-#{group.key}"}
@@ -845,7 +1138,13 @@ defmodule AlnaslWeb.RoundLive do
             </h3>
 
             <div class={["tiles", length(group.tiles) <= 4 && "few"]}>
-              <.tile :for={tile <- group.tiles} tile={tile} section={section} many?={@many?} />
+              <.tile
+                :for={tile <- group.tiles}
+                :key={tile.dom}
+                tile={tile}
+                ctx={section.ctx}
+                many?={@many?}
+              />
             </div>
           </section>
         </div>
@@ -869,7 +1168,10 @@ defmodule AlnaslWeb.RoundLive do
           "%{count} more tournament is not on the boards here.",
           "%{count} more tournaments are not on the boards here.",
           @not_here
-        )} <.link id="not-on-the-boards-setup" navigate={~p"/setup"}>{gettext("Setup")}</.link>
+        )}
+        <.link id="not-on-the-boards-setup" navigate={~p"/setup#setup-tournaments"}>
+          {gettext("Setup")}
+        </.link>
       </p>
     </Layouts.app>
     """
@@ -924,9 +1226,77 @@ defmodule AlnaslWeb.RoundLive do
     """
   end
 
+  # Tiles or a list: what this browser chose, else the list from
+  # @list_from tiles on - a hall of forty boards does not fit in tiles.
+  defp shown_view(view, _count) when view in ["boards", "list"], do: view
+  defp shown_view(_none, count) when count >= @list_from, do: "list"
+  defp shown_view(_none, _count), do: "boards"
+
+  # One board as a row of the list: table, players, last move, clock, state.
+  # The board number opens the board's page, as a tile does.
+  attr :tile, :map, required: true
+  attr :ctx, :map, required: true
+
+  defp board_row(assigns) do
+    ~H"""
+    <tr id={"row-#{@tile.dom}"} class={["board-row", tone(@tile.state)]}>
+      <td class="row-board">
+        <.link
+          id={"row-link-#{@tile.dom}"}
+          navigate={Scope.game_path(@ctx.tid, @ctx.round, @tile.no)}
+          aria-label={gettext("Board %{n}: %{state}", n: @tile.no, state: state_word(@tile.state))}
+        >
+          {@tile.no}
+        </.link>
+        <span :if={@tile.label} class="note">{gettext("table %{label}", label: @tile.label)}</span>
+        <span :if={@tile.match} class="note">
+          {gettext("match %{match}, board %{place}",
+            match: @tile.match.number,
+            place: @tile.match.board
+          )}
+        </span>
+      </td>
+      <td class="row-players">
+        <span class="row-player">
+          <span class="dot white"></span>{@tile.white || gettext("White")}
+        </span>
+        <span class="row-player">
+          <span class="dot black"></span>{@tile.black || gettext("Black")}
+        </span>
+      </td>
+      <td class="row-move">
+        <%= cond do %>
+          <% @tile.result -> %>
+            <b>{@tile.result}</b>
+          <% @tile.last_san -> %>
+            {div(@tile.count + 1, 2)}{if rem(@tile.count, 2) == 1, do: ".", else: "..."}
+            <.figurine san={@tile.last_san} />
+          <% true -> %>
+            <span class="note">{gettext("No moves")}</span>
+        <% end %>
+      </td>
+      <td class="row-clock">
+        <%= if @tile.clock do %>
+          <.clock ms={@tile.clock.white_ms} running={@tile.clock.running == :white} />
+          <.clock ms={@tile.clock.black_ms} running={@tile.clock.running == :black} />
+        <% else %>
+          <span class="note">-</span>
+        <% end %>
+      </td>
+      <td class="row-state">
+        <.state state={@tile.state} />
+        <span :if={@tile.alarm} id={"row-alarm-#{@tile.dom}"} class="note">{@tile.alarm}</span>
+        <span :if={@tile.pairing_flag} class="note">
+          {gettext("Pairing changed in OpenPairings")}
+        </span>
+      </td>
+    </tr>
+    """
+  end
+
   # One board of the round: the tile, its menu, and what stays on the box.
   attr :tile, :map, required: true
-  attr :section, :map, required: true
+  attr :ctx, :map, required: true, doc: "the section's `ctx`: what a tile needs of it"
   attr :many?, :boolean, default: false
 
   defp tile(assigns) do
@@ -934,17 +1304,17 @@ defmodule AlnaslWeb.RoundLive do
     <div id={"tile-wrap-#{@tile.dom}"} class="tile-wrap">
       <.link
         id={"tile-#{@tile.dom}"}
-        navigate={Scope.game_path(@section.tid, @section.round, @tile.no)}
+        navigate={Scope.game_path(@ctx.tid, @ctx.round, @tile.no)}
         class={["tile", tone(@tile.state), @tile.pairing_flag && "flagged"]}
         aria-label={gettext("Board %{n}: %{state}", n: @tile.no, state: state_word(@tile.state))}
       >
         <div class="tile-head">
           <span class="tile-no">{@tile.no}</span>
           <span
-            :if={@many? and @section.title}
+            :if={@many? and @ctx.title}
             id={"tile-tournament-#{@tile.dom}"}
             class="flag plain"
-          >{@section.title}</span>
+          >{@ctx.title}</span>
           <span :if={@tile.label} id={"tile-label-#{@tile.dom}"} class="flag plain">
             {gettext("table %{label}", label: @tile.label)}
           </span>
@@ -968,12 +1338,12 @@ defmodule AlnaslWeb.RoundLive do
         </div>
 
         <div
-          :if={@section.outside_titles != [] and @tile.board_name}
+          :if={@ctx.outside not in [nil, ""] and @tile.board_name}
           id={"tile-outside-#{@tile.dom}"}
           class="tile-note"
         >
           <.icon name="warning" />{gettext("Not playing in %{tournament}",
-            tournament: Enum.join(@section.outside_titles, " / ")
+            tournament: @ctx.outside
           )}
         </div>
 
@@ -1100,7 +1470,7 @@ defmodule AlnaslWeb.RoundLive do
             id={"tile-result-#{@tile.dom}-#{String.replace(result, "/", "")}"}
             small
             phx-click="result"
-            phx-value-t={@section.tid}
+            phx-value-t={@ctx.tid}
             phx-value-board={@tile.no}
             phx-value-result={result}
           >{result}</.button>
@@ -1109,7 +1479,7 @@ defmodule AlnaslWeb.RoundLive do
             id={"tile-result-#{@tile.dom}-none"}
             small
             phx-click="result"
-            phx-value-t={@section.tid}
+            phx-value-t={@ctx.tid}
             phx-value-board={@tile.no}
             phx-value-result="*"
             data-confirm={gettext("Close this game without a result?")}
@@ -1119,7 +1489,7 @@ defmodule AlnaslWeb.RoundLive do
             small
             variant={if @tile.finished? and @tile.new_kind == :replace, do: "primary"}
             phx-click="new_game"
-            phx-value-t={@section.tid}
+            phx-value-t={@ctx.tid}
             phx-value-board={@tile.no}
             phx-value-kind={@tile.new_kind}
             data-confirm={Words.new_game_confirm(@tile.new_kind, @tile.finished?)}
@@ -1134,7 +1504,7 @@ defmodule AlnaslWeb.RoundLive do
             id={"tile-new-game-replace-#{@tile.dom}"}
             small
             phx-click="new_game"
-            phx-value-t={@section.tid}
+            phx-value-t={@ctx.tid}
             phx-value-board={@tile.no}
             phx-value-kind="replace"
             data-confirm={Words.new_game_confirm(:replace_decided, @tile.finished?)}
@@ -1143,7 +1513,7 @@ defmodule AlnaslWeb.RoundLive do
       </details>
 
       <div
-        :if={@section.site.page && @tile.site_url}
+        :if={@ctx.site? && @tile.site_url}
         id={"tile-site-#{@tile.dom}"}
         class="tile-site"
       >
@@ -1163,7 +1533,7 @@ defmodule AlnaslWeb.RoundLive do
           id={"tile-send-this-#{@tile.dom}"}
           small
           phx-click="send_this"
-          phx-value-t={@section.tid}
+          phx-value-t={@ctx.tid}
           phx-value-board={@tile.no}
           data-confirm={Words.send_this_confirm()}
         >{gettext("Send this one instead")}</.button>

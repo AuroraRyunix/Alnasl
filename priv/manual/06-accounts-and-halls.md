@@ -21,7 +21,7 @@ A 02cloud login alone gets nobody in. Only an invitation, or being named an admi
 
 The box's own ports are one hall. Every bridge belongs to a hall, and so do its boards and tournaments. An admin makes more halls on the Halls page. Each account sees its own halls and nothing of the others.
 
-With more than one hall, the switcher at the top says which one the pages are about, and the Halls page shows every hall at a glance: boards live, bridges connected, and what needs an arbiter.
+With more than one hall, the hall picker at the top of the rail says which one the pages are about, and how many of its boards are live. Press it for your halls, each with your role there and its live boards (a search field appears from seven halls on); picking one keeps you on the page you were on, now about that hall. "All halls" at the bottom opens the Halls page, which shows every hall at a glance: boards live, bridges connected, and what needs an arbiter.
 
 ## Tournaments and halls {#placements}
 
@@ -45,7 +45,7 @@ In each hall an account is an owner, an arbiter or a viewer. The same person can
 | Viewer | Follow the games. Changes nothing |
 | Arbiter | Run them: tables, rounds, results, corrections, the links to OpenPairings and OpenResults |
 | Owner | All that, and add and remove bridges, and invite people |
-| Admin | See every hall and the box itself: its name, updates, the tracker, the Outbox's switches |
+| Admin | See every hall and the box itself: its name, updates, the tracker, the switches on the Results page |
 
 For a tournament played in more than one hall, the highest role you have in any of them counts.
 
@@ -75,4 +75,4 @@ With accounts, the QR code under "Open this site on your phone" (on Boards and S
 
 ### A forgotten password {#forgotten-password}
 
-There is no mail to reset it with. An admin opens the hall's page and gives the account a temporary password; the next sign-in asks for one of the account's own, and every other browser signed in as it is signed out. Your own password is changed under your account (bottom of the left rail).
+There is no mail to reset it with. An admin opens the hall's page and gives the account a temporary password; the next sign-in asks for one of the account's own, and every other browser signed in as it is signed out. Your own password is changed under Account, in the account menu (the button at the foot of the rail, top right on a phone), which also says your role in the hall you are in.

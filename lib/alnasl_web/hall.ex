@@ -34,11 +34,41 @@ defmodule AlnaslWeb.Hall do
 
   # --- the plug ----------------------------------------------------------------
 
-  @doc "Puts the language in place for a controller request."
+  @locale_cookie "_alnasl_locale"
+
+  @doc "The cookie that keeps a person's language on a browser without an account."
+  def locale_cookie, do: @locale_cookie
+
+  @doc """
+  Puts the language in place for a controller request: the account's own
+  choice, or - nobody signed in - the one this browser chose (a cookie),
+  or else the box's default (Setup). The browser's choice goes into the
+  session too, where the LiveView socket finds it (`on_mount/4`). Needs
+  `AlnaslWeb.UserAuth.fetch_current_scope/2` before it where there is one.
+  """
   def put_locale(conn, _opts) do
-    Gettext.put_locale(AlnaslWeb.Gettext, locale())
-    conn
+    conn = fetch_cookies(conn)
+    chosen = valid_locale(conn.cookies[@locale_cookie])
+    Gettext.put_locale(AlnaslWeb.Gettext, locale(conn.assigns[:current_scope], chosen))
+
+    if get_session(conn, :person_locale) == chosen,
+      do: conn,
+      else: put_session(conn, :person_locale, chosen)
   end
+
+  @doc """
+  The language a page is read in: the account's choice when someone is
+  signed in, the browser's (`chosen`) when nobody is, else the box's.
+  """
+  def locale(scope, chosen) do
+    case scope do
+      %Scope{user: %{locale: locale}} -> valid_locale(locale) || box_locale()
+      _nobody -> valid_locale(chosen) || box_locale()
+    end
+  end
+
+  defp valid_locale(locale) when locale in ["en", "nl"], do: locale
+  defp valid_locale(_other), do: nil
 
   @doc """
   With accounts (or on the server): the signed-in, and nobody else - the
@@ -88,7 +118,8 @@ defmodule AlnaslWeb.Hall do
   defp loopback?({0, 0, 0, 0, 0, 65_535, 32_512, _}), do: true
   defp loopback?(_other), do: false
 
-  defp locale do
+  @doc "The box's default language (Setup, admins): what a person who chose none reads."
+  def box_locale do
     case Settings.get("locale") do
       locale when locale in ["en", "nl"] -> locale
       _other -> "en"
@@ -98,10 +129,17 @@ defmodule AlnaslWeb.Hall do
   # --- the LiveView hook -------------------------------------------------------
 
   def on_mount(:default, _params, session, socket) do
-    locale = locale()
+    scoped = mount_scope(session)
+
+    locale =
+      case scoped do
+        {:ok, scope} -> locale(scope, session["person_locale"])
+        _away -> locale(nil, session["person_locale"])
+      end
+
     Gettext.put_locale(AlnaslWeb.Gettext, locale)
 
-    case mount_scope(session) do
+    case scoped do
       # An account in no hall yet has one page: the one that says so.
       {:ok, %Scope{hall: nil, open?: false}} when socket.view != AlnaslWeb.HallsLive ->
         {:halt, redirect(socket, to: "/halls")}
@@ -122,9 +160,12 @@ defmodule AlnaslWeb.Hall do
             box: Settings.get("box_name") || "Alnasl",
             locale: locale,
             update: Scope.can?(scope, :admin) && not Accounts.server?() && Updates.notice(),
-            phone_signin: nil
+            phone_signin: nil,
+            current_path: "/"
           )
           |> refresh()
+          # Where the page is: the hall picker and the language come back here.
+          |> attach_hook(:hall_path, :handle_params, &path/3)
           # First: nothing below, and no page, sees an event the scope may not send.
           |> attach_hook(:permit, :handle_event, &AlnaslWeb.Permit.check/3)
           |> attach_hook(:hall, :handle_info, &info/2)
@@ -137,6 +178,12 @@ defmodule AlnaslWeb.Hall do
       {:redirect, to} ->
         {:halt, redirect(socket, to: to)}
     end
+  end
+
+  defp path(_params, uri, socket) do
+    %URI{path: path, query: query} = URI.parse(uri)
+    here = if query in [nil, ""], do: path || "/", else: (path || "/") <> "?" <> query
+    {:cont, assign(socket, current_path: AlnaslWeb.UserAuth.local_path(here))}
   end
 
   # Who the page is for: `{:ok, scope}`, or where to send the browser.
@@ -193,7 +240,13 @@ defmodule AlnaslWeb.Hall do
     {:cont,
      if(hall,
        do:
-         assign(socket, hall: %{hall | heads: Status.heads(link, socket.assigns[:current_scope])}),
+         assign(socket,
+           hall: %{
+             hall
+             | heads: Status.heads(link, socket.assigns[:current_scope]),
+               waiting: Status.waiting(socket.assigns[:current_scope])
+           }
+         ),
        else: refresh(socket)
      )}
   end

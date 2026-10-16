@@ -1007,6 +1007,7 @@ defmodule AlnaslWeb.SetupLive do
       box={@box}
       locale={@locale}
       scope={@current_scope}
+      path={@current_path}
       title={gettext("Setup")}
     >
       <div class="cols">
@@ -1857,15 +1858,6 @@ defmodule AlnaslWeb.SetupLive do
           </p>
         </.panel>
 
-        <.panel id="setup-look" title={gettext("Colour theme")}>
-          <p class="note">
-            {gettext(
-              "Chosen per device and kept in this browser; the box and the other screens are not told. Match device follows the phone or computer, light by day and dark by night."
-            )}
-          </p>
-          <Layouts.theme_picker id="theme-grid" variant={:grid} />
-        </.panel>
-
         <.panel
           :if={@box_admin?}
           id="setup-box"
@@ -1885,7 +1877,12 @@ defmodule AlnaslWeb.SetupLive do
                 field={@box_form[:locale]}
                 id="box-locale"
                 type="select"
-                label={gettext("Language")}
+                label={gettext("Default language")}
+                hint={
+                  gettext(
+                    "For whoever has not chosen one in the account menu. Each person's own choice stands."
+                  )
+                }
                 options={[{"English", "en"}, {"Nederlands", "nl"}]}
               />
               <.input

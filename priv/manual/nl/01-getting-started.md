@@ -9,19 +9,25 @@ Alnasl leest de elektronische borden in een speelzaal, leidt uit de stand van de
 
 Wie tegen wie speelt, hoort Alnasl van OpenPairings. Wat elk bord zag, gaat daarheen terug, naast de paring. De zetten en de klokken gaan naar de uitslagensite (OpenResults), waar de toeschouwers ze volgen. Alnasl bewaart eerst alles zelf, dus een zaal zonder internet verliest niets: wat niet kon worden verstuurd, gaat in volgorde weg zodra de verbinding terug is.
 
-Je werkt ermee in een browser, op het kastje zelf of op je laptop in de zaal. De pagina's staan in de balk links (op een telefoon bovenaan):
+Je werkt ermee in een browser, op het kastje zelf of op je laptop in de zaal. De pagina's staan in de balk links, in groepen:
 
-| Pagina | Waarvoor |
-| --- | --- |
-| Ronde | Het scherm tijdens het spel: een tegel per bord |
-| Borden | Wat er aangesloten is, de tafelnummers, "Klaar voor ronde N?" |
-| Wachtrij | Wat naar de uitslagensite en de andere bestemmingen gegaan is, en wat nog wacht |
-| PGN | Partijen als tekst: inlezen, toewijzen, vergelijken, exporteren |
-| Opnames | Alles wat de borden zeiden, ruw, om nog eens te bekijken |
-| Logboek | Wat er gebeurd is, in zinnen |
-| Zalen | De zalen waar je bij hoort, hun bruggen en mensen |
-| Instellingen | Koppelingen, toernooien, accounts, updates |
-| Help | Deze handleiding |
+| Groep | Pagina | Waarvoor |
+| --- | --- | --- |
+| Spelen | Live | Het scherm tijdens het spel: de borden van deze zaal, als tegels of als lijst |
+| Spelen | Borden | Wat er aangesloten is, de tafelnummers, "Klaar voor ronde N?" |
+| Spelen | Partijen | Partijen als tekst (PGN): inlezen, toewijzen, vergelijken, exporteren |
+| Versturen | Resultaten | Wat naar de uitslagensite en de andere bestemmingen gegaan is, en wat nog wacht |
+| Beheren | Zalen | De zalen waar je bij hoort, hun bruggen en mensen |
+| Beheren | Instellingen | Koppelingen, toernooien, accounts, updates |
+| Terugkijken | Logboek | Wat er gebeurd is, in zinnen |
+| Terugkijken | Opnames | Alles wat de borden zeiden, ruw, om nog eens te bekijken |
+| | Help | Deze handleiding |
+
+Bovenaan de balk: de naam van het kastje (op de server: "server") en, als je meer dan één zaal hebt, de zaalkiezer. Onderaan: de accountknop, met je taal, het kleurthema en Afmelden.
+
+Op een telefoon wordt de balk een strook bovenaan (de naam, de zaalkiezer en de accountknop) en staan de pagina's in een strook onderaan: Live, Borden, Resultaten en Meer, met de rest. Op een telefoon ontbreekt niets; het is één tik verder.
+
+Meldingen (de uitslagensite is niet bereikbaar, een bord speelt buiten zijn toernooi, een vraag over tafels, een nieuwe versie) staan boven de pagina, hoogstens twee tegelijk. De rest wacht achter "nog 1 melding"; druk erop om ze te zien.
 
 ## Twee manieren om het te draaien {#two-ways}
 
@@ -74,8 +80,10 @@ Elke keer dezelfde korte lijst. Bij elke stap zegt een pagina in woorden wat er 
 
 ## Taal en kleuren {#language-and-colours}
 
-De site bestaat in het Engels en het Nederlands: EN en NL onderaan de balk. De keuze is die van het kastje, dus iedereen die het opent ziet dezelfde taal, en deze handleiding ook.
+De site bestaat in het Engels en het Nederlands. De taal is de jouwe, niet die van het kastje: kies ze in het accountmenu (de knop onderaan de balk, op een telefoon rechtsboven). Met een account wordt de keuze bij het account bewaard en volgt ze je naar elke browser; zonder accounts wordt ze in die browser bewaard. Hoe dan ook verandert niemand anders van taal, en deze handleiding volgt de jouwe.
 
-De kleuren komen in dezelfde thema's als OpenResults: Papier, Nacht, Bord, Leisteen en Hoog contrast, en Volg het toestel, dat het toestel volgt. Kies met de halve maan onderaan de balk, of bij Instellingen (op een telefoon is de balk niet zichtbaar). De keuze geldt alleen voor die browser. Hoog contrast is voor een projector achteraan de zaal.
+Wie niets koos, leest de standaardtaal van het kastje. Een beheerder stelt die in bij Instellingen, "Dit kastje" ("Deze server"), Standaardtaal.
+
+De kleuren komen in dezelfde thema's als OpenResults: Papier, Nacht, Bord, Leisteen en Hoog contrast, en Volg het toestel, dat het toestel volgt. Kies in het accountmenu, bij Kleurthema; dat is de enige plek. De keuze geldt alleen voor die browser. Hoog contrast is voor een projector achteraan de zaal.
 
 Er kunnen meer thema's bij als themapakketten: een map per thema, in de map `themes` binnen de gegevensmap. Bij de volgende keer laden staan ze na de ingebouwde thema's. Een pakket dat het kastje niet wil laden, staat in het grijs in de lijst, met de reden.

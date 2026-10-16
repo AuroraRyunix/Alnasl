@@ -198,6 +198,22 @@ defmodule Alnasl.Placements do
     end
   end
 
+  @doc """
+  Is board `n` of a tournament played in hall `hall_id`? Asked of the
+  tournament's placements (`list/1`, read once by the caller): the hall of
+  the placement whose boards hold `n`. A board no placement holds is here
+  only when every placement is - a tournament in one hall keeps every game
+  it has, whatever its number.
+  """
+  def board_here?(placements, n, hall_id) when is_list(placements) and is_integer(n) do
+    case Enum.find(placements, &holds?(boards(&1, placements), n)) do
+      nil -> placements != [] and Enum.all?(placements, &(&1.hall_id == hall_id))
+      placement -> placement.hall_id == hall_id
+    end
+  end
+
+  def board_here?(_placements, _n, _hall_id), do: false
+
   @doc "The tournament still listed whose range in hall `hall_id` holds table `number`, if any."
   def for_table(number, hall_id) when is_integer(number) do
     hall_id = hall_id || Halls.own_id()

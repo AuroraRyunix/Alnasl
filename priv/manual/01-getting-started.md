@@ -9,19 +9,25 @@ Alnasl reads the electronic boards in a playing hall, works out the moves from w
 
 Who plays whom, Alnasl learns from OpenPairings. What each board saw goes back there, beside the pairing. The moves and the clocks go to the results site (OpenResults), where spectators follow them. Alnasl keeps everything itself first, so a hall without internet loses nothing: what could not be sent goes out, in order, when the connection is back.
 
-You work with it in a browser, on the box itself or on your laptop in the hall. The places are in the rail on the left (on a phone, along the top):
+You work with it in a browser, on the box itself or on your laptop in the hall. The places are in the rail on the left, in groups:
 
-| Page | What it is for |
-| --- | --- |
-| Round | The screen during play: a tile per board |
-| Boards | What is plugged in, the table numbers, "Ready for round N?" |
-| Outbox | What has gone to the results site and the other destinations, and what waits |
-| PGN | Games as text: read, attach, compare, export |
-| Recordings | Everything the boards said, raw, for looking at again |
-| Log | What happened, in sentences |
-| Halls | The halls you belong to, their bridges and people |
-| Setup | Links, tournaments, accounts, updates |
-| Help | This manual |
+| Group | Page | What it is for |
+| --- | --- | --- |
+| Play | Live | The screen during play: the boards of this hall, as tiles or as a list |
+| Play | Boards | What is plugged in, the table numbers, "Ready for round N?" |
+| Play | Games | Games as text (PGN): read, attach, compare, export |
+| Send | Results | What has gone to the results site and the other destinations, and what waits |
+| Manage | Halls | The halls you belong to, their bridges and people |
+| Manage | Setup | Links, tournaments, accounts, updates |
+| Look back | Log | What happened, in sentences |
+| Look back | Recordings | Everything the boards said, raw, for looking at again |
+| | Help | This manual |
+
+At the top of the rail: the box's name (on the server, "server") and, when you have more than one hall, the hall picker. At its foot: the account button, with your language, the colour theme and Sign out.
+
+On a phone the rail becomes a bar along the top (the name, the hall picker and the account button) and the places a bar along the bottom: Live, Boards, Results and More, which holds the rest. Nothing is missing on a phone; it is one tap further.
+
+Notices (the results site cannot be reached, a board plays outside its tournament, a question about tables, a new version) stand above the page, at most two at a time. The rest wait behind "1 more notice"; press it to see them.
 
 ## Two ways to run it {#two-ways}
 
@@ -74,8 +80,10 @@ The same short list every time. Each step has a page that says in words what is 
 
 ## Language and colours {#language-and-colours}
 
-The site is in English or Dutch: EN and NL at the foot of the rail. The choice is the box's, so everybody who opens it sees the same language, and so does this manual.
+The site is in English or Dutch. The language is yours, not the box's: choose it in the account menu (the button at the foot of the rail, top right on a phone). With an account, the choice is kept with the account and follows you to any browser; without accounts, it is kept in that browser. Either way nobody else's language changes, and this manual follows yours.
 
-The colours come in the same themes as OpenResults: Paper, Night, Board, Slate and High contrast, and Match device, which follows the phone or computer. Choose with the half-moon at the bottom of the rail, or under Setup (on a phone, the rail is not shown). The choice is kept in that browser only. High contrast is the one for a projector at the back of the hall.
+Whoever has chosen nothing reads the box's default language. An admin sets it under Setup, "This box" ("This server"), Default language.
+
+The colours come in the same themes as OpenResults: Paper, Night, Board, Slate and High contrast, and Match device, which follows the phone or computer. Choose in the account menu, under Colour theme; it is the only place. The choice is kept in that browser only. High contrast is the one for a projector at the back of the hall.
 
 More themes can be added as theme packs: one folder per theme, in the folder `themes` inside the data folder. On the next page load they are offered after the built-in ones. A pack the box will not load is listed in grey, with the reason.

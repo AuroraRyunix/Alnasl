@@ -1,8 +1,10 @@
 # Following games, corrections and rounds
 
-What to watch during a round, what the tiles are telling you, how to repair a board that went wrong, and how rounds start and finish. Keep the Round page open and most of this takes care of itself.
+What to watch during a round, what the tiles are telling you, how to repair a board that went wrong, and how rounds start and finish. Keep the Live page open and most of this takes care of itself.
 
-## The Round page {#the-round-page}
+## The Live page {#the-round-page}
+
+Live is the front page. It shows the hall you are in (the hall picker at the top of the rail says which): the tournaments placed in this hall, and of those only the boards of this hall and the games played here. A tournament played in two halls, boards 1-8 here and 9-16 in the annex, shows boards 1-8 here and 9-16 there. With more than one tournament here, a row of names at the top shows one alone; with one, there is no row.
 
 A tile per board: the players, the position the box is sure of, the clocks, the last move, and the state as a shape and a word. Colour never carries the meaning alone.
 
@@ -17,11 +19,17 @@ A tile per board: the players, the position the box is sure of, the clocks, the 
 | Clock wrong way | Black's clock is running and White has not moved |
 | Finished | A result has been set |
 
-A banner across the top means the results site cannot be reached. Play goes on and nothing is lost; the Outbox page says how much is waiting and why.
+A banner across the top means the results site cannot be reached. Play goes on and nothing is lost; the Results page says how much is waiting and why.
+
+### Tiles or a list {#live-views}
+
+"Boards" and "List" at the top switch between the tiles and a list with one row per board: the board number, the players, the last move, the clocks and the state. The list is the one for a hall of forty boards. The choice is kept in this browser; a browser that has chosen nothing gets the list from 24 boards on. The board number in the list opens the board's page, as a tile does.
+
+"Share" beside a tournament shows the QR code of its live page on the results site, to hold up in the hall; press Close (or Share again) to put it away.
 
 A tile is the way to the board's own page. Under it: "Finish game" and "New game".
 
-Only boards that exist here get a tile: a board of this hall seated on that board number, or a board that already has a stored game. Pairings without either are counted in one line under the heading ("26 pairings without a board here"). A tournament with no board here and no game at all is not drawn; one line at the bottom says how many there are ("14 more tournaments are not on the boards here") and leads to Setup. With a single tournament nothing is hidden. A tournament you open by its own address is always shown.
+Only boards that exist here get a tile: a board of this hall seated on that board number, or a board that already has a stored game. Pairings without either are counted in one line under the heading ("26 pairings without a board here"). A tournament with no board here and no game at all is not drawn, and neither is one placed only in another hall; one line at the bottom says how many there are ("14 more tournaments are not on the boards here") and leads to Setup, Tournaments. With a single tournament nothing is hidden. A tournament you open by its own address is always shown.
 
 ## A board's page {#a-board}
 
@@ -67,21 +75,21 @@ Everything you do here is written in the Log with the time.
 
 ## Finishing a game {#finishing}
 
-Set the result on every board, or confirm the suggestion: "Finish game" on the board's page, or under its tile on the Round page. There are three results, or "No result" for a game that was abandoned.
+Set the result on every board, or confirm the suggestion: "Finish game" on the board's page, or under its tile on the Live page. There are three results, or "No result" for a game that was abandoned.
 
 ### Another game on the same board {#new-game}
 
 "New game on this board". The game before it is kept and listed with its PGN. One game of a board goes to the results site, Lichess and OpenPairings:
 
 - Where a pairing names the board and its game has **no result** (abandoned, a false start, "No result"), the new game is that one: it replaces the old game on all three, and the old one stays on the box.
-- Where the game **has a result**, the new game is an extra one that stays on the box, so a finished game is never overwritten. "It replaces the game of the pairing" is there for when you mean it. A game that stays on the box says so on its tile, on its page and in the Outbox, with "Send this one instead".
+- Where the game **has a result**, the new game is an extra one that stays on the box, so a finished game is never overwritten. "It replaces the game of the pairing" is there for when you mean it. A game that stays on the box says so on its tile, on its page and on the Results page, with "Send this one instead".
 - On a board no pairing names, setting up the pieces again starts the next game by itself. Setup can make that always, or never.
 
-A game that was not captured at all: PGN page, read the scoresheet's moves, and "Attach" it to its board.
+A game that was not captured at all: Games page, read the scoresheet's moves, and "Attach" it to its board.
 
 ## Rounds {#rounds}
 
-With OpenPairings, a round starts by itself a few seconds after the arbiter pairs it there: that tournament's boards show the new round with names, ratings and colours. The boards of the other tournaments are not touched. "Start round N" on the Round page stays for when there is no connection, and a tournament can be told not to start rounds by itself (Setup).
+With OpenPairings, a round starts by itself a few seconds after the arbiter pairs it there: that tournament's boards show the new round with names, ratings and colours. The boards of the other tournaments are not touched. "Start round N" on the Live page stays for when there is no connection, and a tournament can be told not to start rounds by itself (Setup).
 
 Without OpenPairings, "Start round N" moves the tournament's boards on to the next round.
 
@@ -95,6 +103,6 @@ If the arbiter changes a pairing in OpenPairings after the round began:
 
 ## Team events {#team-events}
 
-A team event reads as matches on the Round page: "Match 3: Team A - Team B", the match's boards under it in board order, each tile naming the team of each player and its place in the match. Beside the match is its score as the boards saw it finish. Only that: the score that counts is the one the arbiter enters in OpenPairings.
+A team event reads as matches on the Live page: "Match 3: Team A - Team B", the match's boards under it in board order, each tile naming the team of each player and its place in the match. Beside the match is its score as the boards saw it finish. Only that: the score that counts is the one the arbiter enters in OpenPairings.
 
 "Keep each match together" (on by default) counts a tournament's tables match by match, so a match sits side by side and numbering by touching goes match by match. The PGN of a team game carries WhiteTeam and BlackTeam, and Round as round and board ("3.6").

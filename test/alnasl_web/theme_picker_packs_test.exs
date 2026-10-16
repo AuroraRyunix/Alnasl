@@ -37,7 +37,7 @@ defmodule AlnaslWeb.ThemePickerPacksTest do
     assert count(doc, ~s(#theme-picker [data-theme-opt="contrast"])) == 1
   end
 
-  test "an installed pack is offered after the built-ins in both pickers, with its swatch", %{
+  test "an installed pack is offered after the built-ins in the picker, with its swatch", %{
     conn: conn,
     themes_dir: dir
   } do
@@ -46,7 +46,7 @@ defmodule AlnaslWeb.ThemePickerPacksTest do
 
     doc = page(conn)
 
-    for picker <- ~w(theme-picker theme-grid) do
+    for picker <- ~w(theme-picker) do
       assert count(doc, "##{picker}-pack-toon[data-theme-opt=toon]") == 1
       assert count(doc, "##{picker}-pack-toon .theme-pack-swatch i") == 3
 
@@ -73,7 +73,7 @@ defmodule AlnaslWeb.ThemePickerPacksTest do
     Settings.put("locale", "nl")
 
     doc = page(conn)
-    assert doc |> LazyHTML.query("#theme-grid-pack-toon") |> LazyHTML.text() =~ "Tekenfilm"
+    assert doc |> LazyHTML.query("#theme-picker-pack-toon") |> LazyHTML.text() =~ "Tekenfilm"
   end
 
   test "a pack that vanishes is no longer offered or known to the script", %{

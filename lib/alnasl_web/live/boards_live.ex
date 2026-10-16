@@ -449,6 +449,7 @@ defmodule AlnaslWeb.BoardsLive do
       box={@box}
       locale={@locale}
       scope={@current_scope}
+      path={@current_path}
       title={gettext("Boards")}
       subtitle={gettext("%{n} known", n: length(@snapshots))}
     >

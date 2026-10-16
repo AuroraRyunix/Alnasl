@@ -40,7 +40,7 @@ defmodule AlnaslWeb.Permit do
   @everywhere %{"live_ping" => :viewer, "phone_signin" => :viewer, "search" => :viewer}
 
   @levels %{
-    RoundLive => %{},
+    RoundLive => %{"set_view" => :viewer, "share" => :viewer, "unshare" => :viewer},
     GameLive => %{
       "goto" => :viewer,
       "nav" => :viewer,

@@ -15,7 +15,7 @@ Borden, "Een bord toevoegen": kies de poort waarop het bord hangt en druk op Toe
 
 De usb-adapter van een RS232-bord heeft op een Mac of Windows-pc soms het stuurprogramma van de maker nodig voor hij verschijnt (FTDI werkt zoals het is; Prolific, CH340 en CP210x misschien niet).
 
-Een simulatorbord staat in dezelfde lijst. Het speelt zelf een partij en dient om te oefenen: voeg er een toe en de pagina Ronde heeft iets om te tonen.
+Een simulatorbord staat in dezelfde lijst. Het speelt zelf een partij en dient om te oefenen: voeg er een toe en de pagina Live heeft iets om te tonen.
 
 ## Meerdere borden op één kabel {#loop}
 
@@ -36,7 +36,7 @@ Twaalf borden lijken op elkaar, en twaalf kabels ook. Het kastje houdt drie ding
 
 - **Welk bord het is.** Een DGT-bord vertelt het kastje zijn serienummer (het staat ook op een etiket onder het bord). Daaraan kent het kastje het, niet aan de usb-poort. Haal het los, steek het elders in, herstart het kastje: het is nog altijd hetzelfde bord en houdt zijn nummer. Komt het terug op een andere poort, voeg het dan op die poort toe: het kastje herkent het serienummer en zet het terug op zijn oude plaats. Een bord dat het kastje nooit gezien heeft, krijgt de markering "Nieuw bord" en vraagt om een nummer.
 - **Zijn tafelnummer.** De sticker op het bord: "dit is tafel 7". Je stelt het één keer in voor de zaal en het blijft. "Etiketten" op de pagina Borden drukt een vel stickers af met het tafelnummer en het serienummer.
-- **Zijn bord van de ronde.** Normaal hetzelfde nummer als de tafel. Voor één ronde kun je iets anders zeggen in de kolom "Bord van ronde N" ("tafel 7 speelt vandaag bord 3"), twee borden omwisselen, of alles terugzetten. De volgende ronde begint weer bij de tafelnummers. Op de pagina Ronde is het bordnummer het grote; "tafel 7 · serienummer 06310" is de kleine letter.
+- **Zijn bord van de ronde.** Normaal hetzelfde nummer als de tafel. Voor één ronde kun je iets anders zeggen in de kolom "Bord van ronde N" ("tafel 7 speelt vandaag bord 3"), twee borden omwisselen, of alles terugzetten. De volgende ronde begint weer bij de tafelnummers. Op de pagina Live is het bordnummer het grote; "tafel 7 · serienummer 06310" is de kleine letter.
 
 ### De tafelnummers geven {#giving-numbers}
 
@@ -72,4 +72,4 @@ De kolom "Beginstelling" vergelijkt wat op het bord staat met de beginstelling e
 
 ## Tafels die in geen enkel toernooi spelen {#unlinked-tables}
 
-Een bord dat in geen gekoppeld toernooi speelt, blijft nooit stil: de regel onder de balk, de pagina Borden, de pagina Ronde en "Klaar voor ronde N?" zeggen allemaal "Bord 1 speelt niet in ...", met een knop om het daar te zetten. Hoe toernooien en tafels samengaan, staat in [OpenPairings, OpenResults en Lichess](05-openpairings-and-openresults.md).
+Een bord dat in geen gekoppeld toernooi speelt, blijft nooit stil: de regel onder de balk, de pagina Borden, de pagina Live en "Klaar voor ronde N?" zeggen allemaal "Bord 1 speelt niet in ...", met een knop om het daar te zetten. Hoe toernooien en tafels samengaan, staat in [OpenPairings, OpenResults en Lichess](05-openpairings-and-openresults.md).

@@ -26,12 +26,16 @@ defmodule AlnaslWeb.Status do
 
   @doc """
   Everything the frame needs beyond the connection to the results server:
-  `%{heads: [head] | :results_only, seating: map, live: true}`. A `head` is
-  `%{id, tone, icon, text, to}`.
+  `%{heads: [head] | :results_only, seating: map, waiting: n, live: %{hall_id => n}}`.
+  A `head` is `%{id, tone, icon, text, to}`; `waiting` is what the outbox
+  holds for the tournaments of the hall on show (the rail's count), `live`
+  the connected boards of each hall (the hall picker; empty with one hall).
   """
   def build(link, scope \\ nil) do
     %{
       heads: heads(link, scope),
+      waiting: waiting(scope),
+      live: live_by_hall(scope),
       seating:
         if own_hall?(scope) do
           %{outside: Seating.outside(), ask: Seating.ask(), auto: Seating.auto()}
@@ -40,6 +44,39 @@ defmodule AlnaslWeb.Status do
         end
     }
   end
+
+  @doc """
+  What the outbox holds for the tournaments placed in the scope's hall: the
+  count beside Results in the rail. Everything on a box without a hall to
+  scope by.
+  """
+  def waiting(scope) do
+    by_tournament = Outbox.pending_by_tournament()
+
+    case scope do
+      %Scope{hall: %{id: hall_id}} ->
+        Enum.reduce(by_tournament, 0, fn {tid, count}, sum ->
+          tournament = tid && Tournaments.get(tid)
+
+          if tournament && Alnasl.Placements.in_hall?(tournament, hall_id),
+            do: sum + count,
+            else: sum
+        end)
+
+      _none ->
+        by_tournament |> Map.values() |> Enum.sum()
+    end
+  end
+
+  # The boards that are connected, per hall: only asked when there is a hall
+  # to switch to, because it asks every board.
+  defp live_by_hall(%Scope{halls: [_, _ | _]}) do
+    for snapshot <- Alnasl.Boards.snapshots(), snapshot.connected?, reduce: %{} do
+      acc -> Map.update(acc, snapshot[:hall_id] || Halls.own_id(), 1, &(&1 + 1))
+    end
+  end
+
+  defp live_by_hall(_one), do: %{}
 
   # The seating notices are about the box's own ports (`Alnasl.Seating`):
   # shown on the box's own hall, and on a box without accounts.

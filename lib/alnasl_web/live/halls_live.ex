@@ -366,6 +366,7 @@ defmodule AlnaslWeb.HallsLive do
       box={@box}
       locale={@locale}
       scope={@current_scope}
+      path={@current_path}
       title={gettext("Halls")}
     >
       <div class="stack">
@@ -457,6 +458,7 @@ defmodule AlnaslWeb.HallsLive do
       box={@box}
       locale={@locale}
       scope={@current_scope}
+      path={@current_path}
       title={@shown.name}
     >
       <:actions>

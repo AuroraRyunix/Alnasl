@@ -11,15 +11,18 @@ defmodule AlnaslWeb.SeatingComponents do
 
   alias Alnasl.Tournaments
 
-  @doc "What the frame shows under the bar, from `AlnaslWeb.Status.build/1`."
-  attr :seating, :map, default: nil
-  attr :nav, :atom, default: nil
+  @doc """
+  One of the frame's notices about seating, by `key` (`:auto`, `:outside`,
+  `:ask`), from `AlnaslWeb.Status.build/1`. The frame decides which are up
+  and how many are in sight (`AlnaslWeb.Layouts`). A notice names at most
+  three tournaments; the rest are in Setup.
+  """
+  attr :key, :atom, required: true
+  attr :seating, :map, required: true
 
-  def notices(%{seating: nil} = assigns), do: ~H""
-
-  def notices(assigns) do
+  def notice(%{key: :auto} = assigns) do
     ~H"""
-    <div :if={@seating.auto} id="auto-notice" class="banner news" role="status">
+    <div id="auto-notice" class="banner news" role="status">
       <.icon name="ok" />
       <span>
         {ngettext(
@@ -39,8 +42,12 @@ defmodule AlnaslWeb.SeatingComponents do
         </button>
       </span>
     </div>
+    """
+  end
 
-    <div :if={@seating.outside != []} id="outside-banner" class="banner" role="status">
+  def notice(%{key: :outside} = assigns) do
+    ~H"""
+    <div id="outside-banner" class="banner" role="status">
       <.icon name="warning" />
       <ul class="outside-list">
         <li :for={o <- @seating.outside} id={"outside-#{o.board.id}"}>
@@ -48,22 +55,36 @@ defmodule AlnaslWeb.SeatingComponents do
         </li>
       </ul>
     </div>
+    """
+  end
 
-    <div
-      :if={@seating.ask != [] and @nav != :setup}
-      id="ask-banner"
-      class="banner"
-      role="status"
-    >
+  def notice(%{key: :ask} = assigns) do
+    ~H"""
+    <div id="ask-banner" class="banner" role="status">
       <.icon name="warning" />
       <span>
         {gettext("Which tables play in %{names}?",
-          names: Enum.map_join(@seating.ask, ", ", &(Tournaments.title(&1.tournament) || ""))
+          names: few_names(Enum.map(@seating.ask, &(Tournaments.title(&1.tournament) || "")))
         )}
       </span>
       <.link id="ask-banner-link" navigate={~p"/setup#seat-ask"}>{gettext("Answer in Setup")}</.link>
     </div>
     """
+  end
+
+  @doc """
+  At most three names, joined, and how many more there are: "A, B, C and
+  2 more". A notice is a line, not a list of every tournament the links
+  brought.
+  """
+  def few_names(names, max \\ 3, joiner \\ ", ") do
+    {shown, rest} = Enum.split(names, max)
+    text = Enum.join(shown, joiner)
+
+    case length(rest) do
+      0 -> text
+      n -> gettext("%{names} and %{count} more", names: text, count: n)
+    end
   end
 
   @doc "One board that plays in no linked tournament, in words, with the way to put it right."
@@ -79,7 +100,7 @@ defmodule AlnaslWeb.SeatingComponents do
       {outside_text(@entry)}
     </span>
     <span class="outside-actions">
-      <%= for t <- @entry.targets do %>
+      <%= for t <- Enum.take(@entry.targets, 3) do %>
         <button
           id={"#{@scope}put-#{@entry.board.id}-#{t.tournament.id}"}
           type="button"
@@ -104,13 +125,20 @@ defmodule AlnaslWeb.SeatingComponents do
           {gettext("Put it there and start fresh")}
         </button>
       <% end %>
+      <.link
+        :if={length(@entry.targets) > 3}
+        id={"#{@scope}put-more-#{@entry.board.id}"}
+        navigate={~p"/setup#setup-tournaments"}
+      >
+        {gettext("The other %{count} in Setup", count: length(@entry.targets) - 3)}
+      </.link>
     </span>
     """
   end
 
   @doc "The sentence about one board outside: its name and the tournaments it could play in."
   def outside_text(%{board: board, targets: targets, game: game}) do
-    names = Enum.map_join(targets, " / ", &(Tournaments.title(&1.tournament) || ""))
+    names = targets |> Enum.map(&(Tournaments.title(&1.tournament) || "")) |> few_names(3, " / ")
 
     base =
       gettext("%{name} is not playing in %{tournament}.", name: board.name, tournament: names)

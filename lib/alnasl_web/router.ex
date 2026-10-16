@@ -14,8 +14,8 @@ defmodule AlnaslWeb.Router do
     plug :put_root_layout, html: {AlnaslWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
-    plug :put_locale
     plug :fetch_current_scope
+    plug :put_locale
     plug :gate
   end
 
@@ -29,8 +29,8 @@ defmodule AlnaslWeb.Router do
     plug :put_root_layout, html: {AlnaslWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
-    plug :put_locale
     plug :fetch_current_scope
+    plug :put_locale
   end
 
   scope "/", AlnaslWeb do
@@ -90,7 +90,9 @@ defmodule AlnaslWeb.Router do
     get "/unlock", DoorController, :unlock
     post "/unlock", DoorController, :enter
     get "/lock", DoorController, :lock
-    get "/locale/:locale", DoorController, :locale
+    # A person's language: a form, not a link, so nothing a crawler or a
+    # prefetching browser follows changes it (`DoorController.locale/2`).
+    post "/locale", DoorController, :locale
 
     get "/files/round/:round", FileController, :round
     get "/files/round/:round/board/:board", FileController, :game

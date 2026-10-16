@@ -1,13 +1,26 @@
 defmodule AlnaslWeb.Layouts do
   @moduledoc """
-  The frame every page stands in: the rail with the eight places, the bar with
-  the page's name and the connection to the results server, and - on every
-  page, whenever the server cannot be reached - the banner that says so.
+  The frame every page stands in.
+
+  On a desk: the rail - the brand (the box's name, or "server"), the hall
+  picker, the places in four groups (Play, Send, Manage, Look back, and
+  Help), and the account button at its foot. On a phone (860 px and less)
+  the rail is a bar along the top with the brand, the hall picker and the
+  account button, and the places are a tab bar along the bottom: Live,
+  Boards, Results and More, which holds the rest. Nothing the desk has is
+  missing on the phone; it is one tap further.
+
+  Above the page: the notices (the results site cannot be reached, a board
+  plays outside, a question about tables, a new version), at most two in
+  sight and the rest folded behind "N more notices". Then the bar with the
+  page's name and the connection badges.
   """
 
   use AlnaslWeb, :html
 
+  alias Alnasl.Accounts.Scope
   alias Alnasl.ThemePacks
+  alias AlnaslWeb.SeatingComponents
 
   embed_templates "layouts/*"
 
@@ -17,7 +30,8 @@ defmodule AlnaslWeb.Layouts do
   `update` is the newer version the box heard of, if any (`AlnaslWeb.Hall`).
   `nav` is the place the page belongs to; `link` is `Alnasl.Outbox.status/0`
   (assigned by `AlnaslWeb.Hall`); `box` the box's name; `locale` the
-  language in use.
+  language in use; `path` the page's own address, where the hall picker and
+  the language come back to.
   """
   attr :flash, :map, required: true
   attr :nav, :atom, required: true
@@ -26,6 +40,7 @@ defmodule AlnaslWeb.Layouts do
   attr :link, :map, required: true
   attr :box, :string, default: "Alnasl"
   attr :locale, :string, default: "en"
+  attr :path, :string, default: "/"
   attr :update, :any, default: nil, doc: "`Alnasl.Updates.notice/0`"
   attr :alarms, :integer, default: 0
 
@@ -40,146 +55,93 @@ defmodule AlnaslWeb.Layouts do
   attr :hall, :map,
     default: nil,
     doc:
-      "`AlnaslWeb.Status.build/1`: the badges, and the lines about boards outside (assigned by `AlnaslWeb.Hall`)"
+      "`AlnaslWeb.Status.build/1`: the badges, the counts, and the lines about boards outside (assigned by `AlnaslWeb.Hall`)"
 
   slot :actions
   slot :inner_block, required: true
 
   def app(assigns) do
+    assigns =
+      assigns
+      |> assign(:notices, notices(assigns))
+      |> assign(:waiting, waiting(assigns))
+
     ~H"""
     <a class="skip" href="#main">{gettext("Skip to the page")}</a>
     <div class="frame">
-      <aside class="rail">
+      <aside class="rail" id="rail">
         <.link navigate={~p"/"} class="brand" id="brand">
           <.logo />
           <div>
-            <b>Alnasl</b> <span>{@box}</span>
+            <b>Alnasl</b> <span id="brand-edition">{edition_name(@box)}</span>
           </div>
         </.link>
-        <.hall_switcher scope={@scope} />
-        <nav class="nav" aria-label={gettext("Places")}>
-          <.nav_item to={~p"/"} key={:round} nav={@nav} icon="round" count={@alarms}>
-            {gettext("Round")}
-          </.nav_item>
-
-          <.nav_item to={~p"/boards"} key={:boards} nav={@nav} icon="boards">
-            {gettext("Boards")}
-          </.nav_item>
-
-          <.nav_item to={~p"/outbox"} key={:outbox} nav={@nav} icon="outbox" count={@link.pending}>
-            {gettext("Outbox")}
-          </.nav_item>
-
-          <.nav_item to={~p"/pgn"} key={:pgn} nav={@nav} icon="pgn">
-            {gettext("PGN")}
-          </.nav_item>
-
-          <.nav_item to={~p"/recordings"} key={:recordings} nav={@nav} icon="recordings">
-            {gettext("Recordings")}
-          </.nav_item>
-
-          <.nav_item to={~p"/log"} key={:log} nav={@nav} icon="log">
-            {gettext("Log")}
-          </.nav_item>
-
-          <.nav_item to={~p"/halls"} key={:halls} nav={@nav} icon="boards">
-            {gettext("Halls")}
-          </.nav_item>
-
-          <.nav_item to={~p"/setup"} key={:setup} nav={@nav} icon="setup">
-            {gettext("Setup")}
-          </.nav_item>
-
-          <.nav_item to={~p"/help"} key={:help} nav={@nav} icon="help">
-            {gettext("Help")}
-          </.nav_item>
+        <.hall_picker scope={@scope} hall={@hall} path={@path} />
+        <nav class="nav" id="nav" aria-label={gettext("Places")}>
+          <div
+            :for={{group, label, items} <- groups(@alarms, @waiting)}
+            class="nav-group"
+            id={"nav-group-#{group}"}
+            role="group"
+            aria-label={label}
+          >
+            <span :if={label} class="nav-head" aria-hidden="true">{label}</span>
+            <.nav_item
+              :for={item <- items}
+              to={item.to}
+              key={item.key}
+              nav={@nav}
+              icon={item.icon}
+              count={item.count}
+            >
+              {item.label}
+            </.nav_item>
+          </div>
         </nav>
 
         <div class="rail-foot">
-          <.account_line scope={@scope} />
-          <div class="seg" role="group" aria-label={gettext("Language")}>
-            <a
-              id="locale-en"
-              href={~p"/locale/en"}
-              aria-current={to_string(@locale == "en")}
-              lang="en"
-            >EN</a>
-            <a
-              id="locale-nl"
-              href={~p"/locale/nl"}
-              aria-current={to_string(@locale == "nl")}
-              lang="nl"
-            >NL</a>
-          </div>
-          <.theme_picker id="theme-picker" />
+          <.account_menu scope={@scope} locale={@locale} path={@path} />
         </div>
       </aside>
 
       <div class="main">
-        <div
-          :if={@link.state in [:offline, :blocked]}
-          id="offline-banner"
-          class={["banner", @link.state == :blocked && "bad"]}
-          role="status"
-        >
-          <.icon name="offline" />
-          <span>
-            <%= if @link.state == :blocked do %>
-              {gettext("The results server refuses this box. Nothing is lost: %{count} waiting.",
-                count: @link.pending
-              )}
-            <% else %>
-              {gettext("No connection to the results server. Nothing is lost: %{count} waiting.",
-                count: @link.pending
-              )}
-            <% end %>
-          </span>
-          <.link navigate={~p"/outbox"}>{gettext("What is waiting")}</.link>
-        </div>
-        <AlnaslWeb.SeatingComponents.notices seating={@hall && @hall.seating} nav={@nav} />
-        <div :if={@update} id="update-banner" class="banner news" role="status">
-          <.icon name="send" />
-          <span>
-            {gettext("Alnasl %{version} is out. This box runs %{current}.",
-              version: @update.version,
-              current: Alnasl.Updates.current_version()
-            )}
-            <span :if={Map.get(@update, :no_build)} id="update-banner-no-build">
-              {gettext("There is no Mac build for Intel.")}
-            </span>
-
-            <span :if={@update.size} id="update-banner-size">
-              {gettext("The download is %{size}.", size: AlnaslWeb.Words.megabytes(@update.size))}
-            </span>
-          </span>
-
-          <span class="banner-actions">
-            <a id="update-banner-notes" href={@update.url} target="_blank" rel="noopener">
-              {gettext("What is new")}
-            </a>
-
-            <.link id="update-banner-setup" navigate={~p"/setup#setup-updates"}>
-              {gettext("Update...")}
-            </.link>
-
-            <button id="update-banner-later" type="button" class="linkish" phx-click="update_later">
-              {gettext("Later")}
-            </button>
-
+        <div :if={@notices != []} id="notices" class="notices">
+          <.notice
+            :for={key <- Enum.take(@notices, 2)}
+            key={key}
+            link={@link}
+            update={@update}
+            hall={@hall}
+            nav={@nav}
+          />
+          <%= if length(@notices) > 2 do %>
             <button
-              id="update-banner-never"
+              id="more-notices-button"
               type="button"
-              class="linkish"
-              phx-click="update_never"
-              data-confirm={
-                gettext(
-                  "Stop looking for new versions? You can switch it on again under Setup, Updates."
-                )
+              class="banner more-notices"
+              aria-expanded="false"
+              aria-controls="more-notices"
+              phx-click={
+                JS.toggle_attribute({"hidden", ""}, to: "#more-notices")
+                |> JS.toggle_attribute({"aria-expanded", "true", "false"})
               }
             >
-              {gettext("Don't ask again")}
+              <.icon name="chevron" />
+              <span>
+                {ngettext("%{count} more notice", "%{count} more notices", length(@notices) - 2)}
+              </span>
             </button>
-          </span>
+            <div id="more-notices" hidden>
+              <.notice
+                :for={key <- Enum.drop(@notices, 2)}
+                key={key}
+                link={@link}
+                update={@update}
+                hall={@hall}
+                nav={@nav}
+              />
+            </div>
+          <% end %>
         </div>
 
         <header class="bar">
@@ -194,7 +156,7 @@ defmodule AlnaslWeb.Layouts do
                 :for={head <- @hall.heads}
                 id={head.id}
                 navigate={head.to}
-                style="text-decoration:none"
+                class="head-link"
               >
                 <.badge tone={head.tone} icon={head.icon}>{head.text}</.badge>
               </.link>
@@ -213,7 +175,7 @@ defmodule AlnaslWeb.Layouts do
                 <.icon name="external" />
               </a>
             <% else %>
-              <.link navigate={~p"/outbox"} style="text-decoration:none">
+              <.link navigate={~p"/outbox"} class="head-link">
                 <.link_state link={@link} />
               </.link>
             <% end %>
@@ -224,26 +186,459 @@ defmodule AlnaslWeb.Layouts do
           {render_slot(@inner_block)}
         </main>
       </div>
+
+      <.tab_bar nav={@nav} alarms={@alarms} waiting={@waiting} />
     </div>
     <.flash_group flash={@flash} />
     """
   end
 
+  # The box's name under the logo, or "server" on the hosted copy: there is
+  # no box to name there.
+  defp edition_name(box) do
+    case Alnasl.edition() do
+      :server -> gettext("server")
+      :box -> box
+    end
+  end
+
+  # What waits in the outbox for this hall's tournaments; the whole queue
+  # on a page that has no hall to ask about.
+  defp waiting(%{hall: %{waiting: n}}) when is_integer(n), do: n
+  defp waiting(%{link: link}), do: link.pending
+
+  # The places, in their groups: `{id, label, [item]}`. Help stands alone,
+  # at the end, without a heading.
+  defp groups(alarms, waiting) do
+    [
+      {"play", gettext("Play"),
+       [
+         item(:round, ~p"/", "round", gettext("Live"), alarms),
+         item(:boards, ~p"/boards", "boards", gettext("Boards")),
+         item(:pgn, ~p"/pgn", "pgn", gettext("Games"))
+       ]},
+      {"send", gettext("Send"),
+       [item(:outbox, ~p"/outbox", "outbox", gettext("Results"), waiting)]},
+      {"manage", gettext("Manage"),
+       [
+         item(:halls, ~p"/halls", "hall", gettext("Halls")),
+         item(:setup, ~p"/setup", "setup", gettext("Setup"))
+       ]},
+      {"back", gettext("Look back"),
+       [
+         item(:log, ~p"/log", "log", gettext("Log")),
+         item(:recordings, ~p"/recordings", "recordings", gettext("Recordings"))
+       ]},
+      {"help", nil, [item(:help, ~p"/help", "help", gettext("Help"))]}
+    ]
+  end
+
+  defp item(key, to, icon, label, count \\ 0),
+    do: %{key: key, to: to, icon: icon, label: label, count: count}
+
+  # The tab bar keeps three places in reach of a thumb; More has the rest.
+  @tabs [:round, :boards, :outbox]
+
+  attr :nav, :atom, required: true
+  attr :alarms, :integer, default: 0
+  attr :waiting, :integer, default: 0
+
+  defp tab_bar(assigns) do
+    items = assigns.alarms |> groups(assigns.waiting) |> Enum.flat_map(&elem(&1, 2))
+
+    assigns =
+      assign(assigns,
+        tabs: Enum.map(@tabs, fn key -> Enum.find(items, &(&1.key == key)) end),
+        rest: Enum.reject(items, &(&1.key in @tabs))
+      )
+
+    ~H"""
+    <nav id="tab-bar" class="tab-bar" aria-label={gettext("Places on a phone")}>
+      <.link
+        :for={tab <- @tabs}
+        navigate={tab.to}
+        id={"tab-#{tab.key}"}
+        class="tab"
+        aria-current={if @nav == tab.key, do: "page"}
+      >
+        <.icon name={tab.icon} /> <span>{tab.label}</span>
+        <span :if={tab.count > 0} class="count">{tab.count}</span>
+      </.link>
+      <div
+        id="tab-more"
+        class="menu tab-more"
+        phx-click-away={close_menu("tab-more")}
+        data-close={close_menu("tab-more")}
+      >
+        <button
+          id="tab-more-button"
+          type="button"
+          class="tab"
+          aria-haspopup="true"
+          aria-expanded="false"
+          aria-controls="tab-more-menu"
+          aria-current={if @nav in Enum.map(@rest, & &1.key), do: "page"}
+          phx-click={toggle_menu("tab-more")}
+        >
+          <.icon name="more" /> <span>{gettext("More")}</span>
+        </button>
+        <div id="tab-more-menu" class="menu-panel more-sheet" hidden>
+          <.link
+            :for={item <- @rest}
+            navigate={item.to}
+            id={"tab-#{item.key}"}
+            class="menu-item"
+            aria-current={if @nav == item.key, do: "page"}
+          >
+            <.icon name={item.icon} /> <span>{item.label}</span>
+            <span :if={item.count > 0} class="count">{item.count}</span>
+          </.link>
+        </div>
+      </div>
+    </nav>
+    """
+  end
+
+  # A menu is a button and a panel: the panel's `hidden` and the button's
+  # `aria-expanded` move together, and LiveView keeps both through a redraw.
+  # A click elsewhere closes it; so does Escape, which `assets/js/app.js`
+  # answers by running the menu's `data-close` (a key binding on the window
+  # would take keys from the pages that have their own).
+  defp toggle_menu(id) do
+    JS.toggle_attribute({"hidden", ""}, to: "##{id}-menu")
+    |> JS.toggle_attribute({"aria-expanded", "true", "false"}, to: "##{id}-button")
+  end
+
+  defp close_menu(id) do
+    JS.set_attribute({"hidden", ""}, to: "##{id}-menu")
+    |> JS.set_attribute({"aria-expanded", "false"}, to: "##{id}-button")
+  end
+
+  # --- notices -----------------------------------------------------------------
+
+  # The notices that are up, most urgent first: the results site, what the
+  # boards play in, then the news.
+  defp notices(assigns) do
+    seating = assigns.hall && assigns.hall.seating
+
+    [
+      assigns.link.state in [:offline, :blocked] && :offline,
+      seating && seating.auto && :auto,
+      seating && seating.outside != [] && :outside,
+      seating && seating.ask != [] && assigns.nav != :setup && :ask,
+      assigns.update && :update
+    ]
+    |> Enum.filter(& &1)
+  end
+
+  attr :key, :atom, required: true
+  attr :link, :map, required: true
+  attr :update, :any, default: nil
+  attr :hall, :map, default: nil
+  attr :nav, :atom, default: nil
+
+  defp notice(%{key: :offline} = assigns) do
+    ~H"""
+    <div id="offline-banner" class={["banner", @link.state == :blocked && "bad"]} role="status">
+      <.icon name="offline" />
+      <span>
+        <%= if @link.state == :blocked do %>
+          {gettext("The results server refuses this box. Nothing is lost: %{count} waiting.",
+            count: @link.pending
+          )}
+        <% else %>
+          {gettext("No connection to the results server. Nothing is lost: %{count} waiting.",
+            count: @link.pending
+          )}
+        <% end %>
+      </span>
+      <.link navigate={~p"/outbox"}>{gettext("What is waiting")}</.link>
+    </div>
+    """
+  end
+
+  defp notice(%{key: :update} = assigns) do
+    ~H"""
+    <div id="update-banner" class="banner news" role="status">
+      <.icon name="send" />
+      <span>
+        {gettext("Alnasl %{version} is out. This box runs %{current}.",
+          version: @update.version,
+          current: Alnasl.Updates.current_version()
+        )}
+        <span :if={Map.get(@update, :no_build)} id="update-banner-no-build">
+          {gettext("There is no Mac build for Intel.")}
+        </span>
+
+        <span :if={@update.size} id="update-banner-size">
+          {gettext("The download is %{size}.", size: AlnaslWeb.Words.megabytes(@update.size))}
+        </span>
+      </span>
+
+      <span class="banner-actions">
+        <a id="update-banner-notes" href={@update.url} target="_blank" rel="noopener">
+          {gettext("What is new")}
+        </a>
+
+        <.link id="update-banner-setup" navigate={~p"/setup#setup-updates"}>
+          {gettext("Update...")}
+        </.link>
+
+        <button id="update-banner-later" type="button" class="linkish" phx-click="update_later">
+          {gettext("Later")}
+        </button>
+
+        <button
+          id="update-banner-never"
+          type="button"
+          class="linkish"
+          phx-click="update_never"
+          data-confirm={
+            gettext("Stop looking for new versions? You can switch it on again under Setup, Updates.")
+          }
+        >
+          {gettext("Don't ask again")}
+        </button>
+      </span>
+    </div>
+    """
+  end
+
+  defp notice(assigns) do
+    ~H"""
+    <SeatingComponents.notice key={@key} seating={@hall.seating} />
+    """
+  end
+
+  # --- hall picker -------------------------------------------------------------
+
+  @doc """
+  The hall the pages are about, as one button with its live boards; it
+  opens the account's halls, each with its role and live boards, a search
+  field from seven halls on, and "All halls" at the bottom. Picking one
+  keeps the page you are on (`/halls/:id/enter?return_to=`). Nothing when
+  there is only one hall.
+  """
+  attr :scope, :any, default: nil
+  attr :hall, :map, default: nil
+  attr :path, :string, default: "/"
+
+  def hall_picker(assigns) do
+    assigns = assign(assigns, :live, (assigns.hall && assigns.hall[:live]) || %{})
+
+    ~H"""
+    <div
+      :if={@scope && match?([_, _ | _], @scope.halls)}
+      id="hall-picker"
+      class="menu hall-picker"
+      phx-click-away={close_menu("hall-picker")}
+      data-close={close_menu("hall-picker")}
+    >
+      <button
+        id="hall-picker-button"
+        type="button"
+        class="menu-button"
+        aria-haspopup="true"
+        aria-expanded="false"
+        aria-controls="hall-picker-menu"
+        phx-click={toggle_menu("hall-picker")}
+      >
+        <.icon name="hall" />
+        <span class="menu-button-text">
+          <span class="hint">{gettext("Hall")}</span>
+          <b id="hall-picker-current">{@scope.hall && @scope.hall.name}</b>
+        </span>
+        <span
+          id="hall-picker-live"
+          class="live-count"
+          title={gettext("Boards connected")}
+        >
+          {live_words(@scope.hall && Map.get(@live, @scope.hall.id, 0))}
+        </span>
+        <.icon name="chevron" />
+      </button>
+
+      <div id="hall-picker-menu" class="menu-panel" hidden>
+        <input
+          :if={length(@scope.halls) >= 7}
+          id="hall-search"
+          type="search"
+          class="input menu-search"
+          placeholder={gettext("Find a hall")}
+          aria-label={gettext("Find a hall")}
+          autocomplete="off"
+          phx-hook=".HallSearch"
+        />
+        <script :type={Phoenix.LiveView.ColocatedHook} name=".HallSearch">
+          export default {
+            mounted() {
+              this.el.addEventListener("input", () => {
+                const query = this.el.value.trim().toLowerCase()
+                document.querySelectorAll("#hall-picker-list [data-hall-name]").forEach((row) => {
+                  row.hidden = query !== "" && !row.dataset.hallName.includes(query)
+                })
+              })
+            }
+          }
+        </script>
+        <ul id="hall-picker-list" class="menu-list">
+          <li :for={hall <- @scope.halls} data-hall-name={String.downcase(hall.name)}>
+            <a
+              id={"hall-switch-#{hall.id}"}
+              class="menu-item"
+              href={~p"/halls/#{hall.id}/enter?#{[return_to: @path]}"}
+              aria-current={if @scope.hall && @scope.hall.id == hall.id, do: "true"}
+            >
+              <span class="menu-item-main">
+                <b>{hall.name}</b>
+                <span class="hint">{AlnaslWeb.Words.role(Scope.role(@scope, hall.id))}</span>
+              </span>
+              <span class="live-count">{live_words(Map.get(@live, hall.id, 0))}</span>
+            </a>
+          </li>
+        </ul>
+        <.link navigate={~p"/halls"} id="hall-picker-all" class="menu-item menu-foot">
+          <.icon name="hall" /> <span>{gettext("All halls")}</span>
+        </.link>
+      </div>
+    </div>
+    """
+  end
+
+  defp live_words(nil), do: ""
+
+  defp live_words(count),
+    do: ngettext("%{count} live", "%{count} live", count)
+
+  # --- account -----------------------------------------------------------------
+
+  @doc """
+  The account button at the foot of the rail (top right on a phone): who
+  is signed in and their role in this hall, the account page, the language
+  this person reads the site in, the colour theme, and Sign out. On a box
+  without accounts it holds the language and the theme, for this browser.
+  """
+  attr :scope, :any, default: nil
+  attr :locale, :string, default: "en"
+  attr :path, :string, default: "/"
+
+  def account_menu(assigns) do
+    user = assigns.scope && assigns.scope.user
+
+    assigns =
+      assign(assigns,
+        user: user,
+        role: user && Scope.role(assigns.scope, Scope.hall_id(assigns.scope))
+      )
+
+    ~H"""
+    <div
+      id="account"
+      class="menu account-menu"
+      phx-click-away={close_menu("account")}
+      data-close={close_menu("account")}
+    >
+      <button
+        id="account-button"
+        type="button"
+        class="menu-button account-button"
+        aria-haspopup="true"
+        aria-expanded="false"
+        aria-controls="account-menu"
+        phx-click={toggle_menu("account")}
+      >
+        <span class="avatar" aria-hidden="true">
+          <%= if @user do %>
+            {initial(@user.email)}
+          <% else %>
+            <.icon name="account" />
+          <% end %>
+        </span>
+        <span class="menu-button-text account-name">
+          <%= if @user do %>
+            <span class="mono">{@user.email}</span>
+          <% else %>
+            {gettext("This browser")}
+          <% end %>
+        </span>
+        <.icon name="chevron" />
+      </button>
+
+      <div id="account-menu" class="menu-panel account-panel" hidden>
+        <div :if={@user} class="menu-head">
+          <b id="account-email" class="mono">{@user.email}</b>
+          <span :if={@role} id="account-role" class="hint">
+            {gettext("%{role} in this hall", role: AlnaslWeb.Words.role(@role))}
+          </span>
+        </div>
+
+        <.link :if={@user} id="account-link" href={~p"/account"} class="menu-item">
+          <.icon name="account" /> <span>{gettext("Account")}</span>
+        </.link>
+
+        <div class="menu-section">
+          <span class="menu-label" id="locale-label">
+            <.icon name="language" /> {gettext("Language")}
+          </span>
+          <.form
+            for={%{}}
+            as={:locale_choice}
+            action={~p"/locale"}
+            method="post"
+            id="locale-form"
+            class="seg"
+            aria-labelledby="locale-label"
+          >
+            <input type="hidden" name="return_to" value={@path} />
+            <button
+              :for={{code, name} <- [{"en", "English"}, {"nl", "Nederlands"}]}
+              type="submit"
+              name="locale"
+              value={code}
+              id={"locale-#{code}"}
+              lang={code}
+              aria-current={to_string(@locale == code)}
+            >
+              {name}
+            </button>
+          </.form>
+          <p class="hint">
+            <%= if @user do %>
+              {gettext("Kept with your account.")}
+            <% else %>
+              {gettext("Kept in this browser.")}
+            <% end %>
+          </p>
+        </div>
+
+        <div class="menu-section">
+          <span class="menu-label"><.icon name="theme" /> {gettext("Colour theme")}</span>
+          <.theme_picker id="theme-picker" />
+        </div>
+
+        <.link :if={@user} id="log-out" href={~p"/log-out"} method="delete" class="menu-item">
+          <.icon name="signout" /> <span>{gettext("Sign out")}</span>
+        </.link>
+      </div>
+    </div>
+    """
+  end
+
+  defp initial(email), do: email |> String.first() |> String.upcase()
+
   @doc """
   The colour theme, chosen on the device (`assets/js/theme.js` does the work;
-  the choice is kept in this browser and nothing is sent to the box). `popover`
-  is the rail's; `grid` is Setup's, where a phone finds it.
+  the choice is kept in this browser and nothing is sent to the box). It
+  lives in the account menu, and only there.
 
   Installed theme packs (`Alnasl.ThemePacks`) follow the built-in themes, each
   with its swatch; a pack that was refused is listed under them, greyed, with
   the reason, so whoever installed it finds out here rather than in a log.
-  Their ids are prefixed with the picker's own, because Setup shows both
-  pickers and an id used twice is a page that lies to a screen reader.
+  Their ids are prefixed with the picker's own.
   """
   attr :id, :string, required: true
-  attr :variant, :atom, default: :popover, values: [:popover, :grid]
 
-  def theme_picker(%{variant: :grid} = assigns) do
+  def theme_picker(assigns) do
     assigns = assign_packs(assigns)
 
     ~H"""
@@ -258,24 +653,6 @@ defmodule AlnaslWeb.Layouts do
       <.pack_option :for={{pack, label} <- @packs} picker={@id} pack={pack} label={label} />
       <.pack_refused :for={{id, reason} <- @refused} picker={@id} id={id} reason={reason} />
     </div>
-    """
-  end
-
-  def theme_picker(assigns) do
-    assigns = assign_packs(assigns)
-
-    ~H"""
-    <details id={@id} class="theme-picker" phx-update="ignore">
-      <summary class="btn small ghost" title={gettext("Colour theme")}>
-        <.icon name="theme" /> <span class="sr-only">{gettext("Colour theme")}</span>
-      </summary>
-
-      <div class="theme-picker-panel" role="group" aria-label={gettext("Colour theme")}>
-        <.theme_option :for={{key, label} <- themes()} key={key} label={label} />
-        <.pack_option :for={{pack, label} <- @packs} picker={@id} pack={pack} label={label} />
-        <.pack_refused :for={{id, reason} <- @refused} picker={@id} id={id} reason={reason} />
-      </div>
-    </details>
     """
   end
 
@@ -434,43 +811,6 @@ defmodule AlnaslWeb.Layouts do
       </.panel>
     </main>
     <.flash_group flash={@flash} />
-    """
-  end
-
-  @doc """
-  The halls of the account, at the top of the rail: which one the pages are
-  about, and the others to switch to. Nothing on a box with one hall.
-  """
-  attr :scope, :any, default: nil
-
-  def hall_switcher(assigns) do
-    ~H"""
-    <div :if={@scope && length(@scope.halls) > 1} id="hall-switcher" class="hall-switcher">
-      <span class="hint">{gettext("Hall")}</span>
-      <ul>
-        <li :for={hall <- @scope.halls}>
-          <a
-            id={"hall-switch-#{hall.id}"}
-            href={~p"/halls/#{hall.id}/enter"}
-            aria-current={to_string(@scope.hall && @scope.hall.id == hall.id)}
-          >
-            {hall.name}
-          </a>
-        </li>
-      </ul>
-    </div>
-    """
-  end
-
-  @doc "Who is signed in, with the way to the account and out. Nothing on a box without accounts."
-  attr :scope, :any, default: nil
-
-  def account_line(assigns) do
-    ~H"""
-    <div :if={@scope && @scope.user} id="account-line" class="account-line">
-      <a id="account-link" href={~p"/account"} class="mono">{@scope.user.email}</a>
-      <.link id="log-out" href={~p"/log-out"} method="delete">{gettext("Sign out")}</.link>
-    </div>
     """
   end
 

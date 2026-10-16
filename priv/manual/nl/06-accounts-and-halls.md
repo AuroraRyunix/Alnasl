@@ -21,7 +21,7 @@ Een 02cloud-login alleen laat niemand binnen. Alleen een uitnodiging, of door de
 
 De poorten van het kastje zelf zijn één zaal. Elke brug hoort bij een zaal, en haar borden en toernooien ook. Een beheerder maakt meer zalen op de pagina Zalen. Elk account ziet zijn eigen zalen en niets van de andere.
 
-Bij meer dan één zaal zegt de wisselaar bovenaan over welke de pagina's gaan, en toont de pagina Zalen elke zaal in één oogopslag: borden live, bruggen verbonden, en wat een arbiter nodig heeft.
+Bij meer dan één zaal zegt de zaalkiezer bovenaan de balk over welke zaal de pagina's gaan, en hoeveel van haar borden live zijn. Druk erop voor je zalen, elk met je rol daar en haar live borden (vanaf zeven zalen verschijnt een zoekveld); kies je er een, dan blijf je op de pagina waar je was, nu over die zaal. "Alle zalen" onderaan opent de pagina Zalen, die elke zaal in één oogopslag toont: borden live, bruggen verbonden, en wat een arbiter nodig heeft.
 
 ## Toernooien en zalen {#placements}
 
@@ -45,7 +45,7 @@ In elke zaal is een account eigenaar, arbiter of kijker. Dezelfde persoon kan in
 | Kijker | De partijen volgen. Verandert niets |
 | Arbiter | Ze leiden: tafels, rondes, resultaten, correcties, de koppelingen met OpenPairings en OpenResults |
 | Eigenaar | Dat alles, en bruggen toevoegen en verwijderen, en mensen uitnodigen |
-| Beheerder | Elke zaal zien en het kastje zelf: zijn naam, updates, de tracker, de schakelaars van de Wachtrij |
+| Beheerder | Elke zaal zien en het kastje zelf: zijn naam, updates, de tracker, de schakelaars op de pagina Resultaten |
 
 Voor een toernooi dat in meer dan één zaal gespeeld wordt, telt de hoogste rol die je in een van die zalen hebt.
 
@@ -75,4 +75,4 @@ Met accounts is de QR-code onder "Open deze site op je telefoon" (op Borden en I
 
 ### Een vergeten wachtwoord {#forgotten-password}
 
-Er is geen mail om het mee te herstellen. Een beheerder opent de pagina van de zaal en geeft het account een tijdelijk wachtwoord; bij de volgende aanmelding wordt om een eigen wachtwoord gevraagd, en elke andere browser die als dit account aangemeld was, wordt afgemeld. Je eigen wachtwoord wijzig je onder je account (onderaan in de balk links).
+Er is geen mail om het mee te herstellen. Een beheerder opent de pagina van de zaal en geeft het account een tijdelijk wachtwoord; bij de volgende aanmelding wordt om een eigen wachtwoord gevraagd, en elke andere browser die als dit account aangemeld was, wordt afgemeld. Je eigen wachtwoord wijzig je bij Account, in het accountmenu (de knop onderaan de balk, op een telefoon rechtsboven), dat ook zegt welke rol je hebt in de zaal waar je bent.

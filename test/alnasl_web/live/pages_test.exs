@@ -6,13 +6,17 @@ defmodule AlnaslWeb.PagesTest do
   alias Alnasl.{Log, Pgn}
 
   describe "Look" do
-    test "the theme picker is in the rail and in Setup, with every theme", %{conn: conn} do
+    test "the theme picker is in the account menu, once, with every theme", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/setup")
       keys = AlnaslWeb.Layouts.themes() |> Enum.map(&elem(&1, 0))
 
-      for id <- ~w(theme-picker theme-grid), key <- keys do
-        assert has_element?(view, "##{id} [data-theme-opt=#{key}]")
+      for key <- keys do
+        assert has_element?(view, "#account-menu #theme-picker [data-theme-opt=#{key}]")
       end
+
+      # Setup no longer has a second one.
+      refute has_element?(view, "#theme-grid")
+      refute has_element?(view, "#setup-look")
     end
 
     test "the favicon is the mark, and the page loads the theme before it paints", %{conn: conn} do
@@ -725,12 +729,30 @@ defmodule AlnaslWeb.PagesTest do
       assert "door.unlocked" in kinds and "door.refused" in kinds
     end
 
-    test "the language switch is one link, and it is the box's language", %{conn: conn} do
-      conn = conn |> put_req_header("referer", "http://localhost/boards") |> get(~p"/locale/nl")
+    test "the language is this browser's, by a form, and the box's stays", %{conn: conn} do
+      conn = post(conn, ~p"/locale", %{"locale" => "nl", "return_to" => "/boards"})
       assert redirected_to(conn) == "/boards"
-      assert Settings.get("locale") == "nl"
-      assert redirected_to(get(build_conn(), ~p"/locale/xx")) == "/"
-      assert Settings.get("locale") == "nl"
+      assert conn.resp_cookies[AlnaslWeb.Hall.locale_cookie()].value == "nl"
+      # Nobody else's language changed.
+      assert Settings.get("locale") == "en"
+
+      # This browser now reads Dutch; another one does not.
+      {:ok, view, _html} = live(recycle(conn), ~p"/")
+      assert has_element?(view, "#locale-nl[aria-current=true]")
+      refute has_element?(view, "#nav-group-play[aria-label=Play]")
+      {:ok, view, _html} = live(build_conn(), ~p"/")
+      assert has_element?(view, "#locale-en[aria-current=true]")
+      assert has_element?(view, "#nav-group-play[aria-label=Play]")
+
+      assert redirected_to(post(build_conn(), ~p"/locale", %{"locale" => "xx"})) == "/"
+
+      for bad <- ["//evil.example", "/\\evil.example", "https://evil.example/"] do
+        conn = post(build_conn(), ~p"/locale", %{"locale" => "en", "return_to" => bad})
+        assert redirected_to(conn) == "/"
+      end
+
+      # A GET changes nothing.
+      assert get(build_conn(), "/locale/nl").status == 404
     end
   end
 end

@@ -160,6 +160,7 @@ defmodule AlnaslWeb.HelpLive do
       box={@box}
       locale={@locale}
       scope={@current_scope}
+      path={@current_path}
       title={gettext("Help")}
     >
       <div

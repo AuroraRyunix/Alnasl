@@ -4,7 +4,7 @@ Alnasl does not know who plays whom, and it does not host the spectators' page. 
 
 ## Where the games go {#where-the-games-go}
 
-Each destination has its own queue, its own pause after a failure, its own line on the Outbox page (connected or not, last success, how many wait, the last error in words), its own switch and its own "Send now". They do not wait for each other.
+Each destination has its own queue, its own pause after a failure, its own line on the Results page (connected or not, last success, how many wait, the last error in words), its own switch and its own "Send now". They do not wait for each other.
 
 | Destination | What it gets |
 | --- | --- |
@@ -14,7 +14,7 @@ Each destination has its own queue, its own pause after a failure, its own line 
 
 Each game goes to the places of its own tournament: that tournament's results page, that tournament's Lichess round, the OpenPairings it came from. A tournament whose key is refused, or which is not published yet, holds up nobody else's.
 
-Sending is automatic: to OpenPairings from the moment a tournament is linked, to the results site from the moment it has an address and a key (a game recorded before that goes out in full). Lichess stays off until you fill in a round and a token. "Send now" on the Outbox page only nudges a destination that is waiting out a pause, and always says what it did or why it did nothing.
+Sending is automatic: to OpenPairings from the moment a tournament is linked, to the results site from the moment it has an address and a key (a game recorded before that goes out in full). Lichess stays off until you fill in a round and a token. "Send now" on the Results page only nudges a destination that is waiting out a pause, and always says what it did or why it did nothing.
 
 ## Linking to OpenPairings {#linking-to-openpairings}
 
@@ -41,7 +41,7 @@ The bar names what it is about. "OpenPairings: connected" is the code you pasted
 
 ### A board that plays nowhere {#unlinked}
 
-The line under the bar, the Boards page, the Round page and "Ready for round N?" all say "Board 1 is not playing in ...", with a button to put it there. If a game is under way on it, the button offers "these moves are board N of round R" (the moves stay, under the pairing's names, and are sent in full) or "start fresh" (the game is closed without a result and kept where it was). A board connected later joins the only linked tournament by itself, as long as the box's own has not been used.
+The line under the bar, the Boards page, the Live page and "Ready for round N?" all say "Board 1 is not playing in ...", with a button to put it there. If a game is under way on it, the button offers "these moves are board N of round R" (the moves stay, under the pairing's names, and are sent in full) or "start fresh" (the game is closed without a result and kept where it was). A board connected later joins the only linked tournament by itself, as long as the box's own has not been used.
 
 ### What goes back to OpenPairings {#goes-back}
 
@@ -61,7 +61,7 @@ The box still works. Type the results page in on Setup (the results site's addre
 
 ## The results site {#results-site}
 
-OpenResults is where spectators follow the games. To see what they see: on the Round page, "Open the results site" opens the live boards of the round in a new tab, "QR" shows a code of the tournament's live page to hold up in the hall, and each tile has a "Live page" link to its board. A board's page has "This game on the results site". A tournament that is not on a results site has no link, and says so.
+OpenResults is where spectators follow the games. To see what they see: on the Live page, "Open the results site" opens the live boards of the round in a new tab, "Share" shows a QR code of the tournament's live page to hold up in the hall, and each tile has a "Live page" link to its board. A board's page has "This game on the results site". A tournament that is not on a results site has no link, and says so.
 
 > [!NOTE] The public page may be behind on purpose
 > The results site can hold live boards back by a delay that its admin sets, so a move made a minute ago may not be there yet. That is not a fault, and nothing is missing.
@@ -77,7 +77,7 @@ Two ways, and they can run side by side. Either way, first make a broadcast on L
 1. On Lichess, leave the round's source empty: the games will be pushed. Copy the link to the round.
 2. On Lichess, make a personal access token (lichess.org/account/oauth/token) with the permission to create and update studies and broadcasts. It is shown once: copy it.
 3. On the box, Setup, "Lichess broadcast": paste the link and the token, say which round of the tournament it is, tick "Send the games", Save. "Test" asks Lichess whether the token and the round are right, and says in words what is not.
-4. From then on every move, correction and result goes to Lichess within a couple of seconds, with the clocks. The Outbox page shows Lichess as a destination of its own.
+4. From then on every move, correction and result goes to Lichess within a couple of seconds, with the clocks. The Results page shows Lichess as a destination of its own.
 
 It needs internet at the box. A new round on Lichess is a new round id: change it in Setup when the round changes.
 

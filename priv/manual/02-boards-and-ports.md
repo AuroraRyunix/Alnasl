@@ -15,7 +15,7 @@ Boards, "Add a board": choose the port the board is plugged into and press Add. 
 
 The USB adapter of an RS232 board may need its maker's driver before it shows up on a Mac or Windows PC (FTDI works as it is; Prolific, CH340 and CP210x may not).
 
-A simulator board is on the same list. It plays a game by itself and is there for practising: add one, and the Round page has something to show.
+A simulator board is on the same list. It plays a game by itself and is there for practising: add one, and the Live page has something to show.
 
 ## Several boards on one cable {#loop}
 
@@ -36,7 +36,7 @@ Twelve boards look alike, and so do twelve cables. The box keeps three things ap
 
 - **Which board it is.** A DGT board tells the box its serial number (it is also on a label under the board). That is what the box knows it by, not the USB port. Unplug it, plug it in elsewhere, restart the box: it is still the same board and keeps its number. If it comes back on another port, add it on that port: the box recognises the serial and puts it back in its old place. A board the box has never seen is marked "New board" and asks for a number.
 - **Its table number.** The sticker on the board: "this is table 7". You set it once for the hall and it stays. "Labels" on the Boards page prints a sheet of stickers with the table number and the serial.
-- **Its board of the round.** Normally the same number as the table. For one round you can say otherwise in the column "Board of round N" ("table 7 plays board 3 today"), swap two boards, or put everything back. The next round starts from the table numbers again. On the Round page the board number is the big one; "table 7 · serial 06310" is the small print.
+- **Its board of the round.** Normally the same number as the table. For one round you can say otherwise in the column "Board of round N" ("table 7 plays board 3 today"), swap two boards, or put everything back. The next round starts from the table numbers again. On the Live page the board number is the big one; "table 7 · serial 06310" is the small print.
 
 ### Giving the table numbers {#giving-numbers}
 
@@ -72,4 +72,4 @@ The column "Start position" compares what stands on the board with the starting 
 
 ## Tables that play in no tournament {#unlinked-tables}
 
-A board that plays in no linked tournament is never left silent: the line under the bar, the Boards page, the Round page and "Ready for round N?" all say "Board 1 is not playing in ...", with a button to put it there. How tournaments and tables go together is in [OpenPairings, OpenResults and Lichess](05-openpairings-and-openresults.md).
+A board that plays in no linked tournament is never left silent: the line under the bar, the Boards page, the Live page and "Ready for round N?" all say "Board 1 is not playing in ...", with a button to put it there. How tournaments and tables go together is in [OpenPairings, OpenResults and Lichess](05-openpairings-and-openresults.md).

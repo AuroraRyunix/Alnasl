@@ -55,20 +55,26 @@ defmodule AlnaslWeb.ResultsLinksTest do
       refute has_element?(view, "#tile-1 a")
     end
 
-    test "a QR code of the live page, behind a small 'QR' toggle", %{conn: conn} do
+    test "a QR code of the live page, made when Share is pressed", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/")
-      assert has_element?(view, "details#site-qr:not([open]) summary", "QR")
+      refute has_element?(view, "#site-qr-code")
+      assert has_element?(view, "#share[aria-expanded=false]")
+      view |> element("#share") |> render_click()
+      assert has_element?(view, "#share[aria-expanded=true]")
       assert has_element?(view, "#site-qr-code svg[role=img]")
       assert has_element?(view, "#site-qr-code svg[aria-label*='test-open/live']")
       assert has_element?(view, "#site-qr-url", @site <> "/live")
       assert has_element?(view, "#site-qr-code rect[fill='#000000']")
+
+      view |> element("#share-close") |> render_click()
+      refute has_element?(view, "#share-panel")
     end
 
     test "without a results page: no link, and the reason", %{conn: conn} do
       own_put(server_url: "")
       {:ok, view, _html} = live(conn, ~p"/")
       refute has_element?(view, "#site-open")
-      refute has_element?(view, "#site-qr")
+      refute has_element?(view, "#share")
       refute has_element?(view, "[id^=tile-site-link-]")
       assert has_element?(view, "#site-none", "No results site")
 
@@ -88,7 +94,9 @@ defmodule AlnaslWeb.ResultsLinksTest do
       assert has_element?(view, "#round-section-t#{open.id}")
       assert new_tab?(view, "site-open", @site <> "/live/1")
       assert new_tab?(view, "site-open-t#{open.id}", "http://results.test/t/slug-17/live/1")
+      view |> element("#share-t#{open.id}") |> render_click()
       assert has_element?(view, "#site-qr-url-t#{open.id}", "http://results.test/t/slug-17/live")
+      refute has_element?(view, "#site-qr-url")
 
       assert new_tab?(
                view,

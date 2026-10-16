@@ -18,7 +18,7 @@ On the Recordings page you only see the boards of your own halls.
 
 What happened, in sentences, with filters: board connected, moves recovered, out of sync, repaired by the arbiter, offline, back. Everything you do on a board's page, a repair or a correction, is in it with the time.
 
-## The Outbox {#the-outbox}
+## The Results page {#the-outbox}
 
 The connections, honestly: for the results site and for every other destination, connected or not, last success, how much is waiting and why it is not going, in words. Each has its own switch and its own "Send now". What waits, what the server refused, and what went out.
 
@@ -58,7 +58,7 @@ It is not published from OpenPairings, or no relay key is saved there (Settings,
 
 ### The results site shows nothing {#results-site-empty}
 
-Look at the Outbox: is anything waiting, and why? Was the round published from the pairing program? A game is only shown for a published board.
+Look at the Results page: is anything waiting, and why? Was the round published from the pairing program? A game is only shown for a published board.
 
 ### A bridge is "not connected" {#bridge-down}
 

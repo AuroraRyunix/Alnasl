@@ -288,6 +288,7 @@ defmodule AlnaslWeb.PgnLive do
       box={@box}
       locale={@locale}
       scope={@current_scope}
+      path={@current_path}
       title="PGN"
     >
       <:actions>
