@@ -30,10 +30,12 @@ defmodule AlnaslWeb.SeatingComponents do
           count: @seating.auto.count
         )}
       </span>
+
       <span class="banner-actions">
         <button id="auto-undo" type="button" class="linkish" phx-click="seat_undo">
           {gettext("Undo")}
         </button>
+
         <button id="auto-ok" type="button" class="linkish" phx-click="seat_dismiss">
           {gettext("OK")}
         </button>
@@ -61,7 +63,10 @@ defmodule AlnaslWeb.SeatingComponents do
           names: Enum.map_join(@seating.ask, ", ", &(Tournaments.title(&1.tournament) || ""))
         )}
       </span>
-      <.link id="ask-banner-link" navigate={~p"/setup#seat-ask"}>{gettext("Answer in Setup")}</.link>
+
+      <.link id="ask-banner-link" navigate={~p"/setup/tournaments#seat-ask"}>{gettext(
+        "Answer in Setup"
+      )}</.link>
     </div>
     """
   end
@@ -78,6 +83,7 @@ defmodule AlnaslWeb.SeatingComponents do
     <span class="outside-text">
       {outside_text(@entry)}
     </span>
+
     <span class="outside-actions">
       <%= for t <- @entry.targets do %>
         <button
@@ -91,6 +97,7 @@ defmodule AlnaslWeb.SeatingComponents do
         >
           {put_label(@entry, t)}
         </button>
+
         <button
           :if={@entry.game}
           id={"#{@scope}put-fresh-#{@entry.board.id}-#{t.tournament.id}"}
@@ -165,6 +172,7 @@ defmodule AlnaslWeb.SeatingComponents do
           "The box's boards are not in these tournaments yet, so nothing they read is sent there. Say which table numbers play in which; the first table is the tournament's board 1."
         )}
       </p>
+
       <.form
         :for={a <- @ask}
         for={to_form(%{"id" => a.tournament.id, "from" => a.from, "to" => a.to}, as: :seat)}
@@ -188,6 +196,7 @@ defmodule AlnaslWeb.SeatingComponents do
             class="input table-no"
           />
         </div>
+
         <div class="field">
           <label for={"seat-to-#{a.tournament.id}"}>{gettext("to")}</label>
           <input
@@ -201,9 +210,11 @@ defmodule AlnaslWeb.SeatingComponents do
             class="input table-no"
           />
         </div>
+
         <.button id={"seat-submit-#{a.tournament.id}"} small variant="primary" type="submit">
           {gettext("These tables play here")}
         </.button>
+
         <.button
           id={"seat-decline-#{a.tournament.id}"}
           small

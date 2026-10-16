@@ -19,7 +19,7 @@ De brug belt zelf naar Alnasl. In het netwerk van de zaal hoeft niets open te st
 
 Eén handeling, op één plaats, en niemand typt een sleutel.
 
-1. Open op Alnasl de pagina van de zaal waar de borden bij horen: Zalen, dan de zaal (of Instellingen, voor de zaal waar je naar kijkt). Druk op "Een brug toevoegen".
+1. Open op Alnasl de pagina van de zaal waar de borden bij horen: Zalen, dan de zaal (Instellingen, Toegang, heeft een knop "Bruggen van deze zaal" die er voor de zaal waar je naar kijkt heen leidt). Druk op "Een brug toevoegen".
 2. Er verschijnt een link en hetzelfde als QR-code. De link is goed voor **één brug en vijftien minuten**, en zegt tot wanneer.
 3. Op de pagina van de brug, "Aansluiten bij een server": plak de link, of scan de code met de camera. Druk op Aansluiten.
 4. De brug toont "Aangesloten." en de server staat in haar lijst. Op Alnasl verschijnt de brug in de lijst van bruggen van de zaal, met haar naam en "verbonden".

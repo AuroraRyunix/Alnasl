@@ -42,7 +42,7 @@ defmodule AlnaslWeb.DestinationWords do
   def quiet(:nothing_waiting), do: gettext("Nothing is waiting.")
 
   def quiet(:no_code),
-    do: gettext("No connect code: add one under Setup, Tournaments.")
+    do: gettext("No connect code: add one under Setup, Connections.")
 
   def quiet(:board_outside),
     do:
@@ -59,7 +59,7 @@ defmodule AlnaslWeb.DestinationWords do
 
   def quiet({:not_set_up, "lichess"}),
     do:
-      gettext("Stays off until a round and a token are filled in under Setup, Lichess broadcast.")
+      gettext("Stays off until a round and a token are filled in under Setup, Results and Lichess.")
 
   def quiet({:not_set_up, _id}),
     do:

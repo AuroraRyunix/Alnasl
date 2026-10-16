@@ -86,7 +86,7 @@ defmodule AlnaslWeb.Status do
           {nil, "waiting", gettext("OpenPairings: not asked yet")}
       end
 
-    %{id: "head-pairing", tone: tone, icon: icon, text: text, to: "/setup#setup-tournaments"}
+    %{id: "head-pairing", tone: tone, icon: icon, text: text, to: "/setup/connections"}
   end
 
   defp results_head(linked, link) do

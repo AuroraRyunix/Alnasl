@@ -345,7 +345,7 @@ defmodule AlnaslWeb.OutboxLive do
                 <%= if t.kind == "linked" do %>
                   {gettext("not on a results site (yet)")}
                 <% else %>
-                  <.link navigate={~p"/setup"}>{gettext("not set up yet")}</.link>
+                  <.link navigate={~p"/setup/results"}>{gettext("not set up yet")}</.link>
                 <% end %>
               <% else %>
                 <span class="mono">{t.server_url}</span>
@@ -530,7 +530,7 @@ defmodule AlnaslWeb.OutboxLive do
                 {gettext("Send again, whatever is held")}
               </.button>
 
-              <.link :if={d.state == :unconfigured} navigate={~p"/setup"}>
+              <.link :if={d.state == :unconfigured} navigate={~p"/setup/results"}>
                 {gettext("Set it up")}
               </.link>
             </div>

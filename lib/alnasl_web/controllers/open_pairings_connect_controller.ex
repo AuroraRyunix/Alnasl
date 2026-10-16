@@ -189,8 +189,11 @@ defmodule AlnaslWeb.OpenPairingsConnectController do
     String.slice("Alnasl - " <> name, 0, 80)
   end
 
-  defp refuse(conn, text), do: conn |> put_flash(:error, text) |> redirect(to: ~p"/setup")
-  defp info(conn, text), do: conn |> put_flash(:info, text) |> redirect(to: ~p"/setup")
+  defp refuse(conn, text),
+    do: conn |> put_flash(:error, text) |> redirect(to: ~p"/setup/connections")
+
+  defp info(conn, text),
+    do: conn |> put_flash(:info, text) |> redirect(to: ~p"/setup/connections")
 
   # The address the browser used: behind the tunnel the request arrives in
   # plain HTTP and says so in `x-forwarded-proto`. A forged header changes

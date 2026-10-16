@@ -44,17 +44,17 @@ Een zet wordt geloofd als de stukken even stil gestaan hebben, of zodra de volge
 
 De klok is vaker ingedrukt dan er zetten gezien zijn. Vergelijk het bord met de zettenlijst.
 
-### "Code geweigerd" bij Toernooien in Instellingen {#code-refused}
+### "Code geweigerd" bij Koppelingen in Instellingen {#code-refused}
 
 OpenPairings aanvaardt de koppelcode niet: ze is daar ingetrokken, of het is niet de volledige regel. Het kastje is gestopt met vragen en de borden gaan door met de paringen die het heeft. Maak een nieuwe code in OpenPairings (Instellingen, Live borden), voeg ze toe, en verwijder de oude.
 
-### "Geen antwoord" bij Toernooien in Instellingen {#no-answer}
+### "Geen antwoord" bij Koppelingen in Instellingen {#no-answer}
 
 OpenPairings is niet bereikbaar. Er gaat niets verloren: de borden gaan door met de paringen die het kastje heeft, de partijen worden voor OpenPairings bewaard, en het kastje vraagt vanzelf opnieuw. Een ronde die intussen gepaard werd, start je met "Ronde N starten" en ze krijgt haar namen zodra de verbinding terug is.
 
 ### Een toernooi heeft geen uitslagenpagina {#no-results-page}
 
-Het is niet gepubliceerd vanuit OpenPairings, of daar is geen relaissleutel bewaard (Instellingen, Live borden). Instellingen zegt welk van de twee. Tot dan gaan de zetten alleen naar OpenPairings; het adres en de sleutel komen vanzelf zodra ze er zijn.
+Het is niet gepubliceerd vanuit OpenPairings, of daar is geen relaissleutel bewaard (Instellingen, Live borden). Instellingen, Toernooien, zegt welk van de twee. Tot dan gaan de zetten alleen naar OpenPairings; het adres en de sleutel komen vanzelf zodra ze er zijn.
 
 ### De uitslagensite toont niets {#results-site-empty}
 

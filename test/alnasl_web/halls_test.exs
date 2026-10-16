@@ -155,11 +155,11 @@ defmodule AlnaslWeb.HallsTest do
       render_hook(page, "remove_bridge", %{"id" => "#{theirs.id}"})
       assert Bridges.get(theirs.id).revoked_at == nil
 
-      {:ok, setup, _html} = live(log_in(build_conn(), owner, a), ~p"/setup")
-      assert has_element?(setup, "#bridge-#{mine.id}")
-      refute has_element?(setup, "#bridge-#{theirs.id}")
-      render_hook(setup, "remove_bridge", %{"id" => "#{theirs.id}"})
-      assert Bridges.get(theirs.id).revoked_at == nil
+      # Setup no longer holds the bridges; it leads to the hall's page.
+      {:ok, setup, _html} = live(log_in(build_conn(), owner, a), ~p"/setup/access")
+      refute has_element?(setup, "#setup-bridges")
+      refute has_element?(setup, "#bridge-#{mine.id}")
+      assert has_element?(setup, ~s(#setup-bridges-link[href="/halls/#{a.id}"]))
 
       assert {:error, {:live_redirect, %{to: "/halls"}}} =
                live(log_in(build_conn(), owner, a), ~p"/halls/#{b.id}")

@@ -54,8 +54,8 @@ Press "Which board is this?" on the Boards page and lift a piece on the board yo
 
 Walking along the tables with a phone in your hand is easier than going back and forth to the box.
 
-1. Setup, "Access from other machines": set a PIN, then let other machines in the hall open the site, and start Alnasl again. Do it before the hall fills up.
-2. On the box, open Boards (or Setup): "Open this site on your phone" shows the address and a QR code. Point the phone's camera at it and give the PIN. (On a box with accounts, the code signs you in instead; see [Accounts, halls and roles](06-accounts-and-halls.md).)
+1. Setup, Access, "Access from other machines": set a PIN, then let other machines in the hall open the site, and start Alnasl again. Do it before the hall fills up.
+2. On the box, open Boards (or Setup, Access): "Open this site on your phone" shows the address and a QR code. Point the phone's camera at it and give the PIN. (On a box with accounts, the code signs you in instead; see [Accounts, halls and roles](06-accounts-and-halls.md).)
 3. On the phone: Boards, "Number by touching", Start. The next table number fills the screen. Walk to that table and lift any piece; the phone flashes the number and the board's serial, buzzes (Android only) and beeps once "Sound off" has been tapped to "Sound on". A phone wants one tap per visit before it makes any sound, and an iPhone on silent plays none.
 4. Undo, Skip and Stop are at the bottom of the screen. If the phone loses the network between two tables, nothing is lost: the run is kept on the box.
 

@@ -54,8 +54,8 @@ Druk op "Welk bord is dit?" op de pagina Borden en til een stuk op het bord dat 
 
 Met een telefoon in je hand langs de tafels lopen is makkelijker dan heen en weer naar het kastje.
 
-1. Instellingen, "Toegang vanaf andere machines": stel een pincode in, laat dan andere machines in de zaal de site openen, en start Alnasl opnieuw. Doe het voor de zaal volloopt.
-2. Open op het kastje Borden (of Instellingen): "Open deze site op je telefoon" toont het adres en een QR-code. Richt de camera van de telefoon erop en geef de pincode. (Op een kastje met accounts meldt de code je aan; zie [Accounts, zalen en rollen](06-accounts-and-halls.md).)
+1. Instellingen, Toegang, "Toegang vanaf andere machines": stel een pincode in, laat dan andere machines in de zaal de site openen, en start Alnasl opnieuw. Doe het voor de zaal volloopt.
+2. Open op het kastje Borden (of Instellingen, Toegang): "Open deze site op je telefoon" toont het adres en een QR-code. Richt de camera van de telefoon erop en geef de pincode. (Op een kastje met accounts meldt de code je aan; zie [Accounts, zalen en rollen](06-accounts-and-halls.md).)
 3. Op de telefoon: Borden, "Nummeren door aan te raken", Start. Het volgende tafelnummer vult het scherm. Loop naar die tafel en til een willekeurig stuk op; de telefoon laat het nummer en het serienummer van het bord oplichten, trilt (alleen Android) en piept eenmaal zodra "Geluid uit" aangetikt is tot "Geluid aan". Een telefoon wil per bezoek één tik voor hij geluid maakt, en een iPhone op stil speelt niets af.
 4. Ongedaan maken, Overslaan en Stop staan onderaan het scherm. Valt het netwerk van de telefoon tussen twee tafels weg, dan gaat er niets verloren: de ronde wordt op het kastje bewaard.
 

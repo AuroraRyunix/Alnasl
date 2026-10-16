@@ -158,7 +158,7 @@ defmodule AlnaslWeb.Layouts do
               {gettext("What is new")}
             </a>
 
-            <.link id="update-banner-setup" navigate={~p"/setup#setup-updates"}>
+            <.link id="update-banner-setup" navigate={~p"/setup/updates"}>
               {gettext("Update...")}
             </.link>
 

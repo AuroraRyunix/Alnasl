@@ -6,13 +6,18 @@ defmodule AlnaslWeb.PagesTest do
   alias Alnasl.{Log, Pgn}
 
   describe "Look" do
-    test "the theme picker is in the rail and in Setup, with every theme", %{conn: conn} do
+    test "the theme picker is in the rail, with every theme, and no longer in Setup", %{
+      conn: conn
+    } do
       {:ok, view, _html} = live(conn, ~p"/setup")
       keys = AlnaslWeb.Layouts.themes() |> Enum.map(&elem(&1, 0))
 
-      for id <- ~w(theme-picker theme-grid), key <- keys do
-        assert has_element?(view, "##{id} [data-theme-opt=#{key}]")
+      for key <- keys do
+        assert has_element?(view, "#theme-picker [data-theme-opt=#{key}]")
       end
+
+      refute has_element?(view, "#theme-grid")
+      refute has_element?(view, "#setup-look")
     end
 
     test "the favicon is the mark, and the page loads the theme before it paints", %{conn: conn} do
@@ -223,7 +228,7 @@ defmodule AlnaslWeb.PagesTest do
 
   describe "Setup" do
     test "test connection asks the server and says in words how each step went", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/results")
       form = fn params -> form(view, "#server-form", server: params) end
 
       good = %{
@@ -269,7 +274,7 @@ defmodule AlnaslWeb.PagesTest do
 
     test "a pasted link is taken apart, and the stored key is never shown again", %{conn: conn} do
       own_put(server_url: "", slug: "", relay_key: "")
-      {:ok, view, html} = live(conn, ~p"/setup")
+      {:ok, view, html} = live(conn, ~p"/setup/results")
       assert html =~ "It starts with orrk_"
 
       html =
@@ -307,7 +312,7 @@ defmodule AlnaslWeb.PagesTest do
     test "the box: name, language, round, and whether mate is offered without the arbiter", %{
       conn: conn
     } do
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/this-box")
 
       view
       |> form("#box-form",
@@ -322,7 +327,7 @@ defmodule AlnaslWeb.PagesTest do
       )
       |> render_submit()
 
-      assert_redirect(view, ~p"/setup")
+      assert_redirect(view, ~p"/setup/this-box")
 
       assert own().round == 3
 
@@ -335,13 +340,13 @@ defmodule AlnaslWeb.PagesTest do
                  "clock_heartbeat_s" => 30
                }
 
-      {:ok, view, html} = live(conn, ~p"/setup")
+      {:ok, view, html} = live(conn, ~p"/setup/this-box")
       assert has_element?(view, "#brand", "Hall B")
       assert html =~ "Borden" and html =~ "Opslaan"
     end
 
     test "a PIN is set and removed", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/access")
       assert has_element?(view, "#pin-state", "No PIN")
       assert view |> form("#pin-form", door: %{pin: "12"}) |> render_submit() =~ "at least 4"
       view |> form("#pin-form", door: %{pin: "2468"}) |> render_submit()
@@ -357,7 +362,7 @@ defmodule AlnaslWeb.PagesTest do
     end
 
     test "the tracker's patience is saved, bounded, and reset", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/advanced")
 
       view
       |> form("#tracker-form",
@@ -382,7 +387,7 @@ defmodule AlnaslWeb.PagesTest do
     test "\"Bullet / fast play\" moves the settings that belong together, and leaves the search depth alone",
          %{conn: conn} do
       assert Alnasl.Tracker.defaults().search_depth == 8
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/advanced")
       refute has_element?(view, "#preset-bullet-on")
       assert has_element?(view, "#tracker-depth-note")
 

@@ -64,7 +64,7 @@ defmodule AlnaslWeb.UpdatesTest do
         assert has_element?(view, "#update-banner", newer())
         assert has_element?(view, "#update-banner-size", "41 MB")
         assert has_element?(view, ~s(#update-banner-notes[href*="/releases/tag/v#{newer()}"]))
-        assert has_element?(view, ~s(#update-banner-setup[href="/setup#setup-updates"]))
+        assert has_element?(view, ~s(#update-banner-setup[href="/setup/updates"]))
       end
     end
 
@@ -86,7 +86,7 @@ defmodule AlnaslWeb.UpdatesTest do
       {:ok, other, _html} = live(conn, ~p"/log")
       refute has_element?(other, "#update-banner")
       # Setup still knows, for whoever goes looking.
-      {:ok, setup, _html} = live(conn, ~p"/setup")
+      {:ok, setup, _html} = live(conn, ~p"/setup/updates")
       assert has_element?(setup, "#update-offer", newer())
     end
 
@@ -98,7 +98,7 @@ defmodule AlnaslWeb.UpdatesTest do
       refute has_element?(view, "#update-banner")
       assert Updates.mode() == "never"
 
-      {:ok, setup, _html} = live(conn, ~p"/setup")
+      {:ok, setup, _html} = live(conn, ~p"/setup/updates")
       assert has_element?(setup, "#update-mode-never[checked]")
       refute has_element?(setup, "#update-banner")
     end
@@ -113,7 +113,7 @@ defmodule AlnaslWeb.UpdatesTest do
 
   describe "Setup, Updates" do
     test "says which version this is and what the setting is", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/updates")
 
       assert has_element?(view, "#update-version", Updates.current_version())
       assert has_element?(view, "#update-mode-ask[checked]")
@@ -121,7 +121,7 @@ defmodule AlnaslWeb.UpdatesTest do
     end
 
     test "the switch is kept", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/updates")
 
       view |> element("#update-mode-form") |> render_change(%{"mode" => "never"})
       assert Updates.mode() == "never"
@@ -133,7 +133,7 @@ defmodule AlnaslWeb.UpdatesTest do
 
     test "\"Look now\" asks, and says what it found - also that it found nobody", %{conn: conn} do
       Application.put_env(:alnasl, :install_kind, :velopack)
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/updates")
 
       FakeReleases.publish(Updates.current_version())
       view |> element("#check-update") |> render_click()
@@ -154,7 +154,7 @@ defmodule AlnaslWeb.UpdatesTest do
     test "\"Look now\" works with the looking switched off: a button is a person", %{conn: conn} do
       Updates.put_mode("never")
       FakeReleases.publish(newer())
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/updates")
 
       view |> element("#check-update") |> render_click()
       assert has_element?(view, "#update-offer", newer())
@@ -163,7 +163,7 @@ defmodule AlnaslWeb.UpdatesTest do
 
     test "nothing is fetched on the first press: it says what the second will cost", %{conn: conn} do
       heard_of_one()
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/updates")
 
       view |> element("#update-start") |> render_click()
       assert has_element?(view, "#update-confirm", "41 MB")
@@ -177,7 +177,7 @@ defmodule AlnaslWeb.UpdatesTest do
 
     test "the yes hands over to the launcher, and the page says what happens next", %{conn: conn} do
       heard_of_one()
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/updates")
 
       view |> element("#update-start") |> render_click()
       view |> element("#update-yes") |> render_click()
@@ -190,7 +190,7 @@ defmodule AlnaslWeb.UpdatesTest do
     test "a game in progress is a refusal in words, with the board's number", %{conn: conn} do
       heard_of_one()
       game_on("FAKE1", 3)
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/updates")
 
       view |> element("#update-start") |> render_click()
 
@@ -207,7 +207,7 @@ defmodule AlnaslWeb.UpdatesTest do
     test "the refusal is overruled only by the button that asks to be sure", %{conn: conn} do
       heard_of_one()
       game_on("FAKE1", 3)
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/updates")
 
       view |> element("#update-start") |> render_click()
       assert has_element?(view, "#update-force[data-confirm]")
@@ -219,7 +219,7 @@ defmodule AlnaslWeb.UpdatesTest do
 
     test "a game that began after the question is still a refusal", %{conn: conn} do
       heard_of_one()
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/updates")
 
       view |> element("#update-start") |> render_click()
       assert has_element?(view, "#update-confirm")
@@ -233,7 +233,7 @@ defmodule AlnaslWeb.UpdatesTest do
 
     test "a copy that cannot update itself is told how, and offered no button", %{conn: conn} do
       heard_of_one(:manual)
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/updates")
 
       assert has_element?(view, "#update-manual", "sudo /opt/alnasl/update.sh")
       refute has_element?(view, "#update-start")
@@ -242,7 +242,7 @@ defmodule AlnaslWeb.UpdatesTest do
     test "the Linux installation leaves its request and says so", %{conn: conn} do
       heard_of_one(:systemd)
       File.rm_rf!(Updates.request_dir())
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/updates")
 
       view |> element("#update-start") |> render_click()
       view |> element("#update-yes") |> render_click()
@@ -260,7 +260,7 @@ defmodule AlnaslWeb.UpdatesTest do
       File.write!(file, "failed 9.9.9 the new version did not answer; 0.1.0 is running again\n")
       Application.put_env(:alnasl, :update_status_file, file)
 
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/updates")
       assert has_element?(view, "#update-failed", "9.9.9")
       assert has_element?(view, "#update-failed", "did not answer")
     after
@@ -268,7 +268,7 @@ defmodule AlnaslWeb.UpdatesTest do
     end
 
     test "\"Start with Windows\" is not offered where it means nothing", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/updates")
       refute has_element?(view, "#autostart-form")
     end
   end
@@ -277,7 +277,7 @@ defmodule AlnaslWeb.UpdatesTest do
     test "the notice and the panel are in Dutch when the box is", %{conn: conn} do
       heard_of_one()
       Settings.put("locale", "nl")
-      {:ok, view, html} = live(conn, ~p"/setup")
+      {:ok, view, html} = live(conn, ~p"/setup/updates")
 
       assert has_element?(view, "#update-banner-later", "Later")
       assert has_element?(view, "#update-banner-never", "Niet meer vragen")
@@ -288,7 +288,7 @@ defmodule AlnaslWeb.UpdatesTest do
 
   describe "the hall's network" do
     test "a box answers only itself, and the switch wants a PIN first", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/access")
 
       assert Listen.chosen() == "local"
       assert has_element?(view, "#listen-lan[disabled]")
@@ -301,7 +301,7 @@ defmodule AlnaslWeb.UpdatesTest do
 
     test "with a PIN it is one press, and it says it waits for the next start", %{conn: conn} do
       Settings.set_pin("2468")
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/access")
 
       view |> element("#listen-lan") |> render_click()
       assert Listen.chosen() == "lan"

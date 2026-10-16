@@ -49,7 +49,7 @@ defmodule AlnaslWeb.FirstLinkTest do
       b = numbered(2)
       code = one_tournament()
 
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/connections")
       html = add(view, code)
       assert html =~ "now play in Open"
 
@@ -71,7 +71,7 @@ defmodule AlnaslWeb.FirstLinkTest do
     test "a board without a table number gets the next free one", %{conn: conn} do
       board = fake_dgt("FAKE9")
       code = one_tournament()
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/connections")
       add(view, code)
 
       board = Boards.get!(board.id)
@@ -91,7 +91,7 @@ defmodule AlnaslWeb.FirstLinkTest do
 
       FakeOpenPairings.add_tournament(18, group: "Festival", label: "U12", name: "U12", boards: 2)
 
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/connections")
       html = add(view, FakeOpenPairings.group_code("Festival"))
       assert html =~ "Say below which tables play in which"
 
@@ -122,7 +122,7 @@ defmodule AlnaslWeb.FirstLinkTest do
       for n <- 1..2, do: numbered(n)
       FakeOpenPairings.add_tournament(17, group: "F", boards: 1)
       FakeOpenPairings.add_tournament(18, group: "F", boards: 1)
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/connections")
       add(view, FakeOpenPairings.group_code("F"))
       u = by_remote(18)
 
@@ -137,7 +137,7 @@ defmodule AlnaslWeb.FirstLinkTest do
       playing(board)
       code = one_tournament()
 
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/connections")
       add(view, code)
       open = by_remote(17)
 
@@ -298,7 +298,7 @@ defmodule AlnaslWeb.FirstLinkTest do
       open = by_remote(17)
       assert open.relay_key == ""
 
-      {:ok, setup, _} = live(conn, ~p"/setup")
+      {:ok, setup, _} = live(conn, ~p"/setup/tournaments?open=#{open.id}")
 
       assert has_element?(
                setup,
@@ -482,7 +482,7 @@ defmodule AlnaslWeb.FirstLinkTest do
     test "'This copy of Alnasl' says the version, how it was started, and where the data is",
          %{conn: conn} do
       numbered(1)
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/this-box")
       assert has_element?(view, "#about-version", Alnasl.Updates.current_version())
       assert has_element?(view, "#about-kind", "From source")
       assert has_element?(view, "#about-data", Path.expand(Alnasl.Paths.data()))

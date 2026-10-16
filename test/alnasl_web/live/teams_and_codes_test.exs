@@ -96,7 +96,7 @@ defmodule AlnaslWeb.TeamsAndCodesTest do
     test "the form offers to keep each match together, and says how many boards a match has",
          %{conn: conn} do
       event = team_event()
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/tournaments?open=#{event.id}")
 
       assert has_element?(view, "#tournament-teams-#{event.id}", "4 boards a match")
       assert has_element?(view, "#tables-keep-#{event.id}[checked]")
@@ -113,7 +113,7 @@ defmodule AlnaslWeb.TeamsAndCodesTest do
       refute has_element?(view, "#tables-keep-#{event.id}[checked]")
 
       open = linked(17, name: "Open", boards: 2)
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/tournaments?open=#{open.id}")
       refute has_element?(view, "#tables-keep-#{open.id}")
     end
 
@@ -142,7 +142,7 @@ defmodule AlnaslWeb.TeamsAndCodesTest do
       {:ok, old, [open]} = OpenPairings.add_code(old_code)
       FakeOpenPairings.withdraw(old_code)
 
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/connections")
 
       html =
         view

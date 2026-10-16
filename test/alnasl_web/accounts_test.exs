@@ -20,9 +20,9 @@ defmodule AlnaslWeb.AccountsTest do
       {:ok, view, _html} = live(conn, ~p"/boards")
       refute has_element?(view, "#account-link")
 
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/access")
       assert has_element?(view, "#first-account-form")
-      assert has_element?(view, "#bridge-add")
+      refute has_element?(view, "#setup-bridges")
 
       assert redirected_to(get(build_conn(), ~p"/log-in")) == "/"
     end
@@ -82,7 +82,7 @@ defmodule AlnaslWeb.AccountsTest do
     test "Setup makes one, and it signs a phone in once", %{conn: conn} do
       put_app_env(:lan_addresses, ["192.0.2.10"])
       owner = first_owner()
-      {:ok, view, _html} = live(log_in(conn, owner), ~p"/setup")
+      {:ok, view, _html} = live(log_in(conn, owner), ~p"/setup/access")
 
       refute has_element?(view, "#setup-phone-access-qr")
       view |> element("#setup-phone-access-signin") |> render_click()

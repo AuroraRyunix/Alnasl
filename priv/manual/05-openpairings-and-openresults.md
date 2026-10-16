@@ -19,7 +19,7 @@ Sending is automatic: to OpenPairings from the moment a tournament is linked, to
 ## Linking to OpenPairings {#linking-to-openpairings}
 
 1. In OpenPairings: Settings, Live boards, make a connect code, for one tournament or for a group of tournaments. It is shown once, as a line of text and as a QR code holding the same text.
-2. On the box: Setup, Tournaments, paste the line and press Add. From a phone: scan the QR code with the phone's own camera, copy the link it shows instead of opening it, and paste it in the field. The box cannot scan it itself: a browser only lends its camera to a page served over https, and the box is not.
+2. On the box: Setup, Connections, press "+ Add" (it is open already when there is no connection yet), paste the line and press Add. From a phone: scan the QR code with the phone's own camera, copy the link it shows instead of opening it, and paste it in the field. The box cannot scan it itself: a browser only lends its camera to a page served over https, and the box is not.
 3. The tournaments the code reaches appear, each with what came with it: players, the rounds that are paired, the rate of play, and, when the tournament is published, its results page and relay key. Nothing is typed on the box for the results site. A tournament added to the group later appears by itself.
 4. The boards are put in the tournament for you. With one tournament and nothing played yet in the box's own, every board the box knows plays there at once, its table number being its board; the line under the bar says so and has an Undo. With a group, or a game already under way, the box asks which tables play in which, with ranges filled in: "Tables from 5 to 8", table 5 being the tournament's board 1. One board can also be put in a tournament on the Boards page.
 
@@ -29,7 +29,7 @@ Press "Test connection": it really asks, and explains failures in words (a wrong
 
 Instead of a code per tournament, connect a whole OpenPairings account:
 
-1. On the box: Setup, Tournaments, **Connect an OpenPairings account**. Type the address of your OpenPairings (or `http://127.0.0.1:4000` for a copy on this computer). It is remembered; on the hosted server it is filled in already.
+1. On the box: Setup, Connections, "+ Add", **Connect an OpenPairings account**. Type the address of your OpenPairings (or `http://127.0.0.1:4000` for a copy on this computer). It is remembered; on the hosted server it is filled in already.
 2. OpenPairings opens. Sign in if it asks, check which box is asking, and press **Allow**. You are back on the box.
 3. The box now has every current tournament you may edit in OpenPairings, as owner or collaborator - including the ones you make later. Finished more than 14 days ago, archived or handed off: left out. The list shows it as *All your tournaments on* the host, with the count.
 
@@ -57,7 +57,7 @@ With a desktop copy of OpenPairings on the same computer, the code begins with `
 
 ### Without OpenPairings {#without-openpairings}
 
-The box still works. Type the results page in on Setup (the results site's address, the tournament and the relay key), and say who plays on each board's page ("Players") or attach a PGN that says it. The box does not read pairings from the results site.
+The box still works. Type the results page in on Setup, Results and Lichess (the results site's address, the tournament and the relay key), and say who plays on each board's page ("Players") or attach a PGN that says it. The box does not read pairings from the results site.
 
 ## The results site {#results-site}
 
@@ -76,10 +76,10 @@ Two ways, and they can run side by side. Either way, first make a broadcast on L
 
 1. On Lichess, leave the round's source empty: the games will be pushed. Copy the link to the round.
 2. On Lichess, make a personal access token (lichess.org/account/oauth/token) with the permission to create and update studies and broadcasts. It is shown once: copy it.
-3. On the box, Setup, "Lichess broadcast": paste the link and the token, say which round of the tournament it is, tick "Send the games", Save. "Test" asks Lichess whether the token and the round are right, and says in words what is not.
+3. On the box, Setup, Results and Lichess, "Lichess broadcast": paste the link and the token, say which round of the tournament it is, tick "Send the games", Save. "Test" asks Lichess whether the token and the round are right, and says in words what is not.
 4. From then on every move, correction and result goes to Lichess within a couple of seconds, with the clocks. The Outbox page shows Lichess as a destination of its own.
 
-It needs internet at the box. A new round on Lichess is a new round id: change it in Setup when the round changes.
+It needs internet at the box. A new round on Lichess is a new round id: change it in Setup, Results and Lichess, when the round changes.
 
 ### Pull: Lichess fetches the games from the results site {#lichess-pull}
 

@@ -35,7 +35,7 @@ defmodule AlnaslWeb.PlacementsLiveTest do
   test "a hall is added from the halls the account arbitrates in, and the boards follow on",
        ctx do
     %{conn: conn, a: a, b: b, c: c, open: open, arbiter: arbiter} = ctx
-    {:ok, view, _html} = live(log_in(conn, arbiter, a), ~p"/setup")
+    {:ok, view, _html} = live(log_in(conn, arbiter, a), ~p"/setup/tournaments?open=#{open.id}")
 
     assert has_element?(view, "#placement-#{open.id}-#{a.id}")
     assert has_element?(view, "#placement-add-hall-#{open.id} option[value='#{b.id}']")
@@ -61,7 +61,7 @@ defmodule AlnaslWeb.PlacementsLiveTest do
   test "a hall's tables are changed; a clash is refused and the last hall stays", ctx do
     %{conn: conn, a: a, b: b, open: open, arbiter: arbiter} = ctx
     {:ok, _, _} = Placements.add(open, b.id)
-    {:ok, view, _html} = live(log_in(conn, arbiter, a), ~p"/setup")
+    {:ok, view, _html} = live(log_in(conn, arbiter, a), ~p"/setup/tournaments?open=#{open.id}")
 
     view
     |> form("#placement-form-#{open.id}-#{b.id}",
@@ -105,24 +105,28 @@ defmodule AlnaslWeb.PlacementsLiveTest do
     {:ok, annex_link, []} =
       Alnasl.OpenPairings.add_code(Alnasl.FakeOpenPairings.code(17), b.id)
 
-    {:ok, view, _html} = live(log_in(conn, arbiter, b), ~p"/setup")
+    {:ok, view, _html} = live(log_in(conn, arbiter, b), ~p"/setup/connections")
     assert has_element?(view, "#link-elsewhere-#{annex_link.id}-17")
     view |> element("#link-also-here-#{annex_link.id}-17") |> render_click()
 
     # One tournament, now in both halls; the button has done its job.
     assert Placements.halls_of(festival) == [a.id, b.id]
     assert length(Alnasl.Repo.all(Tournament)) == length(Tournaments.list())
-    assert has_element?(view, "#tournament-#{festival.id}")
     refute has_element?(view, "#link-also-here-#{annex_link.id}-17")
+    render_patch(view, ~p"/setup/tournaments")
+    assert has_element?(view, "#tournament-#{festival.id}")
   end
 
   test "the tournament is on the annex's Setup once it is played there", ctx do
     %{conn: conn, b: b, open: open, arbiter: arbiter} = ctx
-    {:ok, view, _html} = live(log_in(conn, arbiter, b), ~p"/setup")
+    {:ok, view, _html} = live(log_in(conn, arbiter, b), ~p"/setup/tournaments?open=#{open.id}")
     refute has_element?(view, "#tournament-#{open.id}")
 
     {:ok, _, _} = Placements.add(open, b.id)
-    {:ok, view, _html} = live(log_in(build_conn(), arbiter, b), ~p"/setup")
+
+    {:ok, view, _html} =
+      live(log_in(build_conn(), arbiter, b), ~p"/setup/tournaments?open=#{open.id}")
+
     assert has_element?(view, "#tournament-#{open.id}")
     # Its "tables from" is the annex's range.
     assert has_element?(view, "#tables-from-#{open.id}[value='1']")

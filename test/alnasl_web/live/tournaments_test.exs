@@ -57,12 +57,14 @@ defmodule AlnaslWeb.TournamentsTest do
       conn: conn
     } do
       code = festival()
-      {:ok, view, html} = live(conn, ~p"/setup")
-      assert has_element?(view, "#setup-tournaments") and has_element?(view, "#code-form")
+      {:ok, view, html} = live(conn, ~p"/setup/tournaments")
+      assert has_element?(view, "#setup-tournaments")
       # Before any code there is the box's own tournament, and that is all.
       assert has_element?(view, "#tournament-#{own().id}")
       assert html =~ "No pairing program"
 
+      render_patch(view, ~p"/setup/connections")
+      assert has_element?(view, "#setup-connections") and has_element?(view, "#code-form")
       html = add(view, code)
       assert html =~ "The code is accepted: 2 tournament(s)"
 
@@ -75,6 +77,8 @@ defmodule AlnaslWeb.TournamentsTest do
 
       open = by_remote(17)
       u12 = by_remote(18)
+      render_patch(view, ~p"/setup/tournaments?open=#{open.id}")
+      render_patch(view, ~p"/setup/tournaments?open=#{u12.id}")
       assert has_element?(view, "#tournament-#{open.id}", "Open")
       assert has_element?(view, "#tournament-line-#{open.id}", "6 player(s)")
       assert has_element?(view, "#tournament-line-#{open.id}", "3 board(s) in round 1")
@@ -94,7 +98,7 @@ defmodule AlnaslWeb.TournamentsTest do
 
     test "what goes wrong is said in words: not a code, a wrong code, nobody home", %{conn: conn} do
       FakeOpenPairings.add_tournament(17)
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/connections")
 
       assert add(view, "") =~ "Paste the connect code first"
       assert add(view, "https://pairings.test/api/boards/v1") =~ "the part after the # is missing"
@@ -118,7 +122,7 @@ defmodule AlnaslWeb.TournamentsTest do
          %{conn: conn} do
       code = festival()
       {:ok, link, _} = OpenPairings.add_code(code)
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/connections")
       test = fn -> view |> element("#test-link-#{link.id}") |> render_click() end
 
       test.()
@@ -165,7 +169,7 @@ defmodule AlnaslWeb.TournamentsTest do
       FakeOpenPairings.withdraw(code)
       poll()
 
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/connections")
       assert has_element?(view, "#link-state-#{link.id}", "Code refused")
       assert has_element?(view, "#link-why-#{link.id}", "The box has stopped asking")
 
@@ -174,6 +178,7 @@ defmodule AlnaslWeb.TournamentsTest do
 
       view |> element("#remove-link-#{link.id}") |> render_click()
       refute has_element?(view, "#link-#{link.id}")
+      render_patch(view, ~p"/setup/tournaments")
       refute has_element?(view, "#tournament-#{tournament.id}")
       assert has_element?(view, "#tournament-#{own().id}")
       assert Repo.aggregate(Link, :count) == 0
@@ -186,7 +191,7 @@ defmodule AlnaslWeb.TournamentsTest do
       board = fake_dgt("FAKE1")
       {:ok, _} = Tables.set_table(board, 5)
 
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/tournaments?open=#{u12.id}")
       assert has_element?(view, "#tournament-boards-#{u12.id}", "0 board(s)")
 
       html =
@@ -229,7 +234,7 @@ defmodule AlnaslWeb.TournamentsTest do
     test "each tournament has its own Lichess round", %{conn: conn} do
       {:ok, _link, _} = OpenPairings.add_code(festival())
       open = by_remote(17)
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/results")
 
       view
       |> form("#lichess-tournament-form", %{tournament_id: to_string(open.id)})
