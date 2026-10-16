@@ -242,7 +242,7 @@ jobs:
           kill "$pid" 2>/dev/null || true
 
           case "$body" in
-            *'id="help"'*) echo "the release serves its help page" ;;
+            *'id="manual"'*) echo "the release serves its help page" ;;
             *) echo "::error::the release did not serve a page"; cat "$RUNNER_TEMP/alnasl.log" || true; exit 1 ;;
           esac
 
@@ -286,7 +286,7 @@ jobs:
 
           & taskkill /T /F /PID $proc.Id | Out-Null
 
-          if (-not $body -or $body -notmatch 'id="help"') {
+          if (-not $body -or $body -notmatch 'id="manual"') {
             Write-Host "::error::the release did not serve a page"
             if (Test-Path $log) { Get-Content $log }
             if (Test-Path "$log.err") { Get-Content "$log.err" }
@@ -486,7 +486,7 @@ jobs:
           done
 
           case "$body" in
-            *'id="help"'*) echo "the app serves its help page" ;;
+            *'id="manual"'*) echo "the app serves its help page" ;;
             *) echo "::error::the app did not serve a page"
                cat "$RUNNER_TEMP/alnasl.log" || true
                kill "$pid" 2>/dev/null || true
