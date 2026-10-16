@@ -21,7 +21,15 @@ Een 02cloud-login alleen laat niemand binnen. Alleen een uitnodiging, of door de
 
 De poorten van het kastje zelf zijn één zaal. Elke brug hoort bij een zaal, en haar borden en toernooien ook. Een beheerder maakt meer zalen op de pagina Zalen. Elk account ziet zijn eigen zalen en niets van de andere.
 
-Bij meer dan één zaal zegt de wisselaar bovenaan over welke de pagina's gaan, en toont de pagina Zalen elke zaal in één oogopslag: borden live, bruggen verbonden, en wat een arbiter nodig heeft.
+Bij meer dan één zaal zegt de wisselaar bovenaan over welke de pagina's gaan. De pagina Zalen toont elke zaal in een tabel: jouw rol, borden live, bruggen verbonden, en wat een arbiter nodig heeft.
+
+De pagina van een zaal heeft tabbladen, elk met een eigen adres: **Mensen**, **Uitnodigingen**, **Bruggen** en **Instellingen** (hernoemen, verwijderen). Uitnodigingen en Instellingen zijn voor een eigenaar; een arbiter of kijker heeft Mensen en Bruggen.
+
+### Wat een pagina toont {#scope}
+
+Elke pagina gaat over de zaal waar je naar kijkt: Ronde, Borden, de pagina's die borden nummeren en zoeken, PGN, de Wachtrij (haar lijsten, haar tellers en het getal in de omlijsting), het Logboek en Opnames. Bij Borden biedt elk bord alleen de toernooien die in deze zaal gespeeld worden, plus dat waarin het bord nu speelt.
+
+Het Logboek en Opnames kunnen ook **Al mijn zalen** tonen: vink het aan en ze tonen elke zaal die je mag zien. Ze tonen vijftig regels of bestanden per pagina, met een zoekvak. Een kastje zonder accounts heeft geen zalen om uit elkaar te houden en toont alles.
 
 ## Toernooien en zalen {#placements}
 
@@ -53,13 +61,13 @@ Een kijker die op een knop drukt die iets verandert, krijgt te horen dat zijn ro
 
 ## Mensen uitnodigen {#inviting}
 
-Op de pagina van een zaal maakt "Uitnodigen" een link voor één adres en één rol, één keer bruikbaar en een week geldig. Het kastje stuurt geen mail: kopieer de link zelf naar de persoon. Wie hem opent, maakt het account voor dat adres, met een wachtwoord of met 02cloud, of meldt zich aan en komt in de zaal. Een openstaande uitnodiging kan ingetrokken worden.
+Op het tabblad **Uitnodigingen** van een zaal maakt "Uitnodigen" een link voor één adres en één rol, één keer bruikbaar en een week geldig. Het kastje stuurt geen mail: kopieer de link zelf naar de persoon. Wie hem opent, maakt het account voor dat adres, met een wachtwoord of met 02cloud, of meldt zich aan en komt in de zaal. Een openstaande uitnodiging kan ingetrokken worden.
 
 Een zaal houdt minstens één eigenaar: je kunt de laatste niet uit de zaal halen. Maak eerst iemand anders eigenaar.
 
 ## Een zaal verwijderen {#deleting-a-hall}
 
-Op de pagina van een zaal vindt een eigenaar (of een beheerder) "Deze zaal verwijderen". Je moet de naam van de zaal typen, en pas dan werkt de knop. De mensen, de openstaande uitnodigingen, de koppelcodes en de borden van de zaal gaan mee.
+Op het tabblad **Instellingen** van een zaal vindt een eigenaar (of een beheerder) "Deze zaal verwijderen". Je moet de naam van de zaal typen, en pas dan werkt de knop. De mensen, de openstaande uitnodigingen, de koppelcodes en de borden van de zaal gaan mee.
 
 Een zaal die nog bruggen, toernooien of een koppeling met OpenPairings heeft, wordt niet verwijderd: de melding zegt wat er nog is ("2 bruggen en 1 toernooi"), en die haal je eerst weg. Zo gaat er door deze knop nooit een partij verloren. De eigen zaal van het kastje kan nooit verwijderd worden. Wie de verwijderde zaal open had, komt terecht in een andere zaal van hem of haar.
 

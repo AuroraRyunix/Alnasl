@@ -11,42 +11,75 @@ defmodule AlnaslWeb.RecordingsLive do
   use AlnaslWeb, :live_view
 
   alias Alnasl.{Boards, Clock, Recorder}
+  alias AlnaslWeb.Components.Pager
   alias AlnaslWeb.Words
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, socket |> assign(page_title: gettext("Recordings"), report: nil) |> load()}
+    {:ok,
+     socket
+     |> assign(page_title: gettext("Recordings"), report: nil)
+     |> assign(q: "", all?: false, page: 1)
+     |> load()}
   end
 
   defp load(socket) do
     Recorder.flush()
-    account = socket.assigns.current_scope
-    boards = Alnasl.Halls.visible(account, Boards.list())
+    %{current_scope: account, all?: all?, q: q} = socket.assigns
+    everything? = Alnasl.Accounts.Scope.everything?(account)
+
+    # The default is this hall's boards; "all my halls" is every hall the
+    # account may see. A capture of a board since removed belongs to no hall:
+    # only an admin's all-halls list has it.
+    boards =
+      if all?,
+        do: Alnasl.Halls.visible(account, Boards.list()),
+        else: Alnasl.Halls.here(account, Boards.list())
+
     names = Map.new(boards, &{&1.id, &1.name})
+    open? = account.open?
 
-    # A capture of a board in a hall not the account's is not shown; nor,
-    # to anyone but an admin, one of a board since removed.
     captures =
-      if Alnasl.Accounts.Scope.everything?(account),
-        do: Recorder.list(),
-        else: Enum.filter(Recorder.list(), &Map.has_key?(names, &1.board_id))
+      Recorder.list()
+      |> Enum.filter(&(open? or (all? and everything?) or Map.has_key?(names, &1.board_id)))
+      |> Enum.map(
+        &Map.put(
+          &1,
+          :board_name,
+          names[&1.board_id] || gettext("removed board %{id}", id: &1.board_id)
+        )
+      )
+      |> Enum.filter(&Pager.match?([&1.board_name, &1.name], q))
 
-    assign(socket,
-      captures:
-        Enum.map(
-          captures,
-          &Map.put(
-            &1,
-            :board_name,
-            names[&1.board_id] || gettext("removed board %{id}", id: &1.board_id)
-          )
-        ),
-      total: captures |> Enum.map(& &1.size) |> Enum.sum()
+    {rows, page, pages} = Pager.slice(captures, socket.assigns.page)
+
+    socket
+    |> assign(
+      count: length(captures),
+      total: captures |> Enum.map(& &1.size) |> Enum.sum(),
+      page: page,
+      pages: pages
+    )
+    |> stream(:captures, rows,
+      reset: true,
+      dom_id: &"capture-#{&1.board_id}-#{Path.rootname(&1.name)}"
     )
   end
 
   @impl true
   def handle_event("refresh", _params, socket), do: {:noreply, load(socket)}
+
+  def handle_event("search", params, socket) do
+    filter = params["filter"] || %{}
+
+    {:noreply,
+     socket
+     |> assign(q: to_string(filter["q"] || ""), all?: filter["all"] == "1", page: 1)
+     |> load()}
+  end
+
+  def handle_event("page", %{"to" => to}, socket),
+    do: {:noreply, socket |> assign(page: Pager.page(to)) |> load()}
 
   def handle_event("dry_run", %{"board" => board, "name" => name}, socket) do
     with %{} = capture <- find(board, name), {:ok, report} <- Recorder.dry_run(capture.path) do
@@ -113,11 +146,36 @@ defmodule AlnaslWeb.RecordingsLive do
       locale={@locale}
       scope={@current_scope}
       title={gettext("Recordings")}
-      subtitle={gettext("%{n} files, %{size}", n: length(@captures), size: Words.size(@total))}
+      subtitle={gettext("%{n} files, %{size}", n: @count, size: Words.size(@total))}
     >
       <:actions>
         <.button id="refresh-captures" small phx-click="refresh">{gettext("Look again")}</.button>
       </:actions>
+
+      <.form
+        for={%{}}
+        as={:filter}
+        id="captures-filter"
+        phx-change="search"
+        phx-submit="search"
+        class="row"
+      >
+        <label class="sr-only" for="captures-q">{gettext("Search the recordings")}</label>
+        <input
+          id="captures-q"
+          type="search"
+          name="filter[q]"
+          value={@q}
+          placeholder={gettext("search")}
+          phx-debounce="300"
+          class="input log-q"
+        />
+        <label :if={not @current_scope.open?} class="check" for="captures-all">
+          <input type="hidden" name="filter[all]" value="" />
+          <input id="captures-all" type="checkbox" name="filter[all]" value="1" checked={@all?} />
+          {gettext("All my halls")}
+        </label>
+      </.form>
 
       <.panel :if={@report} id="dry-run" title={gettext("Dry run: %{name}", name: @report.name)}>
         <:actions>
@@ -184,12 +242,12 @@ defmodule AlnaslWeb.RecordingsLive do
       </.panel>
 
       <.panel id="captures" title={gettext("Captures")} flush>
-        <div :if={@captures == []} id="captures-empty" class="empty">
+        <div :if={@count == 0} id="captures-empty" class="empty">
           <b>{gettext("Nothing recorded yet")}</b>
           <p>{gettext("Every connected board is recorded from the moment it is connected.")}</p>
         </div>
 
-        <div :if={@captures != []} class="table-wrap">
+        <div :if={@count > 0} class="table-wrap">
           <table id="captures-table">
             <thead>
               <tr>
@@ -205,8 +263,8 @@ defmodule AlnaslWeb.RecordingsLive do
               </tr>
             </thead>
 
-            <tbody>
-              <tr :for={c <- @captures} id={"capture-#{c.board_id}-#{Path.rootname(c.name)}"}>
+            <tbody id="captures-rows" phx-update="stream">
+              <tr :for={{dom_id, c} <- @streams.captures} id={dom_id}>
                 <td>{c.board_name}</td>
 
                 <td class="mono">{c.name}</td>
@@ -256,6 +314,13 @@ defmodule AlnaslWeb.RecordingsLive do
             </tbody>
           </table>
         </div>
+
+        <AlnaslWeb.Components.Pager.pager
+          id="captures-pager"
+          page={@page}
+          pages={@pages}
+          total={@count}
+        />
       </.panel>
     </Layouts.app>
     """

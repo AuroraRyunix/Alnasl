@@ -115,7 +115,7 @@ defmodule AlnaslWeb.RoundLive do
       alarms: alarms,
       title: title,
       page_title: title,
-      configured?: Outbox.configured?() or Tournaments.links() != [],
+      configured?: Outbox.configured?() or Alnasl.Halls.here(account, Tournaments.links()) != [],
       qr_cache: cache,
       refresh_due?: false
     )

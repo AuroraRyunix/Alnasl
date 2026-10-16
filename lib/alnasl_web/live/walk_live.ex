@@ -53,7 +53,8 @@ defmodule AlnaslWeb.WalkLive do
 
   defp load(socket) do
     state = Finder.state()
-    boards = Map.new(Boards.list(), &{&1.id, &1})
+    scope = socket.assigns.current_scope
+    boards = scope |> Alnasl.Halls.here(Boards.list()) |> Map.new(&{&1.id, &1})
 
     recent =
       state.touches
@@ -67,12 +68,22 @@ defmodule AlnaslWeb.WalkLive do
       end)
 
     assign(socket,
-      wizard: state.wizard,
+      wizard: run_here(state.wizard, Alnasl.Halls.filter_id(scope)),
+      here_ids: MapSet.new(Map.keys(boards)),
       recent: recent,
       board_count: map_size(boards),
       numbered: Enum.count(boards, fn {_id, b} -> b.table_no != nil end)
     )
   end
+
+  # The run on the box is one; it is shown in the hall it was started for.
+  defp run_here(%{hall_id: run_hall}, hall_id)
+       when run_hall != nil and hall_id != nil and run_hall != hall_id,
+       do: nil
+
+  defp run_here(wizard, _hall_id), do: wizard
+
+  defp here?(socket, board_id), do: MapSet.member?(socket.assigns.here_ids, board_id)
 
   # --- events ------------------------------------------------------------------
 
@@ -84,7 +95,7 @@ defmodule AlnaslWeb.WalkLive do
         _bad -> 1
       end
 
-    Finder.start_wizard(first)
+    Finder.start_wizard(first, Alnasl.Halls.filter_id(socket.assigns.current_scope))
     {:noreply, socket |> assign(flash_event: nil) |> load()}
   end
 
@@ -105,18 +116,26 @@ defmodule AlnaslWeb.WalkLive do
 
   @impl true
   def handle_info({:finder, {:assigned, entry}}, socket) do
-    {:noreply,
-     socket
-     |> assign(flash_event: {:assigned, entry})
-     |> push_event("walk:buzz", %{kind: "assigned"})
-     |> load()}
+    if here?(socket, entry.board_id) do
+      {:noreply,
+       socket
+       |> assign(flash_event: {:assigned, entry})
+       |> push_event("walk:buzz", %{kind: "assigned"})
+       |> load()}
+    else
+      {:noreply, load(socket)}
+    end
   end
 
   def handle_info({:finder, {:already, entry}}, socket) do
-    {:noreply,
-     socket
-     |> assign(flash_event: {:already, entry})
-     |> push_event("walk:buzz", %{kind: "already"})}
+    if here?(socket, entry.board_id) do
+      {:noreply,
+       socket
+       |> assign(flash_event: {:already, entry})
+       |> push_event("walk:buzz", %{kind: "already"})}
+    else
+      {:noreply, socket}
+    end
   end
 
   def handle_info({:finder, :complete}, socket) do
@@ -126,7 +145,7 @@ defmodule AlnaslWeb.WalkLive do
   def handle_info({:finder, {:touch, id, at}}, socket) do
     socket = load(socket)
 
-    if socket.assigns.live_action == :find do
+    if socket.assigns.live_action == :find and here?(socket, id) do
       Process.send_after(self(), {:fade, at}, @fresh_ms)
       {:noreply, socket |> assign(fresh: {id, at}) |> push_event("walk:buzz", %{kind: "touch"})}
     else

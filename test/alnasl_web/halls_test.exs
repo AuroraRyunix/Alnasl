@@ -80,11 +80,13 @@ defmodule AlnaslWeb.HallsTest do
     test "an owner adds a bridge to the hall and invites", %{conn: conn, a: a} do
       owner = member(a, user_fixture("hall-owner@example.org"), "owner")
 
-      {:ok, page, _html} = live(log_in(conn, owner, a), ~p"/halls/#{a.id}")
+      {:ok, page, _html} = live(log_in(conn, owner, a), ~p"/halls/#{a.id}/bridges")
       page |> element("#bridge-add") |> render_click()
       assert has_element?(page, "#bridge-join-link")
       assert [%Join{hall_id: hall_id}] = Alnasl.Repo.all(Join)
       assert hall_id == a.id
+
+      page |> element("#hall-tab-invitations") |> render_click()
 
       page
       |> form("#invite-form", invite: %{email: "hall-owner@example.org", role: "viewer"})
@@ -147,7 +149,7 @@ defmodule AlnaslWeb.HallsTest do
       mine = bridge_in(a, "alpha-pi")
       theirs = bridge_in(b, "bravo-pi")
 
-      {:ok, page, _html} = live(log_in(conn, owner, a), ~p"/halls/#{a.id}")
+      {:ok, page, _html} = live(log_in(conn, owner, a), ~p"/halls/#{a.id}/bridges")
       assert has_element?(page, "#bridge-#{mine.id}")
       refute has_element?(page, "#bridge-#{theirs.id}")
 
@@ -183,7 +185,7 @@ defmodule AlnaslWeb.HallsTest do
       {:ok, row} = Bridges.board_row(bridge, "COM3")
       assert row.hall_id == a.id
 
-      {:ok, page, _html} = live(log_in(conn, admin, a), ~p"/halls/#{a.id}")
+      {:ok, page, _html} = live(log_in(conn, admin, a), ~p"/halls/#{a.id}/bridges")
 
       page
       |> form("#bridge-#{bridge.id}-move", %{"hall" => "#{b.id}"})

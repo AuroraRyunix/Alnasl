@@ -12,15 +12,15 @@ Met een opname kun je:
 - **Ze exporteren als testfixture**, zodat een fout in de zaal een test aan een bureau wordt. Dit is voor wie Alnasl onderhoudt; ben jij dat niet, dan kun je het negeren.
 - **Ze downloaden.**
 
-Op de pagina Opnames zie je enkel de borden van je eigen zalen.
+De pagina Opnames toont de borden van de zaal waar je naar kijkt; vink **Al mijn zalen** aan voor de andere. Ze toont vijftig bestanden per pagina, en met zoeken vind je een bord of een bestandsnaam.
 
 ## Het Logboek {#the-log}
 
-Wat er gebeurd is, in zinnen, met filters: bord aangesloten, zetten hersteld, niet synchroon, hersteld door de arbiter, offline, terug. Alles wat je op de pagina van een bord doet, een herstel of een correctie, staat er met het tijdstip in.
+Wat er gebeurd is, in zinnen, met filters: bord aangesloten, zetten hersteld, niet synchroon, hersteld door de arbiter, offline, terug. Alles wat je op de pagina van een bord doet, een herstel of een correctie, staat er met het tijdstip in. Het toont de regels van deze zaal (**Al mijn zalen** toont de rest), vijftig per pagina, en met het zoekvak vind je een woord erin.
 
 ## De Wachtrij {#the-outbox}
 
-De verbindingen, eerlijk: voor de uitslagensite en voor elke andere bestemming, verbonden of niet, laatste succes, hoeveel er wacht en waarom het niet weggaat, in woorden. Elk heeft zijn eigen schakelaar en zijn eigen "Nu versturen". Wat wacht, wat de server weigerde en wat weggegaan is.
+De verbindingen, eerlijk: voor de uitslagensite en voor elke andere bestemming, verbonden of niet, laatste succes, hoeveel er wacht en waarom het niet weggaat, in woorden. Elk heeft zijn eigen schakelaar en zijn eigen "Nu versturen". Wat wacht, wat de server weigerde en wat weggegaan is. Alles, de tellers en het getal in de omlijsting inbegrepen, gaat over de toernooien die gespeeld worden in de zaal waar je naar kijkt.
 
 ## PGN {#pgn}
 

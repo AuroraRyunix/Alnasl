@@ -5,8 +5,10 @@ defmodule AlnaslWeb.HallsLive do
   * `:index` - every hall the account may see, at a glance: how many boards
     are live, which bridges are connected, and what wants an arbiter now.
     An admin makes new halls here.
-  * `:show` - one hall: its name, its people and their roles, the
-    invitations still open, and its bridges ("Add a bridge" joins this hall).
+  * `:show` - one hall, in tabs that each have an address of their own:
+    People (`/halls/3`), Invitations (`/halls/3/invitations`), Bridges
+    (`/halls/3/bridges`; "Add a bridge" joins this hall) and Settings
+    (`/halls/3/settings`: rename, delete).
 
   Who may do what is checked here, per hall, not by the page-wide permit:
   a viewer of one hall can be the owner of the next.
@@ -50,6 +52,7 @@ defmodule AlnaslWeb.HallsLive do
           {:noreply,
            socket
            |> assign(shown: hall, page_title: hall.name, invite_link: nil, temporary: nil)
+           |> assign(tab: pick_tab(socket.assigns.current_scope, hall, params["tab"]))
            |> assign(deleting: false, delete_typed: "")
            |> assign(bridge_join: nil, bridge_message: nil)
            |> assign(name_form: to_form(%{"name" => hall.name}, as: :hall))
@@ -63,6 +66,26 @@ defmodule AlnaslWeb.HallsLive do
         end
     end
   end
+
+  # The tabs of a hall, in order; what a scope may not use is not offered.
+  @tabs ~w(people invitations bridges settings)
+
+  defp tabs(scope, hall) do
+    owner? = Scope.can?(scope, :owner, hall.id) and not scope.open?
+    Enum.filter(@tabs, &(&1 in ~w(people bridges) or owner?))
+  end
+
+  defp pick_tab(scope, hall, wanted) do
+    if wanted in tabs(scope, hall), do: wanted, else: "people"
+  end
+
+  defp tab_path(hall, "people"), do: ~p"/halls/#{hall.id}"
+  defp tab_path(hall, tab), do: ~p"/halls/#{hall.id}/#{tab}"
+
+  defp tab_label("people"), do: gettext("People")
+  defp tab_label("invitations"), do: gettext("Invitations")
+  defp tab_label("bridges"), do: gettext("Bridges")
+  defp tab_label("settings"), do: gettext("Settings")
 
   defp invite_form, do: to_form(%{"email" => "", "role" => "arbiter"}, as: :invite)
 
@@ -379,56 +402,73 @@ defmodule AlnaslWeb.HallsLive do
           {gettext("Your account is not in any hall yet. Whoever invited you can fix that.")}
         </p>
 
-        <ul id="halls" class="hall-cards">
-          <li :for={row <- @rows} id={"hall-#{row.hall.id}"} class="panel">
-            <header>
-              <h2>
-                <.link navigate={~p"/halls/#{row.hall.id}"} id={"hall-#{row.hall.id}-open"}>
-                  {row.hall.name}
-                </.link>
-              </h2>
-              <span class="note">{Words.role(row.role)}</span>
-            </header>
+        <div :if={@rows != []} class="panel flush">
+          <div class="table-wrap">
+            <table id="halls">
+              <thead>
+                <tr>
+                  <th>{gettext("Hall")}</th>
+                  <th>{gettext("Your role")}</th>
+                  <th>{gettext("Live boards")}</th>
+                  <th>{gettext("Bridges")}</th>
+                  <th>{gettext("Attention")}</th>
+                  <th><span class="sr-only">{gettext("Actions")}</span></th>
+                </tr>
+              </thead>
 
-            <div class="body stack">
-              <p id={"hall-#{row.hall.id}-boards"}>
-                {ngettext(
-                  "%{live} of %{count} board live",
-                  "%{live} of %{count} boards live",
-                  row.boards,
-                  live: row.live
-                )}
-              </p>
+              <tbody>
+                <tr :for={row <- @rows} id={"hall-#{row.hall.id}"}>
+                  <td>
+                    <.link navigate={~p"/halls/#{row.hall.id}"} id={"hall-#{row.hall.id}-open"}>
+                      <b>{row.hall.name}</b>
+                    </.link>
+                  </td>
 
-              <p :if={row.bridges > 0} id={"hall-#{row.hall.id}-bridges"} class="note">
-                {ngettext(
-                  "%{up} of %{count} bridge connected",
-                  "%{up} of %{count} bridges connected",
-                  row.bridges,
-                  up: row.bridges_up
-                )}
-              </p>
+                  <td id={"hall-#{row.hall.id}-role"}>{Words.role(row.role)}</td>
 
-              <%= if row.attention != [] do %>
-                <ul id={"hall-#{row.hall.id}-attention"} class="addresses">
-                  <li :for={board <- row.attention} id={"hall-#{row.hall.id}-attention-#{board.id}"}>
-                    <.state state={board.status} /> <span>{board.name}</span>
-                  </li>
-                </ul>
-              <% else %>
-                <p id={"hall-#{row.hall.id}-calm"} class="note">
-                  {gettext("Nothing needs an arbiter.")}
-                </p>
-              <% end %>
+                  <td id={"hall-#{row.hall.id}-boards"} class="num">
+                    {gettext("%{live} of %{count}", live: row.live, count: row.boards)}
+                  </td>
 
-              <div class="row">
-                <.button id={"hall-#{row.hall.id}-enter"} small href={~p"/halls/#{row.hall.id}/enter"}>
-                  {gettext("To its boards")}
-                </.button>
-              </div>
-            </div>
-          </li>
-        </ul>
+                  <td id={"hall-#{row.hall.id}-bridges"} class="num">
+                    <%= if row.bridges > 0 do %>
+                      {gettext("%{up} of %{count}", up: row.bridges_up, count: row.bridges)}
+                    <% else %>
+                      <span class="note">{gettext("none")}</span>
+                    <% end %>
+                  </td>
+
+                  <td>
+                    <%= if row.attention != [] do %>
+                      <ul id={"hall-#{row.hall.id}-attention"} class="addresses">
+                        <li
+                          :for={board <- row.attention}
+                          id={"hall-#{row.hall.id}-attention-#{board.id}"}
+                        >
+                          <.state state={board.status} /> <span>{board.name}</span>
+                        </li>
+                      </ul>
+                    <% else %>
+                      <span id={"hall-#{row.hall.id}-calm"} class="note">
+                        {gettext("Nothing needs an arbiter.")}
+                      </span>
+                    <% end %>
+                  </td>
+
+                  <td class="act">
+                    <.button
+                      id={"hall-#{row.hall.id}-enter"}
+                      small
+                      href={~p"/halls/#{row.hall.id}/enter"}
+                    >
+                      {gettext("To its boards")}
+                    </.button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
 
         <.panel
           :if={Alnasl.Accounts.Scope.can?(@current_scope, :admin) and not @current_scope.open?}
@@ -466,14 +506,29 @@ defmodule AlnaslWeb.HallsLive do
       </:actions>
 
       <div class="stack">
-        <.panel :if={@owner? and not @current_scope.open?} id="hall-name" title={gettext("Name")}>
+        <nav id="hall-tabs" class="seg hall-tabs" aria-label={gettext("Parts of this hall")}>
+          <.link
+            :for={tab <- tabs(@current_scope, @shown)}
+            id={"hall-tab-#{tab}"}
+            patch={tab_path(@shown, tab)}
+            aria-current={to_string(@tab == tab)}
+          >
+            {tab_label(tab)}
+          </.link>
+        </nav>
+
+        <.panel
+          :if={@tab == "settings" and @owner? and not @current_scope.open?}
+          id="hall-name"
+          title={gettext("Name")}
+        >
           <.form for={@name_form} id="hall-name-form" phx-submit="rename" class="row">
             <.input field={@name_form[:name]} label={gettext("Name")} required />
             <.button id="hall-name-submit" type="submit">{gettext("Rename")}</.button>
           </.form>
         </.panel>
 
-        <.panel id="hall-people" title={gettext("People")}>
+        <.panel :if={@tab == "people"} id="hall-people" title={gettext("People")}>
           <%= if @current_scope.open? do %>
             <p id="hall-people-open" class="note">
               {gettext(
@@ -545,7 +600,11 @@ defmodule AlnaslWeb.HallsLive do
           <% end %>
         </.panel>
 
-        <.panel :if={@owner? and not @current_scope.open?} id="hall-invite" title={gettext("Invite")}>
+        <.panel
+          :if={@tab == "invitations" and @owner? and not @current_scope.open?}
+          id="hall-invite"
+          title={gettext("Invite")}
+        >
           <div class="stack">
             <.form for={@invite_form} id="invite-form" phx-submit="invite" class="row">
               <.input
@@ -597,7 +656,7 @@ defmodule AlnaslWeb.HallsLive do
         </.panel>
 
         <.panel
-          :if={@owner? and not @shown.own and not @current_scope.open?}
+          :if={@tab == "settings" and @owner? and not @shown.own and not @current_scope.open?}
           id="hall-delete"
           title={gettext("Delete this hall")}
         >
@@ -667,7 +726,7 @@ defmodule AlnaslWeb.HallsLive do
           </div>
         </.panel>
 
-        <.panel id="hall-bridges" title={gettext("Bridges")}>
+        <.panel :if={@tab == "bridges"} id="hall-bridges" title={gettext("Bridges")}>
           <:actions><AlnaslWeb.Components.ManualLink.manual_link topic={:bridges} /></:actions>
 
           <BridgeComponents.bridges

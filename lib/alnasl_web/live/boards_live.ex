@@ -78,7 +78,8 @@ defmodule AlnaslWeb.BoardsLive do
     scope = socket.assigns.current_scope
     snapshots = Alnasl.Halls.here(scope, Boards.snapshots())
     checks = Tables.checks(tid, round)
-    tournaments = Alnasl.Halls.here(scope, Tournaments.list()) |> Enum.reject(& &1.gone)
+    everyone = Tournaments.list()
+    tournaments = Alnasl.Halls.here(scope, everyone) |> Enum.reject(& &1.gone)
 
     assign(socket,
       snapshots: snapshots,
@@ -90,9 +91,20 @@ defmodule AlnaslWeb.BoardsLive do
       rounds: Enum.uniq(Tournaments.rounds(tid) ++ [round]) |> Enum.sort(),
       tournaments: tournaments,
       shown: Alnasl.Halls.active(scope),
-      names: Map.new(tournaments, &{&1.id, Tournaments.title(&1) || gettext("This box")}),
+      names: Map.new(everyone, &{&1.id, Tournaments.title(&1) || gettext("This box")}),
+      by_id: Map.new(everyone, &{&1.id, &1}),
       refresh_due?: false
     )
+  end
+
+  # The tournaments a board's select offers: those placed in this hall, and
+  # the one the board plays in now, wherever that is placed.
+  defp row_options(placed, by_id, current) do
+    cond do
+      current == nil or Enum.any?(placed, &(&1.id == current)) -> placed
+      by_id[current] -> placed ++ [by_id[current]]
+      true -> placed
+    end
   end
 
   # A real port: the box asks the line who is on it. One board is a board; two
@@ -875,7 +887,7 @@ defmodule AlnaslWeb.BoardsLive do
                       style="width:auto;max-width:11rem"
                     >
                       <option
-                        :for={t <- @tournaments}
+                        :for={t <- row_options(@tournaments, @by_id, s[:tournament_id])}
                         value={t.id}
                         selected={t.id == s[:tournament_id]}
                       >

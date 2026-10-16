@@ -22,17 +22,24 @@ defmodule AlnaslWeb.OutboxLive do
 
   defp load(socket) do
     account = socket.assigns.current_scope
-    mine = mine(account)
+    ids = Alnasl.Halls.tournament_ids(account)
+    tournaments = Alnasl.Halls.active(account)
+
+    waiting_by = %{
+      "openresults" => Outbox.pending_by_tournament(),
+      "lichess" => LichessBroadcast.pending_by_tournament(),
+      "openpairings" => OpenPairings.pending_by_tournament()
+    }
 
     assign(socket,
-      waiting: Enum.filter(Outbox.list("pending", 60), mine),
-      rejected: Enum.filter(Outbox.list("rejected", 30), mine),
-      sent: Enum.filter(Outbox.list("sent", 30), mine),
-      counts: Outbox.counts(),
+      waiting: Outbox.list("pending", 60, ids),
+      rejected: Outbox.list("rejected", 30, ids),
+      sent: Outbox.list("sent", 30, ids),
+      counts: Outbox.counts(ids),
       destinations: Destination.statuses(),
       plans: Map.new(Destination.all(), &{&1.id(), Destination.send_plan(&1)}),
       linked:
-        if(Alnasl.Accounts.Scope.everything?(account),
+        if(account.open?,
           do: Alnasl.Seating.linked(),
           else:
             Alnasl.Halls.here(
@@ -43,34 +50,24 @@ defmodule AlnaslWeb.OutboxLive do
       links: Alnasl.Halls.here(account, Tournaments.links()),
       lichess_refused: LichessBroadcast.refused(),
       pairing_refused: OpenPairings.refused(),
-      tournaments: Alnasl.Halls.active(account),
-      staying_home: Enum.filter(staying_home(), &Alnasl.Halls.sees?(account, &1.tournament)),
+      tournaments: tournaments,
+      staying_home: staying_home(tournaments),
       names: Map.new(Tournaments.list(), &{&1.id, Tournaments.title(&1)}),
-      many?: Tournaments.many?(),
-      waiting_by: %{
-        "openresults" => Outbox.pending_by_tournament(),
-        "lichess" => LichessBroadcast.pending_by_tournament(),
-        "openpairings" => OpenPairings.pending_by_tournament()
-      },
+      many?: length(tournaments) > 1,
+      waiting_by: waiting_by,
+      pending_here: Map.new(waiting_by, fn {id, by} -> {id, here_sum(by, ids)} end),
       refresh_due?: false
     )
   end
 
-  # What of the queue the account may see: everything for an admin and on a
-  # box without accounts, else what its halls' tournaments send.
-  defp mine(account) do
-    if Alnasl.Accounts.Scope.everything?(account) do
-      fn _entry -> true end
-    else
-      ids = account |> Alnasl.Halls.visible(Tournaments.list()) |> MapSet.new(& &1.id)
-      &MapSet.member?(ids, &1.tournament_id)
-    end
-  end
+  # What waits for this hall's tournaments; all of it when there is no hall.
+  defp here_sum(by, nil), do: by |> Map.values() |> Enum.sum()
+  defp here_sum(by, ids), do: by |> Map.take(ids) |> Map.values() |> Enum.sum()
 
   # Boards in the round in play that play a game which stays on the box:
   # nothing of it is waiting, and the arbiter is told why.
-  defp staying_home do
-    for t <- Tournaments.active(),
+  defp staying_home(tournaments) do
+    for t <- tournaments,
         game <- Games.staying_home(t.id, Tournaments.round_in_play(t.id)) do
       %{tournament: t, game: game}
     end
@@ -326,7 +323,7 @@ defmodule AlnaslWeb.OutboxLive do
             <%= if @linked == [] do %>
               <Layouts.link_state link={@link} />
             <% else %>
-              <% result = Status.results() %>
+              <% result = Status.results(@linked, @link, @current_scope) %>
               <%= if result do %>
                 <% {tone, icon, text} = result %>
                 <.badge tone={tone} icon={icon}>{text}</.badge>
@@ -420,7 +417,7 @@ defmodule AlnaslWeb.OutboxLive do
               <.badge id={"dest-state-#{d.id}"} tone={tone} icon={icon}>{word}</.badge>
 
               <span id={"dest-waiting-#{d.id}"} class="note">
-                {gettext("%{n} waiting", n: d.pending)}
+                {gettext("%{n} waiting", n: @pending_here[d.id] || 0)}
               </span>
             </div>
 

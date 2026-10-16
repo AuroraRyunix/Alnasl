@@ -118,7 +118,7 @@ defmodule AlnaslWeb.Hall do
           socket
           |> assign(
             current_scope: scope,
-            link: Outbox.status(),
+            link: Outbox.status(scope),
             box: Settings.get("box_name") || "Alnasl",
             locale: locale,
             update: Scope.can?(scope, :admin) && not Accounts.server?() && Updates.notice(),
@@ -186,7 +186,7 @@ defmodule AlnaslWeb.Hall do
   # Only the badges move with the queue; the lines about boards wait for a
   # change of tournaments or boards.
   defp info(:outbox_changed, socket) do
-    link = Outbox.status()
+    link = Outbox.status(socket.assigns[:current_scope])
     hall = socket.assigns[:hall]
     socket = assign(socket, link: link)
 
@@ -199,7 +199,9 @@ defmodule AlnaslWeb.Hall do
   end
 
   defp info({:setting, "box_name"}, socket) do
-    {:cont, assign(socket, link: Outbox.status(), box: Settings.get("box_name") || "Alnasl")}
+    {:cont, assign(socket,
+       link: Outbox.status(socket.assigns[:current_scope]),
+       box: Settings.get("box_name") || "Alnasl")}
   end
 
   # A tournament, a code or a board's place changed: which boards are

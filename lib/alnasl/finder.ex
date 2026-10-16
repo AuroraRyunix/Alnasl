@@ -77,8 +77,13 @@ defmodule Alnasl.Finder do
   """
   def state, do: GenServer.call(__MODULE__, :state)
 
-  def start_wizard(first \\ 1) when is_integer(first) and first > 0,
-    do: GenServer.call(__MODULE__, {:start, first})
+  @doc """
+  Starts a run. With a `hall_id` the run is that hall's: a board of another
+  hall that feels a piece lift is not numbered by it, and the run is over
+  when every board of the hall has its number.
+  """
+  def start_wizard(first \\ 1, hall_id \\ nil) when is_integer(first) and first > 0,
+    do: GenServer.call(__MODULE__, {:start, first, hall_id})
 
   def undo, do: GenServer.call(__MODULE__, :undo)
   def skip, do: GenServer.call(__MODULE__, :skip)
@@ -100,7 +105,7 @@ defmodule Alnasl.Finder do
     {:reply, public(s), s}
   end
 
-  def handle_call({:start, first}, _from, s) do
+  def handle_call({:start, first, hall_id}, _from, s) do
     now = System.system_time(:millisecond)
 
     s = %{
@@ -108,6 +113,7 @@ defmodule Alnasl.Finder do
       | wizard: %{
           next: first,
           first: first,
+          hall_id: hall_id,
           done: [],
           skipped: [],
           started_at: now,
@@ -183,15 +189,33 @@ defmodule Alnasl.Finder do
         s
 
       nil ->
-        case safely(fn -> assign_next(board_id, w.next, at) end) do
-          %{} = entry ->
-            w = active(%{w | done: [entry | w.done], next: w.next + 1})
-            announce({:assigned, entry})
-            finish(%{s | wizard: w})
-
-          _failed ->
-            s
+        if safely(fn -> in_run?(board_id, w) end) == false do
+          s
+        else
+          assign_or_skip(s, w, board_id, at)
         end
+    end
+  end
+
+  # A run of one hall keeps to that hall's boards.
+  defp in_run?(_board_id, %{hall_id: nil}), do: true
+
+  defp in_run?(board_id, %{hall_id: hall_id}) do
+    case Boards.get(board_id) do
+      nil -> false
+      board -> Alnasl.Halls.of(board) == hall_id
+    end
+  end
+
+  defp assign_or_skip(s, w, board_id, at) do
+    case safely(fn -> assign_next(board_id, w.next, at) end) do
+      %{} = entry ->
+        w = active(%{w | done: [entry | w.done], next: w.next + 1})
+        announce({:assigned, entry})
+        finish(%{s | wizard: w})
+
+      _failed ->
+        s
     end
   end
 
@@ -215,13 +239,18 @@ defmodule Alnasl.Finder do
   defp finish(%{wizard: w} = s) do
     ids = MapSet.new(w.done, & &1.board_id)
 
-    if safely(fn -> Enum.all?(Boards.list(), &(&1.id in ids)) end) == true do
+    if safely(fn -> Enum.all?(boards_of(w), &(&1.id in ids)) end) == true do
       announce(:complete)
       %{s | wizard: nil}
     else
       s
     end
   end
+
+  defp boards_of(%{hall_id: nil}), do: Boards.list()
+
+  defp boards_of(%{hall_id: hall_id}),
+    do: Enum.filter(Boards.list(), &(Alnasl.Halls.of(&1) == hall_id))
 
   defp active(w), do: %{w | active_at: System.system_time(:millisecond)}
 
@@ -242,7 +271,8 @@ defmodule Alnasl.Finder do
     %{
       last: s.last,
       touches: s.touches,
-      wizard: s.wizard && Map.take(s.wizard, [:next, :first, :done, :skipped, :started_at])
+      wizard:
+        s.wizard && Map.take(s.wizard, [:next, :first, :done, :skipped, :started_at, :hall_id])
     }
   end
 
