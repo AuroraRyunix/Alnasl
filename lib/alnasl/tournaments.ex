@@ -271,15 +271,24 @@ defmodule Alnasl.Tournaments do
   """
   def board_of_table(tournament, number, round \\ nil, hall_id \\ nil)
 
-  def board_of_table(%Tournament{} = tournament, number, round, hall_id)
+  def board_of_table(tournament, number, round, hall_id),
+    do: board_of_table_in(tournament, number, round, hall_id, nil)
+
+  @doc """
+  `board_of_table/4` with the tournament's placements already in hand
+  (`Alnasl.Placements.list/1`), for a caller asking about many tables.
+  """
+  def board_of_table_in(%Tournament{} = tournament, number, round, hall_id, placements)
       when is_integer(number) do
-    case Placements.board_at(tournament, hall_id || Alnasl.Halls.of(tournament), number) do
+    hall_id = hall_id || Alnasl.Halls.of(tournament)
+
+    case Placements.board_at(tournament, hall_id, number, placements) do
       nil -> nil
       k -> by_match(tournament, k, round)
     end
   end
 
-  def board_of_table(_tournament, _number, _round, _hall_id), do: nil
+  def board_of_table_in(_tournament, _number, _round, _hall_id, _placements), do: nil
 
   defp by_match(%Tournament{keep_matches: true, kind: "linked"} = tournament, k, round) do
     with true <- team_event?(tournament),

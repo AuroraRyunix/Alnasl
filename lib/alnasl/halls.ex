@@ -82,20 +82,38 @@ defmodule Alnasl.Halls do
   @doc """
   What still keeps a hall from being deleted: `%{bridges, tournaments,
   links}`, counts. A bridge that was removed does not count; a hall's own
-  local tournament counts only once games were played in it, and a link
+  local tournament counts only once games were played in it or it is
+  played in another hall as well, and a link
   (a code, an account) counts because it brings tournaments. A tournament
   from another hall that is also played here counts too: take its tables
   away in Setup first, or the hall would vanish from under its boards.
   """
   def leftovers(%Hall{id: id}) do
     local_with_games =
-      from(t in Tournament,
-        where: t.hall_id == ^id and t.kind == "local",
-        join: g in Game,
-        on: g.tournament_id == t.id,
-        select: t.id,
-        distinct: true
+      Repo.all(
+        from(t in Tournament,
+          where: t.hall_id == ^id and t.kind == "local",
+          join: g in Game,
+          on: g.tournament_id == t.id,
+          select: t.id,
+          distinct: true
+        )
       )
+
+    # The hall's own tournament placed in another hall has boards there:
+    # deleting it would leave them pointing at nothing.
+    local_elsewhere =
+      Repo.all(
+        from(t in Tournament,
+          where: t.hall_id == ^id and t.kind == "local",
+          join: p in Placement,
+          on: p.tournament_id == t.id and p.hall_id != ^id,
+          select: t.id,
+          distinct: true
+        )
+      )
+
+    locals = length(Enum.uniq(local_with_games ++ local_elsewhere))
 
     %{
       bridges:
@@ -108,7 +126,7 @@ defmodule Alnasl.Halls do
           from(t in Tournament, where: t.hall_id == ^id and t.kind != "local"),
           :count
         ) +
-          Repo.aggregate(local_with_games, :count) +
+          locals +
           Repo.aggregate(
             from(p in Placement,
               join: t in Tournament,
@@ -208,7 +226,8 @@ defmodule Alnasl.Halls do
 
   def here(%Scope{} = scope, rows) do
     id = Scope.hall_id(scope)
-    Enum.filter(rows, &Alnasl.Placements.in_hall?(&1, id))
+    index = Alnasl.Placements.index()
+    Enum.filter(rows, &(id in Alnasl.Placements.halls_of(&1, index)))
   end
 
   def here(_none, _rows), do: []
@@ -240,7 +259,11 @@ defmodule Alnasl.Halls do
 
   def visible(%Scope{} = scope, rows) do
     ids = Scope.hall_ids(scope)
-    Enum.filter(rows, fn row -> Enum.any?(Alnasl.Placements.halls_of(row), &(&1 in ids)) end)
+    index = Alnasl.Placements.index()
+
+    Enum.filter(rows, fn row ->
+      Enum.any?(Alnasl.Placements.halls_of(row, index), &(&1 in ids))
+    end)
   end
 
   def visible(_none, _rows), do: []

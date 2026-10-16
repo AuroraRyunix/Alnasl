@@ -27,6 +27,20 @@ defmodule AlnaslWeb.TableWords do
 
   def sticker(board), do: identity(board)
 
+  @doc "Why a hall was not added: a board of its tables is in the middle of another tournament's game."
+  def busy(board) do
+    tournament = Alnasl.Tournaments.get(board.tournament_id)
+
+    gettext(
+      "\"%{board}\" on table %{table} has a game under way in %{tournament}. Nothing was changed: let the game finish, or give this hall other tables.",
+      board: board.name,
+      table: board.table_no,
+      tournament:
+        (tournament && Alnasl.Tournaments.title(tournament)) ||
+          gettext("this box's own tournament")
+    )
+  end
+
   @doc "One line of the checks as `{tone, sentence}`."
   def check(%{level: level, what: what}), do: {tone(level), sentence(what)}
 

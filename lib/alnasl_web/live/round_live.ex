@@ -76,7 +76,7 @@ defmodule AlnaslWeb.RoundLive do
     # Only what is on the boards here: a tournament with a board of this hall
     # or a stored game. One that is asked for by name is shown whatever it has,
     # and a box with a single tournament keeps it, empty state and all.
-    with_games = Games.tournament_ids()
+    with_games = Games.tournament_ids(Enum.map(active, & &1.id))
 
     listed =
       if match?([_one], active),
@@ -90,7 +90,9 @@ defmodule AlnaslWeb.RoundLive do
         do: Enum.filter(shown, &MapSet.member?(listed_ids, &1.id)),
         else: shown
 
-    sections = Enum.map(shown_now, &section(&1, asked || &1.round, snapshots))
+    # A box with one tournament draws every pairing, as it always did.
+    ctx = %{snapshots: snapshots, every?: match?([_one], active), placed: placed(shown_now)}
+    sections = Enum.map(shown_now, &section(&1, asked || &1.round, ctx))
 
     # The same address is drawn once, not three times a second.
     cache =
@@ -150,7 +152,10 @@ defmodule AlnaslWeb.RoundLive do
     end
   end
 
-  defp section(tournament, round, snapshots) do
+  # The placements of the tournaments on the page, asked once a refresh.
+  defp placed(tournaments), do: Map.new(tournaments, &{&1.id, Alnasl.Placements.list(&1)})
+
+  defp section(tournament, round, %{snapshots: snapshots} = ctx) do
     tid = tournament.id
 
     here =
@@ -166,8 +171,14 @@ defmodule AlnaslWeb.RoundLive do
     pairings = Map.new(Tournaments.boards(tid, round), &{&1.board, &1})
 
     # A tile is a board that exists here or has a game. A pairing with
-    # neither is only counted.
-    numbers = Enum.uniq(Map.keys(here) ++ Map.keys(games)) |> Enum.sort()
+    # neither is only counted - except on a box with one tournament, where
+    # four hundred tiles were never the problem.
+    numbers =
+      Enum.uniq(
+        Map.keys(here) ++ Map.keys(games) ++ if(ctx.every?, do: Map.keys(pairings), else: [])
+      )
+      |> Enum.sort()
+
     unplaced = pairings |> Map.keys() |> Enum.reject(&(&1 in numbers)) |> length()
 
     site = site(tournament, round)
@@ -187,7 +198,7 @@ defmodule AlnaslWeb.RoundLive do
             )
 
     counts = Enum.frequencies_by(tiles, & &1.state)
-    checks = Tables.checks(tid, round, snapshots)
+    checks = Tables.checks(tid, round, snapshots, ctx.placed[tid])
     info = Tournaments.info(tid)
 
     %{

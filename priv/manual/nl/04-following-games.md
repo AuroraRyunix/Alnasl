@@ -21,7 +21,7 @@ Een balk over de volle breedte bovenaan betekent dat de uitslagensite niet berei
 
 Een tegel is de weg naar de eigen pagina van het bord. Eronder staan "Partij beëindigen" en "Nieuwe partij".
 
-Alleen borden die hier bestaan krijgen een tegel: een bord van deze zaal dat op dat bordnummer zit, of een bord met al een bewaarde partij. Indelingen zonder een van beide worden geteld in één regel onder de kop ("26 indelingen zonder bord hier"). Een toernooi zonder bord hier en zonder enige partij wordt niet getekend; één regel onderaan zegt hoeveel het er zijn ("14 andere toernooien staan niet op de borden hier") en leidt naar Instellingen. Met één toernooi wordt niets verborgen. Een toernooi dat je opent met zijn eigen adres zie je altijd.
+Alleen borden die hier bestaan krijgen een tegel: een bord van deze zaal dat op dat bordnummer zit, of een bord met al een bewaarde partij. Indelingen zonder een van beide worden geteld in één regel onder de kop ("26 indelingen zonder bord hier"). Een toernooi zonder bord hier en zonder enige partij wordt niet getekend; één regel onderaan zegt hoeveel het er zijn ("14 andere toernooien staan niet op de borden hier") en leidt naar Instellingen. Met één toernooi wordt niets verborgen: elke indeling krijgt een tegel, met of zonder bord, en een kastje dat nog geen indelingen heeft, zegt dat nog altijd. Een toernooi dat je opent met zijn eigen adres zie je altijd, op dezelfde manier geteld als hierboven.
 
 ## De pagina van een bord {#a-board}
 

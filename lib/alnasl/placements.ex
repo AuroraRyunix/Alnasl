@@ -97,6 +97,32 @@ defmodule Alnasl.Placements do
   @doc "Is the row in hall `hall_id`?"
   def in_hall?(row, hall_id), do: hall_id in halls_of(row)
 
+  @doc """
+  What `halls_of/2` needs to answer for many rows without a query a row:
+  the own hall's id, and the halls of every tournament with placements.
+  """
+  def index do
+    halls =
+      Repo.all(
+        from p in Placement,
+          order_by: [p.first_board, p.id],
+          select: {p.tournament_id, p.hall_id}
+      )
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+      |> Map.new(fn {tid, ids} -> {tid, Enum.uniq(ids)} end)
+
+    %{own: Halls.own_id(), halls: halls}
+  end
+
+  @doc "`halls_of/1`, answered from an `index/0`."
+  def halls_of(%Tournament{} = t, %{own: own, halls: halls}),
+    do: Map.get(halls, t.id) || [t.hall_id || own]
+
+  def halls_of(nil, _index), do: []
+  def halls_of(%Alnasl.Halls.Hall{id: id}, _index), do: [id]
+  def halls_of(%{hall_id: id}, _index) when is_integer(id), do: [id]
+  def halls_of(_row, %{own: own}), do: [own]
+
   # --- who may ------------------------------------------------------------------
 
   @doc """
@@ -165,8 +191,10 @@ defmodule Alnasl.Placements do
   tournament not placed in that hall at all counts by its one placement
   when it has one (as a board put in it by hand always did), else `nil`.
   """
-  def board_at(tournament, hall_id, table) when is_integer(table) do
-    all = list(tournament)
+  def board_at(tournament, hall_id, table, all \\ nil)
+
+  def board_at(tournament, hall_id, table, all) when is_integer(table) do
+    all = all || list(tournament)
 
     placement =
       Enum.find(all, &(&1.hall_id == (hall_id || Halls.own_id()))) ||
@@ -186,7 +214,7 @@ defmodule Alnasl.Placements do
     end
   end
 
-  def board_at(_tournament, _hall_id, _table), do: nil
+  def board_at(_tournament, _hall_id, _table, _all), do: nil
 
   @doc "Where board `n` of a tournament is played: `{hall_id, table}`, or `nil`."
   def place_of(tournament, n) when is_integer(n) do
@@ -263,7 +291,8 @@ defmodule Alnasl.Placements do
 
   @doc """
   Adds a hall to a tournament with the place `suggest/2` gives - or what
-  `attrs` says instead.
+  `attrs` says instead. A board of those tables with a game under way in
+  another tournament is not taken: `{:error, :busy, board}`.
   """
   def add(%Tournament{} = tournament, hall_id, attrs \\ %{}) do
     if in_hall(tournament, hall_id) do
@@ -271,9 +300,7 @@ defmodule Alnasl.Placements do
     else
       suggested = suggest(tournament, hall_id)
 
-      put(
-        tournament,
-        hall_id,
+      attrs =
         Map.merge(
           %{
             table_from: suggested.table_from,
@@ -282,7 +309,29 @@ defmodule Alnasl.Placements do
           },
           Map.new(attrs)
         )
-      )
+
+      case busy(tournament, hall_id, attrs) do
+        nil -> put(tournament, hall_id, attrs)
+        board -> {:error, :busy, board}
+      end
+    end
+  end
+
+  # A board of the tables asked for with a game under way in another
+  # tournament: adding a hall does not pull a running game out from under
+  # its players. `nil` when there is none.
+  defp busy(tournament, hall_id, attrs) do
+    case attrs[:table_from] do
+      nil ->
+        nil
+
+      from ->
+        range = from..(attrs[:table_to] || from)//1
+
+        Enum.find(Boards.list(), fn board ->
+          Halls.of(board) == hall_id and board.table_no != nil and board.table_no in range and
+            board.tournament_id != tournament.id and Tables.under_way?(board, tournament)
+        end)
     end
   end
 
@@ -329,6 +378,7 @@ defmodule Alnasl.Placements do
   range had). `%{table_from, table_to, first_board}`.
   """
   def suggest(%Tournament{} = tournament, hall_id) do
+    hall_id = hall_id || Halls.own_id()
     all = Enum.reject(list(tournament), &(&1.hall_id == hall_id))
 
     first_board =
@@ -341,7 +391,7 @@ defmodule Alnasl.Placements do
           max(highest + 1, (all |> Enum.map(& &1.first_board) |> Enum.max()) + 1)
       end
 
-    last_table =
+    ranged =
       Repo.all(
         from p in Placement,
           where:
@@ -349,7 +399,20 @@ defmodule Alnasl.Placements do
               not is_nil(p.table_from),
           select: coalesce(p.table_to, p.table_from)
       )
-      |> Enum.max(fn -> 0 end)
+
+    # A tournament without a range sits on tables too: its boards say
+    # which. The hall's own tournament is where idle boards wait, not a
+    # tenant, so its boards are fair game.
+    local = Halls.local_tournament(hall_id).id
+
+    seated =
+      for board <- Boards.list(),
+          Halls.of(board) == hall_id,
+          board.table_no != nil,
+          board.tournament_id not in [tournament.id, local],
+          do: board.table_no
+
+    last_table = Enum.max(ranged ++ seated, fn -> 0 end)
 
     left =
       Enum.count(
@@ -477,43 +540,78 @@ defmodule Alnasl.Placements do
   @doc """
   Two rows of one tournament made one: the halls `later` is placed in that
   `first` is not go to `first`; a range `first` lacks in a hall both are in
-  is taken over.
+  is taken over. `{:ok, shifted}`: the placements that moved over with
+  another first board, whose boards `reseat/2` numbers again once the
+  rows are what they will be.
   """
   def merge(%Tournament{} = later, %Tournament{} = first) do
     materialize(first)
     materialize(later)
     mine = stored(first.id)
 
-    for p <- stored(later.id) do
-      case Enum.find(mine, &(&1.hall_id == p.hall_id)) do
-        nil ->
-          # Both rows may have counted from board 1: this hall's boards
-          # come after the ones the first row has placed.
-          moved = %{p | tournament_id: first.id}
+    shifted =
+      for p <- stored(later.id), moved = merge_one(p, mine, first), do: moved
 
-          first_board =
-            if boards_free(first, moved) == :ok,
-              do: p.first_board,
-              else: suggest(first, p.hall_id).first_board
+    {:ok, shifted}
+  end
 
+  defp merge_one(p, mine, first) do
+    case Enum.find(mine, &(&1.hall_id == p.hall_id)) do
+      nil ->
+        # Both rows may have counted from board 1: this hall's boards
+        # come after the ones the first row has placed.
+        moved = %{p | tournament_id: first.id}
+
+        first_board =
+          if boards_free(first, moved) == :ok,
+            do: p.first_board,
+            else: suggest(first, p.hall_id).first_board
+
+        placement =
           p
           |> Ecto.Changeset.change(tournament_id: first.id, first_board: first_board)
           |> Repo.update!()
 
-        %Placement{table_from: nil} = there when p.table_from != nil ->
-          there
-          |> Ecto.Changeset.change(table_from: p.table_from, table_to: p.table_to)
-          |> Repo.update!()
+        if first_board != p.first_board, do: placement
 
-          Repo.delete!(p)
+      %Placement{table_from: nil} = there when p.table_from != nil ->
+        there
+        |> Ecto.Changeset.change(table_from: p.table_from, table_to: p.table_to)
+        |> Repo.update!()
 
-        _there ->
-          Repo.delete!(p)
-      end
+        Repo.delete!(p)
+        nil
+
+      _there ->
+        Repo.delete!(p)
+        nil
     end
-
-    :ok
   end
+
+  @doc """
+  Numbers the boards of placements again after their first board moved:
+  a table plays `first_board + (table - table_from)`, whatever it played
+  before. What became of games under way, as `put/4` says.
+  """
+  def reseat(%Tournament{} = tournament, placements) do
+    tournament = Tournaments.get!(tournament.id)
+
+    for p <- placements,
+        carried <- reseat_one(tournament, p),
+        do: carried
+  end
+
+  defp reseat_one(tournament, %Placement{table_from: nil} = placement) do
+    for board <- Boards.list(),
+        board.tournament_id == tournament.id,
+        Halls.of(board) == placement.hall_id,
+        board.table_no != nil,
+        {:ok, _board, carried} = Tables.assign_carry(board, tournament),
+        carried != nil,
+        do: carried
+  end
+
+  defp reseat_one(tournament, placement), do: take_tables(tournament, placement)
 
   @doc "Takes every placement of a tournament away (the tournament goes)."
   def delete_all(tournament_id),
