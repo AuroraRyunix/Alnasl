@@ -823,9 +823,9 @@ msgid "Moves went by unseen and the board cannot say which they were. Pick the r
 msgstr "Er gingen zetten ongezien voorbij en het bord kan niet zeggen welke. Kies hieronder de juiste; het kastje heeft de partij eronder blijven volgen."
 
 #: lib/alnasl_web/live/boards_live.ex:1041
-#: lib/alnasl_web/live/halls_live.ex:365
-#: lib/alnasl_web/live/halls_live.ex:395
-#: lib/alnasl_web/live/halls_live.ex:397
+#: lib/alnasl_web/live/halls_live.ex:439
+#: lib/alnasl_web/live/halls_live.ex:469
+#: lib/alnasl_web/live/halls_live.ex:471
 #: lib/alnasl_web/live/setup_live.ex:1501
 #, elixir-autogen, elixir-format
 msgid "Name"
@@ -3334,6 +3334,7 @@ msgid "a destination"
 msgstr "een bestemming"
 
 #: lib/alnasl_web/live/boards_live.ex:568
+#: lib/alnasl_web/live/halls_live.ex:320
 #, elixir-autogen, elixir-format
 msgid "and"
 msgstr "en"
@@ -5133,6 +5134,7 @@ msgid_plural "%{count} boards"
 msgstr[0] "%{count} bord"
 msgstr[1] "%{count} borden"
 
+#: lib/alnasl_web/live/halls_live.ex:304
 #: lib/alnasl_web/live/setup_live.ex:1235
 #, elixir-autogen, elixir-format
 msgid "%{count} tournament"
@@ -5869,7 +5871,7 @@ msgstr "Een brug is een klein programma (Arkab) naast borden ergens anders - een
 msgid "Add a bridge"
 msgstr "Een brug toevoegen"
 
-#: lib/alnasl_web/live/halls_live.ex:525
+#: lib/alnasl_web/live/halls_live.ex:670
 #: lib/alnasl_web/live/setup_live.ex:1889
 #, elixir-autogen, elixir-format
 msgid "Bridges"
@@ -5940,7 +5942,7 @@ msgstr "De brug \"%{name}\" is erbij gekomen."
 msgid "The bridge \"%{name}\" was removed; its boards with it."
 msgstr "De brug \"%{name}\" is verwijderd, met haar borden."
 
-#: lib/alnasl_web/live/halls_live.ex:259
+#: lib/alnasl_web/live/halls_live.ex:333
 #: lib/alnasl_web/live/setup_live.ex:735
 #, elixir-autogen, elixir-format
 msgid "The bridge did it."
@@ -5957,7 +5959,7 @@ msgstr "Dat kent de brug niet."
 msgid "The bridge is not connected."
 msgstr "De brug is niet verbonden."
 
-#: lib/alnasl_web/live/halls_live.ex:264
+#: lib/alnasl_web/live/halls_live.ex:338
 #: lib/alnasl_web/live/setup_live.ex:740
 #, elixir-autogen, elixir-format
 msgid "The bridge said no: %{why}."
@@ -5978,14 +5980,14 @@ msgstr "verbonden"
 msgid "not connected"
 msgstr "niet verbonden"
 
-#: lib/alnasl_web/live/halls_live.ex:321
+#: lib/alnasl_web/live/halls_live.ex:395
 #, elixir-autogen, elixir-format
 msgid "%{live} of %{count} board live"
 msgid_plural "%{live} of %{count} boards live"
 msgstr[0] "%{live} van %{count} bord live"
 msgstr[1] "%{live} van %{count} borden live"
 
-#: lib/alnasl_web/live/halls_live.ex:330
+#: lib/alnasl_web/live/halls_live.ex:404
 #, elixir-autogen, elixir-format
 msgid "%{up} of %{count} bridge connected"
 msgid_plural "%{up} of %{count} bridges connected"
@@ -6017,7 +6019,7 @@ msgstr "Aanmelden met 02cloud is afgebroken (%{why})."
 msgid "A fresh code"
 msgstr "Een nieuwe code"
 
-#: lib/alnasl_web/live/halls_live.ex:212
+#: lib/alnasl_web/live/halls_live.ex:257
 #, elixir-autogen, elixir-format
 msgid "A hall keeps at least one owner. Make someone else owner first."
 msgstr "Een zaal houdt minstens één eigenaar. Maak eerst iemand anders eigenaar."
@@ -6027,7 +6029,7 @@ msgstr "Een zaal houdt minstens één eigenaar. Maak eerst iemand anders eigenaa
 msgid "A hall was made: %{name}."
 msgstr "Er is een zaal gemaakt: %{name}."
 
-#: lib/alnasl_web/live/halls_live.ex:362
+#: lib/alnasl_web/live/halls_live.ex:436
 #, elixir-autogen, elixir-format
 msgid "A new hall"
 msgstr "Een nieuwe zaal"
@@ -6090,7 +6092,7 @@ msgstr "Kies een wachtwoord voor het nieuwe account (minstens %{n} tekens)."
 
 #: lib/alnasl_web/controllers/account_controller.ex:92
 #: lib/alnasl_web/controllers/session_html.ex:19
-#: lib/alnasl_web/live/halls_live.ex:479
+#: lib/alnasl_web/live/halls_live.ex:553
 #: lib/alnasl_web/live/setup_live.ex:1945
 #, elixir-autogen, elixir-format
 msgid "Email address"
@@ -6116,7 +6118,7 @@ msgstr "Wachtwoord vergeten? Deze box stuurt geen mail: een beheerder kan je een
 msgid "Games, corrections, rounds, and the links to OpenPairings and the results site."
 msgstr "Partijen, correcties, rondes, en de koppelingen met OpenPairings en de resultatensite."
 
-#: lib/alnasl_web/live/halls_live.ex:448
+#: lib/alnasl_web/live/halls_live.ex:522
 #, elixir-autogen, elixir-format
 msgid "Give this account a temporary password? Its sessions end now."
 msgstr "Dit account een tijdelijk wachtwoord geven? Zijn sessies eindigen nu."
@@ -6132,20 +6134,20 @@ msgstr "Eén keer geldig, tot %{time} (UTC). Laat hem niet staan op een scherm d
 msgid "Hall"
 msgstr "Zaal"
 
-#: lib/alnasl_web/live/halls_live.ex:129
+#: lib/alnasl_web/live/halls_live.ex:130
 #, elixir-autogen, elixir-format
 msgid "Hall %{name} is there. Invite its people next."
 msgstr "Zaal %{name} is er. Nodig nu haar mensen uit."
 
 #: lib/alnasl_web/components/layouts.ex:86
 #: lib/alnasl_web/live/halls_live.ex:31
-#: lib/alnasl_web/live/halls_live.ex:295
+#: lib/alnasl_web/live/halls_live.ex:369
 #: lib/alnasl_web/live/setup_live.ex:1921
 #, elixir-autogen, elixir-format
 msgid "Halls"
 msgstr "Zalen"
 
-#: lib/alnasl_web/live/halls_live.ex:474
+#: lib/alnasl_web/live/halls_live.ex:548
 #, elixir-autogen, elixir-format
 msgid "Invite"
 msgstr "Uitnodigen"
@@ -6160,12 +6162,12 @@ msgstr "Word lid van %{hall}"
 msgid "Make a sign-in code"
 msgstr "Maak een aanmeldcode"
 
-#: lib/alnasl_web/live/halls_live.ex:490
+#: lib/alnasl_web/live/halls_live.ex:564
 #, elixir-autogen, elixir-format
 msgid "Make an invitation"
 msgstr "Maak een uitnodiging"
 
-#: lib/alnasl_web/live/halls_live.ex:366
+#: lib/alnasl_web/live/halls_live.ex:440
 #, elixir-autogen, elixir-format
 msgid "Make it"
 msgstr "Maken"
@@ -6185,12 +6187,12 @@ msgstr "Maak het eerste account"
 msgid "New password (at least %{n} characters)"
 msgstr "Nieuw wachtwoord (minstens %{n} tekens)"
 
-#: lib/alnasl_web/live/halls_live.ex:405
+#: lib/alnasl_web/live/halls_live.ex:479
 #, elixir-autogen, elixir-format
 msgid "No accounts yet: everybody on the hall's network may do everything. The first account is made on Setup, and becomes this hall's owner."
 msgstr "Nog geen accounts: iedereen op het netwerk van de zaal mag alles. Het eerste account maak je onder Instellingen, en dat wordt eigenaar van deze zaal."
 
-#: lib/alnasl_web/live/halls_live.ex:346
+#: lib/alnasl_web/live/halls_live.ex:420
 #, elixir-autogen, elixir-format
 msgid "Nothing needs an arbiter."
 msgstr "Niets heeft een arbiter nodig."
@@ -6217,7 +6219,7 @@ msgstr "Wachtwoord (minstens %{n} tekens)"
 msgid "Password changed. Other browsers signed in as you are signed out."
 msgstr "Wachtwoord gewijzigd. Andere browsers die als jou aangemeld waren, zijn afgemeld."
 
-#: lib/alnasl_web/live/halls_live.ex:402
+#: lib/alnasl_web/live/halls_live.ex:476
 #, elixir-autogen, elixir-format
 msgid "People"
 msgstr "Mensen"
@@ -6227,27 +6229,27 @@ msgstr "Mensen"
 msgid "Point the phone's camera at the code: it signs the phone in as you."
 msgstr "Richt de camera van de telefoon op de code: die meldt de telefoon aan als jou."
 
-#: lib/alnasl_web/live/halls_live.ex:398
+#: lib/alnasl_web/live/halls_live.ex:472
 #, elixir-autogen, elixir-format
 msgid "Rename"
 msgstr "Hernoemen"
 
-#: lib/alnasl_web/live/halls_live.ex:153
+#: lib/alnasl_web/live/halls_live.ex:154
 #, elixir-autogen, elixir-format
 msgid "Renamed."
 msgstr "Hernoemd."
 
-#: lib/alnasl_web/live/halls_live.ex:486
+#: lib/alnasl_web/live/halls_live.ex:560
 #, elixir-autogen, elixir-format
 msgid "Role"
 msgstr "Rol"
 
-#: lib/alnasl_web/live/halls_live.ex:496
+#: lib/alnasl_web/live/halls_live.ex:570
 #, elixir-autogen, elixir-format
 msgid "Send this link to %{email}. It works once, for a week:"
 msgstr "Stuur deze link naar %{email}. Hij werkt één keer, een week lang:"
 
-#: lib/alnasl_web/live/halls_live.ex:460
+#: lib/alnasl_web/live/halls_live.ex:534
 #, elixir-autogen, elixir-format
 msgid "Shown once. The next sign-in asks for a password of their own."
 msgstr "Wordt één keer getoond. Bij de volgende aanmelding wordt om een eigen wachtwoord gevraagd."
@@ -6287,22 +6289,22 @@ msgstr "Aanmelden met 02cloud is op deze Alnasl niet ingesteld."
 msgid "Someone was invited to %{hall} as %{role}."
 msgstr "Iemand is uitgenodigd voor %{hall} als %{role}."
 
-#: lib/alnasl_web/live/halls_live.ex:434
+#: lib/alnasl_web/live/halls_live.ex:508
 #, elixir-autogen, elixir-format
 msgid "Take out"
 msgstr "Uit de zaal halen"
 
-#: lib/alnasl_web/live/halls_live.ex:432
+#: lib/alnasl_web/live/halls_live.ex:506
 #, elixir-autogen, elixir-format
 msgid "Take this account out of the hall?"
 msgstr "Dit account uit de zaal halen?"
 
-#: lib/alnasl_web/live/halls_live.ex:451
+#: lib/alnasl_web/live/halls_live.ex:525
 #, elixir-autogen, elixir-format
 msgid "Temporary password"
 msgstr "Tijdelijk wachtwoord"
 
-#: lib/alnasl_web/live/halls_live.ex:457
+#: lib/alnasl_web/live/halls_live.ex:531
 #, elixir-autogen, elixir-format
 msgid "Temporary password for %{email}:"
 msgstr "Tijdelijk wachtwoord voor %{email}:"
@@ -6318,12 +6320,12 @@ msgid "That address has an account here. Sign in, and you come back here to join
 msgstr "Dat adres heeft hier een account. Meld je aan, en je komt hier terug om lid te worden."
 
 #: lib/alnasl_web/controllers/hall_controller.ex:20
-#: lib/alnasl_web/live/halls_live.ex:60
+#: lib/alnasl_web/live/halls_live.ex:61
 #, elixir-autogen, elixir-format
 msgid "That hall is not one of yours."
 msgstr "Die zaal is niet een van de jouwe."
 
-#: lib/alnasl_web/live/halls_live.ex:175
+#: lib/alnasl_web/live/halls_live.ex:220
 #, elixir-autogen, elixir-format
 msgid "That is not an email address."
 msgstr "Dat is geen e-mailadres."
@@ -6363,7 +6365,7 @@ msgstr "De brug \"%{name}\" is naar een andere zaal verplaatst, met haar borden.
 msgid "The same again"
 msgstr "Nog een keer hetzelfde"
 
-#: lib/alnasl_web/live/halls_live.ex:182
+#: lib/alnasl_web/live/halls_live.ex:227
 #, elixir-autogen, elixir-format
 msgid "This address has no account here yet, and on this server new accounts come from an admin. Ask one to invite it."
 msgstr "Dit adres heeft hier nog geen account, en op deze server komen nieuwe accounts van een beheerder. Vraag een beheerder om het uit te nodigen."
@@ -6378,7 +6380,7 @@ msgstr "Deze box heeft al een account."
 msgid "This box has no accounts: everybody on the hall's network may do everything (behind the PIN, if there is one). The first account makes you the box's owner and admin - and from then on every page asks who is there, the box's own screen included."
 msgstr "Deze box heeft geen accounts: iedereen op het netwerk van de zaal mag alles (achter de PIN, als die er is). Met het eerste account word je eigenaar en beheerder van de box - en vanaf dan vraagt elke pagina wie er is, het eigen scherm van de box ook."
 
-#: lib/alnasl_web/live/halls_live.ex:299
+#: lib/alnasl_web/live/halls_live.ex:373
 #, elixir-autogen, elixir-format
 msgid "This box has no accounts: everybody on the hall's network may do everything, as before. Make the first account on Setup to change that."
 msgstr "Deze box heeft geen accounts: iedereen op het netwerk van de zaal mag alles, zoals voorheen. Maak het eerste account onder Instellingen om dat te veranderen."
@@ -6398,13 +6400,13 @@ msgstr "Deze uitnodiging is gebruikt, ingetrokken of verlopen (een week). Vraag 
 msgid "To %{hall}, as %{role}, for %{email}."
 msgstr "Voor %{hall}, als %{role}, voor %{email}."
 
-#: lib/alnasl_web/live/halls_live.ex:352
-#: lib/alnasl_web/live/halls_live.ex:390
+#: lib/alnasl_web/live/halls_live.ex:426
+#: lib/alnasl_web/live/halls_live.ex:464
 #, elixir-autogen, elixir-format
 msgid "To its boards"
 msgstr "Naar haar borden"
 
-#: lib/alnasl_web/live/halls_live.ex:518
+#: lib/alnasl_web/live/halls_live.ex:592
 #, elixir-autogen, elixir-format
 msgid "Withdraw"
 msgstr "Intrekken"
@@ -6435,12 +6437,12 @@ msgstr "Je hebt je aangemeld met een tijdelijk wachtwoord. Kies een eigen wachtw
 msgid "Your account"
 msgstr "Je account"
 
-#: lib/alnasl_web/live/halls_live.ex:305
+#: lib/alnasl_web/live/halls_live.ex:379
 #, elixir-autogen, elixir-format
 msgid "Your account is not in any hall yet. Whoever invited you can fix that."
 msgstr "Je account zit nog in geen enkele zaal. Wie je uitnodigde kan dat oplossen."
 
-#: lib/alnasl_web/live/halls_live.ex:253
+#: lib/alnasl_web/live/halls_live.ex:327
 #, elixir-autogen, elixir-format
 msgid "Your role in this hall does not let you do that."
 msgstr "Je rol in deze zaal laat dat niet toe."
@@ -6467,7 +6469,7 @@ msgstr "eigenaar"
 msgid "read"
 msgstr "gelezen"
 
-#: lib/alnasl_web/live/halls_live.ex:508
+#: lib/alnasl_web/live/halls_live.ex:582
 #, elixir-autogen, elixir-format
 msgid "until %{date}"
 msgstr "tot %{date}"
@@ -6701,3 +6703,67 @@ msgstr "Dat is geen adres van een OpenPairings: het ziet eruit als https://pairi
 #, elixir-autogen, elixir-format
 msgid "The account is connected, but OpenPairings could not be asked yet: %{why} The box asks again by itself."
 msgstr "Het account is gekoppeld, maar OpenPairings kon nog niet gevraagd worden: %{why} Het kastje vraagt het zelf opnieuw."
+
+#: lib/alnasl_web/live/halls_live.ex:302
+#, elixir-autogen, elixir-format
+msgid "%{count} bridge"
+msgid_plural "%{count} bridges"
+msgstr[0] "%{count} brug"
+msgstr[1] "%{count} bruggen"
+
+#: lib/alnasl_web/live/halls_live.ex:306
+#, elixir-autogen, elixir-format
+msgid "%{count} connection to OpenPairings"
+msgid_plural "%{count} connections to OpenPairings"
+msgstr[0] "%{count} koppeling met OpenPairings"
+msgstr[1] "%{count} koppelingen met OpenPairings"
+
+#: lib/alnasl_web/live/halls_live.ex:661
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr "Annuleren"
+
+#: lib/alnasl_web/live/halls_live.ex:632
+#, elixir-autogen, elixir-format
+msgid "Delete %{name}? This cannot be undone."
+msgstr "%{name} verwijderen? Dit kan niet ongedaan worden gemaakt."
+
+#: lib/alnasl_web/live/halls_live.ex:658
+#, elixir-autogen, elixir-format
+msgid "Delete for good"
+msgstr "Definitief verwijderen"
+
+#: lib/alnasl_web/live/halls_live.ex:618
+#, elixir-autogen, elixir-format
+msgid "Delete hall"
+msgstr "Zaal verwijderen"
+
+#: lib/alnasl_web/live/halls_live.ex:602
+#, elixir-autogen, elixir-format
+msgid "Delete this hall"
+msgstr "Deze zaal verwijderen"
+
+#: lib/alnasl_web/live/halls_live.ex:185
+#, elixir-autogen, elixir-format
+msgid "Hall %{name} is gone."
+msgstr "Zaal %{name} is verwijderd."
+
+#: lib/alnasl_web/live/halls_live.ex:606
+#, elixir-autogen, elixir-format
+msgid "Only a hall with no bridges and no tournaments can be deleted. Its people, invitations and boards go with it."
+msgstr "Alleen een zaal zonder bruggen en toernooien kan verwijderd worden. Haar mensen, uitnodigingen en borden gaan mee."
+
+#: lib/alnasl_web/live/halls_live.ex:198
+#, elixir-autogen, elixir-format
+msgid "The box's own hall cannot be deleted."
+msgstr "De eigen zaal van het kastje kan niet verwijderd worden."
+
+#: lib/alnasl_web/live/halls_live.ex:323
+#, elixir-autogen, elixir-format
+msgid "This hall still has %{what} - remove them first."
+msgstr "Deze zaal heeft nog %{what} - haal die eerst weg."
+
+#: lib/alnasl_web/live/halls_live.ex:647
+#, elixir-autogen, elixir-format
+msgid "Type the name of the hall to confirm: %{name}"
+msgstr "Typ de naam van de zaal om te bevestigen: %{name}"

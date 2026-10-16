@@ -42,6 +42,12 @@ On a hall's page, "Invite" makes a link for one address and one role, good once 
 
 A hall keeps at least one owner: you cannot take the last one out. Make someone else owner first.
 
+## Deleting a hall {#deleting-a-hall}
+
+On a hall's page, an owner (or an admin) finds "Delete this hall". It asks you to type the hall's name, and only then does the button work. The people, the open invitations, the join codes and the boards of the hall go with it.
+
+A hall that still has bridges, tournaments or a connection to OpenPairings is not deleted: the message says what is left ("2 bridges and 1 tournament"), and you remove those first. That way no game is ever thrown away by this button. The box's own hall can never be deleted. Anyone who had the deleted hall open lands on another hall of theirs.
+
 ## Signing in {#signing-in}
 
 ### With 02cloud {#sign-in-with-02cloud}

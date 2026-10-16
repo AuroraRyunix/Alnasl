@@ -30,7 +30,7 @@ defmodule AlnaslWeb.HallsLive do
      socket
      |> assign(page_title: gettext("Halls"), base_url: nil, shown: nil)
      |> assign(bridge_join: nil, bridge_message: nil, bridges: [])
-     |> assign(invite_link: nil, temporary: nil)
+     |> assign(invite_link: nil, temporary: nil, deleting: false, delete_typed: "")
      |> assign(new_form: to_form(%{"name" => ""}, as: :hall))
      |> assign(invite_form: invite_form())}
   end
@@ -50,6 +50,7 @@ defmodule AlnaslWeb.HallsLive do
           {:noreply,
            socket
            |> assign(shown: hall, page_title: hall.name, invite_link: nil, temporary: nil)
+           |> assign(deleting: false, delete_typed: "")
            |> assign(bridge_join: nil, bridge_message: nil)
            |> assign(name_form: to_form(%{"name" => hall.name}, as: :hall))
            |> load_show()}
@@ -160,6 +161,50 @@ defmodule AlnaslWeb.HallsLive do
     end
   end
 
+  def handle_event("delete_ask", _params, socket) do
+    {:noreply, assign(socket, deleting: true, delete_typed: "")}
+  end
+
+  def handle_event("delete_cancel", _params, socket) do
+    {:noreply, assign(socket, deleting: false, delete_typed: "")}
+  end
+
+  def handle_event("delete_typing", %{"name" => typed}, socket) do
+    {:noreply, assign(socket, delete_typed: typed)}
+  end
+
+  def handle_event("delete_hall", %{"name" => typed}, socket) do
+    hall = socket.assigns.shown
+
+    # The button is disabled until the name matches; a forged event is not let through.
+    if String.trim(typed) == hall.name do
+      case Halls.delete(socket.assigns.current_scope, hall) do
+        {:ok, hall} ->
+          {:noreply,
+           socket
+           |> put_flash(:info, gettext("Hall %{name} is gone.", name: hall.name))
+           |> push_navigate(to: ~p"/halls")}
+
+        {:error, {:not_empty, left}} ->
+          {:noreply,
+           socket
+           |> assign(deleting: false, delete_typed: "")
+           |> put_flash(:error, not_empty_message(left))}
+
+        {:error, :own} ->
+          {:noreply,
+           socket
+           |> assign(deleting: false)
+           |> put_flash(:error, gettext("The box's own hall cannot be deleted."))}
+
+        {:error, _forbidden} ->
+          {:noreply, refuse(assign(socket, deleting: false))}
+      end
+    else
+      {:noreply, assign(socket, delete_typed: typed)}
+    end
+  end
+
   def handle_event("invite", %{"invite" => %{"email" => email, "role" => role}}, socket) do
     case Accounts.invite(socket.assigns.current_scope, socket.assigns.shown, email, role) do
       {:ok, token} ->
@@ -248,6 +293,35 @@ defmodule AlnaslWeb.HallsLive do
   end
 
   def handle_event(_event, _params, socket), do: {:noreply, socket}
+
+  # "2 bridges and 1 tournament - remove them first"
+  defp not_empty_message(left) do
+    parts =
+      [
+        left.bridges > 0 &&
+          ngettext("%{count} bridge", "%{count} bridges", left.bridges),
+        left.tournaments > 0 &&
+          ngettext("%{count} tournament", "%{count} tournaments", left.tournaments),
+        left.links > 0 &&
+          ngettext(
+            "%{count} connection to OpenPairings",
+            "%{count} connections to OpenPairings",
+            left.links
+          )
+      ]
+      |> Enum.filter(& &1)
+
+    what =
+      case Enum.reverse(parts) do
+        [one] ->
+          one
+
+        [last | rest] ->
+          Enum.join(Enum.reverse(rest), ", ") <> " " <> gettext("and") <> " " <> last
+      end
+
+    gettext("This hall still has %{what} - remove them first.", what: what)
+  end
 
   defp refuse(socket),
     do: put_flash(socket, :error, gettext("Your role in this hall does not let you do that."))
@@ -519,6 +593,77 @@ defmodule AlnaslWeb.HallsLive do
                 </.button>
               </li>
             </ul>
+          </div>
+        </.panel>
+
+        <.panel
+          :if={@owner? and not @shown.own and not @current_scope.open?}
+          id="hall-delete"
+          title={gettext("Delete this hall")}
+        >
+          <div class="stack">
+            <p class="note">
+              {gettext(
+                "Only a hall with no bridges and no tournaments can be deleted. Its people, invitations and boards go with it."
+              )}
+            </p>
+
+            <div class="row">
+              <.button
+                :if={not @deleting}
+                id="hall-delete-ask"
+                variant="danger"
+                phx-click="delete_ask"
+              >
+                {gettext("Delete hall")}
+              </.button>
+            </div>
+
+            <div
+              :if={@deleting}
+              id="hall-delete-confirm"
+              class="alarm warn"
+              role="alertdialog"
+              aria-labelledby="hall-delete-title"
+            >
+              <.icon name="warning" />
+              <div>
+                <b id="hall-delete-title">
+                  {gettext("Delete %{name}? This cannot be undone.", name: @shown.name)}
+                </b>
+                <.form
+                  for={%{}}
+                  as={:delete}
+                  id="hall-delete-form"
+                  phx-change="delete_typing"
+                  phx-submit="delete_hall"
+                  class="stack"
+                >
+                  <.input
+                    id="hall-delete-name"
+                    name="name"
+                    value={@delete_typed}
+                    label={
+                      gettext("Type the name of the hall to confirm: %{name}", name: @shown.name)
+                    }
+                    autocomplete="off"
+                  />
+                  <div class="row">
+                    <.button
+                      id="hall-delete-submit"
+                      type="submit"
+                      variant="danger"
+                      disabled={String.trim(@delete_typed) != @shown.name}
+                    >
+                      {gettext("Delete for good")}
+                    </.button>
+                    <.button id="hall-delete-cancel" type="button" phx-click="delete_cancel">
+                      {gettext("Cancel")}
+                    </.button>
+                  </div>
+                </.form>
+              </div>
+            </div>
           </div>
         </.panel>
 
