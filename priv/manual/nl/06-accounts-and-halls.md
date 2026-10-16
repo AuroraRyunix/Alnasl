@@ -42,6 +42,12 @@ Op de pagina van een zaal maakt "Uitnodigen" een link voor één adres en één 
 
 Een zaal houdt minstens één eigenaar: je kunt de laatste niet uit de zaal halen. Maak eerst iemand anders eigenaar.
 
+## Een zaal verwijderen {#deleting-a-hall}
+
+Op de pagina van een zaal vindt een eigenaar (of een beheerder) "Deze zaal verwijderen". Je moet de naam van de zaal typen, en pas dan werkt de knop. De mensen, de openstaande uitnodigingen, de koppelcodes en de borden van de zaal gaan mee.
+
+Een zaal die nog bruggen, toernooien of een koppeling met OpenPairings heeft, wordt niet verwijderd: de melding zegt wat er nog is ("2 bruggen en 1 toernooi"), en die haal je eerst weg. Zo gaat er door deze knop nooit een partij verloren. De eigen zaal van het kastje kan nooit verwijderd worden. Wie de verwijderde zaal open had, komt terecht in een andere zaal van hem of haar.
+
 ## Aanmelden {#signing-in}
 
 ### Met 02cloud {#sign-in-with-02cloud}

@@ -17,10 +17,12 @@ defmodule Alnasl.Halls do
 
   import Ecto.Query, only: [from: 2]
 
-  alias Alnasl.{Log, Repo, Tournaments}
-  alias Alnasl.Accounts.{Scope, User}
+  alias Alnasl.{Boards, Log, Repo, Tournaments}
+  alias Alnasl.Accounts.{Invitation, Scope, User}
+  alias Alnasl.Bridges.{Bridge, Join}
+  alias Alnasl.Games.Game
   alias Alnasl.Halls.{Hall, Member}
-  alias Alnasl.Tournaments.Tournament
+  alias Alnasl.Tournaments.{Link, Tournament}
 
   @topic "halls"
 
@@ -74,6 +76,85 @@ defmodule Alnasl.Halls do
       end
     else
       {:error, :forbidden}
+    end
+  end
+
+  @doc """
+  What still keeps a hall from being deleted: `%{bridges, tournaments,
+  links}`, counts. A bridge that was removed does not count; a hall's own
+  local tournament counts only once games were played in it, and a link
+  (a code, an account) counts because it brings tournaments.
+  """
+  def leftovers(%Hall{id: id}) do
+    local_with_games =
+      from(t in Tournament,
+        where: t.hall_id == ^id and t.kind == "local",
+        join: g in Game,
+        on: g.tournament_id == t.id,
+        select: t.id,
+        distinct: true
+      )
+
+    %{
+      bridges:
+        Repo.aggregate(
+          from(b in Bridge, where: b.hall_id == ^id and is_nil(b.revoked_at)),
+          :count
+        ),
+      tournaments:
+        Repo.aggregate(
+          from(t in Tournament, where: t.hall_id == ^id and t.kind != "local"),
+          :count
+        ) +
+          Repo.aggregate(local_with_games, :count),
+      links: Repo.aggregate(from(l in Link, where: l.hall_id == ^id), :count)
+    }
+  end
+
+  @doc """
+  Deletes a hall (its owner, or an admin), in one transaction: its open
+  join codes, invitations, memberships, boards, removed bridges and its
+  own local tournament, then the hall. Never the box's own hall, and never
+  one that still has bridges, tournaments or links: `{:error, {:not_empty,
+  leftovers}}`, so no game is thrown away by this.
+  """
+  def delete(%Scope{} = scope, %Hall{} = hall) do
+    cond do
+      not Scope.can?(scope, :owner, hall.id) -> {:error, :forbidden}
+      hall.own -> {:error, :own}
+      true -> do_delete(hall)
+    end
+  end
+
+  defp do_delete(%Hall{id: id} = hall) do
+    boards = Repo.all(from b in Boards.Board, where: b.hall_id == ^id)
+    Enum.each(boards, &Boards.stop/1)
+
+    result =
+      Repo.transaction(fn ->
+        left = leftovers(hall)
+
+        if left.bridges + left.tournaments + left.links > 0 do
+          Repo.rollback({:not_empty, left})
+        else
+          Repo.delete_all(from j in Join, where: j.hall_id == ^id)
+          Repo.delete_all(from i in Invitation, where: i.hall_id == ^id)
+          Repo.delete_all(from m in Member, where: m.hall_id == ^id)
+          Repo.delete_all(from b in Boards.Board, where: b.hall_id == ^id)
+          Repo.delete_all(from b in Bridge, where: b.hall_id == ^id)
+          Repo.delete_all(from t in Tournament, where: t.hall_id == ^id and t.kind == "local")
+          Repo.delete!(hall)
+        end
+      end)
+
+    case result do
+      {:ok, hall} ->
+        Log.add(:info, "hall.deleted", %{name: hall.name}, %{})
+        notify()
+        {:ok, hall}
+
+      error ->
+        error
     end
   end
 
