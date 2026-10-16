@@ -69,8 +69,8 @@ defmodule AlnaslWeb.PagesTest do
     test "a real board needs a port and nothing else: no address is asked for, anywhere",
          %{conn: conn} do
       start_supervised!(
-        {Alnasl.Transport.Fake,
-         port: "FAKE7", device: {Alnasl.Dgt.Emulator, Alnasl.Dgt.Emulator.new()}}
+        {Arkab.Transport.Fake,
+         port: "FAKE7", device: {Arkab.Dgt.Emulator, Arkab.Dgt.Emulator.new()}}
       )
 
       {:ok, view, _html} = live(conn, ~p"/boards")
@@ -104,13 +104,11 @@ defmodule AlnaslWeb.PagesTest do
     test "a port with two boards on it is a loop: one Add, a row for each, and their numbers in small print",
          %{conn: conn} do
       loop = [
-        Alnasl.Dgt.Emulator.new(serial: "06310", version: "1.9"),
-        Alnasl.Dgt.Emulator.new(serial: "40730", version: "4.0", address: 12_799)
+        Arkab.Dgt.Emulator.new(serial: "06310", version: "1.9"),
+        Arkab.Dgt.Emulator.new(serial: "40730", version: "4.0", address: 12_799)
       ]
 
-      start_supervised!(
-        {Alnasl.Transport.Fake, port: "FAKE8", device: {Alnasl.Dgt.Emulator, loop}}
-      )
+      start_supervised!({Arkab.Transport.Fake, port: "FAKE8", device: {Arkab.Dgt.Emulator, loop}})
 
       {:ok, view, _html} = live(conn, ~p"/boards")
       view |> form("#add-board-form", board: %{driver: "dgt_serial"}) |> render_change()
@@ -134,20 +132,18 @@ defmodule AlnaslWeb.PagesTest do
       refute has_element?(view, "#loop-no-serial-#{old.id}")
 
       # One of them is taken off the loop: said in words, on its own row.
-      Alnasl.Transport.Fake.update("FAKE8", fn [first, _second] -> {<<>>, [first]} end)
+      Arkab.Transport.Fake.update("FAKE8", fn [first, _second] -> {<<>>, [first]} end)
       eventually_html(view, fn _ -> has_element?(view, "#loop-absent-#{new.id}") end)
       refute has_element?(view, "#loop-absent-#{old.id}")
     end
 
     test "a loop added as one board says so, and one tap reads it as a loop", %{conn: conn} do
       loop = [
-        Alnasl.Dgt.Emulator.new(serial: "06310", version: "1.9"),
-        Alnasl.Dgt.Emulator.new(serial: "40730", version: "4.0", address: 12_799)
+        Arkab.Dgt.Emulator.new(serial: "06310", version: "1.9"),
+        Arkab.Dgt.Emulator.new(serial: "40730", version: "4.0", address: 12_799)
       ]
 
-      start_supervised!(
-        {Alnasl.Transport.Fake, port: "FAKE9", device: {Alnasl.Dgt.Emulator, loop}}
-      )
+      start_supervised!({Arkab.Transport.Fake, port: "FAKE9", device: {Arkab.Dgt.Emulator, loop}})
 
       {:ok, row} =
         Boards.create(%{name: "Board 1", driver: "dgt_serial", port: "FAKE9", options: %{}})
@@ -663,7 +659,8 @@ defmodule AlnaslWeb.PagesTest do
            tournament.elsewhere tournament.code_replaced tournament.merged tournament.merge_failed
            round.started pairing.changed pairing.gone pairing.board_moved pairing.adopted
            pairing.set_aside destination.forced update.requested loop.read loop.joined
-           seating.joined seating.undone table.game_carried table.game_fresh table.game_left)
+           seating.joined seating.undone table.game_carried table.game_fresh table.game_left
+           bridge.joined bridge.removed)
 
       for kind <- kinds do
         sentence = AlnaslWeb.Words.log(%Alnasl.Log.Event{kind: kind, data: "{}"})

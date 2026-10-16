@@ -13,40 +13,58 @@ defmodule Alnasl.Application do
 
     tidy_release_tmp()
 
-    autostart? = Application.get_env(:alnasl, :autostart, true)
+    children =
+      children(
+        autostart: Application.get_env(:alnasl, :autostart, true),
+        local_boards: Alnasl.Boards.local?()
+      )
+
+    opts = [strategy: :one_for_one, name: Alnasl.Supervisor]
+    Supervisor.start_link(children, opts)
+  end
+
+  @doc """
+  What the box runs. `local_boards: false` is a box with no boards of its
+  own (`ALNASL_NO_LOCAL_BOARDS`, the hosted server): no buses, no serial
+  drivers - its boards arrive from bridges, and everything after the
+  board's own process is the same.
+  """
+  def children(opts) do
+    autostart? = Keyword.fetch!(opts, :autostart)
+    local? = Keyword.fetch!(opts, :local_boards)
 
     # The launcher's Details panel: this start's secret (and its file, when
     # no launcher handed one over), the CPU sample, the slow queries. Before
     # the endpoint, which asks it.
-    children =
+    [
+      AlnaslWeb.Telemetry,
+      Alnasl.Repo,
+      # Always: the box is an appliance, not a deployment with a migration step.
+      {Ecto.Migrator,
+       repos: Application.fetch_env!(:alnasl, :ecto_repos), skip: skip_migrations?()},
+      {Phoenix.PubSub, name: Alnasl.PubSub},
+      {Registry, keys: :unique, name: Alnasl.BoardRegistry},
+      # The bridges' links, and the boards that arrive over them.
+      {Registry, keys: :unique, name: Alnasl.BridgeRegistry},
+      {Registry, keys: :unique, name: Alnasl.RemoteRegistry},
+      {Task.Supervisor, name: Alnasl.TaskSupervisor},
+      Alnasl.Recorder,
+      {Alnasl.Updates.Checker, timer: Application.get_env(:alnasl, :updates_timer, true)}
+    ] ++
+      if(local?, do: [Arkab.Drivers], else: []) ++
       [
-        AlnaslWeb.Telemetry,
-        Alnasl.Repo,
-        # Always: the box is an appliance, not a deployment with a migration step.
-        {Ecto.Migrator,
-         repos: Application.fetch_env!(:alnasl, :ecto_repos), skip: skip_migrations?()},
-        {Phoenix.PubSub, name: Alnasl.PubSub},
-        {Registry, keys: :unique, name: Alnasl.BoardRegistry},
-        {Registry, keys: :unique, name: Arkab.BusRegistry},
-        {Task.Supervisor, name: Alnasl.TaskSupervisor},
-        Alnasl.Recorder,
-        {Alnasl.Updates.Checker, timer: Application.get_env(:alnasl, :updates_timer, true)},
-        {DynamicSupervisor, name: Arkab.BusSupervisor, strategy: :one_for_one},
         {DynamicSupervisor,
-         name: Alnasl.BoardSupervisor, strategy: :one_for_one, max_restarts: 100, max_seconds: 60}
+         name: Alnasl.BoardSupervisor, strategy: :one_for_one, max_restarts: 100, max_seconds: 60},
+        Alnasl.Finder,
+        Alnasl.LauncherDetails
       ] ++
-        [Alnasl.Finder] ++
-        [Alnasl.LauncherDetails] ++
-        if(autostart?,
-          do:
-            Alnasl.Destination.child_specs() ++
-              [Alnasl.OpenPairings.Poller, {Task, &Alnasl.Boards.start_all/0}],
-          else: []
-        ) ++
-        [AlnaslWeb.Endpoint]
-
-    opts = [strategy: :one_for_one, name: Alnasl.Supervisor]
-    Supervisor.start_link(children, opts)
+      if(autostart?,
+        do:
+          Alnasl.Destination.child_specs() ++
+            [Alnasl.OpenPairings.Poller, {Task, &Alnasl.Boards.start_all/0}],
+        else: []
+      ) ++
+      [AlnaslWeb.Endpoint]
   end
 
   @impl true

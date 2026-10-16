@@ -11,7 +11,9 @@ defmodule Alnasl.Boards.Board do
   use Ecto.Schema
   import Ecto.Changeset
 
-  @drivers ~w(simulator replay dgt_serial dgt_bus)
+  # "remote": a board an Arkab bridge reads elsewhere; `port` is
+  # "bridge-<bridge id>:<the bridge's name for it>" (`Alnasl.Bridges`).
+  @drivers ~w(simulator replay dgt_serial dgt_bus remote)
 
   schema "boards" do
     field :name, :string
@@ -32,6 +34,11 @@ defmodule Alnasl.Boards.Board do
 
   def drivers, do: @drivers
 
+  # A box without boards of its own (`Alnasl.Boards.local?/0`) takes rows
+  # from bridges only: a simulator added there would be a board nobody
+  # asked the server to invent.
+  defp allowed, do: if(Alnasl.Boards.local?(), do: @drivers, else: ["remote"])
+
   def changeset(board, attrs) do
     board
     |> cast(attrs, [
@@ -50,7 +57,7 @@ defmodule Alnasl.Boards.Board do
       :firmware
     ])
     |> validate_required([:name, :driver])
-    |> validate_inclusion(:driver, @drivers)
+    |> validate_inclusion(:driver, allowed())
     |> validate_number(:address, greater_than_or_equal_to: 0, less_than: 16_384)
     |> validate_number(:round, greater_than: 0, less_than: 1000)
     |> validate_number(:board_no, greater_than: 0, less_than: 10_000)

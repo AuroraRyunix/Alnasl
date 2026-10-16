@@ -16,6 +16,29 @@ defmodule AlnaslWeb.Router do
     plug :gate
   end
 
+  # A join link opened in a browser: a page that says what it is for. Not
+  # behind the PIN - the link is shown so that a bridge can reach it from
+  # elsewhere, and the page holds nothing a code does not already give.
+  pipeline :join_page do
+    plug :accepts, ["html"]
+    plug :fetch_session
+    plug :put_root_layout, html: {AlnaslWeb.Layouts, :root}
+    plug :put_secure_browser_headers
+    plug :put_locale
+  end
+
+  scope "/join", AlnaslWeb do
+    pipe_through :join_page
+    get "/:code", JoinController, :show
+  end
+
+  # The bridge redeeming a code (`Alnasl.Bridges.redeem/2`). JSON from a
+  # program, not a form from a browser: no session, no CSRF token, no PIN.
+  # The code is the credential, good once and for fifteen minutes.
+  scope "/join", AlnaslWeb do
+    post "/:code", JoinController, :redeem
+  end
+
   # Installed theme packs' stylesheets and fonts (`Alnasl.ThemePacks`). No
   # pipeline and no PIN: the PIN page wears the theme as well, and the
   # controller answers 404 to everything that is not a file of an accepted

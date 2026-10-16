@@ -54,6 +54,11 @@ defmodule Alnasl.Loops do
   Takes two to four seconds on a closed port: call it from a task.
   """
   def probe(port, tries \\ 1) do
+    # A box without boards of its own opens no port, not even to ask.
+    if Boards.local?(), do: probe_line(port, tries), else: {:error, :no_local_boards}
+  end
+
+  defp probe_line(port, tries) do
     case DgtBus.whereis(port) do
       nil -> ask(port, tries)
       bus -> {:ok, DgtBus.present(bus)}
@@ -90,6 +95,10 @@ defmodule Alnasl.Loops do
   for a single board; the boards of a loop are named after their numbers.
   """
   def add(port, name \\ nil) do
+    if Boards.local?(), do: add_port(port, name), else: {:error, :no_local_boards}
+  end
+
+  defp add_port(port, name) do
     case probe(port) do
       {:ok, [_, _ | _] = addresses} ->
         {:ok, :loop, adopt(port, addresses)}

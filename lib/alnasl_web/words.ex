@@ -457,6 +457,7 @@ defmodule AlnaslWeb.Words do
   def driver("replay"), do: gettext("Replay of a capture")
   def driver("dgt_serial"), do: gettext("DGT board, serial")
   def driver("dgt_bus"), do: gettext("DGT board on a loop")
+  def driver("remote"), do: gettext("DGT board, through a bridge")
   def driver(other), do: other
 
   # --- the log -----------------------------------------------------------------
@@ -815,6 +816,12 @@ defmodule AlnaslWeb.Words do
         name: d["name"],
         new: d["new"]
       )
+
+  defp log("bridge.joined", d),
+    do: gettext("The bridge \"%{name}\" joined.", name: d["name"])
+
+  defp log("bridge.removed", d),
+    do: gettext("The bridge \"%{name}\" was removed; its boards with it.", name: d["name"])
 
   defp log("door.unlocked", d), do: gettext("The PIN was given from %{from}.", from: d["from"])
   defp log("door.refused", d), do: gettext("A wrong PIN was tried from %{from}.", from: d["from"])

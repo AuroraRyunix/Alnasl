@@ -41,6 +41,15 @@ if config_env() != :test do
     http: [ip: listen, port: String.to_integer(System.get_env("PORT", "4040"))]
 end
 
+# A box with no hall of its own (the hosted server): no serial ports, no
+# loops, no simulators, nothing started from a port. Its boards arrive from
+# Arkab bridges, and everything after the board's own process - the tracker,
+# the outbox, the destinations, the site - runs as anywhere else. Unset, the
+# box reads what is plugged into it, as it always has.
+if System.get_env("ALNASL_NO_LOCAL_BOARDS") in ~w(1 true yes) do
+  config :alnasl, local_boards: false
+end
+
 # Theme packs (`Alnasl.ThemePacks`): `<data dir>/themes` unless this says
 # otherwise. Unset is the normal case; nothing is installed by default.
 if themes_dir = System.get_env("ALNASL_THEMES_DIR") do

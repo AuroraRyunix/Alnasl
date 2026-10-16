@@ -38,13 +38,26 @@ defmodule AlnaslWeb.SetupLive do
 
   alias Alnasl.Destination.{LichessApi, LichessBroadcast}
   alias Alnasl.OpenPairings.Duplicates
-  alias AlnaslWeb.{Access, DestinationWords, Hall, LinkWords, SeatingComponents, Status, Words}
+
+  alias AlnaslWeb.{
+    Access,
+    BridgeComponents,
+    DestinationWords,
+    Hall,
+    LinkWords,
+    SeatingComponents,
+    Status,
+    Words
+  }
 
   @tracker_fields ~w(settle_ms castle_hold_ms promotion_hold_ms takeback_settle_ms transient_ms lifted_ms search_depth)
 
   @impl true
   def mount(_params, _session, socket) do
-    if connected?(socket), do: Tournaments.subscribe()
+    if connected?(socket) do
+      Tournaments.subscribe()
+      Alnasl.Bridges.subscribe()
+    end
 
     {:ok,
      socket
@@ -53,7 +66,20 @@ defmodule AlnaslWeb.SetupLive do
      |> assign(link_tests: %{}, link_testing: nil, lichess_tid: Tournaments.default_id())
      |> assign(code_form: to_form(%{"code" => ""}, as: :link), code_key: 0)
      |> assign(update_step: nil, update_games: [], update_looked: nil)
-     |> load()}
+     |> assign(bridge_join: nil, bridge_message: nil, base_url: nil)
+     |> load()
+     |> load_bridges()}
+  end
+
+  # The page's own address, for the join link: what the browser shows, which
+  # behind a proxy is the public one.
+  @impl true
+  def handle_params(_params, uri, socket),
+    do: {:noreply, assign(socket, base_url: BridgeComponents.base_url(URI.parse(uri)))}
+
+  defp load_bridges(socket) do
+    bridges = for b <- Alnasl.Bridges.list(), do: %{bridge: b, live: Alnasl.Bridges.live(b.id)}
+    assign(socket, bridges: bridges)
   end
 
   defp load(socket) do
@@ -400,6 +426,34 @@ defmodule AlnaslWeb.SetupLive do
   end
 
   # A tournament the pairing program no longer lists, taken off by itself.
+  def handle_event("add_bridge", _params, socket) do
+    {:ok, join} = Alnasl.Bridges.create_join()
+    base = socket.assigns.base_url || "http://localhost:4040"
+    {:noreply, assign(socket, bridge_join: BridgeComponents.join(base, join))}
+  end
+
+  def handle_event("bridge_command", %{"id" => id, "cmd" => cmd} = params, socket) do
+    fields = Map.take(params, ["port", "board"])
+
+    message =
+      case Alnasl.Bridges.command(String.to_integer(id), cmd, fields) do
+        {:ok, _id} -> gettext("Sent to the bridge.")
+        {:error, :offline} -> gettext("The bridge is not connected.")
+        {:error, _other} -> gettext("The bridge does not know that.")
+      end
+
+    {:noreply, assign(socket, bridge_message: message)}
+  end
+
+  def handle_event("remove_bridge", %{"id" => id}, socket) do
+    case Alnasl.Bridges.get(String.to_integer(id)) do
+      nil -> :ok
+      bridge -> Alnasl.Bridges.remove(bridge)
+    end
+
+    {:noreply, socket |> assign(bridge_message: nil) |> load_bridges()}
+  end
+
   def handle_event("remove_tournament", %{"id" => id}, socket) do
     with %{} = tournament <- Tournaments.get(id), do: Tournaments.remove(tournament)
     {:noreply, socket |> put_flash(:info, gettext("The tournament is off the box.")) |> load()}
@@ -686,6 +740,16 @@ defmodule AlnaslWeb.SetupLive do
   # A tournament appeared, a round was started, a link went quiet.
   def handle_info({:tournament, _id}, socket), do: {:noreply, load(socket)}
 
+  def handle_info({:bridges, {:reply, _bridge, _id, true, _error}}, socket),
+    do: {:noreply, assign(socket, bridge_message: gettext("The bridge did it."))}
+
+  def handle_info({:bridges, {:reply, _bridge, _id, false, error}}, socket),
+    do:
+      {:noreply,
+       assign(socket, bridge_message: gettext("The bridge said no: %{why}.", why: error))}
+
+  def handle_info({:bridges, _changed}, socket), do: {:noreply, load_bridges(socket)}
+
   # The checker heard of a release, or the setting changed in another window.
   def handle_info(:update_changed, socket), do: {:noreply, load(socket)}
 
@@ -774,9 +838,9 @@ defmodule AlnaslWeb.SetupLive do
           <p class="note">
             {gettext(
               "A connect code from OpenPairings (Settings, Live boards) brings a tournament - or a whole group of them - to the box: pairings, colours, rate of play, and the results page with its relay key. A round paired there starts here by itself. One box can hold several codes."
-            )}
-            <.link navigate={~p"/help#help-openpairings"}>{gettext("How, step by step")}</.link>
+            )} <.link navigate={~p"/help#help-openpairings"}>{gettext("How, step by step")}</.link>
           </p>
+
           <div id={"code-wrap-#{@code_key}"}>
             <.form for={@code_form} id="code-form" phx-submit="add_code" class="stack">
               <.input
@@ -798,9 +862,7 @@ defmodule AlnaslWeb.SetupLive do
               </div>
             </.form>
           </div>
-
           <SeatingComponents.ask ask={@hall.seating.ask} />
-
           <ul id="links" class="dests" style="margin-top:0.8rem">
             <li :for={link <- @links} id={"link-#{link.id}"} class="dest">
               <% {tone, icon, word} = LinkWords.state(link) %>
@@ -808,16 +870,20 @@ defmodule AlnaslWeb.SetupLive do
                 <b>{LinkWords.about(link)}</b>
                 <.badge id={"link-state-#{link.id}"} tone={tone} icon={icon}>{word}</.badge>
               </div>
+
               <p id={"link-line-#{link.id}"} class="dest-line">
                 {gettext("Last contact: %{t}.", t: when_(link.last_ok_at))}
                 <span :if={link.server_version}>
                   {link.server_name || "OpenPairings"} {link.server_version}.
                 </span>
+
                 <span class="note">{gettext("Code %{hint}.", hint: Tournaments.secret_hint(link))}</span>
               </p>
+
               <p :if={LinkWords.why(link)} id={"link-why-#{link.id}"} class="note">
                 {LinkWords.why(link)}
               </p>
+
               <div
                 :for={found <- Duplicates.shared(link)}
                 id={"link-elsewhere-#{link.id}-#{found.remote_id}"}
@@ -825,11 +891,13 @@ defmodule AlnaslWeb.SetupLive do
                 role="status"
               >
                 <p>{LinkWords.elsewhere([found])}</p>
+
                 <p class="note">
                   {gettext(
                     "Nothing of it is made twice. If this code is meant to replace the other one - that one was withdrawn and this one made new - use this one: the tournament keeps its boards and its games."
                   )}
                 </p>
+
                 <.button
                   id={"use-code-#{link.id}-#{found.remote_id}"}
                   small
@@ -838,6 +906,7 @@ defmodule AlnaslWeb.SetupLive do
                   phx-value-remote={found.remote_id}
                 >{gettext("Use this code for %{name}", name: found.name)}</.button>
               </div>
+
               <div class="row">
                 <.button
                   id={"test-link-#{link.id}"}
@@ -866,6 +935,7 @@ defmodule AlnaslWeb.SetupLive do
                   }
                 >{gettext("Remove")}</.button>
               </div>
+
               <p
                 :if={@link_testing == link.id}
                 id={"link-test-running-#{link.id}"}
@@ -874,6 +944,7 @@ defmodule AlnaslWeb.SetupLive do
               >
                 {gettext("Asking OpenPairings...")}
               </p>
+
               <ul
                 :if={@link_tests[link.id]}
                 id={"link-test-#{link.id}"}
@@ -896,6 +967,7 @@ defmodule AlnaslWeb.SetupLive do
                   >
                     {LinkWords.step_name(step)}
                   </.badge>
+
                   <span>
                     {sentence}
                     <span
@@ -927,13 +999,16 @@ defmodule AlnaslWeb.SetupLive do
                 <span :if={t.label not in [nil, ""] and t.name not in [nil, "", t.label]} class="note">
                   {t.name}
                 </span>
+
                 <.badge :if={t.kind == "local"} id={"tournament-kind-#{t.id}"} icon="waiting">
                   {gettext("No pairing program")}
                 </.badge>
+
                 <.badge :if={t.gone} id={"tournament-gone-#{t.id}"} tone="warn" icon="warning">
                   {gettext("No longer listed")}
                 </.badge>
               </div>
+
               <%= if t.kind == "linked" do %>
                 <% got = received(t) %>
                 <p id={"tournament-line-#{t.id}"} class="dest-line">
@@ -945,8 +1020,7 @@ defmodule AlnaslWeb.SetupLive do
                       rounds: got.rounds,
                       boards: got.boards,
                       round: t.remote_round || "-"
-                    )}
-                    <span :if={got.time_control}>{got.time_control}.</span>
+                    )} <span :if={got.time_control}>{got.time_control}.</span>
                     <span :if={Tournaments.team_event?(t)} id={"tournament-teams-#{t.id}"}>
                       {gettext("A team event, %{n} boards a match.",
                         n: Tournaments.boards_per_match(t) || "?"
@@ -955,6 +1029,7 @@ defmodule AlnaslWeb.SetupLive do
                   <% else %>
                     {gettext("Nothing received yet.")}
                   <% end %>
+
                   <span class="note">
                     {gettext("The boards follow round %{n}.", n: t.round)}
                     <span :if={t.version}>
@@ -970,6 +1045,7 @@ defmodule AlnaslWeb.SetupLive do
                 >
                   {results_text}
                 </p>
+
                 <div
                   :if={results_tone == "warn"}
                   id={"tournament-nokey-#{t.id}"}
@@ -979,6 +1055,7 @@ defmodule AlnaslWeb.SetupLive do
                   <b>
                     {gettext("%{url}, %{slug}: no relay key yet", url: t.server_url, slug: t.slug)}
                   </b>
+
                   <p>{results_text}</p>
                 </div>
               <% else %>
@@ -988,6 +1065,7 @@ defmodule AlnaslWeb.SetupLive do
                     n: t.round
                   )}
                 </p>
+
                 <p
                   :if={ResultsSite.why_not(t)}
                   id={"tournament-site-none-#{t.id}"}
@@ -996,11 +1074,13 @@ defmodule AlnaslWeb.SetupLive do
                   {no_site_reason(ResultsSite.why_not(t))}
                 </p>
               <% end %>
+
               <p :if={ResultsSite.page?(t)} id={"tournament-site-#{t.id}"}>
                 <.site_link id={"tournament-site-link-#{t.id}"} href={ResultsSite.tournament_url(t)}>
                   {gettext("Open the results page: %{address}", address: ResultsSite.display(t))}
                 </.site_link>
               </p>
+
               <.form
                 for={
                   to_form(%{"id" => t.id, "from" => t.table_from, "to" => t.table_to}, as: :tables)
@@ -1024,6 +1104,7 @@ defmodule AlnaslWeb.SetupLive do
                     class="input table-no"
                   />
                 </div>
+
                 <div class="field">
                   <label for={"tables-to-#{t.id}"}>{gettext("to")}</label>
                   <input
@@ -1037,6 +1118,7 @@ defmodule AlnaslWeb.SetupLive do
                     class="input table-no"
                   />
                 </div>
+
                 <div :if={Tournaments.team_event?(t)} class="field">
                   <input type="hidden" name="tables[keep_matches]" value="false" />
                   <label for={"tables-keep-#{t.id}"} class="row" style="gap:0.35rem">
@@ -1046,17 +1128,19 @@ defmodule AlnaslWeb.SetupLive do
                       type="checkbox"
                       value="true"
                       checked={t.keep_matches}
-                    />
-                    {gettext("Keep each match together")}
+                    /> {gettext("Keep each match together")}
                   </label>
                 </div>
+
                 <.button id={"assign-tables-#{t.id}"} small type="submit">
                   {gettext("These tables play here")}
                 </.button>
+
                 <span id={"tournament-boards-#{t.id}"} class="note">
                   {gettext("%{count} board(s) now", count: Map.get(@board_counts, t.id, 0))}
                 </span>
               </.form>
+
               <div class="row">
                 <.button
                   :if={t.kind == "linked"}
@@ -1070,6 +1154,7 @@ defmodule AlnaslWeb.SetupLive do
                     do: gettext("Rounds start by themselves: on"),
                     else: gettext("Rounds start by themselves: off")}
                 </.button>
+
                 <.button
                   :if={t.gone}
                   id={"remove-tournament-#{t.id}"}
@@ -1086,11 +1171,13 @@ defmodule AlnaslWeb.SetupLive do
               </div>
             </li>
           </ul>
+
           <p class="note">
             {gettext(
               "Tables 5 to 8 given to a tournament: table 5 is its board 1. A board that gets one of those table numbers later joins by itself. One board can also be put in a tournament on the Boards page."
             )}
           </p>
+
           <p
             :if={Enum.any?(@tournaments, &Tournaments.team_event?/1)}
             id="tables-matches-note"
@@ -1105,12 +1192,19 @@ defmodule AlnaslWeb.SetupLive do
         <.panel id="setup-about" title={gettext("This copy of Alnasl")}>
           <dl class="kv">
             <dt>{gettext("Version")}</dt>
+
             <dd id="about-version">{@about.version}</dd>
+
             <dt>{gettext("Started as")}</dt>
+
             <dd id="about-kind">{Words.install_kind(@about.kind)}</dd>
+
             <dt>{gettext("Data folder")}</dt>
+
             <dd id="about-data" class="mono">{@about.data_dir}</dd>
+
             <dt>{gettext("Knows")}</dt>
+
             <dd id="about-counts">
               {ngettext("%{count} board", "%{count} boards", @about.boards, count: @about.boards)}, {ngettext(
                 "%{count} tournament",
@@ -1120,6 +1214,7 @@ defmodule AlnaslWeb.SetupLive do
               )}
             </dd>
           </dl>
+
           <p id="about-note" class="note">
             {gettext(
               "The boards, their table numbers and the tournaments are kept in the data folder, and stay through updates and reinstalls. A second copy of Alnasl started another way on the same computer (from source, installed, portable) has a data folder of its own, so it has its own boards, numbers and tournaments."
@@ -1133,6 +1228,7 @@ defmodule AlnaslWeb.SetupLive do
               "Only for a tournament without a connect code: a tournament of OpenPairings brings its results page and relay key with it. Who plays is then said by hand on each board's page, or read from a PGN - the box does not read pairings from the results site."
             )}
           </p>
+
           <.form for={@server_form} id="server-form" phx-submit="save_server" class="stack">
             <.input
               field={@server_form[:server_url]}
@@ -1195,6 +1291,7 @@ defmodule AlnaslWeb.SetupLive do
           <p :if={@testing?} id="test-running" class="note" role="status" style="margin-top:0.8rem">
             {gettext("Asking the server...")}
           </p>
+
           <ul
             :if={@checks}
             id="test-result"
@@ -1224,9 +1321,9 @@ defmodule AlnaslWeb.SetupLive do
           <p class="note">
             {gettext(
               "Optional. The box pushes each game of one round to a Lichess broadcast round as it changes - besides the results site, and without waiting for it. On Lichess, make the broadcast and its round first; leave the round's source empty."
-            )}
-            <.link navigate={~p"/help#help-lichess"}>{gettext("How, step by step")}</.link>
+            )} <.link navigate={~p"/help#help-lichess"}>{gettext("How, step by step")}</.link>
           </p>
+
           <form
             :if={length(@tournaments) > 1}
             id="lichess-tournament-form"
@@ -1241,6 +1338,7 @@ defmodule AlnaslWeb.SetupLive do
               </option>
             </select>
           </form>
+
           <.form for={@lichess_form} id="lichess-form" phx-submit="save_lichess" class="stack">
             <.input
               field={@lichess_form[:round]}
@@ -1297,6 +1395,7 @@ defmodule AlnaslWeb.SetupLive do
               >
                 {gettext("Test")}
               </.button>
+
               <.button
                 :if={@lichess_hint || @lichess_round_id not in [nil, ""]}
                 id="clear-lichess"
@@ -1309,6 +1408,7 @@ defmodule AlnaslWeb.SetupLive do
               </.button>
             </div>
           </.form>
+
           <p
             :if={@lichess_testing?}
             id="lichess-test-running"
@@ -1318,6 +1418,7 @@ defmodule AlnaslWeb.SetupLive do
           >
             {gettext("Asking Lichess...")}
           </p>
+
           <ul
             :if={@lichess_checks}
             id="lichess-test-result"
@@ -1341,6 +1442,7 @@ defmodule AlnaslWeb.SetupLive do
               <span>{sentence}</span>
             </li>
           </ul>
+
           <p class="note" style="margin-top:0.8rem">
             {gettext(
               "The test asks Lichess who the token belongs to and whether the round exists. It sends no game and changes nothing there."
@@ -1398,6 +1500,7 @@ defmodule AlnaslWeb.SetupLive do
                 label={gettext("Keep at most this much raw capture (MB)")}
               />
             </div>
+
             <.input
               field={@box_form[:auto_suggest]}
               id="box-auto"
@@ -1437,6 +1540,7 @@ defmodule AlnaslWeb.SetupLive do
               "The box itself is always let in. A browser on another machine in the hall is let in freely, unless a PIN is set here. Other machines can only reach the box at all when that is switched on below."
             )}
           </p>
+
           <div id="listen" class="callout">
             <p id="listen-now">
               <%= if @listening_lan? do %>
@@ -1444,11 +1548,13 @@ defmodule AlnaslWeb.SetupLive do
               <% else %>
                 <.badge icon="waiting">{gettext("This box only")}</.badge>
               <% end %>
+
               <span :if={@listen_forced} id="listen-forced" class="note">
                 {gettext(
                   "Decided where the program is started (ALNASL_LISTEN), so there is no switch here."
                 )}
               </span>
+
               <span
                 :if={!@listen_forced && @listen == "lan" != @listening_lan?}
                 id="listen-pending"
@@ -1457,6 +1563,7 @@ defmodule AlnaslWeb.SetupLive do
                 {gettext("Changed. It takes effect the next time Alnasl starts.")}
               </span>
             </p>
+
             <div :if={!@listen_forced} class="row">
               <.button
                 :if={@listen == "local"}
@@ -1468,6 +1575,7 @@ defmodule AlnaslWeb.SetupLive do
               >
                 {gettext("Let other machines in the hall open this site")}
               </.button>
+
               <.button
                 :if={@listen == "lan"}
                 id="listen-local"
@@ -1477,20 +1585,25 @@ defmodule AlnaslWeb.SetupLive do
               >
                 {gettext("This box only")}
               </.button>
+
               <span :if={@listen == "local" && !@pin_set?} id="listen-needs-pin" class="note">
                 {gettext("Set a PIN first.")}
               </span>
             </div>
+
             <p class="note">
               {gettext(
                 "The first time, Windows asks whether the program may be reached from the network. Say yes for private networks."
               )}
             </p>
           </div>
+
           <p id="pin-state">
             <.badge :if={@pin_set?} tone="ok" icon="ok">{gettext("A PIN is set")}</.badge>
+
             <.badge :if={!@pin_set?} icon="waiting">{gettext("No PIN")}</.badge>
           </p>
+
           <.form
             for={@pin_form}
             id="pin-form"
@@ -1504,8 +1617,7 @@ defmodule AlnaslWeb.SetupLive do
               type="password"
               label={gettext("New PIN")}
               autocomplete="new-password"
-            />
-            <.button id="save-pin" type="submit">{gettext("Set the PIN")}</.button>
+            /> <.button id="save-pin" type="submit">{gettext("Set the PIN")}</.button>
             <.button
               :if={@pin_set?}
               id="clear-pin"
@@ -1532,6 +1644,7 @@ defmodule AlnaslWeb.SetupLive do
           <form id="update-mode-form" phx-change="save_update_mode" class="stack">
             <fieldset class="field">
               <legend>{gettext("Look for a new version")}</legend>
+
               <label class="check" for="update-mode-ask">
                 <input
                   type="radio"
@@ -1549,6 +1662,7 @@ defmodule AlnaslWeb.SetupLive do
                   </span>
                 </span>
               </label>
+
               <label class="check" for="update-mode-never">
                 <input
                   type="radio"
@@ -1556,8 +1670,7 @@ defmodule AlnaslWeb.SetupLive do
                   name="mode"
                   value="never"
                   checked={@update_mode == "never"}
-                />
-                <span>{gettext("Never")}</span>
+                /> <span>{gettext("Never")}</span>
               </label>
             </fieldset>
           </form>
@@ -1566,9 +1679,11 @@ defmodule AlnaslWeb.SetupLive do
             <.button id="check-update" type="button" phx-click="check_update">
               {gettext("Look now")}
             </.button>
+
             <span :if={@update_looked == :current} id="update-looked-current" class="note">
               {gettext("This is the newest version.")}
             </span>
+
             <span :if={@update_looked == :error} id="update-looked-error" class="note">
               {gettext(
                 "GitHub could not be reached, or gave no answer. That needs the internet; nothing else here does."
@@ -1597,11 +1712,13 @@ defmodule AlnaslWeb.SetupLive do
               <b>
                 {gettext("Alnasl %{version} is out.", version: @update_available.version)}
               </b>
+
               <span :if={@update_available.size} id="update-size">
                 {gettext("The download is %{size}.",
                   size: Words.megabytes(@update_available.size)
                 )}
               </span>
+
               <a id="update-notes" href={@update_available.url} target="_blank" rel="noopener">
                 {gettext("What is new")}
               </a>
@@ -1617,21 +1734,25 @@ defmodule AlnaslWeb.SetupLive do
               <% @update_kind == :manual -> %>
                 <div id="update-manual">
                   <p>{gettext("This copy does not update itself. To get the new version:")}</p>
+
                   <ul>
                     <li>
                       {gettext(
                         "Windows, from the zip: download the new zip from the page above, unzip it beside the old folder and start Alnasl there. Your data is not in the folder and is used as it is."
                       )}
                     </li>
+
                     <li>
                       {gettext(
                         "Mac: download the new zip from the page above, stop Alnasl, and put the new Alnasl.app in place of the old one in Applications. Your data is not in the app and is used as it is."
                       )}
                     </li>
+
                     <li>
                       {gettext("Linux, installed with install.sh: run this on the box:")}
                       <code>sudo /opt/alnasl/update.sh</code>
                     </li>
+
                     <li>
                       {gettext("From the source code: fetch the new version and build it again.")}
                     </li>
@@ -1645,6 +1766,7 @@ defmodule AlnaslWeb.SetupLive do
                       boards: board_list(@update_games)
                     )}
                   </p>
+
                   <div class="row">
                     <.button
                       id="update-cancel"
@@ -1654,6 +1776,7 @@ defmodule AlnaslWeb.SetupLive do
                     >
                       {gettext("Wait")}
                     </.button>
+
                     <.button
                       id="update-force"
                       type="button"
@@ -1684,10 +1807,12 @@ defmodule AlnaslWeb.SetupLive do
                       )}
                     <% end %>
                   </p>
+
                   <div class="row">
                     <.button id="update-yes" type="button" variant="primary" phx-click="update_apply">
                       {gettext("Yes, download and install")}
                     </.button>
+
                     <.button id="update-cancel" type="button" phx-click="update_cancel">
                       {gettext("Not now")}
                     </.button>
@@ -1724,6 +1849,14 @@ defmodule AlnaslWeb.SetupLive do
           </form>
         </.panel>
 
+        <.panel id="setup-bridges" title={gettext("Bridges")}>
+          <BridgeComponents.bridges
+            bridges={@bridges}
+            join={@bridge_join}
+            message={@bridge_message}
+          />
+        </.panel>
+
         <.panel id="setup-phone" title={gettext("Open this site on your phone")}>
           <Access.phone id="setup-phone-access" />
         </.panel>
@@ -1734,6 +1867,7 @@ defmodule AlnaslWeb.SetupLive do
               "Times are in milliseconds. The defaults suit classical and rapid play, time scrambles included; leave them unless a hall teaches you otherwise."
             )}
           </p>
+
           <div id="tracker-presets" class="callout">
             <div class="row">
               <.button
@@ -1744,10 +1878,12 @@ defmodule AlnaslWeb.SetupLive do
               >
                 {gettext("Bullet / fast play")}
               </.button>
+
               <.badge :if={@fast?} id="preset-bullet-on" tone="ok" icon="ok">
                 {gettext("Set for fast play")}
               </.badge>
             </div>
+
             <p class="note">
               {gettext(
                 "For games of a few minutes or less. It changes two things: a move must stand for %{settle} ms instead of %{settle_default}, and a board put back to the position before the last move is not read as a takeback - at that speed it is a piece going to and fro. Nothing else is touched, how many moves the box reconstructs included. \"Back to the defaults\" undoes it.",
@@ -1756,6 +1892,7 @@ defmodule AlnaslWeb.SetupLive do
               )}
             </p>
           </div>
+
           <.form for={@tracker_form} id="tracker-form" phx-submit="save_tracker" class="stack">
             <div class="form-grid">
               <.input
@@ -1814,6 +1951,7 @@ defmodule AlnaslWeb.SetupLive do
                   default: @defaults.search_depth
                 )}
               </p>
+
               <.input
                 field={@tracker_form[:promotion_default]}
                 id="tracker-default"
@@ -1827,6 +1965,7 @@ defmodule AlnaslWeb.SetupLive do
                 ]}
               />
             </div>
+
             <.input
               field={@tracker_form[:takeback]}
               id="tracker-takeback"
@@ -1848,6 +1987,7 @@ defmodule AlnaslWeb.SetupLive do
                 "A player parks a piece beside the board, or a sensor loses one: the box follows the moves and shows \"not seen on ...\" until the piece is seen again, moves, or is taken. One piece at a time; a king never. Off: such a board waits, and becomes an alarm."
               )}
             </p>
+
             <div class="row">
               <.button id="save-tracker" variant="primary" type="submit">{gettext("Save")}</.button>
               <.button id="reset-tracker" type="button" phx-click="reset_tracker">{gettext(

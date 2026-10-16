@@ -73,6 +73,13 @@ defmodule Alnasl.BoardServer do
 
   def subscribe, do: Phoenix.PubSub.subscribe(Alnasl.PubSub, @topic)
 
+  @doc """
+  Returns once everything sent to the board before this call has been
+  dealt with - saved, queued, logged. A bridge's events are acknowledged
+  only after this: "the server has it" has to mean the database has it.
+  """
+  def sync(pid), do: GenServer.call(pid, :sync, 30_000)
+
   # --- init --------------------------------------------------------------------
 
   @impl true
@@ -278,6 +285,7 @@ defmodule Alnasl.BoardServer do
 
     # A board alone on its port says which number it answers to on a loop:
     # kept with the row, so that it is known again when it is on one.
+    # (A bridge's board keeps its number in its port; nothing to keep here.)
     alone = if state.board.driver == "dgt_serial", do: info[:bus_address]
 
     changes =
@@ -715,6 +723,8 @@ defmodule Alnasl.BoardServer do
 
   @impl true
   def handle_call(:snapshot, _from, state), do: {:reply, snapshot(state), state}
+
+  def handle_call(:sync, _from, state), do: {:reply, :ok, state}
 
   def handle_call({:reload, %Board{} = board}, _from, state) do
     relink? =

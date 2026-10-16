@@ -24,7 +24,9 @@ defmodule Alnasl.Driver do
   The drivers: `Alnasl.Driver.Simulator` (PGN games played by an invisible
   hand, with faults), `Arkab.Driver.Replay` (a capture file played back),
   `Arkab.Driver.DgtSerial` (one DGT board on a serial port) and
-  `Arkab.Driver.DgtBus` (a loop of DGT boards).
+  `Arkab.Driver.DgtBus` (a loop of DGT boards) - those three live in
+  Arkab, where a bridge runs the same code - and `Alnasl.Driver.Remote` (a
+  board read by an Arkab bridge somewhere else, arriving over its link).
   """
 
   @callback start_link(keyword()) :: GenServer.on_start()
@@ -34,7 +36,8 @@ defmodule Alnasl.Driver do
   def module("replay"), do: Arkab.Driver.Replay
   def module("dgt_serial"), do: Arkab.Driver.DgtSerial
   def module("dgt_bus"), do: Arkab.Driver.DgtBus
+  def module("remote"), do: Alnasl.Driver.Remote
 
   @doc "Sends an event to a driver's owner."
-  def emit(owner, id, event), do: send(owner, {:driver, id, event})
+  defdelegate emit(owner, id, event), to: Arkab.Driver
 end

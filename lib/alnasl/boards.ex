@@ -104,8 +104,23 @@ defmodule Alnasl.Boards do
 
   def running?(id), do: BoardServer.whereis(id) != nil
 
+  @doc """
+  Whether this box reads boards of its own: serial ports, loops,
+  simulators, replays. Not on a box set up with `ALNASL_NO_LOCAL_BOARDS`
+  (the hosted server), which has no hall attached and nothing to plug in;
+  its boards arrive from bridges (`Alnasl.Driver.Remote`) and nothing else
+  is started, whatever an old row says.
+  """
+  def local?, do: Application.get_env(:alnasl, :local_boards, true)
+
   @doc "Connects a board: starts its process and its driver."
-  def start(%Board{} = board) do
+  def start(%Board{driver: driver} = board) when driver != "remote" do
+    if local?(), do: start_server(board), else: {:error, :no_local_boards}
+  end
+
+  def start(%Board{} = board), do: start_server(board)
+
+  defp start_server(%Board{} = board) do
     case DynamicSupervisor.start_child(Alnasl.BoardSupervisor, {BoardServer, board}) do
       {:ok, pid} -> {:ok, pid}
       {:error, {:already_started, pid}} -> {:ok, pid}
@@ -230,10 +245,12 @@ defmodule Alnasl.Boards do
   """
   def discover do
     used = Map.new(list(), &{&1.port, &1.name})
+    # A box without boards of its own does not go looking for ports either.
+    ports = if local?(), do: Transport.ports(), else: []
 
     %{
-      serial?: Transport.Uart.available?(),
-      ports: Enum.map(Transport.ports(), &Map.put(&1, :used_by, used[&1.port])),
+      serial?: local?() and Transport.Uart.available?(),
+      ports: Enum.map(ports, &Map.put(&1, :used_by, used[&1.port])),
       games: length(Pgn.all_bundled())
     }
   end

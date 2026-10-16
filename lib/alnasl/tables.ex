@@ -333,7 +333,9 @@ defmodule Alnasl.Tables do
 
   # --- a board that comes back -------------------------------------------------
 
-  @dgt ["dgt_serial", "dgt_bus"]
+  # A board through a bridge is a DGT board too: one that is carried from
+  # the box's own port to a bridge, or back, is recognised by its serial.
+  @dgt ["dgt_serial", "dgt_bus", "remote"]
 
   @doc """
   What a board's process may write to its row when the board says who it
@@ -576,7 +578,7 @@ defmodule Alnasl.Tables do
     duplicates(all, & &1[:table_no], :duplicate_table) ++
       duplicates(here, & &1.board_no, :duplicate_board) ++
       duplicates(
-        Enum.filter(all, &(&1.driver in ["dgt_serial", "dgt_bus"])),
+        Enum.filter(all, &(&1.driver in @dgt)),
         &serial/1,
         :same_serial
       ) ++

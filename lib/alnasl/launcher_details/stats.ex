@@ -56,7 +56,9 @@ defmodule Alnasl.LauncherDetails.Stats do
         tournaments: safe(fn -> Repo.aggregate(Tournament, :count, log: false) end),
         boards: safe(fn -> Repo.aggregate(Board, :count, log: false) end),
         boards_connected: Registry.count(Alnasl.BoardRegistry),
-        buses_open: Registry.count(Arkab.BusRegistry),
+        # No buses at all on a box without boards of its own.
+        buses_open:
+          if(Process.whereis(Arkab.BusRegistry), do: Registry.count(Arkab.BusRegistry), else: 0),
         outbox_pending: safe(&outbox_pending/0),
         relay: relay()
       }

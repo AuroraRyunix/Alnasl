@@ -15,6 +15,13 @@ defmodule AlnaslWeb.Endpoint do
     websocket: [connect_info: [session: @session_options]],
     longpoll: [connect_info: [session: @session_options]]
 
+  # Arkab bridges (`AlnaslWeb.BridgeSocket`): a program, not a browser, so
+  # no origin to check and no session; the key is in the first frame. Two
+  # minutes of silence ends it (the bridge pings every 25 seconds).
+  socket "/bridge/link", AlnaslWeb.BridgeSocket,
+    websocket: [path: "", check_origin: false, timeout: 120_000],
+    longpoll: false
+
   # Serve at "/" the static files from "priv/static" directory.
   #
   # When code reloading is disabled (e.g., in production),
