@@ -702,6 +702,7 @@ defmodule AlnaslWeb.GameLive do
     <Layouts.app
       flash={@flash}
       nav={:round}
+      help={:game}
       link={@link}
       hall={@hall}
       update={@update}
@@ -734,6 +735,7 @@ defmodule AlnaslWeb.GameLive do
         <div class="empty">
           <b>{gettext("Nothing is known about board %{n} of round %{r}", n: @no, r: @round)}</b>
           <p>{gettext("Link a physical board to it, or attach a game from a PGN.")}</p>
+
           <.button id="game-empty-boards" navigate={~p"/boards"} variant="primary">{gettext(
             "Go to Boards"
           )}</.button>
@@ -759,11 +761,13 @@ defmodule AlnaslWeb.GameLive do
             )}
           <% end %>
         </p>
+
         <p class="note">
           {gettext(
             "Nothing was thrown away: the game is kept as it is, and is not reported to the pairing program until you say what it is. The results site and Lichess still get its moves, under the names it had."
           )}
         </p>
+
         <div class="row">
           <.button
             :if={@pairing[:game]}
@@ -797,11 +801,13 @@ defmodule AlnaslWeb.GameLive do
         <b>
           {gettext("This game stays on the box: it is game %{n} on this board.", n: @game.game_no)}
         </b>
+
         <p>
           {gettext(
             "The results site, OpenPairings and Lichess know one game of a board and a round, and they hold another one for this board. Nothing of this game is sent."
           )}
         </p>
+
         <div class="row">
           <.button
             id="send-this-instead"
@@ -849,9 +855,11 @@ defmodule AlnaslWeb.GameLive do
                 label={gettext("The position after move %{n} in the list", n: @at)}
               />
             </div>
+
             <div :if={@view.apart? and !@at} id="twin" class="twin">
               <figure>
                 <figcaption>{gettext("What the board reads")}</figcaption>
+
                 <.board
                   id="board-raw"
                   position={@view.raw}
@@ -859,8 +867,10 @@ defmodule AlnaslWeb.GameLive do
                   label={gettext("What the board reads now")}
                 />
               </figure>
+
               <figure>
                 <figcaption>{gettext("What is certain")}</figcaption>
+
                 <.board
                   id="board-certain"
                   position={@view.certain}
@@ -870,6 +880,7 @@ defmodule AlnaslWeb.GameLive do
                 />
               </figure>
             </div>
+
             <div :if={!@view.apart? and !@at} class="solo">
               <.board
                 id="board-certain"
@@ -889,9 +900,11 @@ defmodule AlnaslWeb.GameLive do
                 running={@view.snap.clock.running == :white}
               />
             </div>
+
             <p :if={@view.apart? and !@at} class="note" style="margin-top:0.5rem">
               {gettext("The outlined squares are where the two differ.")}
             </p>
+
             <div :if={@view.line != [] and @view.snap.plies != []} id="move-nav" class="move-nav">
               <.button
                 id="nav-start"
@@ -915,6 +928,7 @@ defmodule AlnaslWeb.GameLive do
                   n: length(@view.snap.plies)
                 )}
               </span>
+
               <.button
                 id="nav-forward"
                 small
@@ -934,9 +948,7 @@ defmodule AlnaslWeb.GameLive do
               >{gettext("Live")}</.button>
             </div>
           </.panel>
-
           <.help_box state={@view.snap.status} detail={help_detail(@view.snap)} />
-
           <div
             :if={@view.snap[:unseen] not in [nil, []]}
             id="unseen-help"
@@ -978,6 +990,7 @@ defmodule AlnaslWeb.GameLive do
               <b>{gettext("The starting position is not right")}</b>
               <ul style="margin:0.3rem 0 0;padding-left:1.1rem;color:var(--ink)">
                 <li :for={problem <- Enum.take(@view.snap.problems, 8)}>{Words.problem(problem)}</li>
+
                 <li :if={length(@view.snap.problems) > 8}>
                   {gettext("...and %{n} more", n: length(@view.snap.problems) - 8)}
                 </li>
@@ -995,6 +1008,7 @@ defmodule AlnaslWeb.GameLive do
             <div>
               <b>{gettext("The board suggests a result: %{r}", r: @view.snap.suggestion)}</b>
               <p>{gettext("Nothing is final until you say so.")}</p>
+
               <.button
                 id="confirm-suggestion"
                 small
@@ -1015,7 +1029,9 @@ defmodule AlnaslWeb.GameLive do
               <span class="note">{gettext("%{n} played", n: length(@view.snap.plies))}</span>
               <b :if={@view.snap[:result]} id="game-result">{@view.snap.result}</b>
             </:actions>
+
             <p :if={@view.snap.plies == []} class="note">{gettext("No moves yet.")}</p>
+
             <div
               :if={@view.snap.plies != []}
               id="move-list"
@@ -1029,6 +1045,7 @@ defmodule AlnaslWeb.GameLive do
                 <.ply ply={black} last={length(@view.snap.plies)} at={@at} />
               <% end %>
             </div>
+
             <script :type={Phoenix.LiveView.ColocatedHook} name=".MoveList">
               // The move list: kept at its end while the game is followed, at
               // the move being looked at otherwise - and the keys that step
@@ -1074,11 +1091,13 @@ defmodule AlnaslWeb.GameLive do
                   "More than one line of moves led to what the board showed. The box took one and went on. Compare with a scoresheet when there is a moment."
                 )}
               </p>
+
               <p :if={!several?(@view.snap.plies)} id="guess-why-alone">
                 {gettext(
                   "One line of moves was found for what the board showed, and the box cannot vouch for it: it could not rule out others, or it has more moves than the clock was pressed for. Compare with a scoresheet when there is a moment."
                 )}
               </p>
+
               <.button
                 id="review-guess"
                 small
@@ -1088,6 +1107,7 @@ defmodule AlnaslWeb.GameLive do
               >{gettext("Check them")}</.button>
             </div>
           </div>
+
           <div
             :for={{ply, number} <- rewritten(@view.snap.plies)}
             :if={@choice == nil}
@@ -1103,6 +1123,7 @@ defmodule AlnaslWeb.GameLive do
                   "A piece set down between two squares is read on one of them. A later move made no sense with it there, and does with it on the square beside."
                 )}
               </p>
+
               <.button
                 id={"review-rewritten-#{number}"}
                 small
@@ -1112,41 +1133,45 @@ defmodule AlnaslWeb.GameLive do
               >{gettext("Check it")}</.button>
             </div>
           </div>
+
           <div
             :if={marked(@view.snap.plies, :recovered) > 0}
             id="reconstructed-notice"
             class="note mark-rec"
           >
-            <span class="flag rec">{Words.flag(:recovered)}</span>
-            {Words.marks(:recovered, marked(@view.snap.plies, :recovered))}: {gettext(
-              "not seen one by one, and only one line of moves fits."
-            )}
+            <span class="flag rec">{Words.flag(:recovered)}</span> {Words.marks(
+              :recovered,
+              marked(@view.snap.plies, :recovered)
+            )}: {gettext("not seen one by one, and only one line of moves fits.")}
           </div>
-
           <.choice :if={@choice} choice={@choice} line={@view.line} />
-
           <.panel id="finish" title={gettext("This game")}>
             <:actions>
               <span :if={length(@history) > 1} id="game-no" class="note">
                 {gettext("game %{n} on this board", n: @view.snap[:game_no] || length(@history))}
               </span>
             </:actions>
+
             <p :if={@site_url && !(@game && @game.local)} id="game-site" class="site-line">
               <.site_link id="game-site-link" href={@site_url}>
                 {gettext("This game on the results site")}
               </.site_link>
             </p>
+
             <p :if={@site_why} id="game-site-none" class="note">
               {no_site_reason(@site_why)}
             </p>
+
             <p :if={@view.snap[:game_status] == "finished"} id="finish-done">
               <b>{finished_word(@view.snap[:result])}</b>
             </p>
+
             <b>
               {if @view.snap[:game_status] == "finished",
                 do: gettext("Change the result"),
                 else: gettext("Finish game")}
             </b>
+
             <div class="row finish-row">
               <.button
                 :for={result <- ["1-0", "1/2-1/2", "0-1"]}
@@ -1156,6 +1181,7 @@ defmodule AlnaslWeb.GameLive do
               >
                 {result}
               </.button>
+
               <.button
                 :if={@view.snap[:game_status] != "finished"}
                 id="result-none"
@@ -1166,11 +1192,13 @@ defmodule AlnaslWeb.GameLive do
                 {gettext("No result")}
               </.button>
             </div>
+
             <p class="note">
               {gettext(
                 "Sent to the results site as provisional; the published result comes from the pairing program."
               )}
             </p>
+
             <div class="row" style="margin-top:0.5rem">
               <.button
                 :if={@board}
@@ -1189,6 +1217,7 @@ defmodule AlnaslWeb.GameLive do
                   do: gettext("New game on this board"),
                   else: gettext("An extra game: it stays on this box")}
               </.button>
+
               <.button
                 :if={@board && @new_kind == :extra && @paired?}
                 id="new-game-replace"
@@ -1204,6 +1233,7 @@ defmodule AlnaslWeb.GameLive do
                 phx-click="reopen"
               >{gettext("Reopen the game")}</.button>
             </div>
+
             <.form
               :if={@tournament.kind == "local"}
               for={@names_form}
@@ -1217,15 +1247,18 @@ defmodule AlnaslWeb.GameLive do
                 <.input field={@names_form[:white]} id="names-white" label={gettext("White")} />
                 <.input field={@names_form[:black]} id="names-black" label={gettext("Black")} />
               </div>
+
               <p class="note">
                 {gettext(
                   "This tournament has no pairing program to ask: say here who plays, or attach a PGN that says it."
                 )}
               </p>
+
               <div class="row">
                 <.button id="save-names" type="submit">{gettext("Save the names")}</.button>
               </div>
             </.form>
+
             <div :if={length(@history) > 1} id="games-here" class="games-here">
               <b>{gettext("Games on this board this round")}</b>
               <ol>
@@ -1235,11 +1268,13 @@ defmodule AlnaslWeb.GameLive do
                   <span class="note">
                     {gettext("%{n} played", n: length(Games.sans(game)))}
                   </span>
+
                   <span id={"game-here-where-#{game.game_no}"} class="note">
                     {if game.local,
                       do: gettext("stays on the box"),
                       else: gettext("is the one that leaves the box")}
                   </span>
+
                   <.link
                     id={"game-here-pgn-#{game.game_no}"}
                     href={Scope.game_file(@tid, @round, @no, game.game_no)}
@@ -1247,6 +1282,7 @@ defmodule AlnaslWeb.GameLive do
                   >PGN</.link>
                 </li>
               </ol>
+
               <p class="note">
                 {gettext(
                   "One game of a board goes to the results site, to Lichess and to the pairing program: they know a game by its round and board, or by its pairing. The others are kept here."
@@ -1277,8 +1313,7 @@ defmodule AlnaslWeb.GameLive do
                     placeholder="Nf3 Nc6 Bb5"
                     autocomplete="off"
                     spellcheck="false"
-                  />
-                  <.button id="tool-type" type="submit">{gettext("Add these moves")}</.button>
+                  /> <.button id="tool-type" type="submit">{gettext("Add these moves")}</.button>
                 </.form>
               </div>
 
@@ -1299,6 +1334,7 @@ defmodule AlnaslWeb.GameLive do
                     }
                   }
                 </script>
+
                 <.button
                   id="tool-undo"
                   phx-click="undo"
@@ -1332,6 +1368,7 @@ defmodule AlnaslWeb.GameLive do
                 <p>
                   {gettext("For a resumed game, or as a last resort. The moves so far are replaced.")}
                 </p>
+
                 <.form for={@fen_form} id="set-fen-form" phx-submit="set_fen" class="stack">
                   <.input
                     field={@fen_form[:fen]}
@@ -1509,6 +1546,7 @@ defmodule AlnaslWeb.GameLive do
           Enum.at(@alt.current, elem(@alt.read, 0) - @alt.from)
         )}</b>
       </p>
+
       <p :if={@total > 1} id="choice-what" class="note">
         {gettext(
           "Moves %{from} to %{to} in the list: %{n} lines of moves lead from the first board to the second. One question at a time; moves that every line has are not asked about.",
@@ -1517,6 +1555,7 @@ defmodule AlnaslWeb.GameLive do
           n: @total
         )}
       </p>
+
       <div :if={@total == 1} id="choice-none">
         <b>{gettext("No other line of the same moves fits what the board showed.")}</b>
         <p class="note">
@@ -1527,17 +1566,21 @@ defmodule AlnaslWeb.GameLive do
           )}
         </p>
       </div>
+
       <div class="choice-ends">
         <figure>
           <figcaption>{gettext("Before them")}</figcaption>
+
           <.board
             id="choice-before"
             position={@before}
             label={gettext("The position before those moves")}
           />
         </figure>
+
         <figure>
           <figcaption>{gettext("After them")}</figcaption>
+
           <.board
             id="choice-after"
             position={@after_them}
@@ -1563,6 +1606,7 @@ defmodule AlnaslWeb.GameLive do
                 n: @ask.number
               )}
         </b>
+
         <div class="choice-options">
           <button
             :for={{option, index} <- Enum.with_index(@ask.options)}
@@ -1576,8 +1620,7 @@ defmodule AlnaslWeb.GameLive do
               position={option.position}
               last={option.squares}
               label={gettext("The board after %{move}", move: option.san)}
-            />
-            <span class="choice-san"><.figurine san={option.san} /></span>
+            /> <span class="choice-san"><.figurine san={option.san} /></span>
             <span :if={option.standing?} class="flag plain">{gettext("as it stands")}</span>
             <span class="note">
               {ngettext("%{count} line left", "%{count} lines left", option.left)}
@@ -1594,6 +1637,7 @@ defmodule AlnaslWeb.GameLive do
             class={["choice-san", changed? && "changed"]}
           ><.figurine san={san} /></span>
         </p>
+
         <p :if={Enum.any?(@ask.changed)} class="note">
           {gettext("The outlined moves differ from the game as it stands.")}
         </p>
@@ -1608,6 +1652,7 @@ defmodule AlnaslWeb.GameLive do
         >
           {gettext("Use this line")}
         </.button>
+
         <.button
           id="choice-keep"
           variant={if @ask.line && @total > 1, do: nil, else: "primary"}
@@ -1615,6 +1660,7 @@ defmodule AlnaslWeb.GameLive do
         >
           {gettext("Keep it as it stands")}
         </.button>
+
         <.button
           :if={@total == 1 and @last?}
           id="choice-undo"
@@ -1623,12 +1669,15 @@ defmodule AlnaslWeb.GameLive do
         >
           {gettext("Take them back")}
         </.button>
+
         <.button :if={@total == 1} id="choice-type" phx-click="choice_type">
           {gettext("Type the right moves")}
         </.button>
+
         <.button :if={@picked != []} id="choice-back" phx-click="choice_back">
           {gettext("One question back")}
         </.button>
+
         <.button id="choice-close" variant="ghost" phx-click="choice_close">
           {gettext("Not now")}
         </.button>
@@ -1666,6 +1715,7 @@ defmodule AlnaslWeb.GameLive do
       <div>
         <b>{@headline}</b>
         <p>{@text}</p>
+
         <.button
           :if={match?({kind, _} when kind in [:out_of_turn, :illegal], @detail)}
           id="alarm-missing-move"
@@ -1675,6 +1725,7 @@ defmodule AlnaslWeb.GameLive do
         >{gettext("A move is missing before this")}</.button>
       </div>
     </div>
+
     <p
       :if={@headline && @state not in [:out_of_sync, :no_signal, :recovered, :clock_alarm]}
       id="state-help"

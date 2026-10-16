@@ -69,7 +69,17 @@ defmodule AlnaslWeb.CoreComponents do
     "external" =>
       ~s|<path d="M14 4h6v6M20 4l-9 9M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>|,
     "theme" =>
-      ~s|<circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/>|
+      ~s|<circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/>|,
+    "book" =>
+      ~s|<path d="M12 6.5C10 5 7 4.5 4 5v13c3-.5 6 0 8 1.5 2-1.5 5-2 8-1.5V5c-3-.5-6 0-8 1.5zM12 6.5V19.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>|,
+    "search" =>
+      ~s|<circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="m15 15 5 5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>|,
+    "chevron" =>
+      ~s|<path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>|,
+    "arrow" =>
+      ~s|<path d="M5 12h14m-5.5-5.5L19 12l-5.5 5.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>|,
+    "bars" =>
+      ~s|<path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>|
   }
 
   @doc "The mark (`AlnaslWeb.Logo`): decorative, the name beside it says what it is."
@@ -214,12 +224,13 @@ defmodule AlnaslWeb.CoreComponents do
         width="1"
         height="1"
         class={if rem(rem(i, 8) + div(i, 8), 2) == 0, do: "l", else: "d"}
-      />
-      <rect :for={i <- @marks} x={rem(i, 8)} y={div(i, 8)} width="1" height="1" class="mark" />
+      /> <rect :for={i <- @marks} x={rem(i, 8)} y={div(i, 8)} width="1" height="1" class="mark" />
       <g :if={@coords}>
         <text :for={f <- 0..7} x={f + 0.06} y="7.95">{<<?a + f>>}</text>
+
         <text :for={r <- 0..7} x="7.8" y={r + 0.28}>{8 - r}</text>
       </g>
+
       <use
         :for={{x, y, id} <- @pieces}
         href={"/pieces/cburnett.svg#" <> id}
@@ -294,6 +305,7 @@ defmodule AlnaslWeb.CoreComponents do
         <h2>{@title}</h2>
         {render_slot(@actions)}
       </header>
+
       <div class={["body", @flush && "flush"]}>
         {render_slot(@inner_block)}
       </div>
@@ -384,6 +396,7 @@ defmodule AlnaslWeb.CoreComponents do
           {@label}<span :if={@hint} class="hint" style="display:block">{@hint}</span>
         </span>
       </label>
+
       <p :for={msg <- @errors} class="error">{msg}</p>
     </div>
     """
@@ -406,8 +419,7 @@ defmodule AlnaslWeb.CoreComponents do
   def input(%{type: "textarea"} = assigns) do
     ~H"""
     <div class={["field", @class]}>
-      <label :if={@label} for={@id}>{@label}</label>
-      <textarea id={@id} name={@name} {@rest}>{Phoenix.HTML.Form.normalize_value("textarea", @value)}</textarea>
+      <label :if={@label} for={@id}>{@label}</label> <textarea id={@id} name={@name} {@rest}>{Phoenix.HTML.Form.normalize_value("textarea", @value)}</textarea>
       <span :if={@hint} class="hint">{@hint}</span>
       <p :for={msg <- @errors} class="error">{msg}</p>
     </div>
@@ -425,8 +437,7 @@ defmodule AlnaslWeb.CoreComponents do
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
         aria-invalid={@errors != [] && "true"}
         {@rest}
-      />
-      <span :if={@hint} class="hint">{@hint}</span>
+      /> <span :if={@hint} class="hint">{@hint}</span>
       <p :for={msg <- @errors} class="error">{msg}</p>
     </div>
     """

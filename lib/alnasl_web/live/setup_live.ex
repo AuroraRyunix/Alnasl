@@ -814,6 +814,7 @@ defmodule AlnaslWeb.SetupLive do
     <Layouts.app
       flash={@flash}
       nav={:setup}
+      help={:setup}
       link={@link}
       hall={@hall}
       update={@update}
@@ -827,7 +828,10 @@ defmodule AlnaslWeb.SetupLive do
           <p class="note">
             {gettext(
               "A connect code from OpenPairings (Settings, Live boards) brings a tournament - or a whole group of them - to the box: pairings, colours, rate of play, and the results page with its relay key. A round paired there starts here by itself. One box can hold several codes."
-            )} <.link navigate={~p"/help#help-openpairings"}>{gettext("How, step by step")}</.link>
+            )}
+            <.link navigate={AlnaslWeb.Components.ManualLink.path(:setup)}>{gettext(
+              "How, step by step"
+            )}</.link>
           </p>
 
           <div id={"code-wrap-#{@code_key}"}>
@@ -1314,7 +1318,10 @@ defmodule AlnaslWeb.SetupLive do
           <p class="note">
             {gettext(
               "Optional. The box pushes each game of one round to a Lichess broadcast round as it changes - besides the results site, and without waiting for it. On Lichess, make the broadcast and its round first; leave the round's source empty."
-            )} <.link navigate={~p"/help#help-lichess"}>{gettext("How, step by step")}</.link>
+            )}
+            <.link navigate={AlnaslWeb.Components.ManualLink.path(:lichess)}>{gettext(
+              "How, step by step"
+            )}</.link>
           </p>
 
           <form
@@ -1847,6 +1854,8 @@ defmodule AlnaslWeb.SetupLive do
         </.panel>
 
         <.panel id="setup-bridges" title={gettext("Bridges")}>
+          <:actions><AlnaslWeb.Components.ManualLink.manual_link topic={:bridges} /></:actions>
+
           <BridgeComponents.bridges
             bridges={@bridges}
             join={@bridge_join}
@@ -1864,6 +1873,8 @@ defmodule AlnaslWeb.SetupLive do
         </.panel>
 
         <.panel id="setup-accounts" title={gettext("Accounts")}>
+          <:actions><AlnaslWeb.Components.ManualLink.manual_link topic={:accounts} /></:actions>
+
           <%= cond do %>
             <% @accounts? or @server? -> %>
               <p class="note">
@@ -1871,10 +1882,12 @@ defmodule AlnaslWeb.SetupLive do
                   "Every page asks who you are. People, roles and invitations are on the page of each hall."
                 )}
               </p>
+
               <div class="row">
                 <.button id="setup-halls" navigate={~p"/halls"} icon="boards">
                   {gettext("Halls")}
                 </.button>
+
                 <.button id="setup-account" href={~p"/account"} variant="ghost">
                   {gettext("Your account")}
                 </.button>
@@ -1885,6 +1898,7 @@ defmodule AlnaslWeb.SetupLive do
                   "This box has no accounts: everybody on the hall's network may do everything (behind the PIN, if there is one). The first account makes you the box's owner and admin - and from then on every page asks who is there, the box's own screen included."
                 )}
               </p>
+
               <.form
                 for={@first_form}
                 id="first-account-form"

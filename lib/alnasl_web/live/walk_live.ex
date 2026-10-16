@@ -149,6 +149,7 @@ defmodule AlnaslWeb.WalkLive do
     <Layouts.app
       flash={@flash}
       nav={:boards}
+      help={:numbering}
       link={@link}
       hall={@hall}
       update={@update}
@@ -170,6 +171,7 @@ defmodule AlnaslWeb.WalkLive do
           >
             {gettext("Number")}
           </.link>
+
           <.link
             id="walk-tab-find"
             patch={~p"/boards/find"}
@@ -197,6 +199,7 @@ defmodule AlnaslWeb.WalkLive do
             <span data-for="tap" hidden>{gettext("Tap to enable sound")}</span>
             <span data-for="blocked" hidden>{gettext("Sound blocked by the browser")}</span>
           </button>
+
           <p class="note">
             {gettext(
               "The beep needs the browser's permission, which a tap gives. An iPhone plays nothing with the ring/silent switch on silent, and iPhones do not vibrate; Android phones do."
@@ -339,7 +342,9 @@ defmodule AlnaslWeb.WalkLive do
     <%= if @wizard do %>
       <section id="walk-run" class="walk-stage" aria-live="polite">
         <p class="walk-ask">{gettext("Lift a piece on the board of table")}</p>
+
         <div id="walk-next" class="walk-number">{@wizard.next}</div>
+
         <p class="note">
           {gettext("%{done} of %{all} board(s) numbered in this run.",
             done: length(@wizard.done),
@@ -351,9 +356,7 @@ defmodule AlnaslWeb.WalkLive do
 
       <ol :if={@wizard.done != []} id="walk-done" class="walk-list">
         <li :for={entry <- @wizard.done} id={"walk-done-#{entry.board_id}"}>
-          <b>{entry.table}</b>
-          <span>{entry.name}</span>
-          <span class="note">{serial(entry)}</span>
+          <b>{entry.table}</b> <span>{entry.name}</span> <span class="note">{serial(entry)}</span>
         </li>
       </ol>
 
@@ -365,6 +368,7 @@ defmodule AlnaslWeb.WalkLive do
         >
           {gettext("Undo")}
         </.button>
+
         <.button id="walk-skip" phx-click="skip">
           {gettext("Skip %{n}", n: @wizard.next)}
         </.button>
@@ -374,17 +378,20 @@ defmodule AlnaslWeb.WalkLive do
       <section id="walk-start" class="walk-stage">
         <.walk_flash event={@flash_event} />
         <p class="walk-ask">{gettext("Number the boards by touching them")}</p>
+
         <p>
           {gettext(
             "Press Start, walk to table 1 and lift any piece on its board. Put it back, walk to table 2, lift a piece there - and so on. Each board gets the next number the moment it feels the piece go."
           )}
         </p>
+
         <p id="walk-count" class="note">
           {gettext("%{numbered} of %{all} board(s) have a table number now.",
             numbered: @numbered,
             all: @board_count
           )}
         </p>
+
         <.form for={@start_form} id="walk-start-form" phx-submit="start" class="walk-start-form">
           <label for="walk-first">{gettext("First table number")}</label>
           <input
@@ -401,6 +408,7 @@ defmodule AlnaslWeb.WalkLive do
             {gettext("Start")}
           </.button>
         </.form>
+
         <p class="note">
           {gettext(
             "Do this before the round, with the pieces set up and nobody at the boards: during play every move is a touch. The run stops by itself when every board has a number, or after fifteen minutes without a touch."
@@ -420,8 +428,7 @@ defmodule AlnaslWeb.WalkLive do
         <div id={"walk-flash-#{entry.table}"} class="walk-flash ok" role="status">
           <.icon name="ok" />
           <div>
-            <b>{gettext("Table %{n}", n: entry.table)}</b>
-            <span>{serial(entry)} · {entry.name}</span>
+            <b>{gettext("Table %{n}", n: entry.table)}</b> <span>{serial(entry)} · {entry.name}</span>
           </div>
         </div>
       <% {:already, entry} -> %>
@@ -455,6 +462,7 @@ defmodule AlnaslWeb.WalkLive do
     ~H"""
     <section id="walk-find" class="walk-stage" aria-live="polite">
       <p class="walk-ask">{gettext("Lift a piece on the board you mean")}</p>
+
       <%= case @recent do %>
         <% [%{board: board, at: at} | _] -> %>
           <div
@@ -468,10 +476,13 @@ defmodule AlnaslWeb.WalkLive do
               <span class="walk-label">{gettext("New board")}</span>
               <div id="walk-found-number" class="walk-number small">?</div>
             <% end %>
+
             <p id="walk-found-sticker"><b>{TableWords.sticker(board)}</b></p>
+
             <p class="note">
               {board.name} · {gettext("touched at %{t}", t: time(at))}
             </p>
+
             <.button
               :if={board.board_no && board.round}
               id="walk-found-open"
@@ -491,8 +502,7 @@ defmodule AlnaslWeb.WalkLive do
 
     <ol :if={length(@recent) > 1} id="walk-recent" class="walk-list">
       <li :for={%{board: board, at: at} <- tl(@recent)} id={"walk-recent-#{board.id}"}>
-        <b>{board.board_no || "?"}</b>
-        <span>{TableWords.sticker(board)}</span>
+        <b>{board.board_no || "?"}</b> <span>{TableWords.sticker(board)}</span>
         <span class="note">{time(at)}</span>
       </li>
     </ol>

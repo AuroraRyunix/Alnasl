@@ -285,6 +285,7 @@ defmodule AlnaslWeb.HallsLive do
     <Layouts.app
       flash={@flash}
       nav={:halls}
+      help={:halls}
       link={@link}
       hall={@hall}
       update={@update}
@@ -299,6 +300,7 @@ defmodule AlnaslWeb.HallsLive do
             "This box has no accounts: everybody on the hall's network may do everything, as before. Make the first account on Setup to change that."
           )}
         </p>
+
         <p :if={@rows == []} id="halls-none" class="note">
           {gettext("Your account is not in any hall yet. Whoever invited you can fix that.")}
         </p>
@@ -313,6 +315,7 @@ defmodule AlnaslWeb.HallsLive do
               </h2>
               <span class="note">{Words.role(row.role)}</span>
             </header>
+
             <div class="body stack">
               <p id={"hall-#{row.hall.id}-boards"}>
                 {ngettext(
@@ -322,6 +325,7 @@ defmodule AlnaslWeb.HallsLive do
                   live: row.live
                 )}
               </p>
+
               <p :if={row.bridges > 0} id={"hall-#{row.hall.id}-bridges"} class="note">
                 {ngettext(
                   "%{up} of %{count} bridge connected",
@@ -330,11 +334,11 @@ defmodule AlnaslWeb.HallsLive do
                   up: row.bridges_up
                 )}
               </p>
+
               <%= if row.attention != [] do %>
                 <ul id={"hall-#{row.hall.id}-attention"} class="addresses">
                   <li :for={board <- row.attention} id={"hall-#{row.hall.id}-attention-#{board.id}"}>
-                    <.state state={board.status} />
-                    <span>{board.name}</span>
+                    <.state state={board.status} /> <span>{board.name}</span>
                   </li>
                 </ul>
               <% else %>
@@ -342,6 +346,7 @@ defmodule AlnaslWeb.HallsLive do
                   {gettext("Nothing needs an arbiter.")}
                 </p>
               <% end %>
+
               <div class="row">
                 <.button id={"hall-#{row.hall.id}-enter"} small href={~p"/halls/#{row.hall.id}/enter"}>
                   {gettext("To its boards")}
@@ -371,6 +376,7 @@ defmodule AlnaslWeb.HallsLive do
     <Layouts.app
       flash={@flash}
       nav={:halls}
+      help={:halls}
       link={@link}
       hall={@hall}
       update={@update}
@@ -415,6 +421,7 @@ defmodule AlnaslWeb.HallsLive do
                       options={role_options()}
                     />
                   </form>
+
                   <.button
                     id={"member-#{member.id}-remove"}
                     small
@@ -429,6 +436,7 @@ defmodule AlnaslWeb.HallsLive do
                 <% else %>
                   <span class="note">{Words.role(member.role)}</span>
                 <% end %>
+
                 <.button
                   :if={@admin?}
                   id={"member-#{member.id}-temporary"}
@@ -456,6 +464,7 @@ defmodule AlnaslWeb.HallsLive do
             <dl class="note">
               <%= for role <- Alnasl.Halls.Member.roles() do %>
                 <dt>{Words.role(role)}</dt>
+
                 <dd>{Words.role_means(role)}</dd>
               <% end %>
             </dl>
@@ -488,16 +497,17 @@ defmodule AlnaslWeb.HallsLive do
                   email: @invite_link.email
                 )}
               </p>
+
               <p id="invite-link" class="addresses mono">{@invite_link.url}</p>
             </div>
 
             <ul :if={@invitations != []} id="invitations" class="dests">
               <li :for={i <- @invitations} id={"invitation-#{i.id}"} class="row">
-                <span class="mono">{i.email}</span>
-                <span class="note">{Words.role(i.role)}</span>
+                <span class="mono">{i.email}</span> <span class="note">{Words.role(i.role)}</span>
                 <span class="note">
                   {gettext("until %{date}", date: Calendar.strftime(i.expires_at, "%Y-%m-%d"))}
                 </span>
+
                 <.button
                   id={"invitation-#{i.id}-withdraw"}
                   small
@@ -513,6 +523,8 @@ defmodule AlnaslWeb.HallsLive do
         </.panel>
 
         <.panel id="hall-bridges" title={gettext("Bridges")}>
+          <:actions><AlnaslWeb.Components.ManualLink.manual_link topic={:bridges} /></:actions>
+
           <BridgeComponents.bridges
             bridges={@bridges}
             join={@bridge_join}
