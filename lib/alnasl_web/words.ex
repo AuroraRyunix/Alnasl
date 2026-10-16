@@ -832,6 +832,7 @@ defmodule AlnaslWeb.Words do
       )
 
   defp log("hall.created", d), do: gettext("A hall was made: %{name}.", name: d["name"])
+  defp log("hall.deleted", d), do: gettext("A hall was deleted: %{name}.", name: d["name"])
 
   defp log("account.first", _d),
     do: gettext("The box's first account was made. Every page asks who is there from now on.")
