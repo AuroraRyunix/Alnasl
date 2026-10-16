@@ -23,7 +23,7 @@ defmodule Alnasl.MisreadMoveTest do
   defp put(board, square, piece), do: put_elem(board, sq(square), piece)
   defp move(board, from, to), do: board |> put(to, elem(board, sq(from))) |> lift(from)
 
-  defp feed(tr, timed, tail \\ 10_000) do
+  defp feed(tr, timed, tail) do
     {tr, out, last} =
       Enum.reduce(timed, {tr, [], 0}, fn {t, what}, {tr, out, _last} ->
         {tr, out} = ticks(tr, t, out)

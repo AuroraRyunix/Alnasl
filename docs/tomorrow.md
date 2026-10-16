@@ -119,7 +119,7 @@ mix alnasl.dgt --port COM3 --seconds 180 --out captures/single-1.jsonl
 |---|---|
 | `tx` lines and never an `rx` | wrong port, wrong cable, the board has no power. (Not "still in bus mode": a board answers single-board commands in bus mode too, as 2026-10-12 showed) |
 | `info %{error: ":eacces"}` every 3 s | another program has the port (LiveChess, a terminal, a second `mix alnasl.dgt`). Close it; the driver gets in by itself |
-| `rx` bytes but no `position` | the framing in `lib/alnasl/dgt/protocol.ex` does not match. **Keep the capture**: it holds the bytes |
+| `rx` bytes but no `position` | the framing in Arkab's `lib/arkab/dgt/protocol.ex` does not match. **Keep the capture**: it holds the bytes |
 | a position, but mirrored (White's pieces on rank 8) | the board is the other way round. Fine: the box turns it by itself. Note it down |
 | a position with wrong pieces | the piece codes differ. Keep the capture |
 
@@ -279,7 +279,7 @@ branch):
 | File | Used for |
 |---|---|
 | `single-1.jsonl` | (Done for the handshake and the clock: `docs/real-board-2026-10-12.md`.) Each `ASSUMED` in `protocol.ex` is checked against the `rx` bytes and corrected; the bytes become a test fixture; the tracker's handling of real hands (lift times, capture order, slides) is compared with your notes, and the timings in Setup adjusted if real hands are slower or faster than the simulator's |
-| `loop-live.jsonl` | The three things `Alnasl.Dgt.Bus` still calls ASSUMED: a move in the next "what changed?", the clock's times on the bus, "repeat". Each becomes a fixture and loses the word, or the driver is corrected |
+| `loop-live.jsonl` | The three things `Arkab.Dgt.Bus` still calls ASSUMED: a move in the next "what changed?", the clock's times on the bus, "repeat". Each becomes a fixture and loses the word, or the driver is corrected |
 | the labels | whether a newer board's number on the loop can be worked out from its serial number, and whether two of them can share one |
 | step 2 captures | A whole game through the real driver: the first real fixture for the test suite |
 

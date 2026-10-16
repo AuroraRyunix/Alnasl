@@ -957,7 +957,7 @@ starts it again.
 Several DGT boards on one serial line. `docs/real-loop-2026-10-12.md` is
 what a real one sent; this is what the box does with it.
 
-**Who is on a line** (`Alnasl.Dgt.Loop`) is asked whenever a port is opened
+**Who is on a line** (`Arkab.Dgt.Loop`) is asked whenever a port is opened
 by somebody who does not know: when a port is added, and each time the
 single-board driver opens one. The bus-mode byte, then a ping to
 everybody; each board answers with its address after a wait of its own
@@ -984,7 +984,7 @@ place to the row the box already has for that serial. A newer board's
 address says nothing of its serial number, so its identity on a loop is
 `{:address, n}` ("no. 12799 on the loop") until a row knows both.
 
-**The questions** (`Alnasl.Driver.DgtBus`), one at a time, no pause
+**The questions** (`Arkab.Driver.DgtBus`), one at a time, no pause
 between an answer and the next question:
 
 | Question | When | Costs |

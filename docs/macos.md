@@ -159,7 +159,7 @@ Then the first start is a double-click.
 Every adapter appears twice, `/dev/tty.usbserial-XXXX` and
 `/dev/cu.usbserial-XXXX` (a DGT USB board: `usbmodem...`). The `tty.` one is
 for dial-in and waits for a carrier signal a board never sends, so Alnasl
-lists only the `cu.` one (`Alnasl.Transport.Uart.one_per_device/1`). Pick
+lists only the `cu.` one (`Arkab.Transport.Uart.one_per_device/1`). Pick
 `/dev/cu.usbserial-...` or `/dev/cu.usbmodem...`; `Bluetooth-Incoming-Port`
 and `debug-console` are the Mac's own and never a board.
 

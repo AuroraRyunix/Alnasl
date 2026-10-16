@@ -4,7 +4,7 @@ A DGT board (serial number **06310**, firmware **1.9**) on its own USB
 serial port (COM4, 9600 8N1), with a DGT clock on its clock socket and one
 black knight on it. Two recordings were made with `mix alnasl.dgt`; this is
 every kind of message in them, what the driver made of each, and what that
-settles about the constants in `lib/alnasl/dgt/protocol.ex`.
+settles about the constants in Arkab's `lib/arkab/dgt/protocol.ex`.
 
 The recordings themselves stay out of the repository (`captures/` is
 ignored). The parts that matter are test fixtures -
@@ -51,7 +51,7 @@ whole, the last message complete).
 | Flag bits in the high nibble of the hours | PUBLISHED | still unverified | never set (the `7` in `71 3F 7F` is a dead clock, not a flag) |
 | Battery message id 0x20, long serial number id 0x22 | ASSUMED | still unverified | not sent by this board |
 | Bus address, trademark, EEPROM moves | PUBLISHED | still unverified | never asked for |
-| Everything in `lib/alnasl/dgt/bus.ex` | ASSUMED | still ASSUMED that morning; a loop was read the same afternoon: `docs/real-loop-2026-10-12.md` | one board on its own cable says nothing about a loop |
+| Everything in Arkab's `lib/arkab/dgt/bus.ex` | ASSUMED | still ASSUMED that morning; a loop was read the same afternoon: `docs/real-loop-2026-10-12.md` | one board on its own cable says nothing about a loop |
 
 ## Every message, with its bytes
 
@@ -163,7 +163,7 @@ ranks 1-2. The cable is too short for it to stand anywhere else, and DGT's
 own LiveChess assumes exactly that. So:
 
 - bytes 3-5 and bit 4 are White's, bytes 0-2 and bit 3 are Black's. One
-  place says so: `Alnasl.Dgt.Protocol.reading/1`;
+  place says so: `Arkab.Dgt.Protocol.reading/1`;
 - the `clock_white` option of the serial driver is **gone**, with the
   second argument of `reading/2`. There is no setting, and no control on
   any page, to swap the sides of a clock. A test (`board_server_test.exs`)
@@ -266,12 +266,12 @@ driver into a board process, in `board_server_test.exs`):
 
 ## What changed in the code
 
-- `Alnasl.Dgt.Protocol`: the clock message decoded as `black_ms` /
+- `Arkab.Dgt.Protocol`: the clock message decoded as `black_ms` /
   `white_ms` (was `right_ms` / `left_ms`); `reading/1` (was `reading/2`
   with a side) gives `running` and `armed`; the lever's sense corrected; a
   "no clock" message is `{:info, %{clock: false}}`; comments say CONFIRMED
   where this capture shows it, and only there.
-- `Alnasl.Driver.DgtSerial`: no `clock_white`; "no clock" reported once.
+- `Arkab.Driver.DgtSerial`: no `clock_white`; "no clock" reported once.
 - `Alnasl.Clock`: `armed`, `started`, `off/2`, `first/1`,
   `start_check/2`.
 - `Alnasl.Session`: the clock alarm; a clock switched off; `clock_check/1`.
