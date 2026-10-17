@@ -1,8 +1,9 @@
 # Plan: the Alnasl UI, rethought
 
-Status: proposal (2026-10-17), nothing built. Written after the hosted
-server went live and an account-wide OpenPairings link filled the front page
-with every board of every tournament.
+Status (2026-10-17): steps 0 to 4 are built; the glossary of H is
+[glossary.md](glossary.md) and the manual's "Words used here". Written after
+the hosted server went live and an account-wide OpenPairings link filled the
+front page with every board of every tournament.
 
 ## What is wrong today (the short list)
 

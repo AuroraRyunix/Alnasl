@@ -1,6 +1,6 @@
 # Recording, replay and troubleshooting
 
-The box writes down everything the boards say, so that a game that went wrong in the hall can be looked at again at a desk. This chapter covers that, the other pages that keep a record, and what to do when something is wrong.
+Alnasl writes down everything the boards say, so that a game that went wrong in the hall can be looked at again at a desk. This chapter covers that, the other pages that keep a record, and what to do when something is wrong.
 
 ## Recordings and replay {#recordings}
 
@@ -46,11 +46,11 @@ The clock was pressed more often than moves were seen. Compare the board with th
 
 ### "Code refused" under Connections in Setup {#code-refused}
 
-OpenPairings does not accept the connect code: it was withdrawn there, or it is not the whole line. The box has stopped asking, and the boards go on with the pairings it has. Make a new code in OpenPairings (Settings, Live boards), add it, and remove the old one.
+OpenPairings does not accept the connect code: it was withdrawn there, or it is not the whole line. Alnasl has stopped asking, and the boards go on with the pairings it has. Make a new code in OpenPairings (Settings, Live boards), add it, and remove the old one.
 
 ### "No answer" under Connections in Setup {#no-answer}
 
-OpenPairings cannot be reached. Nothing is lost: the boards go on with the pairings the box has, the games are kept for it, and the box asks again by itself. A round paired meanwhile is started with "Start round N" and takes its names when the connection is back.
+OpenPairings cannot be reached. Nothing is lost: the boards go on with the pairings Alnasl has, the games are kept for it, and Alnasl asks again by itself. A round paired meanwhile is started with "Start round N" and takes its names when the connection is back.
 
 ### A tournament has no results page {#no-results-page}
 

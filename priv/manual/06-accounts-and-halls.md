@@ -27,7 +27,7 @@ A hall's own page has tabs, each with an address of its own: **People**, **Invit
 
 ### What a page shows {#scope}
 
-Every page is about the hall you are looking at: Live, Boards, the pages that number and find boards, PGN, the Outbox (its lists, its counts and the number in the frame), the Log and Recordings. Boards offers only the tournaments played in this hall for each board, and the one the board plays in now.
+Every page is about the hall you are looking at: Live, Boards, the pages that number and find boards, Games, the Results page (its lists, its counts and the number in the frame), the Log and Recordings. Boards offers only the tournaments played in this hall for each board, and the one the board plays in now.
 
 The Log and Recordings can also show **All my halls**: tick it and they list every hall you may see. They hold fifty lines or files a page, with a search box. A box without accounts has no halls to tell apart, and shows everything.
 
@@ -53,7 +53,7 @@ In each hall an account is an owner, an arbiter or a viewer. The same person can
 | Viewer | Follow the games. Changes nothing |
 | Arbiter | Run them: tables, rounds, results, corrections, the links to OpenPairings and OpenResults |
 | Owner | All that, and add and remove bridges, and invite people |
-| Admin | See every hall and the box itself: its name, updates, the tracker, the switches on the Results page |
+| Admin | See every hall and Alnasl itself: its name, updates, the tracker, the switches on the Results page |
 
 For a tournament played in more than one hall, the highest role you have in any of them counts - for what happens to it in that hall. The rest needs the role where it happens:
 
@@ -67,7 +67,7 @@ A viewer who presses a button that changes something is told that their role let
 
 ## Inviting people {#inviting}
 
-On a hall's **Invitations** tab, "Invite" makes a link for one address and one role, good once and for a week. The box sends no mail: copy the link to the person yourself. Whoever opens it makes the account for that address, with a password or with 02cloud, or signs in and joins the hall. An open invitation can be withdrawn.
+On a hall's **Invitations** tab, "Invite" makes a link for one address and one role, good once and for a week. Alnasl sends no mail: copy the link to the person yourself. Whoever opens it makes the account for that address, with a password or with 02cloud, or signs in and joins the hall. An open invitation can be withdrawn.
 
 A hall keeps at least one owner: you cannot take the last one out. Make someone else owner first.
 
@@ -75,7 +75,7 @@ A hall keeps at least one owner: you cannot take the last one out. Make someone 
 
 On a hall's **Settings** tab, an owner (or an admin) finds "Delete this hall". It asks you to type the hall's name, and only then does the button work. The people, the open invitations, the join codes and the boards of the hall go with it.
 
-A hall that still has bridges, tournaments or a connection to OpenPairings is not deleted: the message says what is left ("2 bridges and 1 tournament"), and you remove those first. That way no game is ever thrown away by this button. The box's own hall can never be deleted. Anyone who had the deleted hall open lands on another hall of theirs.
+A hall that still has bridges, tournaments or a connection to OpenPairings is not deleted: the message says what is left ("2 bridges and 1 tournament"), and you remove those first. That way no game is ever thrown away by this button. Alnasl's own hall (on a box, the hall of its own ports) can never be deleted. Anyone who had the deleted hall open lands on another hall of theirs.
 
 ## Signing in {#signing-in}
 
