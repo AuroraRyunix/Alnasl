@@ -19,6 +19,8 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-17
+
 - [Fix] **The account menu is drawn over the page, not under it.** The rail is sticky, which makes it a stacking context, and without a level of its own it was painted in document order: the manual's contents, sticky and later in the page, landed on top of the theme buttons. The rail now has a level above the page, so what opens from it, the account menu and the hall picker, stays above everything on every page and theme.
 - [Change] **An empty Boards page on the server talks about bridges.** It used to invite you to plug a DGT board into a serial port the server does not have. It now says boards arrive through bridges, lists this hall's bridges with their state and how many boards each reports, and links to the hall's Bridges tab; a hall with none is told so in one sentence. The box keeps its serial ports.
 
