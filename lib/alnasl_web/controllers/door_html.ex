@@ -5,37 +5,33 @@ defmodule AlnaslWeb.DoorHTML do
 
   def unlock(assigns) do
     ~H"""
-    <main class="door">
-      <p class="door-brand"><.logo /> <b>Alnasl</b></p>
-      <.panel id="door" title={gettext("This box asks for a PIN")}>
-        <form id="unlock-form" action={~p"/unlock"} method="post" class="stack">
-          <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
-          <p class="note">
-            {gettext("You are reaching Alnasl from another machine. The arbiter set a PIN for that.")}
-          </p>
-          <.input
-            id="unlock-pin"
-            name="pin"
-            value=""
-            type="password"
-            label={gettext("PIN")}
-            autocomplete="off"
-            inputmode="numeric"
-            required
-          />
-          <p
-            :if={@error}
-            id="unlock-error"
-            class="error"
-            role="alert"
-            style="color:var(--bad);font-weight:600"
-          >
-            {@error}
-          </p>
-          <.button id="unlock-submit" variant="primary" type="submit">{gettext("Open")}</.button>
-        </form>
-      </.panel>
-    </main>
+    <Layouts.door flash={@flash} id="door" title={gettext("This box asks for a PIN")}>
+      <form id="unlock-form" action={~p"/unlock"} method="post" class="stack">
+        <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
+        <p class="note">
+          {gettext("You are reaching Alnasl from another machine. The arbiter set a PIN for that.")}
+        </p>
+        <.input
+          id="unlock-pin"
+          name="pin"
+          value=""
+          type="password"
+          label={gettext("PIN")}
+          autocomplete="off"
+          inputmode="numeric"
+          required
+        />
+        <p
+          :if={@error}
+          id="unlock-error"
+          class="error bad-text strong"
+          role="alert"
+        >
+          {@error}
+        </p>
+        <.button id="unlock-submit" variant="primary" type="submit">{gettext("Open")}</.button>
+      </form>
+    </Layouts.door>
     """
   end
 end
