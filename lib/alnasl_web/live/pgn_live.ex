@@ -53,7 +53,8 @@ defmodule AlnaslWeb.PgnLive do
       rounds: Enum.uniq(Tournaments.rounds(tid) ++ Games.rounds(tid) ++ [round]) |> Enum.sort(),
       numbers: tid |> Tournaments.boards(round) |> Enum.map(& &1.board),
       shown: shown,
-      names: Map.new(shown, &{&1.id, Tournaments.title(&1) || gettext("This box")})
+      names:
+        Map.new(shown, &{&1.id, Tournaments.title(&1) || gettext("The hall's own tournament")})
     )
   end
 
@@ -216,7 +217,7 @@ defmodule AlnaslWeb.PgnLive do
      |> put_flash(
        :info,
        gettext(
-         "The game is now board %{n} of round %{r}, and is on its way to the results server.",
+         "The game is now board %{n} of round %{r}, and is on its way to the results site.",
          n: number,
          r: socket.assigns.round
        )
@@ -238,7 +239,7 @@ defmodule AlnaslWeb.PgnLive do
       {:noreply, assign(socket, verdicts: Map.put(socket.assigns.verdicts, i, verdict))}
     else
       {:game, nil} ->
-        {:noreply, put_flash(socket, :error, gettext("The box has no game for that board yet."))}
+        {:noreply, put_flash(socket, :error, gettext("Alnasl has no game for that board yet."))}
 
       _none ->
         {:noreply, put_flash(socket, :error, gettext("Choose the board to compare with first."))}
@@ -328,14 +329,14 @@ defmodule AlnaslWeb.PgnLive do
           class="row"
         >
           <label for="pgn-tournament" class="note">{gettext("Tournament")}</label>
-          <select id="pgn-tournament" name="tournament_id" class="input" style="width:auto">
+          <select id="pgn-tournament" name="tournament_id" class="input fit">
             <option :for={t <- @shown} value={t.id} selected={t.id == @tid}>{@names[t.id]}</option>
           </select>
         </form>
 
         <form id="pgn-round-form" phx-change="round" class="row">
           <label for="pgn-round" class="note">{gettext("Round")}</label>
-          <select id="pgn-round" name="round" class="input" style="width:auto">
+          <select id="pgn-round" name="round" class="input fit">
             <option :for={n <- @rounds} value={n} selected={n == @round}>{n}</option>
           </select>
         </form>
@@ -354,12 +355,11 @@ defmodule AlnaslWeb.PgnLive do
               {entry.client_name}
               <span
                 :for={err <- upload_errors(@uploads.pgn, entry)}
-                class="error"
-                style="color:var(--bad)"
+                class="error bad-text"
               >{upload_error(err)}</span>
             </p>
 
-            <p :for={err <- upload_errors(@uploads.pgn)} class="error" style="color:var(--bad)">
+            <p :for={err <- upload_errors(@uploads.pgn)} class="error bad-text">
               {upload_error(err)}
             </p>
 
@@ -372,8 +372,7 @@ defmodule AlnaslWeb.PgnLive do
             for={@paste_form}
             id="paste-form"
             phx-submit="paste"
-            class="stack"
-            style="margin-top:1rem"
+            class="stack mt-6"
           >
             <.input
               field={@paste_form[:text]}
@@ -401,8 +400,13 @@ defmodule AlnaslWeb.PgnLive do
             >{gettext("Whole round as PGN")}</.button>
           </:actions>
 
-          <div :if={@stored == []} class="empty">
-            {gettext("The box has no games for this round yet.")}
+          <div :if={@stored == []} id="stored-empty" class="empty">
+            <b>{gettext("Alnasl has no games for this round yet")}</b>
+            <p>
+              {gettext(
+                "A game appears here once a board plays it, or when you attach one from a PGN below. Another round? Pick it above."
+              )}
+            </p>
           </div>
 
           <table :if={@stored != []} id="stored-games">
@@ -453,7 +457,7 @@ defmodule AlnaslWeb.PgnLive do
         <.icon name="warning" />
         <div>
           <b>{gettext("%{n} game(s) could not be used", n: length(@problems))}</b>
-          <ul style="margin:0.3rem 0 0;padding-left:1.1rem;color:var(--ink)">
+          <ul class="callout-list">
             <li :for={{index, white, black, message} <- @problems}>
               {gettext("Game %{i} (%{white} - %{black}): %{message}",
                 i: index,
@@ -482,16 +486,16 @@ defmodule AlnaslWeb.PgnLive do
           )}</b>
           <p :if={existing && existing.plies != "[]"}>
             {gettext(
-              "The box already has a game of %{n} move(s) for that board. It will be replaced, here and on the results server.",
+              "Alnasl already has a game of %{n} move(s) for that board. It will be replaced, here and on the results site.",
               n: div(length(Games.sans(existing)) + 1, 2)
             )}
           </p>
 
           <p :if={!existing || existing.plies == "[]"}>
-            {gettext("It will be sent to the results server as that board's game.")}
+            {gettext("It will be sent to the results site as that board's game.")}
           </p>
 
-          <div class="row" style="margin-top:0.5rem">
+          <div class="row mt-3">
             <.button id="attach-yes" variant="primary" phx-click="attach">{gettext("Yes, attach it")}</.button>
             <.button id="attach-no" phx-click="cancel_attach">{gettext("No")}</.button>
           </div>
@@ -546,7 +550,7 @@ defmodule AlnaslWeb.PgnLive do
                   <form id={"target-form-#{i}"} phx-change="target">
                     <input type="hidden" name="index" value={i} />
                     <label class="sr-only" for={"target-#{i}"}>{gettext("Board for game %{i}", i: i)}</label>
-                    <select id={"target-#{i}"} name="board_no" class="input" style="width:auto">
+                    <select id={"target-#{i}"} name="board_no" class="input fit">
                       <option value="">{gettext("choose...")}</option>
 
                       <option

@@ -239,7 +239,7 @@ defmodule AlnaslWeb.PagesTest do
       form.(good) |> render_submit(%{"intent" => "test"})
       html = eventually_html(view, fn _ -> has_element?(view, "#test-result") end)
 
-      assert html =~ "The server answers." and html =~ "relay key is accepted"
+      assert html =~ "The results site answers." and html =~ "relay key is accepted"
 
       # The box does not read the tournament from the results server any
       # more: the test is the address and the key.
@@ -305,7 +305,7 @@ defmodule AlnaslWeb.PagesTest do
 
       assert view
              |> form("#server-form", server: %{server_url: "", tournament: "", relay_key: ""})
-             |> render_submit() =~ "Give the server"
+             |> render_submit() =~ "Give the results site"
     end
 
     test "the box: name, language, round, and whether mate is offered without the arbiter", %{
@@ -461,7 +461,7 @@ defmodule AlnaslWeb.PagesTest do
       own_put(relay_key: "orrk_wrong")
       Games.ensure(1, 2) |> Outbox.enqueue(nil, true)
       html = eventually_html(view, fn _ -> has_element?(view, "#offline-banner.bad") end)
-      assert html =~ "refuses this box"
+      assert html =~ "refuses what Alnasl sends"
       assert has_element?(view, "#last-error", "does not accept the relay key")
     end
   end
@@ -616,7 +616,7 @@ defmodule AlnaslWeb.PagesTest do
 
       {:ok, view, html} = live(conn, ~p"/log")
       assert html =~ "Reconstructed, not seen one by one (one line fits): Nf3 Nc6"
-      assert html =~ "Arbiter at the box: last move (Nf3) taken back."
+      assert html =~ "Arbiter in Alnasl: last move (Nf3) taken back."
       assert has_element?(view, "#log-lines li.error", "Out of sync")
       assert has_element?(view, "#log-lines .where", "R1 board 7")
 

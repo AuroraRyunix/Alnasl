@@ -21,7 +21,7 @@ Eén handeling, op één plaats, en niemand typt een sleutel.
 
 1. Open op Alnasl de pagina van de zaal waar de borden bij horen: Zalen, dan de zaal, dan haar tabblad **Bruggen** (Instellingen, Toegang - Deze server op de server - heeft een knop "Bruggen van deze zaal" die er voor de zaal waar je naar kijkt meteen heen leidt). Druk op "Een brug toevoegen".
 2. Er verschijnt een link en hetzelfde als QR-code. De link is goed voor **één brug en vijftien minuten**, en zegt tot wanneer.
-3. Op de pagina van de brug, "Aansluiten bij een server": plak de link, of scan de code met de camera. Druk op Aansluiten.
+3. Op de pagina van de brug, "Aansluiten bij een server": plak de link, of scan de code met de camera. Druk op Aansluiten. (Een telefoon die de link in zijn eigen browser opent, krijgt een pagina die zegt dat de link voor een brug is, en waar je hem plakt.)
 4. De brug toont "Aangesloten." en de server staat in haar lijst. Op Alnasl verschijnt de brug in de lijst van bruggen van de zaal, met haar naam en "verbonden".
 
 Daarna heeft de brug een eigen sleutel, die ze zelf opgehaald heeft. Niemand ziet hem ooit, leest hem voor of kopieert hem, en Alnasl bewaart enkel een hash ervan. Is de link verlopen voor hij gebruikt werd, druk dan opnieuw op "Een brug toevoegen".

@@ -150,7 +150,7 @@ defmodule AlnaslWeb.OpenPairingsConnectControllerTest do
 
     test "an account with every box slot taken", %{conn: conn} do
       back = round_trip(conn, %{"error" => "too_many_codes"})
-      assert flash_error(back) =~ "already has 8 boxes"
+      assert flash_error(back) =~ "already has 8 copies of Alnasl"
     end
 
     test "a grant used or run out", %{conn: conn} do

@@ -11,7 +11,7 @@ defmodule AlnaslWeb.AccountHTML do
       <div class="stack">
         <p id="account-email" class="mono">{@user.email}</p>
         <p :if={@scope.admin?} id="account-admin" class="note">
-          {gettext("You are an admin: every hall, and the box itself.")}
+          {gettext("You are an admin: every hall, and Alnasl itself.")}
         </p>
         <ul id="account-halls" class="addresses">
           <li :for={{hall, role} <- @roles} id={"account-hall-#{hall.id}"}>

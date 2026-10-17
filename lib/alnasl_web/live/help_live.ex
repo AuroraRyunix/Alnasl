@@ -417,7 +417,7 @@ defmodule AlnaslWeb.HelpLive do
 
                 <p class="manual-lede">
                   {gettext(
-                    "Everything the box does, from the first board to the last PGN, written for the arbiter in the hall. New here? Start with Getting started."
+                    "Everything Alnasl does, from the first board to the last PGN, written for the arbiter in the hall. New here? Start with Getting started."
                   )}
                 </p>
 

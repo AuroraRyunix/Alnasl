@@ -91,7 +91,8 @@ defmodule AlnaslWeb.BoardsLive do
       rounds: Enum.uniq(Tournaments.rounds(tid) ++ [round]) |> Enum.sort(),
       tournaments: tournaments,
       shown: Alnasl.Halls.active(scope),
-      names: Map.new(everyone, &{&1.id, Tournaments.title(&1) || gettext("This box")}),
+      names:
+        Map.new(everyone, &{&1.id, Tournaments.title(&1) || gettext("The hall's own tournament")}),
       by_id: Map.new(everyone, &{&1.id, &1}),
       hall_id: Alnasl.Accounts.Scope.hall_id(scope),
       hall_bridges: hall_bridges(scope),
@@ -493,14 +494,14 @@ defmodule AlnaslWeb.BoardsLive do
           class="row"
         >
           <label for="boards-tournament" class="note">{gettext("Tournament")}</label>
-          <select id="boards-tournament" name="tournament_id" class="input" style="width:auto">
+          <select id="boards-tournament" name="tournament_id" class="input fit">
             <option :for={t <- @shown} value={t.id} selected={t.id == @tid}>{@names[t.id]}</option>
           </select>
         </form>
 
         <form id="boards-round-form" phx-change="round" class="row">
           <label for="boards-round" class="note">{gettext("Linking for round")}</label>
-          <select id="boards-round" name="round" class="input" style="width:auto">
+          <select id="boards-round" name="round" class="input fit">
             <option :for={n <- @rounds} value={n} selected={n == @round}>{n}</option>
           </select>
         </form>
@@ -542,7 +543,7 @@ defmodule AlnaslWeb.BoardsLive do
 
         <span>
           {gettext(
-            "An electronic board carries its serial number on a label underneath. Lift a piece on the board you think it is: the box says whether you are right."
+            "An electronic board carries its serial number on a label underneath. Lift a piece on the board you think it is: Alnasl says whether you are right."
           )}
         </span>
 
@@ -596,17 +597,16 @@ defmodule AlnaslWeb.BoardsLive do
           for={@swap_form}
           id="swap-form"
           phx-submit="swap"
-          class="row"
-          style="margin-top:0.8rem"
+          class="row mt-5"
         >
           <label for="swap-a" class="note">{gettext("For this round, swap the boards of")}</label>
-          <select id="swap-a" name="swap[a]" class="input" style="width:auto">
+          <select id="swap-a" name="swap[a]" class="input fit">
             <option value="">{gettext("choose...")}</option>
 
             <option :for={s <- @snapshots} value={s.id}>{s.name}</option>
           </select>
           <label for="swap-b" class="note">{gettext("and")}</label>
-          <select id="swap-b" name="swap[b]" class="input" style="width:auto">
+          <select id="swap-b" name="swap[b]" class="input fit">
             <option value="">{gettext("choose...")}</option>
 
             <option :for={s <- @snapshots} value={s.id}>{s.name}</option>
@@ -636,8 +636,7 @@ defmodule AlnaslWeb.BoardsLive do
               min="1"
               name="order[first]"
               value={@order_form[:first].value}
-              class="input"
-              style="width:4.5rem"
+              class="input num-s"
             />
             <.button
               id="link-in-order"
@@ -878,7 +877,7 @@ defmodule AlnaslWeb.BoardsLive do
                         {gettext("Clock wrong")}
                       </.badge>
 
-                      <div class="note" style="margin-top:0.2rem">
+                      <div class="note mt-1">
                         {Words.clock_problem(s[:clock_check])}
                       </div>
                     <% s.problems == [] -> %>
@@ -892,7 +891,7 @@ defmodule AlnaslWeb.BoardsLive do
                         {gettext("%{n} wrong", n: length(s.problems))}
                       </.badge>
 
-                      <ul class="note" style="margin:0.2rem 0 0;padding-left:1rem">
+                      <ul class="note mt-1 tight-list">
                         <li :for={p <- Enum.take(s.problems, 3)}>{Words.problem(p)}</li>
 
                         <li :if={length(s.problems) > 3}>
@@ -939,8 +938,7 @@ defmodule AlnaslWeb.BoardsLive do
                     <select
                       id={"tournament-#{s.id}"}
                       name="tournament_id"
-                      class="input"
-                      style="width:auto;max-width:11rem"
+                      class="input fit narrow"
                     >
                       <option
                         :for={t <- row_options(@tournaments, @by_id, s[:tournament_id])}
@@ -982,7 +980,7 @@ defmodule AlnaslWeb.BoardsLive do
                     <label class="sr-only" for={"link-#{s.id}"}>{gettext("Board number for %{name}",
                       name: s.name
                     )}</label>
-                    <select id={"link-#{s.id}"} name="board_no" class="input" style="width:auto">
+                    <select id={"link-#{s.id}"} name="board_no" class="input fit">
                       <option value="">{gettext("not linked")}</option>
 
                       <option

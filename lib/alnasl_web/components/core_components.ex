@@ -410,7 +410,7 @@ defmodule AlnaslWeb.CoreComponents do
         <input type="hidden" name={@name} value="false" disabled={@rest[:disabled]} />
         <input type="checkbox" id={@id} name={@name} value="true" checked={@checked} {@rest} />
         <span>
-          {@label}<span :if={@hint} class="hint" style="display:block">{@hint}</span>
+          {@label}<span :if={@hint} class="hint own-line">{@hint}</span>
         </span>
       </label>
 

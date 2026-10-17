@@ -540,7 +540,7 @@ defmodule AlnaslWeb.TablesAndOutputsTest do
       FakeLichess.install()
       {:ok, view, _html} = live(conn, ~p"/outbox")
 
-      assert has_element?(view, "#destinations #dest-openresults", "Results server")
+      assert has_element?(view, "#destinations #dest-openresults", "Results site")
       assert has_element?(view, "#dest-lichess", "Lichess broadcast")
       assert has_element?(view, "#dest-waiting-lichess", "0 waiting")
 

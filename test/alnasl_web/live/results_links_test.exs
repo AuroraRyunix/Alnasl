@@ -126,7 +126,7 @@ defmodule AlnaslWeb.ResultsLinksTest do
     } do
       {:ok, view, _html} = live(conn, ~p"/round/1")
       eventually_html(view, fn _ -> has_element?(view, "#tile-3 [data-state=finished]") end)
-      assert has_element?(view, "#tile-new-game-3[phx-value-kind=extra]", "stays on this box")
+      assert has_element?(view, "#tile-new-game-3[phx-value-kind=extra]", "stays in Alnasl")
       assert has_element?(view, "#tile-new-game-replace-3", "replaces the game of the pairing")
       refute has_element?(view, "#tile-local-3")
 
@@ -154,17 +154,17 @@ defmodule AlnaslWeb.ResultsLinksTest do
       view |> element("#new-game") |> render_click()
       assert Boards.snapshot(board.id).game_no == 2
 
-      assert has_element?(view, "#game-local", "This game stays on the box")
+      assert has_element?(view, "#game-local", "This game stays in Alnasl")
       assert has_element?(view, "#game-local", "game 2 on this board")
-      assert has_element?(view, "#game-here-where-1", "leaves the box")
-      assert has_element?(view, "#game-here-where-2", "stays on the box")
+      assert has_element?(view, "#game-here-where-1", "leaves Alnasl")
+      assert has_element?(view, "#game-here-where-2", "stays in Alnasl")
       # A link to the other game's page would show the wrong game.
       refute has_element?(view, "#game-site-link")
 
       view |> element("#send-this-instead") |> render_click()
       refute has_element?(view, "#game-local")
-      assert has_element?(view, "#game-here-where-2", "leaves the box")
-      assert has_element?(view, "#game-here-where-1", "stays on the box")
+      assert has_element?(view, "#game-here-where-2", "leaves Alnasl")
+      assert has_element?(view, "#game-here-where-1", "stays in Alnasl")
       assert has_element?(view, "#game-site-link")
     end
 

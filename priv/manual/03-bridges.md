@@ -21,7 +21,7 @@ One action, in one place, and nobody types a key.
 
 1. On Alnasl, open the page of the hall the boards are in: Halls, then the hall, then its **Bridges** tab (Setup, Access - This server on the server - has a "Bridges of this hall" button that leads straight there for the hall you are looking at). Press "Add a bridge".
 2. It shows a link and the same thing as a QR code. The link is good for **one bridge and fifteen minutes**, and says until when.
-3. On the bridge's page, "Join a server": paste the link, or scan the code with the camera. Press Join.
+3. On the bridge's page, "Join a server": paste the link, or scan the code with the camera. Press Join. (A phone that opens the link in its own browser gets a page saying the link is for a bridge, and where to paste it.)
 4. The bridge shows "Joined." and the server appears in its list. On Alnasl the bridge appears in the hall's list of bridges, with its name and "connected".
 
 After that the bridge has a key of its own, which it fetched itself. Nobody ever sees it, reads it aloud or copies it, and Alnasl keeps only a hash of it. If the link runs out before it was used, press "Add a bridge" again.

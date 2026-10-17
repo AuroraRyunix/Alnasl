@@ -27,7 +27,7 @@ De pagina van een zaal heeft tabbladen, elk met een eigen adres: **Mensen**, **U
 
 ### Wat een pagina toont {#scope}
 
-Elke pagina gaat over de zaal waar je naar kijkt: Live, Borden, de pagina's die borden nummeren en zoeken, PGN, de Wachtrij (haar lijsten, haar tellers en het getal in de omlijsting), het Logboek en Opnames. Bij Borden biedt elk bord alleen de toernooien die in deze zaal gespeeld worden, plus dat waarin het bord nu speelt.
+Elke pagina gaat over de zaal waar je naar kijkt: Live, Borden, de pagina's die borden nummeren en zoeken, Partijen, de pagina Resultaten (haar lijsten, haar tellers en het getal in de omlijsting), het Logboek en Opnames. Bij Borden biedt elk bord alleen de toernooien die in deze zaal gespeeld worden, plus dat waarin het bord nu speelt.
 
 Het Logboek en Opnames kunnen ook **Al mijn zalen** tonen: vink het aan en ze tonen elke zaal die je mag zien. Ze tonen vijftig regels of bestanden per pagina, met een zoekvak. Een kastje zonder accounts heeft geen zalen om uit elkaar te houden en toont alles.
 
@@ -53,7 +53,7 @@ In elke zaal is een account eigenaar, arbiter of kijker. Dezelfde persoon kan in
 | Kijker | De partijen volgen. Verandert niets |
 | Arbiter | Ze leiden: tafels, rondes, resultaten, correcties, de koppelingen met OpenPairings en OpenResults |
 | Eigenaar | Dat alles, en bruggen toevoegen en verwijderen, en mensen uitnodigen |
-| Beheerder | Elke zaal zien en het kastje zelf: zijn naam, updates, de tracker, de schakelaars op de pagina Resultaten |
+| Beheerder | Elke zaal zien en Alnasl zelf: zijn naam, updates, de tracker, de schakelaars op de pagina Resultaten |
 
 Voor een toernooi dat in meer dan één zaal gespeeld wordt, telt de hoogste rol die je in een van die zalen hebt - voor wat er in die zaal mee gebeurt. Voor de rest heb je de rol nodig waar het gebeurt:
 
@@ -67,7 +67,7 @@ Een kijker die op een knop drukt die iets verandert, krijgt te horen dat zijn ro
 
 ## Mensen uitnodigen {#inviting}
 
-Op het tabblad **Uitnodigingen** van een zaal maakt "Uitnodigen" een link voor één adres en één rol, één keer bruikbaar en een week geldig. Het kastje stuurt geen mail: kopieer de link zelf naar de persoon. Wie hem opent, maakt het account voor dat adres, met een wachtwoord of met 02cloud, of meldt zich aan en komt in de zaal. Een openstaande uitnodiging kan ingetrokken worden.
+Op het tabblad **Uitnodigingen** van een zaal maakt "Uitnodigen" een link voor één adres en één rol, één keer bruikbaar en een week geldig. Alnasl stuurt geen mail: kopieer de link zelf naar de persoon. Wie hem opent, maakt het account voor dat adres, met een wachtwoord of met 02cloud, of meldt zich aan en komt in de zaal. Een openstaande uitnodiging kan ingetrokken worden.
 
 Een zaal houdt minstens één eigenaar: je kunt de laatste niet uit de zaal halen. Maak eerst iemand anders eigenaar.
 
@@ -75,7 +75,7 @@ Een zaal houdt minstens één eigenaar: je kunt de laatste niet uit de zaal hale
 
 Op het tabblad **Instellingen** van een zaal vindt een eigenaar (of een beheerder) "Deze zaal verwijderen". Je moet de naam van de zaal typen, en pas dan werkt de knop. De mensen, de openstaande uitnodigingen, de koppelcodes en de borden van de zaal gaan mee.
 
-Een zaal die nog bruggen, toernooien of een koppeling met OpenPairings heeft, wordt niet verwijderd: de melding zegt wat er nog is ("2 bruggen en 1 toernooi"), en die haal je eerst weg. Zo gaat er door deze knop nooit een partij verloren. De eigen zaal van het kastje kan nooit verwijderd worden. Wie de verwijderde zaal open had, komt terecht in een andere zaal van hem of haar.
+Een zaal die nog bruggen, toernooien of een koppeling met OpenPairings heeft, wordt niet verwijderd: de melding zegt wat er nog is ("2 bruggen en 1 toernooi"), en die haal je eerst weg. Zo gaat er door deze knop nooit een partij verloren. De eigen zaal van Alnasl (op een kastje de zaal van zijn eigen poorten) kan nooit verwijderd worden. Wie de verwijderde zaal open had, komt terecht in een andere zaal van hem of haar.
 
 ## Aanmelden {#signing-in}
 

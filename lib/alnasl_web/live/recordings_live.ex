@@ -187,7 +187,7 @@ defmodule AlnaslWeb.RecordingsLive do
           {gettext("The capture was played through a fresh tracker. Nothing was saved or sent.")}
         </p>
 
-        <dl class="kv" style="margin-bottom:0.8rem">
+        <dl class="kv mb-5">
           <dt>{gettext("Readings")}</dt>
 
           <dd id="report-events">
@@ -213,7 +213,7 @@ defmodule AlnaslWeb.RecordingsLive do
             <%= if @report.alarms == [] do %>
               {gettext("never")}
             <% else %>
-              <span :for={{t, _why} <- @report.alarms} class="flag" style="margin-right:0.3rem">{at(t)}</span>
+              <span :for={{t, _why} <- @report.alarms} class="flag mr-2">{at(t)}</span>
             <% end %>
           </dd>
 
@@ -228,7 +228,7 @@ defmodule AlnaslWeb.RecordingsLive do
 
         <p :if={@report.moves == []} class="note">{gettext("The tracker found no moves in it.")}</p>
 
-        <p :if={@report.moves != []} id="report-moves" style="line-height:1.9">
+        <p :if={@report.moves != []} id="report-moves" class="loose">
           <%= for {ply, index} <- Enum.with_index(@report.plies) do %>
             <span :if={rem(index, 2) == 0} class="quiet">{div(index, 2) + 1}.</span>
             <span class={
@@ -243,9 +243,16 @@ defmodule AlnaslWeb.RecordingsLive do
       </.panel>
 
       <.panel id="captures" title={gettext("Captures")} flush>
-        <div :if={@count == 0} id="captures-empty" class="empty">
+        <div :if={@count == 0 and @q in [nil, ""]} id="captures-empty" class="empty">
           <b>{gettext("Nothing recorded yet")}</b>
           <p>{gettext("Every connected board is recorded from the moment it is connected.")}</p>
+        </div>
+
+        <div :if={@count == 0 and @q not in [nil, ""]} id="captures-empty" class="empty">
+          <b>{gettext("No recording matches")}</b>
+          <p>
+            {gettext("Nothing here has that in its name. Empty the search field to see them all.")}
+          </p>
         </div>
 
         <div :if={@count > 0} class="table-wrap">

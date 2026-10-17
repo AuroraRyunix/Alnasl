@@ -171,7 +171,7 @@ defmodule AlnaslWeb.TournamentsTest do
 
       {:ok, view, _html} = live(conn, ~p"/setup/connections")
       assert has_element?(view, "#link-state-#{link.id}", "Code refused")
-      assert has_element?(view, "#link-why-#{link.id}", "The box has stopped asking")
+      assert has_element?(view, "#link-why-#{link.id}", "Alnasl has stopped asking")
 
       assert view |> element("#retry-link-#{link.id}") |> render_click() =~
                "refuses the connect code"

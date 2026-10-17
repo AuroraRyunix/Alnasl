@@ -62,6 +62,13 @@
   --radius: 6px;
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  /* Spacing, for the utilities at the end of this file. */
+  --space-1: 0.2rem;
+  --space-2: 0.3rem;
+  --space-3: 0.4rem;
+  --space-4: 0.6rem;
+  --space-5: 0.8rem;
+  --space-6: 1rem;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -1302,6 +1309,17 @@ code,
   margin-bottom: 0.3rem;
 }
 
+.empty p {
+  max-width: 34rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* An empty list in a grid of cards takes the whole row, not one card's. */
+.dests > .empty {
+  grid-column: 1 / -1;
+}
+
 .empty-bridges {
   max-width: 34rem;
   margin: 0 auto;
@@ -2134,6 +2152,7 @@ td .mini {
 
 .log .only-empty:only-child {
   display: block;
+  padding: 2rem 1rem;
 }
 
 /* --- help ------------------------------------------------------------------ */
@@ -4167,3 +4186,40 @@ h1 .manual-help-link, h2 .manual-help-link { transform: translateY(-2px); }
   background: var(--panel);
   box-shadow: var(--shadow);
 }
+
+/* --- utilities --------------------------------------------------------------
+ * What the templates used to say in style="...". Last in the file on purpose:
+ * one class each, so they win over the component rule they adjust (a .kv's
+ * margin, a .row's alignment) the way the inline style did.
+ */
+
+.mt-0 { margin-top: 0; }
+.mt-1 { margin-top: var(--space-1); }
+.mt-3 { margin-top: var(--space-3); }
+.mt-4 { margin-top: var(--space-4); }
+.mt-5 { margin-top: var(--space-5); }
+.mt-6 { margin-top: var(--space-6); }
+.mb-4 { margin-bottom: var(--space-4); }
+.mb-5 { margin-bottom: var(--space-5); }
+.mr-2 { margin-right: var(--space-2); }
+
+.own-line { display: block; }
+.inline { display: inline; }
+.strong { font-weight: 600; }
+.bad-text { color: var(--bad); }
+.warn-text { color: var(--warn); }
+.loose { line-height: 1.9; }
+
+.row.tight { gap: var(--space-2); }
+.row.top { align-items: flex-start; }
+.row.nowrap { flex-wrap: nowrap; }
+.row.align-end { align-items: flex-end; }
+
+.input.fit { width: auto; }
+.input.narrow { max-width: 11rem; }
+.input.num-s { width: 4.5rem; }
+.input.num-m { width: 6.5rem; }
+
+.bare-list { list-style: none; padding: 0; margin-bottom: 0; margin-left: 0; margin-right: 0; }
+.tight-list { margin-bottom: 0; padding-left: var(--space-6); }
+.callout-list { margin: var(--space-2) 0 0; padding-left: 1.1rem; color: var(--ink); }

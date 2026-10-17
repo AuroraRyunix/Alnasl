@@ -100,7 +100,7 @@ defmodule AlnaslWeb.OpenPairingsConnectController do
     refuse(
       conn,
       gettext(
-        "That OpenPairings account already has 8 boxes connected. Withdraw one there (account page, Live boards) and try again."
+        "That OpenPairings account already has 8 copies of Alnasl connected. Withdraw one there (account page, Live boards) and try again."
       )
     )
   end
@@ -138,7 +138,7 @@ defmodule AlnaslWeb.OpenPairingsConnectController do
   defp added(conn, {:ok, link, tournaments}) do
     info(
       conn,
-      gettext("Connected: %{about}. %{count} tournament(s) on the box now.",
+      gettext("Connected: %{about}. %{count} tournament(s) in Alnasl now.",
         about: LinkWords.about(link),
         count: length(tournaments)
       )
@@ -149,7 +149,7 @@ defmodule AlnaslWeb.OpenPairingsConnectController do
     refuse(
       conn,
       gettext(
-        "The account is connected, but OpenPairings could not be asked yet: %{why} The box asks again by itself.",
+        "The account is connected, but OpenPairings could not be asked yet: %{why} Alnasl asks again by itself.",
         why: LinkWords.error(reason)
       )
     )

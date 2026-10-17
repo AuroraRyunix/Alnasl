@@ -15,31 +15,32 @@ defmodule AlnaslWeb.Words do
 
   @doc "Why the pairings could not be fetched."
   def fetch_error(:not_configured),
-    do: gettext("Set the results server and the tournament first (Setup).")
+    do: gettext("Set the results site and the tournament first (Setup).")
 
   def fetch_error(:unreachable),
-    do: gettext("The results server cannot be reached. Is the network up?")
+    do: gettext("The results site cannot be reached. Is the network up?")
 
   def fetch_error(:not_found),
-    do: gettext("The results server does not know this tournament. Has it been published?")
+    do: gettext("The results site does not know this tournament. Has it been published?")
 
-  def fetch_error(:not_json), do: gettext("That address answers, but not as a results server.")
+  def fetch_error(:not_json), do: gettext("That address answers, but not as a results site.")
 
   def fetch_error({:http, status}),
-    do: gettext("The results server answered with an error (%{status}).", status: status)
+    do: gettext("The results site answered with an error (%{status}).", status: status)
 
   def fetch_error(_other), do: gettext("The pairings could not be fetched.")
 
   @doc "One step of \"Test connection\", in words: `{tone, sentence}`."
-  def test_step(:server, :ok), do: {"ok", gettext("The server answers.")}
+  def test_step(:server, :ok), do: {"ok", gettext("The results site answers.")}
 
   def test_step(:server, {:error, {:unreachable, reason}}),
-    do: {"bad", gettext("The server cannot be reached: %{why}", why: unreachable(reason))}
+    do: {"bad", gettext("The results site cannot be reached: %{why}", why: unreachable(reason))}
 
   def test_step(:server, {:error, {:http, status}}),
     do:
       {"bad",
-       gettext("The server answers with an error of its own (%{status}). Try again in a moment.",
+       gettext(
+         "The results site answers with an error of its own (%{status}). Try again in a moment.",
          status: status
        )}
 
@@ -60,11 +61,11 @@ defmodule AlnaslWeb.Words do
     do:
       {"bad",
        gettext(
-         "The server does not know this tournament. Check the name in the link; it must have been published at least once."
+         "The results site does not know this tournament. Check the name in the link; it must have been published at least once."
        )}
 
   def test_step(:tournament, {:error, :not_json}),
-    do: {"bad", gettext("That address answers, but not as a results server. Check the address.")}
+    do: {"bad", gettext("That address answers, but not as a results site. Check the address.")}
 
   def test_step(:tournament, {:error, reason}), do: {"bad", fetch_error(reason)}
 
@@ -81,7 +82,7 @@ defmodule AlnaslWeb.Words do
        )}
 
   def test_step(:key, {:error, :key_refused}),
-    do: {"bad", gettext("The server does not accept this relay key. Was it copied whole?")}
+    do: {"bad", gettext("The results site does not accept this relay key. Was it copied whole?")}
 
   def test_step(:key, {:error, :key_other_tournament}),
     do: {"bad", gettext("This relay key belongs to another tournament.")}
@@ -92,23 +93,27 @@ defmodule AlnaslWeb.Words do
   def test_step(:key, {:error, :rate_limited}),
     do:
       {"warn",
-       gettext("The server asks to slow down. The key is probably fine; try again in a minute.")}
+       gettext(
+         "The results site asks to slow down. The key is probably fine; try again in a minute."
+       )}
 
   def test_step(:key, {:error, :paused}),
     do:
       {"warn",
-       gettext("The server has paused all sending for the moment. The key could not be tested.")}
+       gettext(
+         "The results site has paused all sending for the moment. The key could not be tested."
+       )}
 
   def test_step(:key, {:error, :not_found}),
-    do: {"bad", gettext("The server does not take live boards for this tournament.")}
+    do: {"bad", gettext("The results site does not take live boards for this tournament.")}
 
   def test_step(:key, {:error, {:refused, code}}),
-    do: {"bad", gettext("The server refuses: %{code}.", code: code)}
+    do: {"bad", gettext("The results site refuses: %{code}.", code: code)}
 
   def test_step(_step, :skipped), do: {nil, gettext("Not tested: the step before it failed.")}
   def test_step(_step, {:error, _other}), do: {"bad", gettext("This step failed.")}
 
-  def step_name(:server), do: gettext("Server")
+  def step_name(:server), do: gettext("Results site")
   def step_name(:tournament), do: gettext("Tournament")
   def step_name(:key), do: gettext("Relay key")
 
@@ -134,19 +139,22 @@ defmodule AlnaslWeb.Words do
   def link_error({:tournament, _unnamed, reason}), do: link_error(reason)
 
   def link_error({:unreachable, reason}),
-    do: gettext("The server cannot be reached: %{why}", why: unreachable(reason))
+    do: gettext("The results site cannot be reached: %{why}", why: unreachable(reason))
 
   def link_error(:rate_limited),
-    do: gettext("The server asks to slow down. Sending goes on by itself.")
+    do: gettext("The results site asks to slow down. Sending goes on by itself.")
 
   def link_error({:http, 503, "publishing_paused"}),
-    do: gettext("The server has paused all sending. It goes on by itself when that is lifted.")
+    do:
+      gettext(
+        "The results site has paused all sending. It goes on by itself when that is lifted."
+      )
 
   def link_error({:http, status, _code}),
-    do: gettext("The server answers with an error of its own (%{status}).", status: status)
+    do: gettext("The results site answers with an error of its own (%{status}).", status: status)
 
   def link_error({401, _code}),
-    do: gettext("The server does not accept the relay key. Check it in Setup.")
+    do: gettext("The results site does not accept the relay key. Check it in Setup.")
 
   def link_error({403, "relay_key_revoked"}),
     do: gettext("The relay key has been revoked. Ask for a new one and put it in Setup.")
@@ -155,29 +163,33 @@ defmodule AlnaslWeb.Words do
     do: gettext("The relay key belongs to another tournament. Check Setup.")
 
   def link_error({403, code}),
-    do: gettext("The server refuses this box: %{code}.", code: code || "?")
+    do: gettext("The results site refuses what Alnasl sends: %{code}.", code: code || "?")
 
   def link_error({404, _code}),
-    do: gettext("The server does not know this tournament. Has it been published?")
+    do: gettext("The results site does not know this tournament. Has it been published?")
 
   def link_error({:crash, _message}),
-    do: gettext("Sending failed inside the box. It is tried again.")
+    do: gettext("Sending failed inside Alnasl. It is tried again.")
 
   def link_error(_other), do: gettext("Sending failed. It is tried again.")
 
   @doc "Why the server refused one message."
-  def entry_error("invalid_moves"), do: gettext("The server calls a move in it illegal.")
+  def entry_error("invalid_moves"), do: gettext("The results site calls a move in it illegal.")
 
   def entry_error("moves_conflict"),
-    do: gettext("The server held other moves for this game. The game was sent again in full.")
+    do:
+      gettext("The results site held other moves for this game. The game was sent again in full.")
 
-  def entry_error("invalid_request"), do: gettext("The server could not read it.")
-  def entry_error("invalid_fen"), do: gettext("The server does not accept the starting position.")
+  def entry_error("invalid_request"), do: gettext("The results site could not read it.")
+
+  def entry_error("invalid_fen"),
+    do: gettext("The results site does not accept the starting position.")
+
   def entry_error("fen_mismatch"), do: gettext("The position did not match the moves.")
   def entry_error("ply_mismatch"), do: gettext("The move count did not match the moves.")
 
   def entry_error("older_than_stored"),
-    do: gettext("The server already had more moves than this.")
+    do: gettext("The results site already had more moves than this.")
 
   def entry_error(nil), do: nil
   def entry_error(code), do: gettext("Refused: %{code}.", code: code)
@@ -189,7 +201,7 @@ defmodule AlnaslWeb.Words do
     do:
       {gettext("More than one sequence of moves fits the board"),
        gettext(
-         "Moves went by unseen and the board cannot say which they were. Pick the right ones below; the box has kept following the game underneath."
+         "Moves went by unseen and the board cannot say which they were. Pick the right ones below; Alnasl has kept following the game underneath."
        )}
 
   def state_help(:out_of_sync, {:out_of_turn, _move} = named),
@@ -240,7 +252,7 @@ defmodule AlnaslWeb.Words do
     do:
       {gettext("Moves were reconstructed"),
        gettext(
-         "The last moves were not seen one by one; they were worked out from the position. Orange: only one line of moves fits. Red: more than one did, and the box took one - check those against a scoresheet."
+         "The last moves were not seen one by one; they were worked out from the position. Orange: only one line of moves fits. Red: more than one did, and Alnasl took one - check those against a scoresheet."
        )}
 
   def state_help(:clock_alarm, side),
@@ -548,7 +560,7 @@ defmodule AlnaslWeb.Words do
         ),
       else:
         gettext(
-          "%{number} %{read} was read; the box now takes it to have been %{number} %{now} - a guess. The game from there: %{moves}",
+          "%{number} %{read} was read; Alnasl now takes it to have been %{number} %{now} - a guess. The game from there: %{moves}",
           number: number,
           read: read,
           now: now,
@@ -639,9 +651,9 @@ defmodule AlnaslWeb.Words do
     do: gettext("Result %{result}, from the position.", result: d["result"])
 
   defp log("result.set", d),
-    do: gettext("Result %{result}, set by the arbiter at the box.", result: d["result"])
+    do: gettext("Result %{result}, set by the arbiter in Alnasl.", result: d["result"])
 
-  defp log("result.reopened", _d), do: gettext("The game was reopened by the arbiter at the box.")
+  defp log("result.reopened", _d), do: gettext("The game was reopened by the arbiter in Alnasl.")
 
   defp log("game.new", %{"by" => "pieces"} = d),
     do: gettext("The pieces are set up again: game %{n} on this board begins.", n: d["game"])
@@ -649,92 +661,92 @@ defmodule AlnaslWeb.Words do
   defp log("game.new", %{"kind" => "replace"} = d),
     do:
       gettext(
-        "Arbiter at the box: a new game on this board, game %{n}. It is the game of the pairing: the one before it stays on the box.",
+        "Arbiter in Alnasl: a new game on this board, game %{n}. It is the game of the pairing: the one before it stays in Alnasl.",
         n: d["game"]
       )
 
   defp log("game.new", %{"kind" => "extra"} = d),
     do:
       gettext(
-        "Arbiter at the box: an extra game on this board, game %{n}. It stays on the box.",
+        "Arbiter in Alnasl: an extra game on this board, game %{n}. It stays in Alnasl.",
         n: d["game"]
       )
 
   defp log("game.new", d),
-    do: gettext("Arbiter at the box: a new game on this board, game %{n}.", n: d["game"])
+    do: gettext("Arbiter in Alnasl: a new game on this board, game %{n}.", n: d["game"])
 
   defp log("game.switched", d),
     do:
       gettext(
-        "Game %{n} on this board is the one that leaves the box now, in place of the game before it.",
+        "Game %{n} on this board is the one that leaves Alnasl now, in place of the game before it.",
         n: d["game"]
       )
 
   defp log("repair.undo", d),
-    do: gettext("Arbiter at the box: last move (%{move}) taken back.", move: d["move"] || "-")
+    do: gettext("Arbiter in Alnasl: last move (%{move}) taken back.", move: d["move"] || "-")
 
   defp log("repair.append", d),
-    do: gettext("Arbiter at the box: moves typed in: %{moves}", moves: moves(d))
+    do: gettext("Arbiter in Alnasl: moves typed in: %{moves}", moves: moves(d))
 
   defp log("repair.edit", d),
     do:
-      gettext("Arbiter at the box: move %{ply} changed to %{move}.",
+      gettext("Arbiter in Alnasl: move %{ply} changed to %{move}.",
         ply: d["ply"],
         move: d["move"]
       )
 
-  defp log("repair.set_fen", _d), do: gettext("Arbiter at the box: a position was set by hand.")
+  defp log("repair.set_fen", _d), do: gettext("Arbiter in Alnasl: a position was set by hand.")
 
   defp log("repair.resync", %{"outcome" => "accepted"} = d),
     do:
-      gettext("Arbiter at the box: \"the board is right\" - found and added %{moves}",
+      gettext("Arbiter in Alnasl: \"the board is right\" - found and added %{moves}",
         moves: moves(d)
       )
 
   defp log("repair.resync", %{"outcome" => "guessed"} = d),
     do:
       gettext(
-        "Arbiter at the box: \"the board is right\" - several lines fit, %{moves} was taken",
+        "Arbiter in Alnasl: \"the board is right\" - several lines fit, %{moves} was taken",
         moves: moves(d)
       )
 
   defp log("repair.resync", %{"outcome" => "rejected"} = d),
     do:
       gettext(
-        "Arbiter at the box: \"the board is right\" - only the moves just taken back fit (%{moves}); not put back.",
+        "Arbiter in Alnasl: \"the board is right\" - only the moves just taken back fit (%{moves}); not put back.",
         moves: moves(d)
       )
 
   defp log("repair.resync", _d),
-    do: gettext("Arbiter at the box: \"the board is right\" - nothing was found.")
+    do: gettext("Arbiter in Alnasl: \"the board is right\" - nothing was found.")
 
   defp log("repair.choose", d),
-    do: gettext("Arbiter at the box: said which moves were played: %{moves}", moves: moves(d))
+    do: gettext("Arbiter in Alnasl: said which moves were played: %{moves}", moves: moves(d))
 
-  defp log("repair.paused", _d), do: gettext("Arbiter at the box: sending paused for this board.")
+  defp log("repair.paused", _d), do: gettext("Arbiter in Alnasl: sending paused for this board.")
 
   defp log("repair.resumed", _d),
-    do: gettext("Arbiter at the box: sending resumed for this board.")
+    do: gettext("Arbiter in Alnasl: sending resumed for this board.")
 
   defp log("pgn.attached", d),
     do:
-      gettext("Arbiter at the box: a game of %{moves} moves attached from a PGN.",
+      gettext("Arbiter in Alnasl: a game of %{moves} moves attached from a PGN.",
         moves: d["moves"]
       )
 
   defp log("outbox.offline", _d),
-    do: gettext("No connection to the results server. Moves are kept.")
+    do: gettext("No connection to the results site. Moves are kept.")
 
-  defp log("outbox.online", _d), do: gettext("The results server is back. Sending what was kept.")
+  defp log("outbox.online", _d), do: gettext("The results site is back. Sending what was kept.")
 
   defp log("outbox.blocked", _d),
-    do: gettext("The results server refuses this box. Check the relay key.")
+    do: gettext("The results site refuses what Alnasl sends. Check the relay key.")
 
   defp log("outbox.conflict", _d),
-    do: gettext("The server held other moves for this game; it was sent again in full.")
+    do: gettext("The results site held other moves for this game; it was sent again in full.")
 
   defp log("outbox.server_ahead", _d),
-    do: gettext("The server holds more moves for this game than the box does.")
+    do: gettext("The results site holds more moves for this game than Alnasl does.")
 
   defp log("destination.offline", d),
     do: gettext("No connection to %{name}. The games are kept for it.", name: destination(d))
@@ -743,13 +755,13 @@ defmodule AlnaslWeb.Words do
     do: gettext("%{name} is back. Sending what was kept.", name: destination(d))
 
   defp log("destination.blocked", d),
-    do: gettext("%{name} refuses what the box sends. See the Outbox page.", name: destination(d))
+    do: gettext("%{name} refuses what Alnasl sends. See the Results page.", name: destination(d))
 
   defp log("destination.enabled", d),
-    do: gettext("Arbiter at the box: sending to %{name} switched on.", name: destination(d))
+    do: gettext("Arbiter in Alnasl: sending to %{name} switched on.", name: destination(d))
 
   defp log("destination.disabled", d),
-    do: gettext("Arbiter at the box: sending to %{name} switched off.", name: destination(d))
+    do: gettext("Arbiter in Alnasl: sending to %{name} switched off.", name: destination(d))
 
   defp log("table.set", d),
     do: gettext("\"%{name}\" is table %{table}.", name: d["name"], table: d["table"])
@@ -866,7 +878,7 @@ defmodule AlnaslWeb.Words do
   defp log("link.added", %{"reason" => _} = d),
     do:
       gettext(
-        "A connect code for %{server} was added. It could not be checked yet; the box keeps asking.",
+        "A connect code for %{server} was added. It could not be checked yet; Alnasl keeps asking.",
         server: d["server"]
       )
 
@@ -880,26 +892,26 @@ defmodule AlnaslWeb.Words do
       )
 
   defp log("link.removed", d),
-    do: gettext("The connect code for %{server} was taken off the box.", server: d["server"])
+    do: gettext("The connect code for %{server} was removed from Alnasl.", server: d["server"])
 
   defp log("link.ok", d), do: gettext("%{server} answers again.", server: d["server"])
 
   defp log("link.unreachable", d),
     do:
-      gettext("%{server} does not answer. The boards go on with the pairings the box has.",
+      gettext("%{server} does not answer. The boards go on with the pairings Alnasl has.",
         server: d["server"]
       )
 
   defp log("link.unauthorized", d),
     do:
       gettext(
-        "%{server} refuses the connect code: wrong, or withdrawn there. The box has stopped asking.",
+        "%{server} refuses the connect code: wrong, or withdrawn there. Alnasl has stopped asking.",
         server: d["server"]
       )
 
   defp log("link.unsupported", d),
     do:
-      gettext("%{server} speaks a version of the board link this box does not know.",
+      gettext("%{server} speaks a version of the board link this Alnasl does not know.",
         server: d["server"]
       )
 
@@ -919,7 +931,7 @@ defmodule AlnaslWeb.Words do
   defp log("tournament.elsewhere", d),
     do:
       gettext(
-        "A connect code for %{server} reaches %{name}, which this box already has through another code. No second copy was made.",
+        "A connect code for %{server} reaches %{name}, which Alnasl already has through another code. No second copy was made.",
         server: d["server"],
         name: tournament(d)
       )
@@ -934,7 +946,7 @@ defmodule AlnaslWeb.Words do
   defp log("tournament.merged", d),
     do:
       gettext(
-        "%{name} was on the box twice, through two connect codes. Made one: %{boards} board(s) and %{games} game(s) moved to the first.",
+        "%{name} was in Alnasl twice, through two connect codes. Made one: %{boards} board(s) and %{games} game(s) moved to the first.",
         name: tournament(d),
         boards: d["boards"] || 0,
         games: d["games"] || 0
@@ -1023,18 +1035,18 @@ defmodule AlnaslWeb.Words do
       )
 
   defp log("pairing.adopted", _d),
-    do: gettext("Arbiter at the box: the game is the new pairing's. The moves stand.")
+    do: gettext("Arbiter in Alnasl: the game is the new pairing's. The moves stand.")
 
   defp log("pairing.set_aside", _d),
     do:
       gettext(
-        "Arbiter at the box: the game is set aside and a new one begins for the pairing as it is now."
+        "Arbiter in Alnasl: the game is set aside and a new one begins for the pairing as it is now."
       )
 
   defp log("destination.forced", d),
     do:
       gettext(
-        "Arbiter at the box: %{games} game(s) sent to %{name} again, to replace what it holds.",
+        "Arbiter in Alnasl: %{games} game(s) sent to %{name} again, to replace what it holds.",
         games: d["games"],
         name: destination(d)
       )
@@ -1055,11 +1067,11 @@ defmodule AlnaslWeb.Words do
     if finished?,
       do:
         gettext(
-          "Start a new game on this board? It becomes the game of the pairing and is the one sent to the results site, OpenPairings and Lichess; this one is kept on the box."
+          "Start a new game on this board? It becomes the game of the pairing and is the one sent to the results site, OpenPairings and Lichess; this one is kept in Alnasl."
         ),
       else:
         gettext(
-          "Close this game without a result and start a new one? The new game becomes the game of the pairing and is the one sent to the results site, OpenPairings and Lichess; this one is kept on the box."
+          "Close this game without a result and start a new one? The new game becomes the game of the pairing and is the one sent to the results site, OpenPairings and Lichess; this one is kept in Alnasl."
         )
   end
 
@@ -1068,20 +1080,20 @@ defmodule AlnaslWeb.Words do
       do: nil,
       else:
         gettext(
-          "Close this game without a result and start an extra one? The extra game stays on this box."
+          "Close this game without a result and start an extra one? The extra game stays in Alnasl."
         )
   end
 
   def new_game_confirm(:replace_decided, _finished?),
     do:
       gettext(
-        "This game has a result. Start a new game that replaces it as the game of the pairing? The result already sent is replaced by the new game; this one is kept on the box."
+        "This game has a result. Start a new game that replaces it as the game of the pairing? The result already sent is replaced by the new game; this one is kept in Alnasl."
       )
 
   def send_this_confirm,
     do:
       gettext(
-        "Send this game instead? It becomes the game of the pairing and replaces what the results site, OpenPairings and Lichess hold for this board; the game that was sent is kept on the box."
+        "Send this game instead? It becomes the game of the pairing and replaces what the results site, OpenPairings and Lichess hold for this board; the game that was sent is kept in Alnasl."
       )
 
   @doc "A size in bytes as megabytes, the way a download is spoken of: \"41 MB\", \"0.4 MB\"."
@@ -1092,14 +1104,14 @@ defmodule AlnaslWeb.Words do
 
   @doc "A destination's name, as people call it."
   def destination(%{"destination" => id}), do: destination(id)
-  def destination("openresults"), do: gettext("the results server")
+  def destination("openresults"), do: gettext("the results site")
   def destination("lichess"), do: "Lichess"
   def destination("openpairings"), do: "OpenPairings"
   def destination(other) when is_binary(other), do: other
   def destination(_none), do: gettext("a destination")
 
   defp tournament(%{"tournament" => name}) when is_binary(name) and name != "", do: name
-  defp tournament(_unnamed), do: gettext("this box's own tournament")
+  defp tournament(_unnamed), do: gettext("the hall's own tournament")
 
   defp moves(%{"moves" => moves}) when is_list(moves), do: Enum.join(moves, " ")
   defp moves(_other), do: ""

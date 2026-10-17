@@ -58,6 +58,7 @@ defmodule AlnaslWeb.Router do
   pipeline :join_page do
     plug :accepts, ["html"]
     plug :fetch_session
+    plug :fetch_live_flash
     plug :put_root_layout, html: {AlnaslWeb.Layouts, :root}
     plug :put_secure_browser_headers
     plug :put_locale

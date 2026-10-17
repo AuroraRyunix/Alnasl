@@ -153,7 +153,7 @@ defmodule AlnaslWeb.LogLive do
         <:actions>
           <.form for={@form} id="log-filter" phx-change="filter" class="row">
             <label class="sr-only" for="log-level">{gettext("How serious")}</label>
-            <select id="log-level" name="filter[level]" class="input" style="width:auto">
+            <select id="log-level" name="filter[level]" class="input fit">
               {Phoenix.HTML.Form.options_for_select(
                 [
                   {gettext("Everything"), ""},
@@ -164,7 +164,7 @@ defmodule AlnaslWeb.LogLive do
               )}
             </select>
             <label class="sr-only" for="log-kind">{gettext("About")}</label>
-            <select id="log-kind" name="filter[kind]" class="input" style="width:auto">
+            <select id="log-kind" name="filter[kind]" class="input fit">
               {Phoenix.HTML.Form.options_for_select(Words.log_kinds(), @form[:kind].value)}
             </select>
             <label class="sr-only" for="log-board">{gettext("Board number")}</label>
@@ -175,8 +175,7 @@ defmodule AlnaslWeb.LogLive do
               name="filter[board]"
               value={@form[:board].value}
               placeholder={gettext("board no.")}
-              class="input"
-              style="width:6.5rem"
+              class="input num-m"
             />
             <label class="sr-only" for="log-q">{gettext("Search the log")}</label>
             <input
@@ -204,7 +203,14 @@ defmodule AlnaslWeb.LogLive do
         </:actions>
 
         <ul id="log-lines" class="log" phx-update="stream">
-          <li id="log-empty" class="only-empty empty">{gettext("Nothing to show.")}</li>
+          <li id="log-empty" class="only-empty empty">
+            <b>{gettext("Nothing to show")}</b>
+            <span>
+              {gettext(
+                "Nothing has happened here yet, or nothing matches the filters. Show all brings everything back."
+              )}
+            </span>
+          </li>
 
           <li :for={{id, event} <- @streams.events} id={id} class={event.level}>
             <time datetime={DateTime.to_iso8601(event.at)}>{Words.time(event.at)}</time>

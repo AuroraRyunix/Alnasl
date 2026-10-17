@@ -1,6 +1,6 @@
 # Opnemen, herhalen en problemen oplossen
 
-Het kastje schrijft alles op wat de borden zeggen, zodat een partij die in de zaal misliep aan een bureau opnieuw bekeken kan worden. Dit hoofdstuk gaat daarover, over de andere pagina's die iets bijhouden, en over wat je doet als er iets mis is.
+Alnasl schrijft alles op wat de borden zeggen, zodat een partij die in de zaal misliep aan een bureau opnieuw bekeken kan worden. Dit hoofdstuk gaat daarover, over de andere pagina's die iets bijhouden, en over wat je doet als er iets mis is.
 
 ## Opnames en herhalen {#recordings}
 
@@ -46,11 +46,11 @@ De klok is vaker ingedrukt dan er zetten gezien zijn. Vergelijk het bord met de 
 
 ### "Code geweigerd" bij Koppelingen in Instellingen {#code-refused}
 
-OpenPairings aanvaardt de koppelcode niet: ze is daar ingetrokken, of het is niet de volledige regel. Het kastje is gestopt met vragen en de borden gaan door met de paringen die het heeft. Maak een nieuwe code in OpenPairings (Instellingen, Live borden), voeg ze toe, en verwijder de oude.
+OpenPairings aanvaardt de koppelcode niet: ze is daar ingetrokken, of het is niet de volledige regel. Alnasl is gestopt met vragen en de borden gaan door met de paringen die het heeft. Maak een nieuwe code in OpenPairings (Instellingen, Live borden), voeg ze toe, en verwijder de oude.
 
 ### "Geen antwoord" bij Koppelingen in Instellingen {#no-answer}
 
-OpenPairings is niet bereikbaar. Er gaat niets verloren: de borden gaan door met de paringen die het kastje heeft, de partijen worden voor OpenPairings bewaard, en het kastje vraagt vanzelf opnieuw. Een ronde die intussen gepaard werd, start je met "Ronde N starten" en ze krijgt haar namen zodra de verbinding terug is.
+OpenPairings is niet bereikbaar. Er gaat niets verloren: de borden gaan door met de paringen die Alnasl heeft, de partijen worden voor OpenPairings bewaard, en Alnasl vraagt vanzelf opnieuw. Een ronde die intussen gepaard werd, start je met "Ronde N starten" en ze krijgt haar namen zodra de verbinding terug is.
 
 ### Een toernooi heeft geen uitslagenpagina {#no-results-page}
 

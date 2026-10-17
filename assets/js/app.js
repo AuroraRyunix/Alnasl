@@ -44,8 +44,14 @@ const liveSocket = new LiveSocket("/live", Socket, {
   hooks: {...colocatedHooks, ...Hooks},
 })
 
-topbar.config({barColors: {0: "#0a5967"}, shadowColor: "rgba(0, 0, 0, .25)"})
-window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
+// The bar wears the theme's accent, read when it is shown: the theme can
+// change under a page that stays open.
+const accent = () =>
+  getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#7a2e1e"
+window.addEventListener("phx:page-loading-start", _info => {
+  topbar.config({barColors: {0: accent()}, shadowColor: "rgba(0, 0, 0, .25)"})
+  topbar.show(300)
+})
 window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
 
 // Escape closes the frame's menus (hall picker, account, More): each says how

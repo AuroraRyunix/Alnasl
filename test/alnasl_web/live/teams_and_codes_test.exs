@@ -149,7 +149,7 @@ defmodule AlnaslWeb.TeamsAndCodesTest do
         |> form("#code-form", link: %{code: FakeOpenPairings.code(17)})
         |> render_submit()
 
-      assert html =~ "This code reaches Open, which this box already has through"
+      assert html =~ "This code reaches Open, which Alnasl already has through"
       assert Repo.aggregate(Alnasl.Tournaments.Tournament, :count) == 2
 
       new = Repo.one!(from l in Link, where: l.id != ^old.id)

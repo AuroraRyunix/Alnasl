@@ -29,7 +29,9 @@ Op een telefoon wordt de balk een strook bovenaan (de naam, de zaalkiezer en de 
 
 Meldingen (de uitslagensite is niet bereikbaar, een bord speelt buiten zijn toernooi, een vraag over tafels, een nieuwe versie) staan boven de pagina, hoogstens twee tegelijk. De rest wacht achter "nog 1 melding"; druk erop om ze te zien.
 
-Instellingen is in onderdelen, elk met een eigen adres en een lijst ernaast (een keuzelijst op een telefoon): **Toernooien** (een regel per toernooi; open er een voor de details, zijn zalen en tafels en het automatisch starten; die met borden op dit kastje staan bovenaan, de afgelopen en de niet begonnen zitten achter een schakelaar), **Koppelingen** (codes en accountkoppelingen, een regel elk met een menu voor Testen, Opnieuw proberen en Verwijderen, en "+ Toevoegen"), **Uitslagen en Lichess**, **Dit kastje** (op de server **Deze server**), **Toegang** en **Updates** (alleen een kastje) en **Geavanceerd** (de tracker, voor beheerders). Een onderdeel dat jouw editie of rol niet kan gebruiken, wordt niet getekend.
+Een pagina of lijst waar nog niets in staat, zegt dat in een zin, en zegt wat er iets in brengt: een koppeling voor de toernooien, een brug voor de borden van een zaal, een bord voor een ronde. Is er één voor de hand liggende volgende stap, dan brengt een knop je erheen.
+
+Instellingen is in onderdelen, elk met een eigen adres en een lijst ernaast (een keuzelijst op een telefoon): **Toernooien** (een regel per toernooi; open er een voor de details, zijn zalen en tafels en het automatisch starten; die met borden in deze zaal staan bovenaan, de afgelopen en de niet begonnen zitten achter een schakelaar), **Koppelingen** (codes en accountkoppelingen, een regel elk met een menu voor Testen, Opnieuw proberen en Verwijderen, en "+ Toevoegen"), **Uitslagen en Lichess**, **Dit kastje** (op de server **Deze server**), **Toegang** en **Updates** (alleen een kastje) en **Geavanceerd** (de tracker, voor beheerders). Een onderdeel dat jouw editie of rol niet kan gebruiken, wordt niet getekend.
 
 ## Twee manieren om het te draaien {#two-ways}
 
@@ -78,14 +80,35 @@ Elke keer dezelfde korte lijst. Bij elke stap zegt een pagina in woorden wat er 
 4. Een bord met een klok is pas "Juist" als de klok dat ook is: rechts van het bord, de hendel omhoog aan de kant van wit, zodat de tijd van wit eerst loopt.
 5. Borden: geef elk bord zijn tafelnummer (zie [Borden en poorten](02-boards-and-ports.md)).
 6. Borden: "Klaar voor ronde N?" moet "Klaar" zeggen. Zo niet, dan somt het per bord op wat er mis is.
-7. Ronde: elke tegel moet "Wacht op begin" zeggen.
+7. Live: elke tegel moet "Wacht op begin" zeggen.
 
 ## Taal en kleuren {#language-and-colours}
 
 De site bestaat in het Engels en het Nederlands. De taal is de jouwe, niet die van het kastje: kies ze in het accountmenu (de knop onderaan de balk, op een telefoon rechtsboven). Met een account wordt de keuze bij het account bewaard en volgt ze je naar elke browser; zonder accounts wordt ze in die browser bewaard. Hoe dan ook verandert niemand anders van taal, en deze handleiding volgt de jouwe.
 
-Wie niets koos, leest de standaardtaal van het kastje. Een beheerder stelt die in bij Instellingen, "Dit kastje" ("Deze server"), Standaardtaal.
+Wie niets koos, leest de standaardtaal van Alnasl. Een beheerder stelt die in bij Instellingen, "Dit kastje" ("Deze server"), Standaardtaal.
 
 De kleuren komen in dezelfde thema's als OpenResults: Papier, Nacht, Bord, Leisteen en Hoog contrast, en Volg het toestel, dat het toestel volgt. Kies in het accountmenu, bij Kleurthema; dat is de enige plek. De keuze geldt alleen voor die browser. Hoog contrast is voor een projector achteraan de zaal.
 
-Er kunnen meer thema's bij als themapakketten: een map per thema, in de map `themes` binnen de gegevensmap. Bij de volgende keer laden staan ze na de ingebouwde thema's. Een pakket dat het kastje niet wil laden, staat in het grijs in de lijst, met de reden.
+Er kunnen meer thema's bij als themapakketten: een map per thema, in de map `themes` binnen de gegevensmap. Bij de volgende keer laden staan ze na de ingebouwde thema's. Een pakket dat Alnasl niet wil laden, staat in het grijs in de lijst, met de reden.
+
+## Woorden in deze handleiding {#words}
+
+De schermen en deze handleiding gebruiken één woord per ding:
+
+| Woord | Betekent |
+| --- | --- |
+| Alnasl | Het programma, waar het ook draait. Een zin die de server ook toont, zegt "Alnasl", niet "het kastje" |
+| kastje | Alnasl op een eigen computer in een zaal, die borden leest op zijn eigen poorten |
+| server | De gehoste Alnasl op alnasl.zerotwo.cloud, die borden leest via bruggen |
+| brug | Arkab, naast de borden van een zaal, die ze naar een kastje of de server stuurt |
+| zaal | Een ruimte met tafels en borden; elke pagina gaat over één zaal |
+| het eigen toernooi van de zaal | Waar de borden van een zaal spelen als geen paring ze noemt |
+| koppeling | Een koppelcode of een accountkoppeling met OpenPairings |
+| uitslagensite | OpenResults, waar toeschouwers de partijen volgen |
+| uitslagenpagina | De pagina van één toernooi op de uitslagensite |
+| Resultaten | De pagina in de balk die toont wat verstuurd is en wat wacht |
+| live bord | Een elektronisch bord; de schermen noemen nooit een merk |
+| arbiter, kijker | Rollen in een zaal: een arbiter verbetert en start rondes, een kijker kijkt |
+
+Een partij die "in Alnasl blijft", wordt hier bewaard en nergens heen gestuurd; het logboek zegt "Arbiter in Alnasl" als iemand een partij via deze pagina's veranderde.

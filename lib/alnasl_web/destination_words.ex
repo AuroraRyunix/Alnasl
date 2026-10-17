@@ -8,7 +8,7 @@ defmodule AlnaslWeb.DestinationWords do
 
   alias AlnaslWeb.Words
 
-  def name("openresults"), do: gettext("Results server")
+  def name("openresults"), do: gettext("Results site")
   def name("lichess"), do: gettext("Lichess broadcast")
   def name("openpairings"), do: gettext("OpenPairings")
   def name(other), do: other
@@ -66,7 +66,7 @@ defmodule AlnaslWeb.DestinationWords do
   def quiet({:not_set_up, _id}),
     do:
       gettext(
-        "No results page yet: a tournament from OpenPairings brings its own; for the box's own tournament give one under Setup, Results and Lichess."
+        "No results page yet: a tournament from OpenPairings brings its own; for the hall's own tournament give one under Setup, Results and Lichess."
       )
 
   @doc "Why a destination is not sending."
@@ -86,7 +86,7 @@ defmodule AlnaslWeb.DestinationWords do
     do: gettext("Lichess refuses the games: %{message}", message: message)
 
   def error({:lichess, status, _message}),
-    do: gettext("Lichess refuses what the box sends (%{status}).", status: status)
+    do: gettext("Lichess refuses what Alnasl sends (%{status}).", status: status)
 
   def error(:rate_limited),
     do: gettext("Asked to slow down. Sending goes on by itself after the pause.")
@@ -111,7 +111,7 @@ defmodule AlnaslWeb.DestinationWords do
   def report_error("stale"),
     do:
       gettext(
-        "OpenPairings holds a newer report of this game - from another box, or from this one before it was set up again."
+        "OpenPairings holds a newer report of this game - from another copy of Alnasl, or from this one before it was set up again."
       )
 
   def report_error("pairing_changed" <> _detail),
@@ -189,7 +189,7 @@ defmodule AlnaslWeb.DestinationWords do
     do: {"bad", gettext("Lichess will not show that round to this token.")}
 
   def test_step(:round, :unknown),
-    do: {nil, gettext("Lichess answered about the round in a way the box does not understand.")}
+    do: {nil, gettext("Lichess answered about the round in a way Alnasl does not understand.")}
 
   def test_step(_step, {:error, :rate_limited}),
     do: {"warn", gettext("Lichess asks to slow down. Wait a minute and test again.")}

@@ -29,7 +29,9 @@ On a phone the rail becomes a bar along the top (the name, the hall picker and t
 
 Notices (the results site cannot be reached, a board plays outside its tournament, a question about tables, a new version) stand above the page, at most two at a time. The rest wait behind "1 more notice"; press it to see them.
 
-Setup is in sections, each with its own address and a list beside it (a drop-down on a phone): **Tournaments** (a line each; open one for its details, its halls and tables and its automatic start; the ones with boards on this box come first, the finished and the not started are behind a toggle), **Connections** (codes and account links, a line each with a menu for Test, Retry and Remove, and "+ Add"), **Results and Lichess**, **This box** (on the server **This server**), **Access** and **Updates** (a box only) and **Advanced** (the tracker, for admins). A section your edition or role cannot use is not drawn.
+A page or a list with nothing in it yet says so in a sentence, and says what brings something: a connection for the tournaments, a bridge for a hall's boards, a board for a round. Where there is one obvious next step, a button takes you there.
+
+Setup is in sections, each with its own address and a list beside it (a drop-down on a phone): **Tournaments** (a line each; open one for its details, its halls and tables and its automatic start; the ones with boards in this hall come first, the finished and the not started are behind a toggle), **Connections** (codes and account links, a line each with a menu for Test, Retry and Remove, and "+ Add"), **Results and Lichess**, **This box** (on the server **This server**), **Access** and **Updates** (a box only) and **Advanced** (the tracker, for admins). A section your edition or role cannot use is not drawn.
 
 ## Two ways to run it {#two-ways}
 
@@ -78,14 +80,35 @@ The same short list every time. Each step has a page that says in words what is 
 4. A board with a clock is only "Right" when its clock is too: to the right of the board, the lever up on White's side so that White's time runs first.
 5. Boards: give each board its table number (see [Boards and ports](02-boards-and-ports.md)).
 6. Boards: "Ready for round N?" must say Ready. If not, it lists what is wrong, board by board.
-7. Round: every tile should read "Waiting for start".
+7. Live: every tile should read "Waiting for start".
 
 ## Language and colours {#language-and-colours}
 
 The site is in English or Dutch. The language is yours, not the box's: choose it in the account menu (the button at the foot of the rail, top right on a phone). With an account, the choice is kept with the account and follows you to any browser; without accounts, it is kept in that browser. Either way nobody else's language changes, and this manual follows yours.
 
-Whoever has chosen nothing reads the box's default language. An admin sets it under Setup, "This box" ("This server"), Default language.
+Whoever has chosen nothing reads Alnasl's default language. An admin sets it under Setup, "This box" ("This server"), Default language.
 
 The colours come in the same themes as OpenResults: Paper, Night, Board, Slate and High contrast, and Match device, which follows the phone or computer. Choose in the account menu, under Colour theme; it is the only place. The choice is kept in that browser only. High contrast is the one for a projector at the back of the hall.
 
-More themes can be added as theme packs: one folder per theme, in the folder `themes` inside the data folder. On the next page load they are offered after the built-in ones. A pack the box will not load is listed in grey, with the reason.
+More themes can be added as theme packs: one folder per theme, in the folder `themes` inside the data folder. On the next page load they are offered after the built-in ones. A pack Alnasl will not load is listed in grey, with the reason.
+
+## Words used here {#words}
+
+The screens and this manual use one word for each thing:
+
+| Word | Means |
+| --- | --- |
+| Alnasl | The program, wherever it runs. A sentence the server shows too says "Alnasl", not "the box" |
+| box | Alnasl on its own computer in a hall, reading boards on its own ports |
+| server | The hosted Alnasl at alnasl.zerotwo.cloud, which reads boards through bridges |
+| bridge | Arkab, beside the boards of a hall, sending them to a box or the server |
+| hall | A room with tables and boards; every page is about one |
+| the hall's own tournament | Where a hall's boards play when no pairing names them |
+| connection | A connect code or an account link to OpenPairings |
+| results site | OpenResults, where spectators follow the games |
+| results page | One tournament's page on the results site |
+| Results | The page in the rail that shows what was sent and what waits |
+| live board | An electronic board; the screens never name a brand |
+| arbiter, viewer | Roles in a hall: an arbiter corrects and starts rounds, a viewer watches |
+
+A game that "stays in Alnasl" is kept here and not sent anywhere; the log says "Arbiter in Alnasl" when a person changed a game through these pages.

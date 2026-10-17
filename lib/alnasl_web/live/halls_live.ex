@@ -218,7 +218,7 @@ defmodule AlnaslWeb.HallsLive do
           {:noreply,
            socket
            |> assign(deleting: false)
-           |> put_flash(:error, gettext("The box's own hall cannot be deleted."))}
+           |> put_flash(:error, gettext("Alnasl's own hall cannot be deleted."))}
 
         {:error, _forbidden} ->
           {:noreply, refuse(assign(socket, deleting: false))}
@@ -399,9 +399,16 @@ defmodule AlnaslWeb.HallsLive do
           )}
         </p>
 
-        <p :if={@rows == []} id="halls-none" class="note">
-          {gettext("Your account is not in any hall yet. Whoever invited you can fix that.")}
-        </p>
+        <div :if={@rows == []} id="halls-none" class="panel">
+          <div class="empty">
+            <b>{gettext("Not in a hall yet")}</b>
+            <p>
+              {gettext(
+                "A hall is where boards and tournaments live, and your role there is what you may do. Your account is not in any hall yet: whoever invited you can add you, or an admin can."
+              )}
+            </p>
+          </div>
+        </div>
 
         <div :if={@rows != []} class="panel flush">
           <div class="table-wrap">
@@ -538,6 +545,12 @@ defmodule AlnaslWeb.HallsLive do
               )}
             </p>
           <% else %>
+            <p :if={@members == []} id="hall-members-none" class="note">
+              {gettext(
+                "Nobody belongs to this hall yet. Invite someone on the Invitations tab; admins reach every hall without being in it."
+              )}
+            </p>
+
             <ul id="hall-members" class="dests">
               <li :for={member <- @members} id={"member-#{member.id}"} class="row">
                 <span class="mono">{member.user.email}</span>
@@ -635,6 +648,12 @@ defmodule AlnaslWeb.HallsLive do
 
               <p id="invite-link" class="addresses mono">{@invite_link.url}</p>
             </div>
+
+            <p :if={@invitations == []} id="invitations-none" class="note">
+              {gettext(
+                "No invitations waiting. One made above shows here until it is used, withdrawn or a week old."
+              )}
+            </p>
 
             <ul :if={@invitations != []} id="invitations" class="dests">
               <li :for={i <- @invitations} id={"invitation-#{i.id}"} class="row">

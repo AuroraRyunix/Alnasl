@@ -306,8 +306,8 @@ move, played on), so there is an "Out of sync" board to open and repair.
 `mix help alnasl.demo` has the options (`--boards 12`, `--speed 30`,
 `--faults rough`, `--port`).
 
-No results server is set up in the demo: the badge at the top right says
-"Not set up" and the Outbox page shows everything being kept, which is what
+No results site is set up in the demo: the badge at the top right says
+"Not set up" and the Results page shows everything being kept, which is what
 a hall without internet looks like.
 
 ### What you need
@@ -333,18 +333,18 @@ format, the rules a pack's stylesheet must keep, and
 
 | Page | What it is for |
 |---|---|
-| **Round** | The screen during play. A tile per board: players, the position the box is sure of, clocks, last move, and the state as a shape and a word - Live, Waiting for start, Settling, Reconstructed, Out of sync, No signal, Clock wrong way, Finished - with a count of the moves that were reconstructed or guessed, and a warning for a piece that is not seen. Before the first move a tile also says, in words, when the clock is not set for White. A tile is the way to the board's own page; under it, "Finish game" (the three results, or none) and "New game". Fetch the pairings, start the next round. With a results site: "Open the results site" (the live boards of the round, in a new tab), a "QR" of its live page, and a "Live page" link under each tile |
+| **Live** | The screen during play. A tile per board: players, the position Alnasl is sure of, clocks, last move, and the state as a shape and a word - Live, Waiting for start, Settling, Reconstructed, Out of sync, No signal, Clock wrong way, Finished - with a count of the moves that were reconstructed or guessed, and a warning for a piece that is not seen. Before the first move a tile also says, in words, when the clock is not set for White. A tile is the way to the board's own page; under it, "Finish game" (the three results, or none) and "New game". Fetch the pairings, start the next round. With a results site: "Open the results site" (the live boards of the round, in a new tab), a "QR" of its live page, and a "Live page" link under each tile |
 | **A board** | The position large, the move list - Left and Right step through it - and, when board and game have parted ways, what the board reads beside what is certain. Moves the box worked out are marked, and a tap on a guessed one asks which line it was. "This game": finish it with a result or without, start a new game on the board, and the games the board has seen this round with their PGN. The repair tools: "the board is right" (search deeper), type moves, undo, change a move, start from a FEN, pause and resume sending, turn the board round |
 | **Boards** | What is plugged in. Add an electronic board or a simulator; connect and disconnect; each board's live picture, signal quality, serial number and firmware; the start-position check, pieces and clock ("black queen and black king are swapped (d8, e8)", "Clock not in starting position: Black's side would run first - the clock is turned or the lever is the wrong way"); each board's **table number** and its board of the round; "Which board is this?"; "Ready for round N?" with the reasons when it is not (the clock among them); the address and QR code for a phone; a printable sheet of labels. See [Which board is which](#which-board-is-which) |
 | **Number / Find** | Two phone-sized pages under Boards: number the boards of a hall by touching them in order (a piece lifted or put down counts, a clock lever does not), and find out which board the one in front of you is |
-| **Outbox** | The connections, honestly: for the results server and for every other destination, connected or not, last success, how much is waiting and why it is not going, in words; each with its own switch and its own "Send now". What waits, what the server refused, what went out |
-| **PGN** | Read PGN files or pasted moves (checked for legality). Play a game on a simulator board; attach a game that was not captured to its board, after asking; compare a scoresheet with the captured game (the first difference). Export a game or the whole round |
+| **Results** | The connections, honestly: for the results site and for every other destination, connected or not, last success, how much is waiting and why it is not going, in words; each with its own switch and its own "Send now". What waits, what the server refused, what went out |
+| **Games** | Read PGN files or pasted moves (checked for legality). Play a game on a simulator board; attach a game that was not captured to its board, after asking; compare a scoresheet with the captured game (the first difference). Export a game or the whole round |
 | **Recordings** | The raw captures per board. Replay one through the tracker as a dry run (what it makes of it, where it lost the thread); export it as a test fixture; download it |
 | **Log** | What happened, in sentences, with filters: board connected, moves recovered, out of sync, repaired by the arbiter, offline, back |
-| **Setup** | This copy (version, how started, data folder); Tournaments: a connect code from OpenPairings (pasted once, never shown again), what each tournament came with, which tables play in it, "Test connection" that really asks and explains failures - a wrong code, a withdrawn one, nobody home, a tournament that is not published; for a box without OpenPairings the results server, tournament and relay key typed in; a Lichess broadcast round and its token per tournament, with a test of its own; the box's name, language, round; a PIN for other machines and the address they open; the tracker's timings, with "Bullet / fast play" for games of a few minutes or less |
+| **Setup** | This copy (version, how started, data folder); Tournaments: a connect code from OpenPairings (pasted once, never shown again), what each tournament came with, which tables play in it, "Test connection" that really asks and explains failures - a wrong code, a withdrawn one, nobody home, a tournament that is not published; for a box without OpenPairings the results site, tournament and relay key typed in; a Lichess broadcast round and its token per tournament, with a test of its own; the box's name, language, round; a PIN for other machines and the address they open; the tracker's timings, with "Bullet / fast play" for games of a few minutes or less |
 | **Help** | The manual, in English and Dutch: seven chapters from getting started to troubleshooting, with a search, and a small *?* on every page that opens the section about it. The chapters are `priv/manual/*.md` (Dutch in `priv/manual/nl/`) |
 
-A banner on every page says so when the results server cannot be reached.
+A banner on every page says so when the results site cannot be reached.
 
 ## Which board is which
 
@@ -453,9 +453,9 @@ started and forty hands are on the boards.
 
 ## Where the games go
 
-The results server is one destination. There can be more, and they do not
+The results site is one destination. There can be more, and they do not
 wait for each other: each has its own queue, its own pause after a failure,
-its own line on the Outbox page (connected or not, last success, how many
+its own line on the Results page (connected or not, last success, how many
 wait, the last error in words), its own switch and its own "Send now".
 
 | Destination | What it gets | Its place in the queue |
@@ -725,7 +725,7 @@ before LiveChess does. The box leaves the boards as LiveChess expects them
   first, numbered per game, then sent in order with the relay key. Each
   message is the whole game so far, which is the server's own rule and what
   makes a retry harmless. Offline for hours is normal.
-- **More than one destination.** The results server is one; a Lichess
+- **More than one destination.** The results site is one; a Lichess
   broadcast is another; the pairing program a third (`Alnasl.Destination`).
   Each keeps its own place in the queue and its own sender, so one being
   down never holds up another.
@@ -1021,7 +1021,7 @@ and names on every page in both languages.
   is sent and keeps the old one at home; where the game has a result, the
   new game is an extra one that stays (the page offers to let it replace the
   pairing's game on purpose). A live game that stays on the box says so on
-  its tile, its page and in the Outbox, with "Send this one instead".
+  its tile, its page and on the Results page, with "Send this one instead".
   Nobody has pressed this at a real results site or a real OpenPairings yet:
   it is tested against fakes of both.
   The reconstruction, the choice of line and "New game" have been used in

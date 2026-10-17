@@ -59,7 +59,7 @@ defmodule Alnasl.DuplicateCodesTest do
       assert through.id == group.id
 
       sentence = AlnaslWeb.LinkWords.elsewhere(Duplicates.shared(own))
-      assert sentence =~ "This code reaches Open, which this box already has through"
+      assert sentence =~ "This code reaches Open, which Alnasl already has through"
       assert sentence =~ ~s(the group "Festival")
       assert "tournament.elsewhere" in log_kinds()
 

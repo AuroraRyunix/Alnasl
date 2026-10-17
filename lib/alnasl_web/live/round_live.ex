@@ -689,7 +689,7 @@ defmodule AlnaslWeb.RoundLive do
        socket
        |> put_flash(
          :info,
-         gettext("Board %{n}: this game is the one that leaves the box now.", n: no)
+         gettext("Board %{n}: this game is the one that leaves Alnasl now.", n: no)
        )
        |> load()}
     else
@@ -809,7 +809,7 @@ defmodule AlnaslWeb.RoundLive do
             patch={~p"/t/#{t.id}"}
             aria-current={to_string(@only == t.id)}
           >
-            {Tournaments.title(t) || gettext("This box")}
+            {Tournaments.title(t) || gettext("The hall's own tournament")}
           </.link>
         </div>
         <.section_actions :if={match?([_one], @sections)} section={hd(@sections)} />
@@ -866,7 +866,7 @@ defmodule AlnaslWeb.RoundLive do
         :for={section <- @sections}
         id={sid("round-section", section.tid)}
         class="round-section"
-        aria-label={section.title || gettext("This box")}
+        aria-label={section.title || gettext("The hall's own tournament")}
       >
         <header
           :if={length(@sections) > 1}
@@ -874,7 +874,7 @@ defmodule AlnaslWeb.RoundLive do
           class="row spread round-head"
         >
           <h2>
-            {section.title || gettext("This box")}
+            {section.title || gettext("The hall's own tournament")}
             <span class="note">{gettext("Round %{n}", n: section.round)}</span>
           </h2>
 
@@ -888,7 +888,7 @@ defmodule AlnaslWeb.RoundLive do
           role="status"
         >
           {gettext(
-            "OpenPairings no longer lists this tournament for the box's connect code: it was removed, archived or taken out of its group there. Nothing is reported to it any more. Its boards keep running; remove the tournament in Setup when you are done with it."
+            "OpenPairings no longer lists this tournament for the connect code: it was removed, archived or taken out of its group there. Nothing is reported to it any more. Its boards keep running; remove the tournament in Setup when you are done with it."
           )}
         </p>
 
@@ -912,8 +912,7 @@ defmodule AlnaslWeb.RoundLive do
             :if={section.has_boards? and section.current?}
             id={sid("round-ready", section.tid)}
             navigate={~p"/boards"}
-            class="row"
-            style="gap:0.3rem"
+            class="row tight"
           >
             <.badge :if={section.ready?} tone="ok" icon="ok">
               {gettext("Ready for round %{n}", n: section.round)}
@@ -1011,8 +1010,7 @@ defmodule AlnaslWeb.RoundLive do
               ]
             }
             :if={section.counts[state]}
-            class="row"
-            style="gap:0.3rem"
+            class="row tight"
           >
             <b>{section.counts[state]}</b><.state state={state} />
           </span>
@@ -1049,7 +1047,7 @@ defmodule AlnaslWeb.RoundLive do
               <% section.linked? -> %>
                 <p>
                   {gettext(
-                    "OpenPairings has not paired this round, or the box has not heard of it yet. The boards appear here by themselves when it is."
+                    "OpenPairings has not paired this round, or Alnasl has not heard of it yet. The boards appear here by themselves when it is."
                   )}
                 </p>
               <% @configured? or section.has_boards? -> %>
@@ -1065,7 +1063,7 @@ defmodule AlnaslWeb.RoundLive do
               <% true -> %>
                 <p>
                   {gettext(
-                    "Tell the box which tournament it works for first: a connect code from OpenPairings, or a results page."
+                    "Tell Alnasl which tournament it works for first: a connect code from OpenPairings, or a results page."
                   )}
                 </p>
 
@@ -1233,7 +1231,7 @@ defmodule AlnaslWeb.RoundLive do
         if @section.linked?,
           do:
             gettext(
-              "Move this tournament's boards to round %{n} by hand? Normally the box does this by itself when OpenPairings pairs the round. The games of this round stay as they are.",
+              "Move this tournament's boards to round %{n} by hand? Normally Alnasl does this by itself when OpenPairings pairs the round. The games of this round stay as they are.",
               n: @section.round + 1
             ),
           else:
@@ -1352,7 +1350,7 @@ defmodule AlnaslWeb.RoundLive do
             :if={@tile.stays_home?}
             id={"tile-local-flag-#{@tile.dom}"}
             class="flag"
-          >{gettext("Stays on the box")}</span>
+          >{gettext("Stays in Alnasl")}</span>
           <span :if={@tile.warning} class="flag">{gettext("Move missing?")}</span>
           <span :for={piece <- @tile.unseen} id={"tile-unseen-#{@tile.dom}"} class="flag">{AlnaslWeb.Words.unseen(
             piece
@@ -1518,7 +1516,7 @@ defmodule AlnaslWeb.RoundLive do
           >
             {if @tile.new_kind == :replace,
               do: gettext("New game"),
-              else: gettext("An extra game: it stays on this box")}
+              else: gettext("An extra game: it stays in Alnasl")}
           </.button>
 
           <.button
@@ -1546,7 +1544,7 @@ defmodule AlnaslWeb.RoundLive do
 
       <div :if={@tile.stays_home?} id={"tile-local-#{@tile.dom}"} class="tile-local">
         <span>
-          {gettext("This game stays on the box: it is game %{n} on this board.",
+          {gettext("This game stays in Alnasl: it is game %{n} on this board.",
             n: @tile.game_no
           )}
         </span>

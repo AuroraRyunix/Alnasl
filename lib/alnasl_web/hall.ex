@@ -369,7 +369,7 @@ defmodule AlnaslWeb.Hall do
 
   @doc "What was done when a range of tables was given to a tournament."
   def range_words(tournament, from, to, carried, hall_id \\ nil) do
-    name = Tournaments.title(tournament) || gettext("this box's own tournament")
+    name = Tournaments.title(tournament) || gettext("the hall's own tournament")
 
     # Board 1, unless the tournament's first boards are played in another hall.
     case Alnasl.Placements.in_hall(tournament, hall_id || Alnasl.Halls.of(tournament)) do
