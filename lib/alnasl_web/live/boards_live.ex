@@ -542,7 +542,7 @@ defmodule AlnaslWeb.BoardsLive do
 
         <span>
           {gettext(
-            "A DGT board carries its serial number on a label underneath. Lift a piece on the board you think it is: the box says whether you are right."
+            "An electronic board carries its serial number on a label underneath. Lift a piece on the board you think it is: the box says whether you are right."
           )}
         </span>
 
@@ -694,7 +694,7 @@ defmodule AlnaslWeb.BoardsLive do
           <b>{gettext("No boards yet")}</b>
           <p>
             {gettext(
-              "Add a DGT board on a serial port below - or a simulator board, to see everything work without hardware."
+              "Add an electronic board on a serial port below - or a simulator board, to see everything work without hardware."
             )}
           </p>
         </div>
@@ -1107,7 +1107,7 @@ defmodule AlnaslWeb.BoardsLive do
                 label={gettext("Kind")}
                 options={[
                   {gettext("Simulator (no hardware)"), "simulator"},
-                  {gettext("DGT board, or several on a loop (serial port)"), "dgt_serial"}
+                  {gettext("Electronic board, or several on a loop (serial port)"), "dgt_serial"}
                 ]}
               />
               <.input

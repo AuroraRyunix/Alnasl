@@ -1,5 +1,5 @@
 defmodule Mix.Tasks.Alnasl.Dgt do
-  @shortdoc "Talks to one DGT board on a serial port, prints every byte and message, and writes a capture"
+  @shortdoc "Talks to one electronic board on a serial port, prints every byte and message, and writes a capture"
 
   @moduledoc """
   The serial driver's debug mode: for the first meeting with a real board.

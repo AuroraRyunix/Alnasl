@@ -455,9 +455,9 @@ defmodule AlnaslWeb.Words do
 
   def driver("simulator"), do: gettext("Simulator")
   def driver("replay"), do: gettext("Replay of a capture")
-  def driver("dgt_serial"), do: gettext("DGT board, serial")
-  def driver("dgt_bus"), do: gettext("DGT board on a loop")
-  def driver("remote"), do: gettext("DGT board, through a bridge")
+  def driver("dgt_serial"), do: gettext("Electronic board, serial")
+  def driver("dgt_bus"), do: gettext("Electronic board on a loop")
+  def driver("remote"), do: gettext("Electronic board, through a bridge")
   def driver(other), do: other
 
   # --- the log -----------------------------------------------------------------

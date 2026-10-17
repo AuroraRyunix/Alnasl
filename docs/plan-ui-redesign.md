@@ -195,13 +195,13 @@ Each step ships on its own.
 
 Not part of this redesign; after it. Chromium browsers on the desktop
 (Chrome, Edge) have the Web Serial API: over https a page may open a serial
-port after one click in the browser's own port dialog, and a DGT board on
+port after one click in the browser's own port dialog, and an electronic board on
 USB is one. So on the server, a laptop with Chrome and a board on USB could
 be a bridge without installing anything: Boards > "Connect a board here",
 the page reads the board and sends what it sees over its own socket, and
 the server treats it as one more bridge (`Alnasl.Driver.Remote`).
 
-Needs: the DGT protocol again in JavaScript, a small queue in the browser
+Needs: the board protocol again in JavaScript, a small queue in the browser
 (IndexedDB) so a dropped line loses nothing, and the tab staying open.
 Chromium on the desktop only; no Firefox, no Safari, nothing on iOS; plain
 http on a hall network does not qualify (localhost does). First trial: one

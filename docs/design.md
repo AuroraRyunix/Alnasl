@@ -25,7 +25,7 @@ driver ──whole positions, clock──▶ board process ──▶ recorder (r
 
 A driver delivers **the whole board** every time anything on it changes: 64
 squares, each a piece or empty (`Alnasl.Position`, a8 first). Not moves and
-not changes. A DGT board in update mode sends single-square changes; the
+not changes. An electronic board in update mode sends single-square changes; the
 driver applies them to its own picture and passes on the picture, and every
 few seconds asks the board for a full dump again - so a lost byte heals, and
 nothing above the driver can drift from the board.
@@ -520,7 +520,7 @@ chess but the timing, and three things in the tracker exist because of it:
   the notice the move is made; without it, a move that never stood for
   `settle_ms` was only ever found afterwards by the search, two at a time,
   flagged *recovered* - or not at all.
-- **The clock is late.** A DGT clock reports about once a second (the real
+- **The clock is late.** A clock reports about once a second (the real
   board's recording: gaps of 0.9-1.3 s), so a press reaches the box up to
   a second after the lever went down - often with the next piece already
   on its square. A press therefore confirms the move on the board only
@@ -557,8 +557,8 @@ A chess clock helps, and is used: a press confirms a move at once, and
 raises "Move missing?" on the tile long before the position betrays it.
 
 The clock's **sides are fixed**. It stands to the right of the board,
-White's display toward White: the cable reaches nowhere else, and DGT's own
-software assumes the same. So the box never guesses which side is whose and
+White's display toward White: the cable reaches nowhere else, and the board
+maker's own software assumes the same. So the box never guesses which side is whose and
 offers nothing to swap them with. That makes a clock the wrong way round a
 fact that can be stated instead of a setting that can be wrong:
 
@@ -695,7 +695,7 @@ A capture is read back as the timed events a driver delivers, which is what
 the `Replay` driver plays, what "Replay through the tracker" on the
 Recordings page judges, and what `mix alnasl.replay` prints. A file with
 `rx` lines and no `pos` lines - or a log from `tools/serial_proxy.py` - is
-decoded with the DGT protocol on the way in, so a recording of a real
+decoded with the board protocol on the way in, so a recording of a real
 board made *before* the driver is right can test the driver once it is.
 
 `test/fixtures/captures/opera-with-hands.jsonl` is one, checked in: a game
@@ -954,7 +954,7 @@ starts it again.
 
 ## 8. A loop
 
-Several DGT boards on one serial line. `docs/real-loop-2026-10-12.md` is
+Several electronic boards on one serial line. `docs/real-loop-2026-10-12.md` is
 what a real one sent; this is what the box does with it.
 
 **Who is on a line** (`Arkab.Dgt.Loop`) is asked whenever a port is opened

@@ -10,7 +10,7 @@ De brug belt zelf naar Alnasl. In het netwerk van de zaal hoeft niets open te st
 
 ## Arkab, het brugprogramma {#arkab}
 
-**Arkab** is de brug: het bordenlezen van Alnasl en niets anders - de DGT-stuurprogramma's, de seriële bus, een wachtrij die elke zet bijhoudt tot de server hem heeft, en de uitgaande lijn naar een of meer Alnasls. Geen rondes, geen aanmeldingen, geen eigen partijen. Het is een apart programma met een eigen repository, [github.com/AuroraRyunix/Arkab](https://github.com/AuroraRyunix/Arkab), Apache-2.0 zoals Alnasl, en het deelt zijn bordcode met Alnasl, zodat een bord op beide hetzelfde leest.
+**Arkab** is de brug: het bordenlezen van Alnasl en niets anders - de stuurprogramma's, de seriële bus, een wachtrij die elke zet bijhoudt tot de server hem heeft, en de uitgaande lijn naar een of meer Alnasls. Geen rondes, geen aanmeldingen, geen eigen partijen. Het is een apart programma met een eigen repository, [github.com/AuroraRyunix/Arkab](https://github.com/AuroraRyunix/Arkab), Apache-2.0 zoals Alnasl, en het deelt zijn bordcode met Alnasl, zodat een bord op beide hetzelfde leest.
 
 > [!NOTE] Arkab krijgen
 > Een kant-en-klare download is er nog niet: voorlopig start je Arkab vanuit de broncode met Elixir (`mix deps.get`, daarna `mix run --no-halt`), zoals de README beschrijft. Een pakket voor een Raspberry Pi komt eraan. Zijn pagina antwoordt dan op poort 4050 van de machine waarop het draait.

@@ -8,10 +8,10 @@ One row per board: its live picture, the signal, its serial number and firmware,
 
 ## Adding a board {#adding-a-board}
 
-Boards, "Add a board": choose the port the board is plugged into and press Add. DGT boards, in their RS232 and USB-C models, come down to a serial stream, so one driver serves both. A DGT board on USB is a port called `COM3` or similar on Windows, `/dev/ttyUSB0` or `/dev/ttyACM0` on Linux, `/dev/cu.usbserial-...` or `/dev/cu.usbmodem...` on a Mac. On Linux the user running Alnasl must be in the `dialout` group; the installed service is set up that way. A Mac lists every adapter twice, as `tty.` and `cu.`; Alnasl offers only the `cu.` one.
+Boards, "Add a board": choose the port the board is plugged into and press Add. Electronic boards, in their RS232 and USB-C models, come down to a serial stream, so one driver serves both. An electronic board on USB is a port called `COM3` or similar on Windows, `/dev/ttyUSB0` or `/dev/ttyACM0` on Linux, `/dev/cu.usbserial-...` or `/dev/cu.usbmodem...` on a Mac. On Linux the user running Alnasl must be in the `dialout` group; the installed service is set up that way. A Mac lists every adapter twice, as `tty.` and `cu.`; Alnasl offers only the `cu.` one.
 
 > [!WARNING] One program per port
-> A port can be read by one program at a time. Close DGT LiveChess before you add the board here, or the box will not get an answer.
+> A port can be read by one program at a time. Close the board maker's own software before you add the board here, or the box will not get an answer.
 
 The USB adapter of an RS232 board may need its maker's driver before it shows up on a Mac or Windows PC (FTDI works as it is; Prolific, CH340 and CP210x may not).
 
@@ -19,7 +19,7 @@ A simulator board is on the same list. It plays a game by itself and is there fo
 
 ## Several boards on one cable {#loop}
 
-DGT boards can be chained on one serial cable, as in DGT LiveChess. For the box that is one port. Boards, Add a board: choose the port and press Add. The box asks the port who is on it, which takes a few seconds, and every board that answers gets a row of its own. There is nothing to type and nothing to choose: one board is read as one board, two or more as a loop. A loop holds up to twelve boards.
+Electronic boards can be chained on one serial cable, as in the board maker's own software. For the box that is one port. Boards, Add a board: choose the port and press Add. The box asks the port who is on it, which takes a few seconds, and every board that answers gets a row of its own. There is nothing to type and nothing to choose: one board is read as one board, two or more as a loop. A loop holds up to twelve boards.
 
 A board plugged into the chain later gets its row by itself within some ten seconds, and the Log says so. A board taken off the chain keeps its row, which says "No signal" and why; it is back when the board is. If a board in the middle of the chain says "No signal" and the others do not, its cable in the chain is out, or it has no power. The boards before it go on.
 
@@ -34,7 +34,7 @@ If a port was added while one board was on it, and several are on it now, the ro
 
 Twelve boards look alike, and so do twelve cables. The box keeps three things apart.
 
-- **Which board it is.** A DGT board tells the box its serial number (it is also on a label under the board). That is what the box knows it by, not the USB port. Unplug it, plug it in elsewhere, restart the box: it is still the same board and keeps its number. If it comes back on another port, add it on that port: the box recognises the serial and puts it back in its old place. A board the box has never seen is marked "New board" and asks for a number.
+- **Which board it is.** An electronic board tells the box its serial number (it is also on a label under the board). That is what the box knows it by, not the USB port. Unplug it, plug it in elsewhere, restart the box: it is still the same board and keeps its number. If it comes back on another port, add it on that port: the box recognises the serial and puts it back in its old place. A board the box has never seen is marked "New board" and asks for a number.
 - **Its table number.** The sticker on the board: "this is table 7". You set it once for the hall and it stays. "Labels" on the Boards page prints a sheet of stickers with the table number and the serial.
 - **Its board of the round.** Normally the same number as the table. For one round you can say otherwise in the column "Board of round N" ("table 7 plays board 3 today"), swap two boards, or put everything back. The next round starts from the table numbers again. On the Live page the board number is the big one; "table 7 · serial 06310" is the small print.
 

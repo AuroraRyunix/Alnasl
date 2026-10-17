@@ -22,7 +22,7 @@ internet does not.
 ## Who it is for
 
 Arbiters and organisers who run a tournament with OpenPairings and have
-DGT electronic boards on some or all tables. Not for players, and not for
+Electronic chessboards on some or all tables. Not for players, and not for
 spectators: they watch on the results site and never see Alnasl.
 
 It is one of four programs that go together. Say so, so that nobody
@@ -119,9 +119,9 @@ GitHub.
   built and started on GitHub's): until `docs/macos.md`'s test list has
   been worked through, show the Mac downloads as "preview", or not at all.
   The links above answer from the first release that carries them.
-- **Boards**: DGT electronic boards with a serial connection: a DGT USB
+- **Boards**: electronic chessboards with a serial connection: a USB
   board directly, or a serial (RS232) board through a USB-serial adapter.
-  A DGT clock connected to the board is read too. See "What not to claim"
+  A clock connected to the board is read too. See "What not to claim"
   for how much of this has been tried.
 - **A browser** on the same computer (any current Chrome, Edge, Firefox or
   Safari) for the management site; optionally a phone or a laptop on the
@@ -161,9 +161,7 @@ Apache License 2.0. Free to use, also commercially; the source is public.
 Copyright 2026 Jorian Burssens. (OpenPairings is under a different licence,
 the Elastic License 2.0; do not copy its licence line here.)
 
-"DGT" is a trademark of Digital Game Technology B.V. Alnasl is not
-affiliated with or endorsed by DGT. Put that sentence in the page's small
-print, and do not use DGT's logo.
+Do not use any board maker's name or logo on the page.
 
 ## Links
 
@@ -184,12 +182,12 @@ print, and do not use DGT's logo.
 
 This is the part to read twice. As of this writing:
 
-- **It has not been used at a tournament.** Real DGT boards have been
+- **It has not been used at a tournament.** Real electronic boards have been
   connected and read at a desk: a few short games on one board with a
   clock. No tournament game has been played through Alnasl.
 - **Two boards were tried**, an older serial board (firmware 1.9) and a
   newer USB-C board (firmware 4.0): one alone on its cable, and both
-  together on one cable (DGT's "loop"), where both were found and read.
+  together on one cable (a "loop"), where both were found and read.
   A move played live on a loop, a clock on a loop, and more than two
   boards on a loop have not been seen. Bluetooth boards, and boards from
   Millennium or Chessnut, are not supported at all.
@@ -207,7 +205,7 @@ This is the part to read twice. As of this writing:
 - It **does not decide results**, and the page must not suggest it does:
   what a board saw is shown to the arbiter in OpenPairings, who enters the
   result.
-- It is **not a DGT LiveChess replacement in general**: it sends games to
+- It is **not a replacement for the board maker's own software in general**: it sends games to
   OpenResults (and to OpenPairings), not to arbitrary sites.
 - Do not call it "stable", "production-ready" or "1.0". The version starts
   with 0 for a reason.
@@ -234,7 +232,7 @@ English:
 > has been played on it yet. If you try it at an event, keep scoresheets as you
 > always do, and tell us how it went.
 >
-> Free and open source (Apache 2.0). For DGT boards with a serial or USB
+> Free and open source (Apache 2.0). For electronic boards with a serial or USB
 > connection.
 
 Dutch:
@@ -252,7 +250,7 @@ Dutch:
 > geen toernooi op gespeeld. Probeer je het op een evenement, hou dan notatieformulieren bij
 > zoals altijd, en laat ons weten hoe het ging.
 >
-> Gratis en open source (Apache 2.0). Voor DGT-borden met een seriële of
+> Gratis en open source (Apache 2.0). Voor elektronische borden met een seriële of
 > USB-aansluiting.
 
 ## When this brief goes out of date

@@ -11,7 +11,7 @@ means when it does not.
 ## Where it stands
 
 **Step 1 was half done on 2026-10-12** - one board (serial 06310, firmware
-1.9), one black knight, a DGT clock. `docs/real-board-2026-10-12.md` has
+1.9), one black knight, a clock. `docs/real-board-2026-10-12.md` has
 every byte. Confirmed:
 
 - the port, the framing, the handshake (serial number, version, dump);
@@ -171,7 +171,7 @@ still prints `(lever: black first)` when it is set the wrong way.
 mix phx.server
 ```
 
-Open http://localhost:4040, **Boards** → Add a board → "DGT board on its own
+Open http://localhost:4040, **Boards** → Add a board → "Electronic board on its own
 serial port" → the port → Add. It should show the position, serial number
 and firmware, and "Start position: Right - pieces and clock". Tip the
 clock's lever to Black's side: it must change to "Clock wrong" with the
@@ -189,7 +189,7 @@ is fine for today.
 
 ## 3. A loop
 
-Two or more boards on the bus cable, one port. Close DGT LiveChess first:
+Two or more boards on the bus cable, one port. Close the board maker's own software first:
 it holds the port.
 
 ### 3a. Who is there

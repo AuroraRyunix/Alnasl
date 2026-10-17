@@ -4,7 +4,7 @@
 > "bridge mode" switch in Alnasl. Instead:
 >
 > - **Arkab** (own repository, AuroraRyunix/Arkab, Apache-2.0) is the small
->   program: the DGT drivers, the serial transport, the bus/loop discovery,
+>   program: the board drivers, the serial transport, the bus/loop discovery,
 >   the capture recorder, the store-and-forward queue, the outgoing link to
 >   one or more Alnasls, and one small status/join page. No tracker, no
 >   rounds, no logins, no OpenPairings/OpenResults. Its own release.
@@ -41,13 +41,13 @@ Status: plan, nothing built (2026-10-16). The bridge code lives in its own repos
  ┌──────────────┐            ┌──────────────┐          ┌──────────────────────────┐
  │ Alnasl       │            │ Alnasl       │  out-    │ Alnasl (full)            │
  │ mode: bridge │──────────▶ │ mode: bridge │──going──▶│  boards of hall A + B    │
- │ DGT boards   │  outgoing  │ DGT boards   │  only    │  tracker, games, rounds  │
+ │ electronic boards   │  outgoing  │ electronic boards   │  only    │  tracker, games, rounds  │
  └──────────────┘  only      └──────────────┘          │  OpenPairings/OpenResults│
                                                         │  logins, roles           │
  hall C                                                 └──────────────────────────┘
  ┌──────────────────────────┐
  │ Alnasl (full)            │   today's box, unchanged in what it can do,
- │ its own DGT boards       │   and it can ALSO take bridges (a second
+ │ its own electronic boards       │   and it can ALSO take bridges (a second
  │ + optional bridges       │   room in the same club, for example)
  └──────────────────────────┘
 ```

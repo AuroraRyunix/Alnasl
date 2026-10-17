@@ -163,7 +163,7 @@ what holds.
 - [ ] Installing again finds the data.
 - [ ] A PC that never had Erlang or the Visual C++ runtime starts it (the
       three DLLs beside `erl.exe` are there for this).
-- [ ] A real DGT board on a COM port is read by the installed copy.
+- [ ] A real electronic board on a COM port is read by the installed copy.
 - [ ] From the second release on: the notice appears, "Download and
       install" stops the program, the launcher downloads and applies, the
       new version starts. Then the unhappy ways: no network at that moment
@@ -199,7 +199,7 @@ what holds.
       window, opens the browser; Stop asks and stops; no `beam` is left.
 - [ ] The data is in `~/Library/Application Support/AlnaslData`, and is
       still there after the app is binned.
-- [ ] A real DGT board on a USB adapter shows up as `/dev/cu.*` and is read.
+- [ ] A real electronic board on a USB adapter shows up as `/dev/cu.*` and is read.
 
 ## Version numbers
 

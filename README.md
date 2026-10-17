@@ -10,7 +10,7 @@ for the arbiter - and keeps working when the hall's internet does not.
 > Status: **first build. Everything runs on simulated boards, one real
 > board has been read, and so has a real loop of two.** The tracker, the
 > outbox and the management site are written and tested without hardware.
-> The DGT serial driver met a real board and clock on 2026-10-12: handshake,
+> The serial driver met a real board and clock on 2026-10-12: handshake,
 > position, piece movements and the clock are confirmed
 > ([docs/real-board-2026-10-12.md](docs/real-board-2026-10-12.md)). The same
 > day two boards on one cable were found, named and read as a loop
@@ -29,7 +29,7 @@ whom; the arrow carries the games out of the hall.
 ## Where it fits
 
 ```
-[DGT boards] --serial--> Alnasl (in the hall)
+[electronic boards] --serial--> Alnasl (in the hall)
                           |  ^   \
      who plays whom, the  |  |    \  moves, clocks - live, buffered
      round that is on     |  |     \ when offline (push only)
@@ -149,7 +149,7 @@ launcher, on purpose: antivirus has been seen to delete single-file
 programs that unpack themselves, and to leave this shape alone (measured
 for OpenPairings, which is packaged the same way; not yet for Alnasl).
 
-Windows 10 or 11, 64-bit. A DGT board on USB is a COM port; see
+Windows 10 or 11, 64-bit. An electronic board on USB is a COM port; see
 [Serial ports](#serial-ports).
 
 ### Linux and the Raspberry Pi
@@ -217,7 +217,7 @@ log folder*. The data is in
 the app or dragging it to the Bin leaves it alone. Updating is by hand for
 now: download the new zip and put the new app in place of the old one.
 
-A DGT board on USB is `/dev/cu.usbserial-...` or `/dev/cu.usbmodem...`;
+An electronic board on USB is `/dev/cu.usbserial-...` or `/dev/cu.usbmodem...`;
 see [Serial ports](#serial-ports). macOS 11 (Big Sur) or newer.
 
 ### From source
@@ -335,7 +335,7 @@ format, the rules a pack's stylesheet must keep, and
 |---|---|
 | **Round** | The screen during play. A tile per board: players, the position the box is sure of, clocks, last move, and the state as a shape and a word - Live, Waiting for start, Settling, Reconstructed, Out of sync, No signal, Clock wrong way, Finished - with a count of the moves that were reconstructed or guessed, and a warning for a piece that is not seen. Before the first move a tile also says, in words, when the clock is not set for White. A tile is the way to the board's own page; under it, "Finish game" (the three results, or none) and "New game". Fetch the pairings, start the next round. With a results site: "Open the results site" (the live boards of the round, in a new tab), a "QR" of its live page, and a "Live page" link under each tile |
 | **A board** | The position large, the move list - Left and Right step through it - and, when board and game have parted ways, what the board reads beside what is certain. Moves the box worked out are marked, and a tap on a guessed one asks which line it was. "This game": finish it with a result or without, start a new game on the board, and the games the board has seen this round with their PGN. The repair tools: "the board is right" (search deeper), type moves, undo, change a move, start from a FEN, pause and resume sending, turn the board round |
-| **Boards** | What is plugged in. Add a DGT board or a simulator; connect and disconnect; each board's live picture, signal quality, serial number and firmware; the start-position check, pieces and clock ("black queen and black king are swapped (d8, e8)", "Clock not in starting position: Black's side would run first - the clock is turned or the lever is the wrong way"); each board's **table number** and its board of the round; "Which board is this?"; "Ready for round N?" with the reasons when it is not (the clock among them); the address and QR code for a phone; a printable sheet of labels. See [Which board is which](#which-board-is-which) |
+| **Boards** | What is plugged in. Add an electronic board or a simulator; connect and disconnect; each board's live picture, signal quality, serial number and firmware; the start-position check, pieces and clock ("black queen and black king are swapped (d8, e8)", "Clock not in starting position: Black's side would run first - the clock is turned or the lever is the wrong way"); each board's **table number** and its board of the round; "Which board is this?"; "Ready for round N?" with the reasons when it is not (the clock among them); the address and QR code for a phone; a printable sheet of labels. See [Which board is which](#which-board-is-which) |
 | **Number / Find** | Two phone-sized pages under Boards: number the boards of a hall by touching them in order (a piece lifted or put down counts, a clock lever does not), and find out which board the one in front of you is |
 | **Outbox** | The connections, honestly: for the results server and for every other destination, connected or not, last success, how much is waiting and why it is not going, in words; each with its own switch and its own "Send now". What waits, what the server refused, what went out |
 | **PGN** | Read PGN files or pasted moves (checked for legality). Play a game on a simulator board; attach a game that was not captured to its board, after asking; compare a scoresheet with the captured game (the first difference). Export a game or the whole round |
@@ -351,7 +351,7 @@ A banner on every page says so when the results server cannot be reached.
 Twelve boards look alike, and so do twelve cables. Alnasl keeps three things
 apart, and the Boards page shows all three:
 
-1. **Which board it is.** A DGT board reports its serial number (it is also
+1. **Which board it is.** An electronic board reports its serial number (it is also
    on a label under the board); that is its identity. Not the USB port: pull
    the cable, use another port, restart the box, and it is still the same
    board with the same number. When a known board turns up on another port -
@@ -385,7 +385,7 @@ Giving the numbers:
 And finding a board: **Which board is this?** lights up the row of the board
 you touch; **Show me** on a row tells you the serial to look for and says
 whether the board you then touch is the right one. Alnasl does not make a
-board beep or blink: no DGT command for that is sent, because none was
+board beep or blink: no board command for that is sent, because none was
 verified.
 
 **Ready for round N?** is one list before the round: two boards with the
@@ -399,7 +399,7 @@ position ("Clock not in starting position: Black's side would run first..."
 
 ### Boards on a loop
 
-Several DGT boards chained on one serial cable are one port to the box.
+Several electronic boards chained on one serial cable are one port to the box.
 **Add a board, choose the port, press Add**: the box asks the port who is
 on it (some three seconds) and every board that answers gets a row of its
 own. There is no "bus address" to type and no kind to choose - one board
@@ -635,7 +635,7 @@ want to know what they would have made of it) and saves nothing.
 
 ### Serial ports
 
-A DGT board is a serial port to the system: `/dev/ttyUSB0` or `/dev/ttyACM0`
+An electronic board is a serial port to the system: `/dev/ttyUSB0` or `/dev/ttyACM0`
 on Linux (the user needs to be in the `dialout` group), `COM3` and the like
 on Windows (Device Manager, *Ports (COM & LPT)*), `/dev/cu.usbserial-...` or
 `/dev/cu.usbmodem...` on a Mac. 9600 baud, 8N1.
@@ -674,7 +674,7 @@ The serial library (`circuits_uart`) is C code built with `make`:
 Without the library everything works except opening a real port: the Boards
 page says so, and simulator boards are unaffected.
 
-One program at a time can have a port. DGT LiveChess holds the ports of
+One program at a time can have a port. The board maker's own software holds the ports of
 the boards it shows: close it before the box reads them, and stop the box
 before LiveChess does. The box leaves the boards as LiveChess expects them
 ("end bus mode" is the last thing it says on a loop).
@@ -686,7 +686,7 @@ before LiveChess does. The box leaves the boards as LiveChess expects them
 - **A driver delivers whole positions**, not moves: 64 squares, each a piece
   or empty, every time anything changes. `Simulator` (PGN games played by an
   invisible hand, with faults), `Replay` (a capture file), `DgtSerial` (one
-  DGT board), `DgtBus` (a loop of them). Which of the two a port needs is
+  electronic board), `DgtBus` (a loop of them). Which of the two a port needs is
   found out by asking the port.
 - **The tracker turns positions into moves.** It keeps the last *certain*
   position. A board one legal move away is that move, once it has stood
@@ -881,8 +881,8 @@ played - 74, 40 and 45 plies - with the results set on the box (0-1, 0-1,
 "0 waiting" while the sender was busy, and each request opened a connection
 pool of its own.
 
-**The DGT serial driver, against a real board** (serial 06310, firmware
-1.9, with a DGT clock; recorded 2026-10-12, decoded message by message in
+**The serial driver, against a real board** (serial 06310, firmware
+1.9, with a clock; recorded 2026-10-12, decoded message by message in
 [docs/real-board-2026-10-12.md](docs/real-board-2026-10-12.md)). Confirmed
 by that recording, and pinned by tests that push its bytes through the
 driver (`test/alnasl/real_board_test.exs`, fixtures `real-06310-*.jsonl`):
@@ -1029,11 +1029,11 @@ and names on every page in both languages.
 - **A loop has been read, not played on.** Two real boards on one cable
   were found, named and read (see above); nobody moved a piece and no clock
   was attached. That a move comes out of the next "what changed?" is what
-  DGT's text and the boards' own memories say, and the driver asks for the
+  the protocol text and the boards' own memories say, and the driver asks for the
   whole board every few seconds besides, so that a move on a loop can be
   late but not wrong. Help says so; nothing on the Boards page calls a loop
   "not verified" any more.
-- **A newer DGT board does not say its serial number on a loop.** Board
+- **A newer electronic board does not say its serial number on a loop.** Board
   06310 (firmware 1.9) answers as 6310, which is its serial number. The
   board with firmware 4.0 answers as 12799, which is not: it is known by
   that number until it has been plugged in alone once. Whether two such
@@ -1044,10 +1044,10 @@ and names on every page in both languages.
   in its memory, and went on). The drivers send none where more than one
   board answered.
 - **The result gesture** (kings in the centre: both on light squares = 1-0,
-  both on dark = 0-1, one on each = draw) is how DGT LiveChess is understood
+  both on dark = 0-1, one on each = draw) is how the board maker's own software is understood
   to work, not something read in a specification. It is only ever a
   suggestion.
-- **No DGT clock commands** are sent (nothing is written to the clock's
+- **No clock commands** are sent (nothing is written to the clock's
   display); the clock is only read. What the clock says about itself when it
   is switched on (`0A 10 01 2A 00 00 00`) is recognised and not decoded.
   Because nothing is written to it, "Show me" cannot make a board or its
@@ -1119,7 +1119,7 @@ and names on every page in both languages.
   than two boards on a loop likewise: twelve would each be asked what
   changed some four times a second (counted from the two that were
   measured, not measured).
-- **Bluetooth DGT, Millennium, Chessnut**: not started. A driver is one
+- **Bluetooth boards, Millennium, Chessnut**: not started. A driver is one
   module behind `Alnasl.Driver`.
 
 ## Stack
@@ -1132,6 +1132,3 @@ stylesheet is hand-written (`assets/css/app.css`), bundled by esbuild.
 ## License
 
 Apache License 2.0 - see [LICENSE](LICENSE) and [NOTICE](NOTICE).
-
-Alnasl is not affiliated with or endorsed by DGT (Digital Game Technology).
-"DGT" is their trademark, used here only to say which boards Alnasl talks to.

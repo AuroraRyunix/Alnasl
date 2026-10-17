@@ -86,7 +86,7 @@ pending part of the outbox.
 | `database.slow_queries` | the last five queries of 100 ms or more since the start, newest first; the query text cut at 160 characters (placeholders, never the values) |
 | `log.source` | `file` (a launcher's `launcher.log`), `journald` (with `unit`, under systemd) or `stdout` (a terminal) |
 | `alnasl.boards` | boards set up; `boards_connected` those with a running process and driver |
-| `alnasl.buses_open` | DGT serial buses open (one per port). Counted from the registry: **no port is opened or touched to answer this** |
+| `alnasl.buses_open` | serial buses open (one per port). Counted from the registry: **no port is opened or touched to answer this** |
 | `alnasl.outbox_pending` | messages for the results site not sent yet |
 | `alnasl.relay` | `unconfigured`, `disabled`, `idle`, `connected`, `offline` or `blocked`. No address and no error text: those can name the arbiter's server, and the panel gets pasted into mails |
 | `summary` | the same numbers as label/value lines in words and units, in a fixed order (`Alnasl.LauncherDetails.Stats.labels/1`) |

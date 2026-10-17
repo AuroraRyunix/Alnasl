@@ -8,10 +8,10 @@ Eén rij per bord: zijn live plaatje, het signaal, zijn serienummer en firmware,
 
 ## Een bord toevoegen {#adding-a-board}
 
-Borden, "Een bord toevoegen": kies de poort waarop het bord hangt en druk op Toevoegen. DGT-borden, in hun RS232- en USB-C-uitvoering, komen allebei neer op een seriële stroom, dus één stuurprogramma volstaat. Een DGT-bord op usb is een poort als `COM3` op Windows, `/dev/ttyUSB0` of `/dev/ttyACM0` op Linux, `/dev/cu.usbserial-...` of `/dev/cu.usbmodem...` op een Mac. Op Linux moet de gebruiker die Alnasl draait in de groep `dialout` zitten; de geïnstalleerde dienst is zo ingesteld. Een Mac toont elke adapter twee keer, als `tty.` en `cu.`; Alnasl biedt alleen de `cu.` aan.
+Borden, "Een bord toevoegen": kies de poort waarop het bord hangt en druk op Toevoegen. Elektronische borden, in hun RS232- en USB-C-uitvoering, komen allebei neer op een seriële stroom, dus één stuurprogramma volstaat. Een elektronisch bord op usb is een poort als `COM3` op Windows, `/dev/ttyUSB0` of `/dev/ttyACM0` op Linux, `/dev/cu.usbserial-...` of `/dev/cu.usbmodem...` op een Mac. Op Linux moet de gebruiker die Alnasl draait in de groep `dialout` zitten; de geïnstalleerde dienst is zo ingesteld. Een Mac toont elke adapter twee keer, als `tty.` en `cu.`; Alnasl biedt alleen de `cu.` aan.
 
 > [!WARNING] Eén programma per poort
-> Een poort kan maar door één programma tegelijk gelezen worden. Sluit DGT LiveChess voor je het bord hier toevoegt, anders krijgt het kastje geen antwoord.
+> Een poort kan maar door één programma tegelijk gelezen worden. Sluit de eigen software van de bordenmaker voor je het bord hier toevoegt, anders krijgt het kastje geen antwoord.
 
 De usb-adapter van een RS232-bord heeft op een Mac of Windows-pc soms het stuurprogramma van de maker nodig voor hij verschijnt (FTDI werkt zoals het is; Prolific, CH340 en CP210x misschien niet).
 
@@ -19,7 +19,7 @@ Een simulatorbord staat in dezelfde lijst. Het speelt zelf een partij en dient o
 
 ## Meerdere borden op één kabel {#loop}
 
-DGT-borden kunnen aan elkaar geschakeld worden op één seriële kabel, zoals in DGT LiveChess. Voor het kastje is dat één poort. Borden, "Een bord toevoegen": kies de poort en druk op Toevoegen. Het kastje vraagt de poort wie erop zit, dat duurt een paar seconden, en elk bord dat antwoordt krijgt een eigen rij. Je hoeft niets te typen of te kiezen: één bord wordt als één bord gelezen, twee of meer als een lus. Een lus telt tot twaalf borden.
+Elektronische borden kunnen aan elkaar geschakeld worden op één seriële kabel, zoals in de eigen software van de bordenmaker. Voor het kastje is dat één poort. Borden, "Een bord toevoegen": kies de poort en druk op Toevoegen. Het kastje vraagt de poort wie erop zit, dat duurt een paar seconden, en elk bord dat antwoordt krijgt een eigen rij. Je hoeft niets te typen of te kiezen: één bord wordt als één bord gelezen, twee of meer als een lus. Een lus telt tot twaalf borden.
 
 Een bord dat later in de keten wordt gestoken, krijgt binnen een tiental seconden vanzelf zijn rij, en het Logboek zegt het. Een bord dat uit de keten gehaald wordt, houdt zijn rij, die "Geen signaal" zegt en waarom; het is terug als het bord terug is. Zegt een bord midden in de keten "Geen signaal" en de andere niet, dan is zijn kabel in de keten eruit, of heeft het geen stroom. De borden ervoor blijven gewoon werken.
 
@@ -34,7 +34,7 @@ Als een poort toegevoegd is toen er één bord op zat, en er nu meer op zitten, 
 
 Twaalf borden lijken op elkaar, en twaalf kabels ook. Het kastje houdt drie dingen uit elkaar.
 
-- **Welk bord het is.** Een DGT-bord vertelt het kastje zijn serienummer (het staat ook op een etiket onder het bord). Daaraan kent het kastje het, niet aan de usb-poort. Haal het los, steek het elders in, herstart het kastje: het is nog altijd hetzelfde bord en houdt zijn nummer. Komt het terug op een andere poort, voeg het dan op die poort toe: het kastje herkent het serienummer en zet het terug op zijn oude plaats. Een bord dat het kastje nooit gezien heeft, krijgt de markering "Nieuw bord" en vraagt om een nummer.
+- **Welk bord het is.** Een elektronisch bord vertelt het kastje zijn serienummer (het staat ook op een etiket onder het bord). Daaraan kent het kastje het, niet aan de usb-poort. Haal het los, steek het elders in, herstart het kastje: het is nog altijd hetzelfde bord en houdt zijn nummer. Komt het terug op een andere poort, voeg het dan op die poort toe: het kastje herkent het serienummer en zet het terug op zijn oude plaats. Een bord dat het kastje nooit gezien heeft, krijgt de markering "Nieuw bord" en vraagt om een nummer.
 - **Zijn tafelnummer.** De sticker op het bord: "dit is tafel 7". Je stelt het één keer in voor de zaal en het blijft. "Etiketten" op de pagina Borden drukt een vel stickers af met het tafelnummer en het serienummer.
 - **Zijn bord van de ronde.** Normaal hetzelfde nummer als de tafel. Voor één ronde kun je iets anders zeggen in de kolom "Bord van ronde N" ("tafel 7 speelt vandaag bord 3"), twee borden omwisselen, of alles terugzetten. De volgende ronde begint weer bij de tafelnummers. Op de pagina Live is het bordnummer het grote; "tafel 7 · serienummer 06310" is de kleine letter.
 

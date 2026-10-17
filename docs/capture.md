@@ -1,6 +1,6 @@
-# Capturing the DGT bus
+# Capturing the board bus
 
-How to record what DGT LiveChess says to a loop, on Windows with a single
+How to record what the board maker's own software says to a loop, on Windows with a single
 serial adapter: LiveChess drives the boards as usual, and a small proxy in
 between passes every byte through and writes it down.
 
@@ -10,16 +10,16 @@ loop directly on 2026-10-12 (`docs/real-loop-2026-10-12.md`,
 differently, should Alnasl ever misread a loop that LiveChess reads.
 
 ```
-LiveChess --> COM10 (virtual) <==com0com==> COM11 (virtual) --> serial_proxy.py --> COM3 (adapter) --> DGT loop
+LiveChess --> COM10 (virtual) <==com0com==> COM11 (virtual) --> serial_proxy.py --> COM3 (adapter) --> Loop
                                                                       |
                                                                 capture.log
 ```
 
 ## What you need
 
-- The DGT loop with 2-3 boards (and the clock, if you have one), on its usual
+- The loop with 2-3 boards (and the clock, if you have one), on its usual
   cable and adapter.
-- DGT LiveChess.
+- The board maker's own software.
 - **com0com** - a free, signed virtual null-modem driver for Windows: it makes
   two COM ports wired to each other. Installing a driver is a change to the
   PC; you do this step yourself.

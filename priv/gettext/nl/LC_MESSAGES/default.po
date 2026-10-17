@@ -232,8 +232,8 @@ msgstr "Acties"
 
 #: lib/alnasl_web/live/boards_live.ex:696
 #, elixir-autogen, elixir-format
-msgid "Add a DGT board on a serial port below - or a simulator board, to see everything work without hardware."
-msgstr "Voeg hieronder een DGT-bord op een seriële poort toe - of een simulatorbord om alles te zien werken zonder hardware."
+msgid "Add an electronic board on a serial port below - or a simulator board, to see everything work without hardware."
+msgstr "Voeg hieronder een elektronisch bord op een seriële poort toe - of een simulatorbord om alles te zien werken zonder hardware."
 
 #: lib/alnasl_web/live/boards_live.ex:1094
 #, elixir-autogen, elixir-format
@@ -530,8 +530,8 @@ msgstr "Correcties"
 
 #: lib/alnasl_web/words.ex:458
 #, elixir-autogen, elixir-format
-msgid "DGT board, serial"
-msgstr "DGT-bord, serieel"
+msgid "Electronic board, serial"
+msgstr "Elektronisch bord, serieel"
 
 #: lib/alnasl_web/live/recordings_live.ex:311
 #, elixir-autogen, elixir-format
@@ -2645,8 +2645,8 @@ msgstr "%{n} wachtend"
 
 #: lib/alnasl_web/live/boards_live.ex:544
 #, elixir-autogen, elixir-format
-msgid "A DGT board carries its serial number on a label underneath. Lift a piece on the board you think it is: the box says whether you are right."
-msgstr "Een DGT-bord draagt zijn serienummer op een etiket aan de onderkant. Til een stuk op van het bord waarvan je denkt dat het dit is: het kastje zegt of je gelijk hebt."
+msgid "An electronic board carries its serial number on a label underneath. Lift a piece on the board you think it is: the box says whether you are right."
+msgstr "Een elektronisch bord draagt zijn serienummer op een etiket aan de onderkant. Til een stuk op van het bord waarvan je denkt dat het dit is: het kastje zegt of je gelijk hebt."
 
 #: lib/alnasl_web/live/boards_live.ex:1172
 #, elixir-autogen, elixir-format
@@ -5071,13 +5071,13 @@ msgstr "De poort wordt gevraagd..."
 
 #: lib/alnasl_web/words.ex:459
 #, elixir-autogen, elixir-format
-msgid "DGT board on a loop"
-msgstr "DGT-bord op een lus"
+msgid "Electronic board on a loop"
+msgstr "Elektronisch bord op een lus"
 
 #: lib/alnasl_web/live/boards_live.ex:1110
 #, elixir-autogen, elixir-format
-msgid "DGT board, or several on a loop (serial port)"
-msgstr "DGT-bord, of meerdere op een lus (seriële poort)"
+msgid "Electronic board, or several on a loop (serial port)"
+msgstr "Elektronisch bord, of meerdere op een lus (seriële poort)"
 
 #: lib/alnasl_web/live/boards_live.ex:795
 #, elixir-autogen, elixir-format
@@ -5882,8 +5882,8 @@ msgstr "Bruggen"
 
 #: lib/alnasl_web/words.ex:460
 #, elixir-autogen, elixir-format
-msgid "DGT board, through a bridge"
-msgstr "DGT-bord, via een brug"
+msgid "Electronic board, through a bridge"
+msgstr "Elektronisch bord, via een brug"
 
 #: lib/alnasl_web/live/bridge_components.ex:63
 #, elixir-autogen, elixir-format

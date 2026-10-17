@@ -44,8 +44,8 @@ def pump(src, dst, tag, log, lock, t0, stop):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--app", required=True, help="the com0com end LiveChess does NOT use, e.g. COM11")
-    ap.add_argument("--board", required=True, help="the real port of the DGT loop, e.g. COM3")
-    ap.add_argument("--baud", type=int, default=9600, help="DGT boards: 9600")
+    ap.add_argument("--board", required=True, help="the real port of the loop, e.g. COM3")
+    ap.add_argument("--baud", type=int, default=9600, help="boards: 9600")
     ap.add_argument("--out", default="capture.log")
     args = ap.parse_args()
 

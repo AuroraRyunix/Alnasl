@@ -1,5 +1,5 @@
 defmodule Mix.Tasks.Alnasl.Loop do
-  @shortdoc "Asks a serial port what DGT boards are on it, byte by byte, and writes a capture"
+  @shortdoc "Asks a serial port what electronic boards are on it, byte by byte, and writes a capture"
 
   @moduledoc """
   The loop's debug mode: several DGT boards on one serial line.

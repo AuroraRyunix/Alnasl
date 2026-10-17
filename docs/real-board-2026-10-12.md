@@ -1,7 +1,7 @@
 # The first real board: what it sent, 2026-10-12
 
-A DGT board (serial number **06310**, firmware **1.9**) on its own USB
-serial port (COM4, 9600 8N1), with a DGT clock on its clock socket and one
+An electronic board (serial number **06310**, firmware **1.9**) on its own USB
+serial port (COM4, 9600 8N1), with a clock on its clock socket and one
 black knight on it. Two recordings were made with `mix alnasl.dgt`; this is
 every kind of message in them, what the driver made of each, and what that
 settles about the constants in Arkab's `lib/arkab/dgt/protocol.ex`.
@@ -128,7 +128,7 @@ The increment is 30 seconds, added to the side that pressed, at the press.
 The display shows a second less than "time at the press + 30" as often as
 not, because the press falls inside a second.
 
-The announcement `0A 10 01 2A 00 00 00` has the form DGT's description gives
+The announcement `0A 10 01 2A 00 00 00` has the form the protocol description gives
 a clock's answer to a command (low nibble 0x0A where the hours belong). No
 command was sent to the clock. It is recognised and never read as a time;
 what it says is not decoded, and nothing depends on it.
@@ -159,8 +159,8 @@ Seen: 0x10 (4 times), 0x11 (76), 0x0B (157), 0x12 (2), 0x0A (1), 0x30 (1).
 ## Sides: there is no option
 
 The clock stands to the **right of the board**, White's display toward
-ranks 1-2. The cable is too short for it to stand anywhere else, and DGT's
-own LiveChess assumes exactly that. So:
+ranks 1-2. The cable is too short for it to stand anywhere else, and the board
+maker's own software assumes exactly that. So:
 
 - bytes 3-5 and bit 4 are White's, bytes 0-2 and bit 3 are Black's. One
   place says so: `Arkab.Dgt.Protocol.reading/1`;

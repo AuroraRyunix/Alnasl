@@ -4,7 +4,7 @@ Since 2026-10-14 every push to `main` builds **`Alnasl.app`** for Apple
 Silicon Macs, and a release attaches it. Nobody on the project has a Mac:
 everything here was built and started on GitHub's macOS runners, and the
 [test list](#testing-a-build-on-a-real-mac) at the end is what a person
-with a Mac (and ideally a DGT board) still has to confirm.
+with a Mac (and ideally an electronic board) still has to confirm.
 
 | | |
 |---|---|
@@ -157,7 +157,7 @@ Then the first start is a double-click.
 ## Serial ports on a Mac
 
 Every adapter appears twice, `/dev/tty.usbserial-XXXX` and
-`/dev/cu.usbserial-XXXX` (a DGT USB board: `usbmodem...`). The `tty.` one is
+`/dev/cu.usbserial-XXXX` (a USB board: `usbmodem...`). The `tty.` one is
 for dial-in and waits for a carrier signal a board never sends, so Alnasl
 lists only the `cu.` one (`Arkab.Transport.Uart.one_per_device/1`). Pick
 `/dev/cu.usbserial-...` or `/dev/cu.usbmodem...`; `Bluetooth-Incoming-Port`
@@ -228,11 +228,11 @@ minutes, plus the board.
 
 **A board**
 
-9. Plug in the DGT board (USB, or RS232 through its adapter). In Terminal,
+9. Plug in the electronic board (USB, or RS232 through its adapter). In Terminal,
    `ls /dev/cu.*` should list a `cu.usbmodem...` or `cu.usbserial-...`. If
    nothing new appears, the adapter needs its driver (see above) - note the
    adapter's make.
-10. Boards page, add a DGT board: the port list shows the `cu.` port, and no
+10. Boards page, add an electronic board: the port list shows the `cu.` port, and no
     `tty.` twin. Pick it and connect: the board's picture appears, with its
     serial number. Move a piece: the picture follows.
 11. (If an OpenPairings is at hand) a connect code in Setup, *Test

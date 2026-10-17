@@ -232,7 +232,7 @@ msgstr ""
 
 #: lib/alnasl_web/live/boards_live.ex:696
 #, elixir-autogen, elixir-format
-msgid "Add a DGT board on a serial port below - or a simulator board, to see everything work without hardware."
+msgid "Add an electronic board on a serial port below - or a simulator board, to see everything work without hardware."
 msgstr ""
 
 #: lib/alnasl_web/live/boards_live.ex:1094
@@ -530,7 +530,7 @@ msgstr ""
 
 #: lib/alnasl_web/words.ex:458
 #, elixir-autogen, elixir-format
-msgid "DGT board, serial"
+msgid "Electronic board, serial"
 msgstr ""
 
 #: lib/alnasl_web/live/recordings_live.ex:311
@@ -2645,7 +2645,7 @@ msgstr ""
 
 #: lib/alnasl_web/live/boards_live.ex:544
 #, elixir-autogen, elixir-format
-msgid "A DGT board carries its serial number on a label underneath. Lift a piece on the board you think it is: the box says whether you are right."
+msgid "An electronic board carries its serial number on a label underneath. Lift a piece on the board you think it is: the box says whether you are right."
 msgstr ""
 
 #: lib/alnasl_web/live/boards_live.ex:1172
@@ -5071,12 +5071,12 @@ msgstr ""
 
 #: lib/alnasl_web/words.ex:459
 #, elixir-autogen, elixir-format
-msgid "DGT board on a loop"
+msgid "Electronic board on a loop"
 msgstr ""
 
 #: lib/alnasl_web/live/boards_live.ex:1110
 #, elixir-autogen, elixir-format
-msgid "DGT board, or several on a loop (serial port)"
+msgid "Electronic board, or several on a loop (serial port)"
 msgstr ""
 
 #: lib/alnasl_web/live/boards_live.ex:795
@@ -5882,7 +5882,7 @@ msgstr ""
 
 #: lib/alnasl_web/words.ex:460
 #, elixir-autogen, elixir-format
-msgid "DGT board, through a bridge"
+msgid "Electronic board, through a bridge"
 msgstr ""
 
 #: lib/alnasl_web/live/bridge_components.ex:63
