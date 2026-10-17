@@ -77,8 +77,13 @@ defmodule AlnaslWeb.BridgeComponents do
       <p :if={@message} id="bridge-message" class="note" role="status">{@message}</p>
 
       <ul id="bridge-list" class="dests">
-        <li :if={@bridges == []} id="bridge-none" class="note">
-          {gettext("No bridge yet.")}
+        <li :if={@bridges == []} id="bridge-none" class="empty">
+          <b>{gettext("No bridges yet")}</b>
+          <p>
+            {gettext(
+              "A bridge is Arkab on a small computer beside the boards of a hall: it reads them and sends them here. Add a bridge, then paste its link on the bridge's page or scan the code there."
+            )}
+          </p>
         </li>
         <li :for={%{bridge: b, live: live} <- @bridges} id={"bridge-#{b.id}"} class="stack">
           <div>

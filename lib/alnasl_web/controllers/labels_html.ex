@@ -22,9 +22,10 @@ defmodule AlnaslWeb.LabelsHTML do
         </p>
         <a id="labels-back" class="btn small" href={~p"/boards"}>{gettext("Back to Boards")}</a>
       </header>
-      <p :if={@boards == []} id="labels-empty" class="empty">
-        {gettext("No board has a table number yet. Number them on the Boards page first.")}
-      </p>
+      <div :if={@boards == []} id="labels-empty" class="empty">
+        <b>{gettext("No labels to print")}</b>
+        <p>{gettext("No board has a table number yet. Number them on the Boards page first.")}</p>
+      </div>
       <ul :if={@boards != []} id="labels-sheet" class="labels-sheet">
         <li :for={board <- @boards} id={"label-#{board.id}"} class="label">
           <span class="label-word">{gettext("Table")}</span>

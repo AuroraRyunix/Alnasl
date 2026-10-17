@@ -203,7 +203,14 @@ defmodule AlnaslWeb.LogLive do
         </:actions>
 
         <ul id="log-lines" class="log" phx-update="stream">
-          <li id="log-empty" class="only-empty empty">{gettext("Nothing to show.")}</li>
+          <li id="log-empty" class="only-empty empty">
+            <b>{gettext("Nothing to show")}</b>
+            <span>
+              {gettext(
+                "Nothing has happened here yet, or nothing matches the filters. Show all brings everything back."
+              )}
+            </span>
+          </li>
 
           <li :for={{id, event} <- @streams.events} id={id} class={event.level}>
             <time datetime={DateTime.to_iso8601(event.at)}>{Words.time(event.at)}</time>

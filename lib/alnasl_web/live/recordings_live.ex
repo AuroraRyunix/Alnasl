@@ -243,9 +243,16 @@ defmodule AlnaslWeb.RecordingsLive do
       </.panel>
 
       <.panel id="captures" title={gettext("Captures")} flush>
-        <div :if={@count == 0} id="captures-empty" class="empty">
+        <div :if={@count == 0 and @q in [nil, ""]} id="captures-empty" class="empty">
           <b>{gettext("Nothing recorded yet")}</b>
           <p>{gettext("Every connected board is recorded from the moment it is connected.")}</p>
+        </div>
+
+        <div :if={@count == 0 and @q not in [nil, ""]} id="captures-empty" class="empty">
+          <b>{gettext("No recording matches")}</b>
+          <p>
+            {gettext("Nothing here has that in its name. Empty the search field to see them all.")}
+          </p>
         </div>
 
         <div :if={@count > 0} class="table-wrap">

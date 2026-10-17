@@ -1598,10 +1598,35 @@ defmodule AlnaslWeb.SetupLive do
               />
             </ul>
 
-            <p :if={@groups.here == []} id="tournaments-empty" class="note">
-              {if @groups.searching?,
-                do: gettext("No tournament has that in its name."),
-                else: gettext("No tournament yet. Add a connection to get one.")}
+            <div :if={@groups.here == [] and @groups.searching?} id="tournaments-empty" class="empty">
+              <b>{gettext("No tournament has that in its name")}</b>
+              <p>
+                {gettext("Try a shorter part of the name, or empty the search field to see them all.")}
+              </p>
+            </div>
+
+            <div
+              :if={@groups.here == [] and not @groups.searching? and @groups.rest == []}
+              id="tournaments-empty"
+              class="empty"
+            >
+              <b>{gettext("No tournaments yet")}</b>
+              <p>
+                {gettext(
+                  "A tournament arrives with a connection: a connect code from OpenPairings, or your OpenPairings account. Its rounds, pairings and results page come with it."
+                )}
+              </p>
+              <.button id="tournaments-empty-add" navigate={~p"/setup/connections"} variant="primary">
+                {gettext("Add a connection")}
+              </.button>
+            </div>
+
+            <p
+              :if={@groups.here == [] and not @groups.searching? and @groups.rest != []}
+              id="tournaments-empty"
+              class="note"
+            >
+              {gettext("No tournament has boards in this hall yet; the others are below.")}
             </p>
 
             <div :if={@groups.rest != []} id="tournaments-rest-wrap" class="tfold">
@@ -1839,9 +1864,14 @@ defmodule AlnaslWeb.SetupLive do
               </li>
             </ul>
 
-            <p :if={@links == []} id="links-empty" class="note">
-              {gettext("No connection yet. Add a code, or connect an OpenPairings account.")}
-            </p>
+            <div :if={@links == []} id="links-empty" class="empty">
+              <b>{gettext("No connections yet")}</b>
+              <p>
+                {gettext(
+                  "A connection brings tournaments from OpenPairings: paste a connect code (OpenPairings, Settings, Live boards), or connect an OpenPairings account below."
+                )}
+              </p>
+            </div>
 
             <div class="row">
               <.button

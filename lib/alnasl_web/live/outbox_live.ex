@@ -553,7 +553,14 @@ defmodule AlnaslWeb.OutboxLive do
           </li>
         </ul>
 
-        <div :if={@waiting == []} class="empty">{gettext("Nothing is waiting.")}</div>
+        <div :if={@waiting == []} id="waiting-empty" class="empty">
+          <b>{gettext("Nothing is waiting")}</b>
+          <p>
+            {gettext(
+              "Every move read so far has been sent. Moves that cannot go out at once wait here, in order."
+            )}
+          </p>
+        </div>
         <.entries :if={@waiting != []} id="waiting-table" entries={@waiting} mode={:waiting} />
       </.panel>
 
@@ -571,7 +578,14 @@ defmodule AlnaslWeb.OutboxLive do
           <.button :if={@sent != []} id="prune" small phx-click="prune">{gettext("Clear the list")}</.button>
         </:actions>
 
-        <div :if={@sent == []} class="empty">{gettext("Nothing has been sent yet.")}</div>
+        <div :if={@sent == []} id="sent-empty" class="empty">
+          <b>{gettext("Nothing has been sent yet")}</b>
+          <p>
+            {gettext(
+              "Moves are sent as soon as a board plays in a tournament with a results site or OpenPairings behind it. No board playing yet, or no connection? Boards and Setup are where that starts."
+            )}
+          </p>
+        </div>
         <.entries :if={@sent != []} id="sent-table" entries={@sent} mode={:sent} />
       </.panel>
     </Layouts.app>

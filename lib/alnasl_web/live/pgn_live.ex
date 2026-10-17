@@ -400,8 +400,13 @@ defmodule AlnaslWeb.PgnLive do
             >{gettext("Whole round as PGN")}</.button>
           </:actions>
 
-          <div :if={@stored == []} class="empty">
-            {gettext("Alnasl has no games for this round yet.")}
+          <div :if={@stored == []} id="stored-empty" class="empty">
+            <b>{gettext("Alnasl has no games for this round yet")}</b>
+            <p>
+              {gettext(
+                "A game appears here once a board plays it, or when you attach one from a PGN below. Another round? Pick it above."
+              )}
+            </p>
           </div>
 
           <table :if={@stored != []} id="stored-games">
