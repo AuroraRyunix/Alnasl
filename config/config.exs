@@ -78,6 +78,13 @@ config :logger, :default_formatter,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
+# The SQLite NIF compiled here instead of downloaded, when the build asks
+# (the macOS job sets EXQLITE_FORCE_BUILD): the precompiled one wants macOS
+# 14, and the app promises 11. rel/macos/build_app.sh checks the result.
+if System.get_env("EXQLITE_FORCE_BUILD") == "true" do
+  config :exqlite, force_build: true
+end
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"

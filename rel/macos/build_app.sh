@@ -28,8 +28,9 @@
 #     serial port is a simulator;
 #   * every Mach-O file links only to the system (/usr/lib, /System) or to
 #     itself. The runner has Homebrew; the arbiter's Mac does not;
-#   * the oldest macOS every Mach-O file accepts (`minos`). The newest of
-#     those goes into LSMinimumSystemVersion and the log.
+#   * the oldest macOS every Mach-O file accepts (`minos`). Any file that
+#     wants newer than 11.0 fails the build, by name; otherwise the newest
+#     of them goes into LSMinimumSystemVersion and the log.
 
 set -eu
 
@@ -105,9 +106,23 @@ else
 fi
 rm -rf "$iconset"
 
-# Links and minimum system, per Mach-O file.
+# True when version $1 is newer than $2 (11.0, 14.0, 15.0.1).
+newer() {
+  [ "$1" != "$2" ] &&
+    [ "$(printf '%s\n%s\n' "$1" "$2" | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)" = "$1" ]
+}
+
+# Links and minimum system, per Mach-O file. `supported` is the promise:
+# the launcher is compiled for it above, and the runtime and the NIFs are
+# built for it in the workflow. A file that asks for more is a build that
+# fails here, by name - not an app that tells a Mac on 14 "You can't use
+# this version of the application", which is how the 15.0 of the
+# ready-made Erlang got out the first time, unnoticed by anyone with a
+# Mac new enough not to care.
+supported=11.0
 bad=0
-minimum=11.0
+minimum=$supported
+too_new=$(mktemp)
 found=$(mktemp)
 find "$app" -type f -print0 | xargs -0 file | grep 'Mach-O' | cut -d: -f1 >"$found"
 while IFS= read -r binary; do
@@ -128,12 +143,21 @@ while IFS= read -r binary; do
     /LC_BUILD_VERSION/ { want = "minos" }
     /LC_VERSION_MIN_MACOSX/ { want = "version" }
     want != "" && $1 == want { print $2; want = "" }' | head -1)
-  if [ -n "$minos" ] && [ "$(printf '%s\n%s\n' "$minimum" "$minos" | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)" = "$minos" ]; then
+  if [ -n "$minos" ] && newer "$minos" "$minimum"; then
     minimum=$minos
+  fi
+  if [ -n "$minos" ] && newer "$minos" "$supported"; then
+    echo "$minos  $binary" >>"$too_new"
   fi
 done <"$found"
 echo "Mach-O files: $(wc -l <"$found" | tr -d ' '), oldest macOS all of them accept: $minimum"
 rm -f "$found"
+if [ -s "$too_new" ]; then
+  echo "::error::$(wc -l <"$too_new" | tr -d ' ') file(s) need a macOS newer than $supported; the app would refuse to open on $supported:"
+  sed 's/^/  /' "$too_new"
+  bad=1
+fi
+rm -f "$too_new"
 [ "$bad" = 0 ] || exit 1
 
 sed -e "s/__VERSION__/$version/g" -e "s/__MINIMUM_SYSTEM__/$minimum/g" \
