@@ -9,7 +9,7 @@ defmodule Alnasl.Bridges do
   ## Joining
 
   `create_join/2` makes a code for a hall, good for fifteen minutes and one
-  bridge; the hall's page (and Setup, for the hall it is about) shows
+  bridge; the Bridges tab of the hall's page shows
   `https://<this box>/join/<code>` as text and as a QR code. The bridge
   posts who it is to that link and is given its own long key (`redeem/2`).
   Only the key's hash is kept here. The bridge is in the code's hall, and

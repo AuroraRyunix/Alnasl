@@ -66,7 +66,7 @@ defmodule AlnaslWeb.DestinationWords do
   def quiet({:not_set_up, _id}),
     do:
       gettext(
-        "No results page yet: a tournament from OpenPairings brings its own; for the box's own tournament give one under Setup."
+        "No results page yet: a tournament from OpenPairings brings its own; for the box's own tournament give one under Setup, Results and Lichess."
       )
 
   @doc "Why a destination is not sending."

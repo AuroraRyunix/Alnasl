@@ -135,7 +135,7 @@ defmodule AlnaslWeb.SeatingComponents do
       <.link
         :if={length(@entry.targets) > 3}
         id={"#{@scope}put-more-#{@entry.board.id}"}
-        navigate={~p"/setup#setup-tournaments"}
+        navigate={~p"/setup/tournaments"}
       >
         {gettext("The other %{count} in Setup", count: length(@entry.targets) - 3)}
       </.link>

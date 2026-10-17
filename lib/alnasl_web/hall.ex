@@ -241,20 +241,18 @@ defmodule AlnaslWeb.Hall do
      if(hall,
        do:
          assign(socket,
-           hall: %{
-             hall
-             | heads: Status.heads(link, socket.assigns[:current_scope]),
-               waiting: Status.waiting(socket.assigns[:current_scope])
-           }
+           hall: %{hall | heads: Status.heads(link, socket.assigns[:current_scope])}
          ),
        else: refresh(socket)
      )}
   end
 
   defp info({:setting, "box_name"}, socket) do
-    {:cont, assign(socket,
+    {:cont,
+     assign(socket,
        link: Outbox.status(socket.assigns[:current_scope]),
-       box: Settings.get("box_name") || "Alnasl")}
+       box: Settings.get("box_name") || "Alnasl"
+     )}
   end
 
   # A tournament, a code or a board's place changed: which boards are

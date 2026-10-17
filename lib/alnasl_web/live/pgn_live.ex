@@ -145,6 +145,7 @@ defmodule AlnaslWeb.PgnLive do
 
       [board] =
         Boards.add_simulators(1, socket.assigns.round,
+          tournament_id: socket.assigns.tid,
           games: [game],
           first: number || next_free(socket),
           faults: %{"lift" => 0.08, "slide" => 0.1}
@@ -249,14 +250,42 @@ defmodule AlnaslWeb.PgnLive do
     Enum.find(socket.assigns.games, fn {_game, n} -> n == i end)
   end
 
-  defp next_free(socket) do
+  defp next_free(socket), do: next_free_no(socket.assigns)
+
+  defp next_free_no(assigns) do
     used =
       (Boards.list()
-       |> Enum.filter(&(&1.tournament_id == socket.assigns.tid))
-       |> Enum.map(& &1.board_no)) ++ Enum.map(socket.assigns.stored, & &1.board_no)
+       |> Enum.filter(&(&1.tournament_id == assigns.tid))
+       |> Enum.map(& &1.board_no)) ++ Enum.map(assigns.stored, & &1.board_no)
 
     (used |> Enum.reject(&is_nil/1) |> Enum.max(fn -> 0 end)) + 1
   end
+
+  @doc """
+  The board numbers of `assigns.tid` an event would touch, for
+  `AlnaslWeb.Permit`: the hall a board is played in decides, as on Live.
+  `attach` the number it asked about, `ask_attach` and `simulate` the
+  game's chosen board (a simulator without one takes the next free number),
+  `simulate_all` the run of numbers it is about to take.
+  """
+  def board_numbers("attach", _params, %{confirm: {_i, number, _existing}}), do: [number]
+
+  def board_numbers("ask_attach", %{"index" => index}, assigns) do
+    case assigns.targets[int(index, 0)] do
+      number when is_integer(number) -> [number]
+      _none -> []
+    end
+  end
+
+  def board_numbers("simulate", %{"index" => index}, assigns),
+    do: [assigns.targets[int(index, 0)] || next_free_no(assigns)]
+
+  def board_numbers("simulate_all", _params, %{games: [_ | _] = games} = assigns) do
+    first = next_free_no(assigns)
+    Enum.to_list(first..(first + length(games) - 1))
+  end
+
+  def board_numbers(_event, _params, _assigns), do: []
 
   defp int(text, default) do
     case Integer.parse(to_string(text)) do

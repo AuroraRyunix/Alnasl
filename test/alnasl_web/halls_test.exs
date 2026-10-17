@@ -161,7 +161,7 @@ defmodule AlnaslWeb.HallsTest do
       {:ok, setup, _html} = live(log_in(build_conn(), owner, a), ~p"/setup/access")
       refute has_element?(setup, "#setup-bridges")
       refute has_element?(setup, "#bridge-#{mine.id}")
-      assert has_element?(setup, ~s(#setup-bridges-link[href="/halls/#{a.id}"]))
+      assert has_element?(setup, ~s(#setup-bridges-link[href="/halls/#{a.id}/bridges"]))
 
       assert {:error, {:live_redirect, %{to: "/halls"}}} =
                live(log_in(build_conn(), owner, a), ~p"/halls/#{b.id}")

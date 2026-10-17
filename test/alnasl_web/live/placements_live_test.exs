@@ -152,7 +152,7 @@ defmodule AlnaslWeb.PlacementsLiveTest do
     annex = user_fixture("annex@example.org")
     member(b, annex, "arbiter")
 
-    {:ok, view, _html} = live(log_in(conn, annex, b), ~p"/setup")
+    {:ok, view, _html} = live(log_in(conn, annex, b), ~p"/setup/connections")
     view |> element("#link-also-here-#{annex_link.id}-17") |> render_click()
 
     assert Placements.halls_of(festival) == [a.id, b.id]
@@ -164,6 +164,34 @@ defmodule AlnaslWeb.PlacementsLiveTest do
 
     render_click(view, "placement_add", %{"t" => "#{other.id}", "hall" => "#{b.id}"})
     assert Placements.halls_of(other) == [a.id]
+  end
+
+  test "PGN: an arbiter of the annex attaches a game to the annex's boards, not the main hall's",
+       ctx do
+    %{conn: conn, a: a, b: b, open: open} = ctx
+    {:ok, _, _} = Placements.add(open, b.id)
+
+    user = user_fixture("annex-pgn@example.org")
+    member(a, user, "viewer")
+    member(b, user, "arbiter")
+
+    {:ok, view, _html} = live(log_in(conn, user, b), ~p"/pgn")
+    render_click(view, "pick_tournament", %{"tournament_id" => "#{open.id}"})
+
+    view
+    |> form("#paste-form", paste: %{text: "[White \"A\"]\n[Black \"B\"]\n\n1. e4 e5 *\n"})
+    |> render_submit()
+
+    # Board 3 is played in the main hall: the question is not even asked.
+    render_click(view, "target", %{"index" => "1", "board_no" => "3"})
+    render_click(view, "ask_attach", %{"index" => "1"})
+    assert has_element?(view, "#flash-error")
+    refute has_element?(view, "#attach-yes")
+
+    # Board 9 is the annex's first: asked, and the box would attach it.
+    render_click(view, "target", %{"index" => "1", "board_no" => "9"})
+    render_click(view, "ask_attach", %{"index" => "1"})
+    assert has_element?(view, "#attach-yes")
   end
 
   test "an arbiter of the annex standing in the main hall does not seat the annex's tournament there",

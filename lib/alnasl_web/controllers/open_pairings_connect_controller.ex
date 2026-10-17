@@ -1,6 +1,6 @@
 defmodule AlnaslWeb.OpenPairingsConnectController do
   @moduledoc """
-  "Connect an OpenPairings account" on Setup, Tournaments
+  "Connect an OpenPairings account" on Setup, Connections
   (`Alnasl.OpenPairings.Connect`): `start/2` sends the browser to
   OpenPairings with a fresh `state` kept in this browser's session,
   `callback/2` takes it back, checks the `state`, trades the grant for a

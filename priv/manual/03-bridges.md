@@ -19,7 +19,7 @@ The bridge dials out to Alnasl. Nothing has to be opened in the hall's network: 
 
 One action, in one place, and nobody types a key.
 
-1. On Alnasl, open the page of the hall the boards are in: Halls, then the hall (Setup, Access, has a "Bridges of this hall" button that leads there for the hall you are looking at). Press "Add a bridge".
+1. On Alnasl, open the page of the hall the boards are in: Halls, then the hall, then its **Bridges** tab (Setup, Access - This server on the server - has a "Bridges of this hall" button that leads straight there for the hall you are looking at). Press "Add a bridge".
 2. It shows a link and the same thing as a QR code. The link is good for **one bridge and fifteen minutes**, and says until when.
 3. On the bridge's page, "Join a server": paste the link, or scan the code with the camera. Press Join.
 4. The bridge shows "Joined." and the server appears in its list. On Alnasl the bridge appears in the hall's list of bridges, with its name and "connected".

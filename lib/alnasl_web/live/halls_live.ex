@@ -395,7 +395,7 @@ defmodule AlnaslWeb.HallsLive do
       <div class="stack">
         <p :if={@current_scope.open?} id="halls-open" class="note">
           {gettext(
-            "This box has no accounts: everybody on the hall's network may do everything, as before. Make the first account on Setup to change that."
+            "This box has no accounts: everybody on the hall's network may do everything, as before. Make the first account on Setup, Access, to change that."
           )}
         </p>
 
@@ -534,7 +534,7 @@ defmodule AlnaslWeb.HallsLive do
           <%= if @current_scope.open? do %>
             <p id="hall-people-open" class="note">
               {gettext(
-                "No accounts yet: everybody on the hall's network may do everything. The first account is made on Setup, and becomes this hall's owner."
+                "No accounts yet: everybody on the hall's network may do everything. The first account is made on Setup, Access, and becomes this hall's owner."
               )}
             </p>
           <% else %>

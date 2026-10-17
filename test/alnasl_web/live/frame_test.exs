@@ -165,7 +165,6 @@ defmodule AlnaslWeb.FrameTest do
         update: %{version: "9.9.9", url: "https://example.org", size: nil},
         hall: %{
           heads: :results_only,
-          waiting: 0,
           live: %{},
           seating: %{auto: nil, outside: [], ask: asks}
         }

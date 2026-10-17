@@ -27,7 +27,7 @@ A hall's own page has tabs, each with an address of its own: **People**, **Invit
 
 ### What a page shows {#scope}
 
-Every page is about the hall you are looking at: Round, Boards, the pages that number and find boards, PGN, the Outbox (its lists, its counts and the number in the frame), the Log and Recordings. Boards offers only the tournaments played in this hall for each board, and the one the board plays in now.
+Every page is about the hall you are looking at: Live, Boards, the pages that number and find boards, PGN, the Outbox (its lists, its counts and the number in the frame), the Log and Recordings. Boards offers only the tournaments played in this hall for each board, and the one the board plays in now.
 
 The Log and Recordings can also show **All my halls**: tick it and they list every hall you may see. They hold fifty lines or files a page, with a search box. A box without accounts has no halls to tell apart, and shows everything.
 
@@ -59,7 +59,7 @@ For a tournament played in more than one hall, the highest role you have in any 
 
 - **The hall you are standing in.** Giving its tables to a tournament, adding a code, its bridges: your role in this hall, whatever you are in the tournament's other halls.
 - **The whole tournament.** Removing it, its Lichess round and key, starting it by itself, the next round: your role in its home hall, the hall it came from.
-- **One board.** A result or a new game on the Round page, or anything on a board's page: your role in the hall that board is played in.
+- **One board.** A result or a new game on the Live page, anything on a board's page, or a game from the Games page attached to it or played on a simulator as that board: your role in the hall that board is played in.
 
 "Also play it in this hall" needs only an arbiter's role in the hall whose own code reaches the tournament: having the code is the permission.
 
@@ -89,4 +89,4 @@ With accounts, the QR code under "Open this site on your phone" (on Boards and S
 
 ### A forgotten password {#forgotten-password}
 
-There is no mail to reset it with. An admin opens the hall's page and gives the account a temporary password; the next sign-in asks for one of the account's own, and every other browser signed in as it is signed out. Your own password is changed under Account, in the account menu (the button at the foot of the rail, top right on a phone), which also says your role in the hall you are in.
+There is no mail to reset it with. An admin opens the hall's **People** tab and gives the account a temporary password; the next sign-in asks for one of the account's own, and every other browser signed in as it is signed out. Your own password is changed under Account, in the account menu (the button at the foot of the rail, top right on a phone), which also says your role in the hall you are in.

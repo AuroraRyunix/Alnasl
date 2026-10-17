@@ -20,7 +20,8 @@ defmodule AlnaslWeb.Permit do
   the hall the page is about needs the role there too; one about the whole
   tournament (removing it, its Lichess key, its rounds) needs it in the
   tournament's home hall; one about board N needs it in the hall board N
-  is played in.
+  is played in - on Live, on the board's own page, and on PGN (attaching a
+  game to board N, or playing it on a simulator as board N).
 
   On a box with no accounts everybody is the owner of everything, and this
   lets everything through, as before there were accounts.
@@ -216,6 +217,20 @@ defmodule AlnaslWeb.Permit do
       end
     else
       []
+    end
+  end
+
+  # PGN: a game attached to board N, or played on a simulator as board N,
+  # is board N's business - the page holds the tournament and the number,
+  # the event only says which game.
+  defp board_halls(PgnLive, event, params, %{tid: tid} = assigns)
+       when event in ~w(ask_attach attach simulate simulate_all) do
+    case Tournaments.get(tid) do
+      %Tournaments.Tournament{} = t ->
+        event |> PgnLive.board_numbers(params, assigns) |> Enum.map(&board_hall(t, &1))
+
+      nil ->
+        []
     end
   end
 

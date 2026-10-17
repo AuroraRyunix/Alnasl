@@ -1,7 +1,6 @@
 defmodule AlnaslWeb.BridgeComponents do
   @moduledoc """
-  The Bridges panel of a hall (on Setup for the hall the pages are about,
-  and on the hall's own page): "Add a bridge" (a link and its QR code, good
+  The Bridges tab of a hall's own page (Setup only links to it): "Add a bridge" (a link and its QR code, good
   for fifteen minutes and one bridge, which joins this hall), and every
   bridge of the hall - connected or not, its ports and boards, and the
   commands it takes.

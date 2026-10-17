@@ -2321,7 +2321,11 @@ defmodule AlnaslWeb.SetupLive do
                       {gettext("Your account")}
                     </.button>
 
-                    <.button id="setup-bridges-link" navigate={~p"/halls/#{@hall_id}"} variant="ghost">
+                    <.button
+                      id="setup-bridges-link"
+                      navigate={~p"/halls/#{@hall_id}/bridges"}
+                      variant="ghost"
+                    >
                       {gettext("Bridges of this hall")}
                     </.button>
                   </div>
@@ -2499,7 +2503,11 @@ defmodule AlnaslWeb.SetupLive do
                       {gettext("Your account")}
                     </.button>
 
-                    <.button id="setup-bridges-link" navigate={~p"/halls/#{@hall_id}"} variant="ghost">
+                    <.button
+                      id="setup-bridges-link"
+                      navigate={~p"/halls/#{@hall_id}/bridges"}
+                      variant="ghost"
+                    >
                       {gettext("Bridges of this hall")}
                     </.button>
                   </div>

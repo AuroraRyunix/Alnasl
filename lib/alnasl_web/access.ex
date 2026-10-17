@@ -169,7 +169,7 @@ defmodule AlnaslWeb.Access do
           <p :if={!@info.lan?} id={"#{@id}-local-only"} class="note">
             <.badge tone="warn" icon="warning">{gettext("Not reachable yet")}</.badge>
             {gettext(
-              "This box answers only itself, so a phone gets no answer. Setup, \"Access from other machines\": set a PIN, let other machines in, and start Alnasl again."
+              "This box answers only itself, so a phone gets no answer. Setup, Access, \"Access from other machines\": set a PIN, let other machines in, and start Alnasl again."
             )}
           </p>
 

@@ -202,10 +202,12 @@ defmodule AlnaslWeb.Layouts do
     end
   end
 
-  # What waits in the outbox for this hall's tournaments; the whole queue
-  # on a page that has no hall to ask about.
-  defp waiting(%{hall: %{waiting: n}}) when is_integer(n), do: n
-  defp waiting(%{link: link}), do: link.pending
+  # What waits in the outbox for this hall's tournaments: `pending` of
+  # `Alnasl.Outbox.status/1`, the same number the badge and the Outbox page
+  # count, so the rail cannot disagree with them. The whole queue on a box
+  # without accounts.
+  defp waiting(%{link: %{pending: n}}) when is_integer(n), do: n
+  defp waiting(_assigns), do: 0
 
   # The places, in their groups: `{id, label, [item]}`. Help stands alone,
   # at the end, without a heading.

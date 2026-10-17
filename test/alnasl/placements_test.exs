@@ -323,6 +323,38 @@ defmodule Alnasl.PlacementsTest do
              )
     end
 
+    test "PGN: a game for board N needs the role where board N is played", %{
+      a: a,
+      b: b,
+      open: open
+    } do
+      {:ok, _, _} = Placements.add(open, b.id)
+      # An arbiter of the annex, a viewer in the main hall, standing in the annex.
+      account = scope(%{a.id => "viewer", b.id => "arbiter"}, b)
+      pgn = AlnaslWeb.PgnLive
+      page = %{tid: open.id, stored: [], games: [], targets: %{1 => 3, 2 => 11}, confirm: nil}
+      allowed? = &AlnaslWeb.Permit.allowed?(account, pgn, &1, &2, Map.merge(page, &3))
+
+      # Board 3 is the main hall's, board 11 the annex's.
+      refute allowed?.("attach", %{}, %{confirm: {1, 3, nil}})
+      assert allowed?.("attach", %{}, %{confirm: {2, 11, nil}})
+
+      refute allowed?.("ask_attach", %{"index" => "1"}, %{})
+      assert allowed?.("ask_attach", %{"index" => "2"}, %{})
+
+      refute allowed?.("simulate", %{"index" => "1"}, %{})
+      assert allowed?.("simulate", %{"index" => "2"}, %{})
+
+      # Without a board chosen a simulator takes the next free number, 1:
+      # the main hall's, and so is the run "Play them all" would take.
+      refute allowed?.("simulate", %{"index" => "3"}, %{})
+      refute allowed?.("simulate_all", %{}, %{games: [{:game, 1}, {:game, 2}]})
+
+      # An arbiter of the main hall may do it there.
+      main = scope(%{a.id => "arbiter"}, a)
+      assert AlnaslWeb.Permit.allowed?(main, pgn, "attach", %{}, %{page | confirm: {1, 3, nil}})
+    end
+
     test "a hall can be added only where the account is arbiter or owner", ctx do
       %{a: a, b: b, c: c, open: open} = ctx
       account = scope(%{a.id => "arbiter", b.id => "owner", c.id => "viewer"}, a)

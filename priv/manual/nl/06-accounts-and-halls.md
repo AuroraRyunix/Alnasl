@@ -27,7 +27,7 @@ De pagina van een zaal heeft tabbladen, elk met een eigen adres: **Mensen**, **U
 
 ### Wat een pagina toont {#scope}
 
-Elke pagina gaat over de zaal waar je naar kijkt: Ronde, Borden, de pagina's die borden nummeren en zoeken, PGN, de Wachtrij (haar lijsten, haar tellers en het getal in de omlijsting), het Logboek en Opnames. Bij Borden biedt elk bord alleen de toernooien die in deze zaal gespeeld worden, plus dat waarin het bord nu speelt.
+Elke pagina gaat over de zaal waar je naar kijkt: Live, Borden, de pagina's die borden nummeren en zoeken, PGN, de Wachtrij (haar lijsten, haar tellers en het getal in de omlijsting), het Logboek en Opnames. Bij Borden biedt elk bord alleen de toernooien die in deze zaal gespeeld worden, plus dat waarin het bord nu speelt.
 
 Het Logboek en Opnames kunnen ook **Al mijn zalen** tonen: vink het aan en ze tonen elke zaal die je mag zien. Ze tonen vijftig regels of bestanden per pagina, met een zoekvak. Een kastje zonder accounts heeft geen zalen om uit elkaar te houden en toont alles.
 
@@ -59,7 +59,7 @@ Voor een toernooi dat in meer dan één zaal gespeeld wordt, telt de hoogste rol
 
 - **De zaal waar je staat.** Haar tafels aan een toernooi geven, een code toevoegen, haar bruggen: je rol in deze zaal, wat je ook bent in de andere zalen van het toernooi.
 - **Het hele toernooi.** Het verwijderen, zijn Lichess-ronde en -sleutel, het vanzelf laten starten, de volgende ronde: je rol in de thuiszaal, de zaal waar het vandaan komt.
-- **Eén bord.** Een uitslag of een nieuwe partij op de Ronde-pagina, of wat dan ook op de pagina van een bord: je rol in de zaal waar dat bord gespeeld wordt.
+- **Eén bord.** Een uitslag of een nieuwe partij op de pagina Live, wat dan ook op de pagina van een bord, of een partij van de pagina Partijen die eraan toegewezen wordt of op een simulator als dat bord gespeeld wordt: je rol in de zaal waar dat bord gespeeld wordt.
 
 "Speel het ook in deze zaal" vraagt alleen de rol van arbiter in de zaal waarvan de eigen code het toernooi bereikt: de code hebben is de toestemming.
 
@@ -89,4 +89,4 @@ Met accounts is de QR-code onder "Open deze site op je telefoon" (op Borden en I
 
 ### Een vergeten wachtwoord {#forgotten-password}
 
-Er is geen mail om het mee te herstellen. Een beheerder opent de pagina van de zaal en geeft het account een tijdelijk wachtwoord; bij de volgende aanmelding wordt om een eigen wachtwoord gevraagd, en elke andere browser die als dit account aangemeld was, wordt afgemeld. Je eigen wachtwoord wijzig je bij Account, in het accountmenu (de knop onderaan de balk, op een telefoon rechtsboven), dat ook zegt welke rol je hebt in de zaal waar je bent.
+Er is geen mail om het mee te herstellen. Een beheerder opent het tabblad **Mensen** van de zaal en geeft het account een tijdelijk wachtwoord; bij de volgende aanmelding wordt om een eigen wachtwoord gevraagd, en elke andere browser die als dit account aangemeld was, wordt afgemeld. Je eigen wachtwoord wijzig je bij Account, in het accountmenu (de knop onderaan de balk, op een telefoon rechtsboven), dat ook zegt welke rol je hebt in de zaal waar je bent.
