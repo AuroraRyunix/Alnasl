@@ -6,7 +6,7 @@ Wie wat mag zien en doen. Op een kastje in een zaal zijn er geen accounts tot je
 
 Een kastje zonder accounts is open: iedereen op het netwerk van de zaal mag alles doen, achter de pincode als die er is. Zo werkt Alnasl altijd al, en een update verandert dat niet.
 
-Bij Instellingen, "Accounts", kun je het eerste account maken. Je wordt eigenaar en beheerder van het kastje, en vanaf dan vraagt elke pagina wie er is, ook het eigen scherm van het kastje. De pincode heeft dan niets meer te zeggen.
+Bij Instellingen, Toegang, "Accounts", kun je het eerste account maken. Je wordt eigenaar en beheerder van het kastje, en vanaf dan vraagt elke pagina wie er is, ook het eigen scherm van het kastje. De pincode heeft dan niets meer te zeggen.
 
 > [!IMPORTANT] Hiermee gaat de aanmelding aan
 > Maak het eerste account als je klaar bent om je op elk toestel in de zaal aan te melden, telefoons inbegrepen. De aanmelding met een QR-code op de telefoon, hieronder, maakt dat pijnloos.
@@ -25,7 +25,7 @@ Bij meer dan één zaal zegt de zaalkiezer bovenaan de balk over welke zaal de p
 
 ## Toernooien en zalen {#placements}
 
-Waar een toernooi gespeeld wordt, zeg je in Instellingen, onder het toernooi: **Zalen en tafels**. Elke rij is één zaal, met de tafels van en tot en het eerste bord dat die tafels spelen. De twee gewone gevallen:
+Waar een toernooi gespeeld wordt, zeg je bij Instellingen, Toernooien: open het toernooi, en daar staat **Zalen en tafels**. Elke rij is één zaal, met de tafels van en tot en het eerste bord dat die tafels spelen. De twee gewone gevallen:
 
 - **Twee toernooien, één zaal.** De Open op tafels 1 tot 8, de min-twaalfjarigen op tafels 9 tot 16: elk toernooi heeft één rij in de zaal, en tafel 9 is bord 1 van de min-twaalfjarigen. Dat deed "Tafels van ... tot ..." altijd al, en doet het nog.
 - **Eén toernooi, twee zalen.** Borden 1 tot 8 in de grote zaal op haar tafels 1 tot 8, borden 9 tot 16 in de zaal ernaast op haar tafels 1 tot 8: de Open heeft twee rijen, de tweede begint bij bord 9. Tafel 4 van de zaal ernaast speelt bord 12.
@@ -77,7 +77,7 @@ Waar de uitrol het ingesteld heeft, heeft de aanmeldpagina een knop "Aanmelden m
 
 ### Telefoons: de QR-code {#phone-sign-in}
 
-Met accounts is de QR-code onder "Open deze site op je telefoon" (op Borden en Instellingen) een aanmeldcode. "Maak een aanmeldcode" toont er een die de telefoon eenmalig als jou aanmeldt, binnen vijf minuten. Een telefoon blijft dertig dagen aangemeld. Elke arbiter kan ook een eigen account gebruiken.
+Met accounts is de QR-code onder "Open deze site op je telefoon" (op Borden en Instellingen, Toegang) een aanmeldcode. "Maak een aanmeldcode" toont er een die de telefoon eenmalig als jou aanmeldt, binnen vijf minuten. Een telefoon blijft dertig dagen aangemeld. Elke arbiter kan ook een eigen account gebruiken.
 
 ### Een vergeten wachtwoord {#forgotten-password}
 

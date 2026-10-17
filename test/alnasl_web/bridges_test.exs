@@ -102,11 +102,11 @@ defmodule AlnaslWeb.BridgesTest do
     end
   end
 
-  describe "Setup" do
+  describe "The hall page" do
     test "Add a bridge shows the link and its QR code; a bridge that joins is listed", %{
       conn: conn
     } do
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/halls/#{Alnasl.Halls.own_id()}")
       assert has_element?(view, "#bridge-none")
 
       view |> element("#bridge-add") |> render_click()

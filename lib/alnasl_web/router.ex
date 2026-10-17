@@ -129,6 +129,7 @@ defmodule AlnaslWeb.Router do
       live "/recordings", RecordingsLive, :index
       live "/log", LogLive, :index
       live "/setup", SetupLive, :index
+      live "/setup/:section", SetupLive, :section
       live "/halls", HallsLive, :index
       live "/halls/:id", HallsLive, :show
       live "/help", HelpLive, :index

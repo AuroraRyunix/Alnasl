@@ -40,7 +40,7 @@ defmodule AlnaslWeb.AccountController do
 
           conn
           |> put_flash(:error, message)
-          |> redirect(to: ~p"/setup#setup-accounts")
+          |> redirect(to: ~p"/setup/access#setup-accounts")
 
         {:error, _taken} ->
           conn
@@ -52,7 +52,7 @@ defmodule AlnaslWeb.AccountController do
     end
   end
 
-  def first(conn, _params), do: redirect(conn, to: ~p"/setup")
+  def first(conn, _params), do: redirect(conn, to: ~p"/setup/access")
 
   def show(conn, _params) do
     case conn.assigns.current_scope do

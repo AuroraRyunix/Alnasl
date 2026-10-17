@@ -6,7 +6,7 @@ Who may see and do what. On a box in a hall there are no accounts until you make
 
 A box without accounts is open: everybody on the hall's network may do everything, behind the PIN if there is one. That is how Alnasl has always worked, and an update does not change it.
 
-Under Setup, "Accounts", you can make the first account. You become the box's owner and admin, and from then on every page asks who is there, the box's own screen included. The PIN has no say any more then.
+Under Setup, Access, "Accounts", you can make the first account. You become the box's owner and admin, and from then on every page asks who is there, the box's own screen included. The PIN has no say any more then.
 
 > [!IMPORTANT] This switches the login on
 > Make the first account when you are ready to sign in on every device in the hall, phones included. The phone sign-in below makes that painless.
@@ -25,7 +25,7 @@ With more than one hall, the hall picker at the top of the rail says which one t
 
 ## Tournaments and halls {#placements}
 
-Where a tournament is played is said on Setup, under the tournament: **Halls and tables**. Each row is one hall, with its tables from and to and the first board those tables play. The two common cases:
+Where a tournament is played is said on Setup, Tournaments: open the tournament, and there is **Halls and tables**. Each row is one hall, with its tables from and to and the first board those tables play. The two common cases:
 
 - **Two tournaments, one hall.** The Open on tables 1 to 8, the under-twelves on tables 9 to 16: each tournament has one row in the hall, and table 9 is board 1 of the under-twelves. This is what "Tables from ... to ..." has always done, and still does.
 - **One tournament, two halls.** Boards 1 to 8 in the main hall on its tables 1 to 8, boards 9 to 16 in the annex on its tables 1 to 8: the Open has two rows, the second starting at board 9. Table 4 of the annex plays board 12.
@@ -77,7 +77,7 @@ Where the deployment has set it up, the sign-in page has a "Sign in with 02cloud
 
 ### Phones: the QR code {#phone-sign-in}
 
-With accounts, the QR code under "Open this site on your phone" (on Boards and Setup) is a sign-in code. "Make a sign-in code" shows one that signs the phone in as you, once, within five minutes. A phone stays signed in for thirty days. Each arbiter can also use an account of their own.
+With accounts, the QR code under "Open this site on your phone" (on Boards and Setup, Access) is a sign-in code. "Make a sign-in code" shows one that signs the phone in as you, once, within five minutes. A phone stays signed in for thirty days. Each arbiter can also use an account of their own.
 
 ### A forgotten password {#forgotten-password}
 

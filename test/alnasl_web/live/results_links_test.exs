@@ -234,16 +234,19 @@ defmodule AlnaslWeb.ResultsLinksTest do
       pairing_program()
       open = linked(17, name: "Open", boards: 2)
       own = Tournaments.default()
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/tournaments?open=#{open.id}")
+      render_patch(view, ~p"/setup/tournaments?open=#{own.id}")
 
       assert new_tab?(view, "tournament-site-link-#{open.id}", "http://results.test/t/slug-17")
       assert new_tab?(view, "tournament-site-link-#{own.id}", @site)
+      render_patch(view, ~p"/setup/results")
       assert new_tab?(view, "server-site-link", @site)
 
       own_put(server_url: "")
-      {:ok, view, _html} = live(conn, ~p"/setup")
-      refute has_element?(view, "#tournament-site-link-#{own.id}")
+      {:ok, view, _html} = live(conn, ~p"/setup/results")
       refute has_element?(view, "#server-site-link")
+      render_patch(view, ~p"/setup/tournaments?open=#{own.id}")
+      refute has_element?(view, "#tournament-site-link-#{own.id}")
       assert has_element?(view, "#tournament-site-none-#{own.id}", "No results site")
     end
   end

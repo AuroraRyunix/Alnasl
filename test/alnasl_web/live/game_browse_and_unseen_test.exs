@@ -181,7 +181,7 @@ defmodule AlnaslWeb.GameBrowseAndUnseenTest do
   end
 
   test "Setup has the switch, on by default, and a board plays by it", %{conn: conn} do
-    {:ok, setup, _html} = live(conn, ~p"/setup")
+    {:ok, setup, _html} = live(conn, ~p"/setup/advanced")
     assert has_element?(setup, "#tracker-unseen[checked]")
     assert has_element?(setup, "#tracker-unseen-note")
 
@@ -191,7 +191,7 @@ defmodule AlnaslWeb.GameBrowseAndUnseenTest do
 
     assert Settings.get("tracker")["unseen_piece"] == false
     refute Keyword.fetch!(Settings.tracker_opts(), :unseen_piece)
-    {:ok, setup, _html} = live(conn, ~p"/setup")
+    {:ok, setup, _html} = live(conn, ~p"/setup/advanced")
     refute has_element?(setup, "#tracker-unseen[checked]")
   end
 end

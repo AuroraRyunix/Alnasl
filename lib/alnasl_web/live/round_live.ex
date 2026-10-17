@@ -1071,7 +1071,7 @@ defmodule AlnaslWeb.RoundLive do
 
                 <.button
                   id={sid("empty-setup", section.tid)}
-                  navigate={~p"/setup"}
+                  navigate={~p"/setup/connections"}
                   variant="primary"
                 >{gettext("Go to Setup")}</.button>
             <% end %>
@@ -1193,9 +1193,7 @@ defmodule AlnaslWeb.RoundLive do
           "%{count} more tournaments are not on the boards here.",
           @not_here
         )}
-        <.link id="not-on-the-boards-setup" navigate={~p"/setup#setup-tournaments"}>
-          {gettext("Setup")}
-        </.link>
+        <.link id="not-on-the-boards-setup" navigate={~p"/setup/tournaments"}>{gettext("Setup")}</.link>
       </p>
     </Layouts.app>
     """

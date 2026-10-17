@@ -36,12 +36,18 @@ defmodule AlnaslWeb.EditionTest do
     test "Setup keeps its updates, its PIN, the box name, and says which edition it is", %{
       conn: conn
     } do
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/this-box")
       assert has_element?(view, "#about-edition", "Box")
-      assert has_element?(view, "#setup-updates")
-      assert has_element?(view, "#setup-pin")
       assert has_element?(view, "#box-name")
       assert has_element?(view, "#setup-box", "This box")
+
+      {:ok, view, _html} = live(conn, ~p"/setup/updates")
+      assert has_element?(view, "#setup-updates")
+
+      {:ok, view, _html} = live(conn, ~p"/setup/access")
+      assert has_element?(view, "#setup-pin")
+      assert has_element?(view, "#setup-nav-access")
+      assert has_element?(view, "#setup-nav-updates")
     end
 
     test "Boards keeps adding a board and the serial ports", %{conn: conn} do
@@ -60,7 +66,7 @@ defmodule AlnaslWeb.EditionTest do
     end
 
     test "Setup draws none of the box's panels, and names itself", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/this-box")
       assert has_element?(view, "#about-edition", "Server")
       assert has_element?(view, "#setup-box", "This server")
       refute has_element?(view, "#box-name")
@@ -68,8 +74,18 @@ defmodule AlnaslWeb.EditionTest do
       refute has_element?(view, "#autostart-form")
       refute has_element?(view, "#setup-pin")
       refute has_element?(view, "#update-banner")
-      # What both editions have stays.
-      assert has_element?(view, "#setup-bridges")
+      # The sections a server cannot use are not in the list, and not reachable.
+      refute has_element?(view, "#setup-nav-access")
+      refute has_element?(view, "#setup-nav-updates")
+
+      for slug <- ~w(access updates) do
+        assert {:error, {:live_redirect, %{to: "/setup/tournaments"}}} =
+                 live(conn, "/setup/#{slug}")
+      end
+
+      # What both editions have stays; the bridges are the hall page's.
+      refute has_element?(view, "#setup-bridges")
+      assert has_element?(view, "#setup-bridges-link")
       assert has_element?(view, "#setup-accounts")
       assert has_element?(view, "#box-locale")
     end
@@ -185,7 +201,7 @@ defmodule AlnaslWeb.EditionTest do
       end
 
       assert has_element?(view, "#not-on-the-boards", "7 more tournaments")
-      assert has_element?(view, "#not-on-the-boards-setup[href='/setup#setup-tournaments']")
+      assert has_element?(view, "#not-on-the-boards-setup[href='/setup/tournaments']")
       refute has_element?(view, "#live-empty")
     end
 

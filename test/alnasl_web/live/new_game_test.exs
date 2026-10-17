@@ -246,7 +246,7 @@ defmodule AlnaslWeb.NewGameTest do
   end
 
   test "Setup has the choice, 'where no pairing names the board' by default", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/setup")
+    {:ok, view, _html} = live(conn, ~p"/setup/this-box")
     assert has_element?(view, "#box-new-game option[value=unpaired][selected]")
 
     view |> form("#box-form", box: %{new_game_on_setup: "always"}) |> render_submit()

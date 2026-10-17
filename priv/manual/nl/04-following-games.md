@@ -71,7 +71,7 @@ Op de pagina van het bord.
 Alles wat je hier doet, komt met het tijdstip in het Logboek.
 
 > [!TIP] Blitz en bullet
-> Instellingen heeft "Bullet / snel spel" voor partijen van een paar minuten of minder: een zet moet korter blijven staan, en een teruggezet stuk wordt niet als terugname gelezen. Het kastje leidt tot twee gemiste zetten af; daarboven wordt het bord "Niet synchroon" en zoekt "Hier hersynchroniseren" dieper.
+> Instellingen, Geavanceerd, heeft "Bullet / snel spel" voor partijen van een paar minuten of minder: een zet moet korter blijven staan, en een teruggezet stuk wordt niet als terugname gelezen. Het kastje leidt tot twee gemiste zetten af; daarboven wordt het bord "Niet synchroon" en zoekt "Hier hersynchroniseren" dieper.
 
 ## Een partij afsluiten {#finishing}
 
@@ -83,13 +83,13 @@ Stel op elk bord het resultaat in, of bevestig het voorstel: "Partij beëindigen
 
 - Noemt een paring het bord en heeft de partij **geen resultaat** (gestaakt, een valse start, "Geen resultaat"), dan is de nieuwe partij die partij: ze vervangt de oude op alle drie, en de oude blijft op het kastje.
 - Heeft de partij **wel een resultaat**, dan is de nieuwe partij een extra die op het kastje blijft, zodat een afgewerkte partij nooit overschreven wordt. "Ze vervangt de partij van de paring" staat er voor als je dat echt bedoelt. Een partij die op het kastje blijft, zegt dat op haar tegel, op haar pagina en op de pagina Resultaten, met "Verstuur deze in de plaats".
-- Op een bord dat geen paring noemt, begint het opnieuw opstellen van de stukken vanzelf de volgende partij. Instellingen kan dat altijd of nooit maken.
+- Op een bord dat geen paring noemt, begint het opnieuw opstellen van de stukken vanzelf de volgende partij. Instellingen, Dit kastje, kan dat altijd of nooit maken.
 
 Een partij die helemaal niet vastgelegd werd: pagina Partijen, lees de zetten van het partijformulier in en wijs ze toe aan haar bord.
 
 ## Rondes {#rounds}
 
-Met OpenPairings begint een ronde vanzelf een paar seconden nadat de arbiter ze daar paart: de borden van dat toernooi tonen de nieuwe ronde met namen, ratings en kleuren. De borden van de andere toernooien blijven ongemoeid. "Ronde N starten" op de pagina Live blijft er voor als er geen verbinding is, en een toernooi kan ingesteld worden om rondes niet vanzelf te starten (Instellingen).
+Met OpenPairings begint een ronde vanzelf een paar seconden nadat de arbiter ze daar paart: de borden van dat toernooi tonen de nieuwe ronde met namen, ratings en kleuren. De borden van de andere toernooien blijven ongemoeid. "Ronde N starten" op de pagina Live blijft er voor als er geen verbinding is, en een toernooi kan ingesteld worden om rondes niet vanzelf te starten (Instellingen, Toernooien, open het toernooi).
 
 Zonder OpenPairings zet "Ronde N starten" de borden van het toernooi door naar de volgende ronde.
 

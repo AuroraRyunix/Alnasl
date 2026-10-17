@@ -234,7 +234,7 @@ defmodule AlnaslWeb.TablesAndOutputsTest do
 
       Application.put_env(:alnasl, :lan?, true)
       Settings.set_pin("2468")
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/access")
       assert has_element?(view, "#setup-phone-access-urls li", "http://192.168.1.20:4002/")
       assert has_element?(view, "#setup-phone-access-qr svg")
       assert has_element?(view, "#setup-phone-access-pin-set")
@@ -471,7 +471,7 @@ defmodule AlnaslWeb.TablesAndOutputsTest do
 
     test "Setup: the round as a link, the token typed once and never shown again, a test in words",
          %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/results")
       assert has_element?(view, "#setup-lichess #lichess-form")
       refute Destination.enabled?(LichessBroadcast)
 

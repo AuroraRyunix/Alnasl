@@ -19,7 +19,7 @@ Versturen gebeurt vanzelf: naar OpenPairings vanaf het moment dat een toernooi g
 ## Koppelen met OpenPairings {#linking-to-openpairings}
 
 1. In OpenPairings: Instellingen, Live borden, maak een koppelcode, voor één toernooi of voor een groep toernooien. Ze wordt één keer getoond, als een regel tekst en als QR-code met dezelfde tekst.
-2. Op het kastje: Instellingen, Toernooien, plak de regel en druk op Toevoegen. Vanaf een telefoon: scan de QR-code met de eigen camera van de telefoon, kopieer de link die hij toont in plaats van hem te openen, en plak hem in het veld. Het kastje kan hem niet zelf scannen: een browser leent zijn camera enkel aan een pagina die via https geserveerd wordt, en het kastje doet dat niet.
+2. Op het kastje: Instellingen, Koppelingen, druk op "+ Toevoegen" (hij staat al open als er nog geen koppeling is), plak de regel en druk op Toevoegen. Vanaf een telefoon: scan de QR-code met de eigen camera van de telefoon, kopieer de link die hij toont in plaats van hem te openen, en plak hem in het veld. Het kastje kan hem niet zelf scannen: een browser leent zijn camera enkel aan een pagina die via https geserveerd wordt, en het kastje doet dat niet.
 3. De toernooien waar de code bij kan, verschijnen, elk met wat ermee meekwam: spelers, de rondes die gepaard zijn, het tempo van spel, en, als het toernooi gepubliceerd is, zijn uitslagenpagina en relaissleutel. Voor de uitslagensite typ je op het kastje niets. Een toernooi dat later aan de groep wordt toegevoegd, verschijnt vanzelf.
 4. De borden worden voor je in het toernooi gezet. Met één toernooi en nog niets gespeeld in dat van het kastje zelf, spelen alle borden die het kastje kent meteen daar, met hun tafelnummer als bord; de regel onder de balk zegt het en heeft een Ongedaan maken. Bij een groep, of een partij die al bezig is, vraagt het kastje welke tafels in welk toernooi spelen, met bereiken al ingevuld: "Tafels van 5 tot 8", waarbij tafel 5 bord 1 van het toernooi is. Eén bord kan ook op de pagina Borden in een toernooi gezet worden.
 
@@ -29,7 +29,7 @@ Druk op "Verbinding testen": het vraagt echt na en legt mislukkingen in woorden 
 
 In plaats van een code per toernooi koppel je een heel OpenPairings-account:
 
-1. Op het kastje: Instellingen, Toernooien, **Een OpenPairings-account koppelen**. Typ het adres van je OpenPairings (of `http://127.0.0.1:4000` voor een kopie op deze computer). Het wordt onthouden; op de gehoste server staat het er al.
+1. Op het kastje: Instellingen, Koppelingen, "+ Toevoegen", **Een OpenPairings-account koppelen**. Typ het adres van je OpenPairings (of `http://127.0.0.1:4000` voor een kopie op deze computer). Het wordt onthouden; op de gehoste server staat het er al.
 2. OpenPairings gaat open. Meld je aan als het dat vraagt, kijk welk kastje het vraagt, en druk op **Toestaan**. Je bent terug op het kastje.
 3. Het kastje heeft nu elk lopend toernooi dat je in OpenPairings mag bewerken, als eigenaar of medewerker - ook de toernooien die je later maakt. Meer dan 14 dagen geleden afgelopen, gearchiveerd of overgedragen: niet. De lijst toont het als *Al je toernooien op* de server, met het aantal.
 
@@ -57,7 +57,7 @@ Met een desktopkopie van OpenPairings op dezelfde computer begint de code met `h
 
 ### Zonder OpenPairings {#without-openpairings}
 
-Het kastje werkt toch. Typ de uitslagenpagina in bij Instellingen (het adres van de uitslagensite, het toernooi en de relaissleutel), en zeg wie op elk bord speelt op de pagina van het bord ("Spelers") of wijs een PGN toe die het zegt. Het kastje leest geen paringen van de uitslagensite.
+Het kastje werkt toch. Typ de uitslagenpagina in bij Instellingen, Uitslagen en Lichess (het adres van de uitslagensite, het toernooi en de relaissleutel), en zeg wie op elk bord speelt op de pagina van het bord ("Spelers") of wijs een PGN toe die het zegt. Het kastje leest geen paringen van de uitslagensite.
 
 ## De uitslagensite {#results-site}
 
@@ -76,10 +76,10 @@ Twee manieren, en ze kunnen naast elkaar draaien. In beide gevallen maak je eers
 
 1. Laat op Lichess de bron van de ronde leeg: de partijen worden gepusht. Kopieer de link naar de ronde.
 2. Maak op Lichess een persoonlijk toegangstoken (lichess.org/account/oauth/token) met het recht om studies en uitzendingen aan te maken en bij te werken. Het wordt één keer getoond: kopieer het.
-3. Op het kastje, Instellingen, "Lichess-uitzending": plak de link en het token, zeg welke ronde van het toernooi het is, vink "De partijen versturen" aan, Bewaren. "Testen" vraagt Lichess of het token en de ronde kloppen, en zegt in woorden wat niet klopt.
+3. Op het kastje, Instellingen, Uitslagen en Lichess, "Lichess-uitzending": plak de link en het token, zeg welke ronde van het toernooi het is, vink "De partijen versturen" aan, Bewaren. "Testen" vraagt Lichess of het token en de ronde kloppen, en zegt in woorden wat niet klopt.
 4. Vanaf dan gaat elke zet, correctie en uitslag binnen een paar seconden naar Lichess, met de klokken. De pagina Resultaten toont Lichess als een bestemming op zich.
 
-Het kastje heeft internet nodig. Een nieuwe ronde op Lichess is een nieuw rondenummer: pas het aan bij Instellingen als de ronde verandert.
+Het kastje heeft internet nodig. Een nieuwe ronde op Lichess is een nieuw rondenummer: pas het aan bij Instellingen, Uitslagen en Lichess, als de ronde verandert.
 
 ### Pull: Lichess haalt de partijen op bij de uitslagensite {#lichess-pull}
 

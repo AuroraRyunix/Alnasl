@@ -44,17 +44,17 @@ A move is believed once the pieces have stood still for a moment, or as soon as 
 
 The clock was pressed more often than moves were seen. Compare the board with the move list.
 
-### "Code refused" under Tournaments in Setup {#code-refused}
+### "Code refused" under Connections in Setup {#code-refused}
 
 OpenPairings does not accept the connect code: it was withdrawn there, or it is not the whole line. The box has stopped asking, and the boards go on with the pairings it has. Make a new code in OpenPairings (Settings, Live boards), add it, and remove the old one.
 
-### "No answer" under Tournaments in Setup {#no-answer}
+### "No answer" under Connections in Setup {#no-answer}
 
 OpenPairings cannot be reached. Nothing is lost: the boards go on with the pairings the box has, the games are kept for it, and the box asks again by itself. A round paired meanwhile is started with "Start round N" and takes its names when the connection is back.
 
 ### A tournament has no results page {#no-results-page}
 
-It is not published from OpenPairings, or no relay key is saved there (Settings, Live boards). Setup says which. Until then its moves go to OpenPairings only; the address and the key arrive by themselves once they are there.
+It is not published from OpenPairings, or no relay key is saved there (Settings, Live boards). Setup, Tournaments, says which. Until then its moves go to OpenPairings only; the address and the key arrive by themselves once they are there.
 
 ### The results site shows nothing {#results-site-empty}
 

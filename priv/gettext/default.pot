@@ -7099,3 +7099,126 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "server"
 msgstr ""
+
+#: lib/alnasl_web/live/setup_live.ex:1613
+#, elixir-autogen, elixir-format
+msgid "%{count} more tournament, not on the boards here"
+msgid_plural "%{count} more tournaments, not on the boards here"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/alnasl_web/live/setup_live.ex:1855
+#, elixir-autogen, elixir-format
+msgid "+ Add"
+msgstr ""
+
+#: lib/alnasl_web/live/setup_live.ex:111
+#, elixir-autogen, elixir-format
+msgid "Access"
+msgstr ""
+
+#: lib/alnasl_web/live/setup_live.ex:1687
+#, elixir-autogen, elixir-format
+msgid "Actions for this connection"
+msgstr ""
+
+#: lib/alnasl_web/live/setup_live.ex:114
+#, elixir-autogen, elixir-format
+msgid "Advanced"
+msgstr ""
+
+#: lib/alnasl_web/live/setup_live.ex:2321
+#: lib/alnasl_web/live/setup_live.ex:2499
+#, elixir-autogen, elixir-format
+msgid "Bridges of this hall"
+msgstr ""
+
+#: lib/alnasl_web/live/setup_live.ex:104
+#: lib/alnasl_web/live/setup_live.ex:1560
+#: lib/alnasl_web/live/setup_live.ex:1669
+#, elixir-autogen, elixir-format
+msgid "Connections"
+msgstr ""
+
+#: lib/alnasl_web/live/setup_live.ex:1573
+#: lib/alnasl_web/live/setup_live.ex:1580
+#, elixir-autogen, elixir-format
+msgid "Find a tournament"
+msgstr ""
+
+#: lib/alnasl_web/live/setup_live.ex:1642
+#, elixir-autogen, elixir-format
+msgid "Hide the tournaments not started or finished"
+msgstr ""
+
+#: lib/alnasl_web/live/setup_live.ex:1843
+#, elixir-autogen, elixir-format
+msgid "No connection yet. Add a code, or connect an OpenPairings account."
+msgstr ""
+
+#: lib/alnasl_web/live/setup_live.ex:1600
+#, elixir-autogen, elixir-format
+msgid "No tournament has that in its name."
+msgstr ""
+
+#: lib/alnasl_web/live/setup_live.ex:1601
+#, elixir-autogen, elixir-format
+msgid "No tournament yet. Add a connection to get one."
+msgstr ""
+
+#: lib/alnasl_web/live/setup_live.ex:1096
+#, elixir-autogen, elixir-format
+msgid "Not started"
+msgstr ""
+
+#: lib/alnasl_web/live/setup_live.ex:105
+#, elixir-autogen, elixir-format
+msgid "Results and Lichess"
+msgstr ""
+
+#: lib/alnasl_web/live/setup_live.ex:1095
+#, elixir-autogen, elixir-format
+msgid "Running"
+msgstr ""
+
+#: lib/alnasl_web/live/setup_live.ex:1547
+#, elixir-autogen, elixir-format
+msgid "Section"
+msgstr ""
+
+#: lib/alnasl_web/live/setup_live.ex:1534
+#, elixir-autogen, elixir-format
+msgid "Sections of Setup"
+msgstr ""
+
+#: lib/alnasl_web/live/setup_live.ex:1644
+#, elixir-autogen, elixir-format
+msgid "Show %{count} tournament not started or finished"
+msgid_plural "Show %{count} tournaments not started or finished"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/alnasl_web/live/setup_live.ex:1558
+#, elixir-autogen, elixir-format
+msgid "The tournaments this box serves. The ones with boards on this box come first; a connect code or an OpenPairings account brings more."
+msgstr ""
+
+#: lib/alnasl_web/live/setup_live.ex:2230
+#, elixir-autogen, elixir-format
+msgid "Used until somebody picks a language of their own."
+msgstr ""
+
+#: lib/alnasl_web/live/setup_live.ex:1127
+#, elixir-autogen, elixir-format
+msgid "round %{n}"
+msgstr ""
+
+#: lib/alnasl_web/destination_words.ex:45
+#, elixir-autogen, elixir-format
+msgid "No connect code: add one under Setup, Connections."
+msgstr ""
+
+#: lib/alnasl_web/destination_words.ex:62
+#, elixir-autogen, elixir-format
+msgid "Stays off until a round and a token are filled in under Setup, Results and Lichess."
+msgstr ""

@@ -71,7 +71,7 @@ On the board's page.
 Everything you do here is written in the Log with the time.
 
 > [!TIP] Blitz and bullet
-> Setup has "Bullet / fast play" for games of a few minutes or less: a move has to stand for a shorter time, and a board put back is not read as a takeback. The box works out up to two moves it did not see; beyond that the board goes "Out of sync" and "Resync from here" searches deeper.
+> Setup, Advanced, has "Bullet / fast play" for games of a few minutes or less: a move has to stand for a shorter time, and a board put back is not read as a takeback. The box works out up to two moves it did not see; beyond that the board goes "Out of sync" and "Resync from here" searches deeper.
 
 ## Finishing a game {#finishing}
 
@@ -83,13 +83,13 @@ Set the result on every board, or confirm the suggestion: "Finish game" on the b
 
 - Where a pairing names the board and its game has **no result** (abandoned, a false start, "No result"), the new game is that one: it replaces the old game on all three, and the old one stays on the box.
 - Where the game **has a result**, the new game is an extra one that stays on the box, so a finished game is never overwritten. "It replaces the game of the pairing" is there for when you mean it. A game that stays on the box says so on its tile, on its page and on the Results page, with "Send this one instead".
-- On a board no pairing names, setting up the pieces again starts the next game by itself. Setup can make that always, or never.
+- On a board no pairing names, setting up the pieces again starts the next game by itself. Setup, This box, can make that always, or never.
 
 A game that was not captured at all: Games page, read the scoresheet's moves, and "Attach" it to its board.
 
 ## Rounds {#rounds}
 
-With OpenPairings, a round starts by itself a few seconds after the arbiter pairs it there: that tournament's boards show the new round with names, ratings and colours. The boards of the other tournaments are not touched. "Start round N" on the Live page stays for when there is no connection, and a tournament can be told not to start rounds by itself (Setup).
+With OpenPairings, a round starts by itself a few seconds after the arbiter pairs it there: that tournament's boards show the new round with names, ratings and colours. The boards of the other tournaments are not touched. "Start round N" on the Live page stays for when there is no connection, and a tournament can be told not to start rounds by itself (Setup, Tournaments, open the tournament).
 
 Without OpenPairings, "Start round N" moves the tournament's boards on to the next round.
 

@@ -66,7 +66,7 @@ defmodule AlnaslWeb.OpenPairingsConnectControllerTest do
 
     test "not an address: said, and nowhere to go", %{conn: conn} do
       out = start(conn, "ftp://pairings.test")
-      assert redirected_to(out) == ~p"/setup"
+      assert redirected_to(out) == ~p"/setup/connections"
       assert flash_error(out) =~ "not the address of an OpenPairings"
     end
 
@@ -76,7 +76,7 @@ defmodule AlnaslWeb.OpenPairingsConnectControllerTest do
       viewer = member(hall, user_fixture("viewer@example.org"), "viewer")
 
       out = conn |> log_in(viewer, hall) |> start()
-      assert redirected_to(out) == ~p"/setup"
+      assert redirected_to(out) == ~p"/setup/connections"
       assert flash_error(out) =~ "follow the games"
       assert get_session(out, :openpairings_connect) == nil
     end
@@ -90,7 +90,7 @@ defmodule AlnaslWeb.OpenPairingsConnectControllerTest do
       grant = FakeOpenPairings.grant(code)
 
       back = round_trip(conn, %{"grant" => grant})
-      assert redirected_to(back) == ~p"/setup"
+      assert redirected_to(back) == ~p"/setup/connections"
       assert Phoenix.Flash.get(back.assigns.flash, :info) =~ "Connected"
 
       assert [link] = Tournaments.links()
@@ -98,7 +98,7 @@ defmodule AlnaslWeb.OpenPairingsConnectControllerTest do
       assert link.hall_id == Halls.own_id()
       assert Enum.map(Tournaments.of_link(link), & &1.remote_id) == [17, 18]
 
-      {:ok, _view, html} = live(build_conn(), ~p"/setup")
+      {:ok, _view, html} = live(build_conn(), ~p"/setup/connections")
       assert html =~ "All your tournaments on pairings.test (2)"
 
       # The grant was good once.

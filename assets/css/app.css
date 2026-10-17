@@ -3810,3 +3810,277 @@ h1 .manual-help-link, h2 .manual-help-link { transform: translateY(-2px); }
 .manual-prose dl { margin: 0 0 16px; }
 .page .manual-prose h3 { text-transform: none; letter-spacing: 0; color: var(--ink); }
 .page .manual-prose h2 { letter-spacing: 0; }
+
+/* --- Setup, split into sections ------------------------------------------- */
+
+.setup {
+  display: grid;
+  grid-template-columns: 13rem minmax(0, 1fr);
+  gap: 1.1rem;
+  align-items: start;
+}
+
+.setup-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  position: sticky;
+  top: 1rem;
+}
+
+.setup-nav-link {
+  display: block;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius);
+  border-left: 3px solid transparent;
+  color: var(--ink);
+  text-decoration: none;
+  transition: background 0.12s ease;
+}
+
+.setup-nav-link:hover {
+  background: var(--sunken);
+}
+
+.setup-nav-link.current {
+  background: var(--sunken);
+  border-left-color: var(--accent);
+  font-weight: 650;
+}
+
+.setup-select {
+  display: none;
+}
+
+.setup-body {
+  min-width: 0;
+}
+
+@media (max-width: 860px) {
+  .setup {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .setup-nav {
+    display: none;
+  }
+
+  .setup-select {
+    display: block;
+  }
+
+  .setup-select select {
+    width: 100%;
+  }
+}
+
+.is-collapsed {
+  display: none;
+}
+
+.add-panel {
+  margin-top: 0.8rem;
+}
+
+/* The tournament rows: a line each, the rest when it is opened. */
+
+.trows {
+  list-style: none;
+  margin: 0.8rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.trow {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
+.trow.open {
+  background: var(--panel);
+}
+
+.trow-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-right: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.trow-toggle {
+  flex: 1 1 18rem;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.6rem 0.75rem;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: var(--radius);
+}
+
+.trow-toggle:hover {
+  background: var(--sunken);
+}
+
+.trow-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trow-meta {
+  color: var(--quiet);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.tdot {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  flex: none;
+  background: var(--idle);
+}
+
+.tdot.ok {
+  background: var(--ok);
+}
+
+.tdot.warn {
+  background: var(--warn);
+}
+
+.chip {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: var(--sunken);
+  color: var(--ink);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.trow-caret,
+.tfold-caret {
+  width: 1rem;
+  height: 1rem;
+  flex: none;
+  transition: transform 0.15s ease;
+}
+
+.trow.open .trow-caret,
+.tfold-caret.up {
+  transform: rotate(180deg);
+}
+
+.trow-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 0.2rem 0.85rem 0.85rem;
+  border-top: 1px solid var(--rule);
+  padding-top: 0.75rem;
+}
+
+.tsearch {
+  margin-top: 0.8rem;
+}
+
+.tsearch .input {
+  width: 100%;
+}
+
+.tfold {
+  margin-top: 0.7rem;
+}
+
+.tfold-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.5rem;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+  border-radius: var(--radius);
+}
+
+.tfold-toggle:hover {
+  background: var(--sunken);
+}
+
+/* Connections: a line each, a menu for what is done to one. */
+
+.conns {
+  list-style: none;
+  margin: 0.8rem 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.conn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
+.conn-line {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.conn-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.menu {
+  position: relative;
+}
+
+.menu > summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.menu-list {
+  position: absolute;
+  right: 0;
+  z-index: 5;
+  margin-top: 0.25rem;
+  min-width: 11rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.4rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}

@@ -7099,3 +7099,126 @@ msgstr "Deze browser"
 #, elixir-autogen, elixir-format
 msgid "server"
 msgstr "server"
+
+#: lib/alnasl_web/live/setup_live.ex:1613
+#, elixir-autogen, elixir-format
+msgid "%{count} more tournament, not on the boards here"
+msgid_plural "%{count} more tournaments, not on the boards here"
+msgstr[0] "%{count} ander toernooi, niet op de borden hier"
+msgstr[1] "%{count} andere toernooien, niet op de borden hier"
+
+#: lib/alnasl_web/live/setup_live.ex:1855
+#, elixir-autogen, elixir-format
+msgid "+ Add"
+msgstr "+ Toevoegen"
+
+#: lib/alnasl_web/live/setup_live.ex:111
+#, elixir-autogen, elixir-format
+msgid "Access"
+msgstr "Toegang"
+
+#: lib/alnasl_web/live/setup_live.ex:1687
+#, elixir-autogen, elixir-format
+msgid "Actions for this connection"
+msgstr "Acties voor deze koppeling"
+
+#: lib/alnasl_web/live/setup_live.ex:114
+#, elixir-autogen, elixir-format
+msgid "Advanced"
+msgstr "Geavanceerd"
+
+#: lib/alnasl_web/live/setup_live.ex:2321
+#: lib/alnasl_web/live/setup_live.ex:2499
+#, elixir-autogen, elixir-format
+msgid "Bridges of this hall"
+msgstr "Bruggen van deze zaal"
+
+#: lib/alnasl_web/live/setup_live.ex:104
+#: lib/alnasl_web/live/setup_live.ex:1560
+#: lib/alnasl_web/live/setup_live.ex:1669
+#, elixir-autogen, elixir-format
+msgid "Connections"
+msgstr "Koppelingen"
+
+#: lib/alnasl_web/live/setup_live.ex:1573
+#: lib/alnasl_web/live/setup_live.ex:1580
+#, elixir-autogen, elixir-format
+msgid "Find a tournament"
+msgstr "Zoek een toernooi"
+
+#: lib/alnasl_web/live/setup_live.ex:1642
+#, elixir-autogen, elixir-format
+msgid "Hide the tournaments not started or finished"
+msgstr "Verberg de toernooien die niet begonnen of afgelopen zijn"
+
+#: lib/alnasl_web/live/setup_live.ex:1843
+#, elixir-autogen, elixir-format
+msgid "No connection yet. Add a code, or connect an OpenPairings account."
+msgstr "Nog geen koppeling. Voeg een code toe, of koppel een OpenPairings-account."
+
+#: lib/alnasl_web/live/setup_live.ex:1600
+#, elixir-autogen, elixir-format
+msgid "No tournament has that in its name."
+msgstr "Geen enkel toernooi heeft dat in zijn naam."
+
+#: lib/alnasl_web/live/setup_live.ex:1601
+#, elixir-autogen, elixir-format
+msgid "No tournament yet. Add a connection to get one."
+msgstr "Nog geen toernooi. Voeg een koppeling toe om er een te krijgen."
+
+#: lib/alnasl_web/live/setup_live.ex:1096
+#, elixir-autogen, elixir-format
+msgid "Not started"
+msgstr "Niet begonnen"
+
+#: lib/alnasl_web/live/setup_live.ex:105
+#, elixir-autogen, elixir-format
+msgid "Results and Lichess"
+msgstr "Uitslagen en Lichess"
+
+#: lib/alnasl_web/live/setup_live.ex:1095
+#, elixir-autogen, elixir-format
+msgid "Running"
+msgstr "Bezig"
+
+#: lib/alnasl_web/live/setup_live.ex:1547
+#, elixir-autogen, elixir-format
+msgid "Section"
+msgstr "Onderdeel"
+
+#: lib/alnasl_web/live/setup_live.ex:1534
+#, elixir-autogen, elixir-format
+msgid "Sections of Setup"
+msgstr "Onderdelen van Instellingen"
+
+#: lib/alnasl_web/live/setup_live.ex:1644
+#, elixir-autogen, elixir-format
+msgid "Show %{count} tournament not started or finished"
+msgid_plural "Show %{count} tournaments not started or finished"
+msgstr[0] "Toon %{count} toernooi dat niet begonnen of afgelopen is"
+msgstr[1] "Toon %{count} toernooien die niet begonnen of afgelopen zijn"
+
+#: lib/alnasl_web/live/setup_live.ex:1558
+#, elixir-autogen, elixir-format
+msgid "The tournaments this box serves. The ones with boards on this box come first; a connect code or an OpenPairings account brings more."
+msgstr "De toernooien die dit kastje bedient. Die met borden op dit kastje staan bovenaan; een koppelcode of een OpenPairings-account brengt er meer."
+
+#: lib/alnasl_web/live/setup_live.ex:2230
+#, elixir-autogen, elixir-format
+msgid "Used until somebody picks a language of their own."
+msgstr "Geldt tot iemand een eigen taal kiest."
+
+#: lib/alnasl_web/live/setup_live.ex:1127
+#, elixir-autogen, elixir-format
+msgid "round %{n}"
+msgstr "ronde %{n}"
+
+#: lib/alnasl_web/destination_words.ex:45
+#, elixir-autogen, elixir-format
+msgid "No connect code: add one under Setup, Connections."
+msgstr "Geen koppelcode: voeg er een toe onder Instellingen, Koppelingen."
+
+#: lib/alnasl_web/destination_words.ex:62
+#, elixir-autogen, elixir-format
+msgid "Stays off until a round and a token are filled in under Setup, Results and Lichess."
+msgstr "Blijft uit tot een ronde en een token zijn ingevuld onder Instellingen, Uitslagen en Lichess."

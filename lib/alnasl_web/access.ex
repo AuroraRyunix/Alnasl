@@ -122,10 +122,12 @@ defmodule AlnaslWeb.Access do
             <rect :for={{x, y} <- @code.cells} x={x} y={y} width="1" height="1" fill="#000000" />
           </svg>
         </div>
+
         <div class="stack">
           <%= if @accounts? do %>
             <%= if @signin do %>
               <p>{gettext("Point the phone's camera at the code: it signs the phone in as you.")}</p>
+
               <p id={"#{@id}-signin-expiry"} class="note">
                 {gettext(
                   "Good once, until %{time} (UTC). Do not leave it on a screen others photograph.",
@@ -139,6 +141,7 @@ defmodule AlnaslWeb.Access do
                 )}
               </p>
             <% end %>
+
             <div>
               <.button
                 id={"#{@id}-signin"}
@@ -149,6 +152,7 @@ defmodule AlnaslWeb.Access do
                 {if @signin, do: gettext("A fresh code"), else: gettext("Make a sign-in code")}
               </.button>
             </div>
+
             <ul id={"#{@id}-urls"} class="addresses">
               <li :for={u <- @info.urls} class="mono">{u <> @path}</li>
             </ul>
@@ -156,25 +160,28 @@ defmodule AlnaslWeb.Access do
             <p>
               {gettext("Open this address on your phone, or point its camera at the code:")}
             </p>
+
             <ul id={"#{@id}-urls"} class="addresses">
               <li :for={u <- @info.urls} class="mono">{u <> @path}</li>
             </ul>
           <% end %>
+
           <p :if={!@info.lan?} id={"#{@id}-local-only"} class="note">
             <.badge tone="warn" icon="warning">{gettext("Not reachable yet")}</.badge>
             {gettext(
               "This box answers only itself, so a phone gets no answer. Setup, \"Access from other machines\": set a PIN, let other machines in, and start Alnasl again."
             )}
           </p>
+
           <p :if={@pin_set? and !@accounts?} id={"#{@id}-pin-set"} class="note">
             {gettext("The phone will be asked for the PIN once.")}
           </p>
+
           <p :if={!@pin_set? and !@accounts?} id={"#{@id}-pin-hint"} class="note">
             <.badge tone="warn" icon="warning">{gettext("No PIN")}</.badge>
             {gettext(
               "Anybody on the hall's network who opens this address can renumber the boards. Set a PIN in Setup before the hall fills up."
-            )}
-            <.link navigate={~p"/setup"}>{gettext("Go to Setup")}</.link>
+            )} <.link navigate={~p"/setup/access"}>{gettext("Go to Setup")}</.link>
           </p>
         </div>
       <% else %>
