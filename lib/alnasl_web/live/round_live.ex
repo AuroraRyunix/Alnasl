@@ -172,7 +172,7 @@ defmodule AlnaslWeb.RoundLive do
       many?: length(listed) > 1,
       title: title,
       page_title: title,
-      configured?: Outbox.configured?() or Tournaments.links() != [],
+      configured?: Outbox.configured?() or Alnasl.Halls.here(account, Tournaments.links()) != [],
       dirty: MapSet.new(),
       full?: false,
       refresh_due?: false

@@ -7222,3 +7222,80 @@ msgstr "Geen koppelcode: voeg er een toe onder Instellingen, Koppelingen."
 #, elixir-autogen, elixir-format
 msgid "Stays off until a round and a token are filled in under Setup, Results and Lichess."
 msgstr "Blijft uit tot een ronde en een token zijn ingevuld onder Instellingen, Uitslagen en Lichess."
+
+#: lib/alnasl_web/live/halls_live.ex:430
+#, elixir-autogen, elixir-format
+msgid "%{live} of %{count}"
+msgstr "%{live} van %{count}"
+
+#: lib/alnasl_web/live/halls_live.ex:435
+#, elixir-autogen, elixir-format
+msgid "%{up} of %{count}"
+msgstr "%{up} van %{count}"
+
+#: lib/alnasl_web/live/log_live.ex:199
+#: lib/alnasl_web/live/recordings_live.ex:176
+#, elixir-autogen, elixir-format
+msgid "All my halls"
+msgstr "Al mijn zalen"
+
+#: lib/alnasl_web/live/halls_live.ex:414
+#, elixir-autogen, elixir-format
+msgid "Attention"
+msgstr "Aandacht"
+
+#: lib/alnasl_web/live/halls_live.ex:86
+#, elixir-autogen, elixir-format
+msgid "Invitations"
+msgstr "Uitnodigingen"
+
+#: lib/alnasl_web/live/halls_live.ex:412
+#, elixir-autogen, elixir-format
+msgid "Live boards"
+msgstr "Live borden"
+
+#: lib/alnasl_web/components/pager.ex:62
+#, elixir-autogen, elixir-format
+msgid "Page %{page} of %{pages} (%{total} in all)"
+msgstr "Pagina %{page} van %{pages} (%{total} in totaal)"
+
+#: lib/alnasl_web/components/pager.ex:50
+#, elixir-autogen, elixir-format
+msgid "Pages"
+msgstr "Pagina's"
+
+#: lib/alnasl_web/live/halls_live.ex:509
+#, elixir-autogen, elixir-format
+msgid "Parts of this hall"
+msgstr "Onderdelen van deze zaal"
+
+#: lib/alnasl_web/live/log_live.ex:180
+#, elixir-autogen, elixir-format
+msgid "Search the log"
+msgstr "Doorzoek het logboek"
+
+#: lib/alnasl_web/live/recordings_live.ex:163
+#, elixir-autogen, elixir-format
+msgid "Search the recordings"
+msgstr "Doorzoek de opnames"
+
+#: lib/alnasl_web/live/halls_live.ex:88
+#, elixir-autogen, elixir-format
+msgid "Settings"
+msgstr "Instellingen"
+
+#: lib/alnasl_web/live/halls_live.ex:411
+#, elixir-autogen, elixir-format
+msgid "Your role"
+msgstr "Jouw rol"
+
+#: lib/alnasl_web/live/halls_live.ex:437
+#, elixir-autogen, elixir-format
+msgid "none"
+msgstr "geen"
+
+#: lib/alnasl_web/live/log_live.ex:186
+#: lib/alnasl_web/live/recordings_live.ex:169
+#, elixir-autogen, elixir-format
+msgid "search"
+msgstr "zoeken"

@@ -1499,6 +1499,49 @@ code,
   color: var(--on-accent);
 }
 
+/* --- hall tabs, search, pages -------------------------------------------- */
+
+.hall-tabs {
+  align-self: flex-start;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.hall-tabs a {
+  white-space: nowrap;
+}
+
+.input.log-q {
+  width: 11rem;
+  max-width: 100%;
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink);
+  min-height: 2.25rem;
+  cursor: pointer;
+}
+
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-top: 1px solid var(--rule);
+}
+
+.pager .btn[disabled] {
+  opacity: 0.5;
+  cursor: default;
+}
+
 /* --- states: a shape, a word, and then a colour ---------------------------- */
 
 .state {

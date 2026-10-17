@@ -7222,3 +7222,80 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Stays off until a round and a token are filled in under Setup, Results and Lichess."
 msgstr ""
+
+#: lib/alnasl_web/live/halls_live.ex:430
+#, elixir-autogen, elixir-format
+msgid "%{live} of %{count}"
+msgstr ""
+
+#: lib/alnasl_web/live/halls_live.ex:435
+#, elixir-autogen, elixir-format
+msgid "%{up} of %{count}"
+msgstr ""
+
+#: lib/alnasl_web/live/log_live.ex:199
+#: lib/alnasl_web/live/recordings_live.ex:176
+#, elixir-autogen, elixir-format
+msgid "All my halls"
+msgstr ""
+
+#: lib/alnasl_web/live/halls_live.ex:414
+#, elixir-autogen, elixir-format
+msgid "Attention"
+msgstr ""
+
+#: lib/alnasl_web/live/halls_live.ex:86
+#, elixir-autogen, elixir-format
+msgid "Invitations"
+msgstr ""
+
+#: lib/alnasl_web/live/halls_live.ex:412
+#, elixir-autogen, elixir-format
+msgid "Live boards"
+msgstr ""
+
+#: lib/alnasl_web/components/pager.ex:62
+#, elixir-autogen, elixir-format
+msgid "Page %{page} of %{pages} (%{total} in all)"
+msgstr ""
+
+#: lib/alnasl_web/components/pager.ex:50
+#, elixir-autogen, elixir-format
+msgid "Pages"
+msgstr ""
+
+#: lib/alnasl_web/live/halls_live.ex:509
+#, elixir-autogen, elixir-format
+msgid "Parts of this hall"
+msgstr ""
+
+#: lib/alnasl_web/live/log_live.ex:180
+#, elixir-autogen, elixir-format
+msgid "Search the log"
+msgstr ""
+
+#: lib/alnasl_web/live/recordings_live.ex:163
+#, elixir-autogen, elixir-format
+msgid "Search the recordings"
+msgstr ""
+
+#: lib/alnasl_web/live/halls_live.ex:88
+#, elixir-autogen, elixir-format
+msgid "Settings"
+msgstr ""
+
+#: lib/alnasl_web/live/halls_live.ex:411
+#, elixir-autogen, elixir-format
+msgid "Your role"
+msgstr ""
+
+#: lib/alnasl_web/live/halls_live.ex:437
+#, elixir-autogen, elixir-format
+msgid "none"
+msgstr ""
+
+#: lib/alnasl_web/live/log_live.ex:186
+#: lib/alnasl_web/live/recordings_live.ex:169
+#, elixir-autogen, elixir-format
+msgid "search"
+msgstr ""

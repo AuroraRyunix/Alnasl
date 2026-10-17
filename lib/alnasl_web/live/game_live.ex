@@ -712,7 +712,7 @@ defmodule AlnaslWeb.GameLive do
       path={@current_path}
       title={gettext("Board %{n}", n: @no)}
       subtitle={
-        if Tournaments.many?() and Tournaments.title(@tournament),
+        if Alnasl.Halls.many?(@current_scope) and Tournaments.title(@tournament),
           do: gettext("Round %{n}", n: @round) <> " - " <> Tournaments.title(@tournament),
           else: gettext("Round %{n}", n: @round)
       }

@@ -21,7 +21,15 @@ A 02cloud login alone gets nobody in. Only an invitation, or being named an admi
 
 The box's own ports are one hall. Every bridge belongs to a hall, and so do its boards and tournaments. An admin makes more halls on the Halls page. Each account sees its own halls and nothing of the others.
 
-With more than one hall, the hall picker at the top of the rail says which one the pages are about, and how many of its boards are live. Press it for your halls, each with your role there and its live boards (a search field appears from seven halls on); picking one keeps you on the page you were on, now about that hall. "All halls" at the bottom opens the Halls page, which shows every hall at a glance: boards live, bridges connected, and what needs an arbiter.
+With more than one hall, the hall picker at the top of the rail says which one the pages are about, and how many of its boards are live. Press it for your halls, each with your role there and its live boards (a search field appears from seven halls on); picking one keeps you on the page you were on, now about that hall. "All halls" at the bottom opens the Halls page, which lists every hall in a table: your role in it, boards live, bridges connected, and what needs an arbiter.
+
+A hall's own page has tabs, each with an address of its own: **People**, **Invitations**, **Bridges** and **Settings** (rename, delete). Invitations and Settings are an owner's; an arbiter or a viewer has People and Bridges.
+
+### What a page shows {#scope}
+
+Every page is about the hall you are looking at: Round, Boards, the pages that number and find boards, PGN, the Outbox (its lists, its counts and the number in the frame), the Log and Recordings. Boards offers only the tournaments played in this hall for each board, and the one the board plays in now.
+
+The Log and Recordings can also show **All my halls**: tick it and they list every hall you may see. They hold fifty lines or files a page, with a search box. A box without accounts has no halls to tell apart, and shows everything.
 
 ## Tournaments and halls {#placements}
 
@@ -59,13 +67,13 @@ A viewer who presses a button that changes something is told that their role let
 
 ## Inviting people {#inviting}
 
-On a hall's page, "Invite" makes a link for one address and one role, good once and for a week. The box sends no mail: copy the link to the person yourself. Whoever opens it makes the account for that address, with a password or with 02cloud, or signs in and joins the hall. An open invitation can be withdrawn.
+On a hall's **Invitations** tab, "Invite" makes a link for one address and one role, good once and for a week. The box sends no mail: copy the link to the person yourself. Whoever opens it makes the account for that address, with a password or with 02cloud, or signs in and joins the hall. An open invitation can be withdrawn.
 
 A hall keeps at least one owner: you cannot take the last one out. Make someone else owner first.
 
 ## Deleting a hall {#deleting-a-hall}
 
-On a hall's page, an owner (or an admin) finds "Delete this hall". It asks you to type the hall's name, and only then does the button work. The people, the open invitations, the join codes and the boards of the hall go with it.
+On a hall's **Settings** tab, an owner (or an admin) finds "Delete this hall". It asks you to type the hall's name, and only then does the button work. The people, the open invitations, the join codes and the boards of the hall go with it.
 
 A hall that still has bridges, tournaments or a connection to OpenPairings is not deleted: the message says what is left ("2 bridges and 1 tournament"), and you remove those first. That way no game is ever thrown away by this button. The box's own hall can never be deleted. Anyone who had the deleted hall open lands on another hall of theirs.
 

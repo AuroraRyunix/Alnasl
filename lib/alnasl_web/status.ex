@@ -91,7 +91,7 @@ defmodule AlnaslWeb.Status do
 
       linked ->
         [pairing_head(Halls.here(scope || %Scope{open?: true}, Tournaments.links()))] ++
-          results_head(linked, link)
+          results_head(linked, link, scope)
     end
   end
 
@@ -126,37 +126,42 @@ defmodule AlnaslWeb.Status do
     %{id: "head-pairing", tone: tone, icon: icon, text: text, to: "/setup/connections"}
   end
 
-  defp results_head(linked, link) do
-    case results(linked, link) do
+  defp results_head(linked, link, scope) do
+    case results(linked, link, scope) do
       nil ->
         []
 
       {tone, icon, text} ->
         [
           %{id: "head-results", tone: tone, icon: icon, text: text, to: "/outbox"}
-          |> Map.put(:open, open_address())
+          |> Map.put(:open, open_address(scope))
         ]
     end
   end
 
   # With exactly one tournament in use, the badge has a link to its page on
   # the results site; with several there is no telling which one is meant.
-  defp open_address do
-    case Tournaments.active() do
+  defp open_address(scope) do
+    case active(scope) do
       [one] -> Alnasl.ResultsSite.tournament_url(one)
       _several -> nil
     end
   end
 
+  # The tournaments in use in the hall on show; all of them without a hall.
+  defp active(nil), do: Tournaments.active()
+  defp active(scope), do: Halls.active(scope)
+
   @doc """
-  The results site, for the tournaments in use: `{tone, icon, text}`, or
+  The results site, for the tournaments in use (of the scope's hall, when
+  there is one): `{tone, icon, text}`, or
   `nil` when none of them is on a results site (their games go to
   OpenPairings only, and that is not a fault).
   """
-  def results(linked \\ nil, link \\ nil) do
+  def results(linked \\ nil, link \\ nil, scope \\ nil) do
     linked = linked || Seating.linked()
     link = link || Outbox.status()
-    active = Tournaments.active()
+    active = active(scope)
     published = Enum.filter(linked, &(&1.server_url != ""))
     keyless = Enum.filter(published, &(&1.relay_key == ""))
 

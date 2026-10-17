@@ -12,15 +12,15 @@ For a capture you can:
 - **Export it as a test fixture**, so a failure in a hall becomes a test at a desk. This is for whoever maintains Alnasl; if you are not that person, you can ignore it.
 - **Download it.**
 
-On the Recordings page you only see the boards of your own halls.
+The Recordings page shows the boards of the hall you are looking at; tick **All my halls** for the others. It lists fifty files a page, and a search finds a board or a file name.
 
 ## The Log {#the-log}
 
-What happened, in sentences, with filters: board connected, moves recovered, out of sync, repaired by the arbiter, offline, back. Everything you do on a board's page, a repair or a correction, is in it with the time.
+What happened, in sentences, with filters: board connected, moves recovered, out of sync, repaired by the arbiter, offline, back. Everything you do on a board's page, a repair or a correction, is in it with the time. It shows this hall's lines (**All my halls** shows the rest), fifty a page, and a search box finds a word in them.
 
 ## The Results page {#the-outbox}
 
-The connections, honestly: for the results site and for every other destination, connected or not, last success, how much is waiting and why it is not going, in words. Each has its own switch and its own "Send now". What waits, what the server refused, and what went out.
+The connections, honestly: for the results site and for every other destination, connected or not, last success, how much is waiting and why it is not going, in words. Each has its own switch and its own "Send now". What waits, what the server refused, and what went out. All of it, the counts and the number in the frame included, is about the tournaments played in the hall you are looking at.
 
 ## PGN {#pgn}
 

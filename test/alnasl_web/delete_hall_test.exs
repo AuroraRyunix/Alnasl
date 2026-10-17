@@ -27,7 +27,7 @@ defmodule AlnaslWeb.DeleteHallTest do
   defp scope(user, hall), do: Accounts.scope(user, hall.id)
 
   defp open_dialog(conn, user, hall) do
-    {:ok, view, _html} = live(log_in(conn, user, hall), ~p"/halls/#{hall.id}")
+    {:ok, view, _html} = live(log_in(conn, user, hall), ~p"/halls/#{hall.id}/settings")
     view |> element("#hall-delete-ask") |> render_click()
     view
   end
@@ -141,7 +141,7 @@ defmodule AlnaslWeb.DeleteHallTest do
 
   test "no button on the own hall, nor for an arbiter", %{conn: conn, admin: admin, hall: hall} do
     own = Halls.own()
-    {:ok, view, _html} = live(log_in(conn, admin, own), ~p"/halls/#{own.id}")
+    {:ok, view, _html} = live(log_in(conn, admin, own), ~p"/halls/#{own.id}/settings")
     refute has_element?(view, "#hall-delete")
 
     arbiter = member(hall, user_fixture("arb@example.org"), "arbiter")

@@ -157,18 +157,38 @@ defmodule Alnasl.Outbox do
 
   def pending_count, do: Repo.aggregate(where(Entry, [e], e.state == "pending"), :count)
 
-  def counts do
+  @doc """
+  How many rows wait for the tournaments in `ids` (the tournaments of one
+  hall: `Alnasl.Halls.tournament_ids/1`); every row when `ids` is `nil`.
+  """
+  def pending_count(nil), do: pending_count()
+
+  def pending_count(ids) when is_list(ids),
+    do:
+      Repo.aggregate(where(Entry, [e], e.state == "pending" and e.tournament_id in ^ids), :count)
+
+  def counts(ids \\ nil) do
     Entry
+    |> only(ids)
     |> group_by([e], e.state)
     |> select([e], {e.state, count(e.id)})
     |> Repo.all()
     |> Map.new()
   end
 
-  def list(state, limit \\ 100) do
+  def list(state, limit \\ 100, ids \\ nil) do
     order = if state == "pending", do: [asc: :id], else: [desc: :id]
-    Entry |> where([e], e.state == ^state) |> order_by(^order) |> limit(^limit) |> Repo.all()
+
+    Entry
+    |> only(ids)
+    |> where([e], e.state == ^state)
+    |> order_by(^order)
+    |> limit(^limit)
+    |> Repo.all()
   end
+
+  defp only(query, nil), do: query
+  defp only(query, ids), do: where(query, [e], e.tournament_id in ^ids)
 
   @doc """
   The connection as the arbiter should see it: `%{state, pending, last_ok,
@@ -191,6 +211,17 @@ defmodule Alnasl.Outbox do
       true ->
         base
     end
+  end
+
+  @doc """
+  The connection as one hall sees it: `status/0`, with `pending` counting
+  only what the scope's current hall sends (`Alnasl.Halls.tournament_ids/1`).
+  This is what the badge in the frame shows. A scope with no hall to keep
+  to (a box without accounts, or none at all) sees the whole queue.
+  """
+  def status(scope) do
+    ids = if scope, do: Alnasl.Halls.tournament_ids(scope)
+    %{status() | pending: pending_count(ids)}
   end
 
   @doc "Removes sent and superseded rows older than `days`; all of them when `days` is 0."

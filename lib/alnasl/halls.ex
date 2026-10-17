@@ -249,6 +249,21 @@ defmodule Alnasl.Halls do
 
   def active(_none), do: []
 
+  @doc """
+  The ids of the tournaments placed in the scope's current hall, for
+  filtering a queue or a count; `nil` (all of them) on a box without
+  accounts.
+  """
+  def tournament_ids(%Scope{open?: true}), do: nil
+
+  def tournament_ids(%Scope{} = scope),
+    do: scope |> here(Tournaments.list()) |> Enum.map(& &1.id)
+
+  def tournament_ids(_none), do: []
+
+  @doc "Is there more than one tournament in play in the scope's hall to tell apart?"
+  def many?(scope), do: length(active(scope)) > 1
+
   @doc "The hall a box-wide action (numbering, remaps) keeps to: `nil` (all) on a box without accounts."
   def filter_id(%Scope{open?: true}), do: nil
   def filter_id(%Scope{} = scope), do: Scope.hall_id(scope)
