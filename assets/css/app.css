@@ -367,6 +367,10 @@ code,
   position: sticky;
   top: 0;
   height: 100vh;
+  /* A sticky rail is a stacking context of its own; without a level it is
+     painted in DOM order, and the manual's sticky contents (later in the
+     page) were drawn over the menus that open from it. */
+  z-index: 45;
 }
 
 .brand {
@@ -1296,6 +1300,42 @@ code,
   color: var(--ink);
   font-size: 1rem;
   margin-bottom: 0.3rem;
+}
+
+.empty-bridges {
+  max-width: 34rem;
+  margin: 0 auto;
+}
+
+.empty-bridge-list {
+  list-style: none;
+  margin: 1rem 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  text-align: left;
+}
+
+.empty-bridge-list li {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  padding: 0.55rem 0.8rem;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+
+.empty-bridge-list li b {
+  display: inline;
+  font-size: 0.9375rem;
+  margin: 0;
+}
+
+.empty-bridge-list .hint {
+  margin-left: auto;
 }
 
 /* --- buttons and fields ---------------------------------------------------- */
