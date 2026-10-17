@@ -144,6 +144,35 @@ defmodule AlnaslWeb.EditionTest do
       render_hook(view, "simulate", %{"index" => "1"})
       assert length(Boards.list()) == before
     end
+
+    test "Boards, with none, talks about bridges and offers this hall's Bridges tab", %{
+      conn: conn
+    } do
+      {:ok, view, _html} = live(conn, ~p"/boards")
+      assert has_element?(view, "#boards-empty-no-bridges")
+      assert has_element?(view, "#boards-empty-bridges-link")
+      refute has_element?(view, "#add-board-form")
+      refute has_element?(view, "#ports")
+      refute render(view) =~ "serial port"
+      refute render(view) =~ "simulator"
+
+      hall = Alnasl.Halls.own()
+      {:ok, join} = Alnasl.Bridges.create_join(DateTime.utc_now(:second), hall.id)
+
+      {:ok, _} =
+        Alnasl.Bridges.redeem(join.code, %{
+          "v" => 1,
+          "bridge" => "uid-empty",
+          "name" => "Hall A bridge",
+          "software" => "arkab"
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/boards")
+      assert has_element?(view, "#boards-empty-bridges", "Hall A bridge")
+      assert has_element?(view, "#boards-empty-bridges", "offline")
+      refute has_element?(view, "#boards-empty-no-bridges")
+      assert has_element?(view, ~s(#boards-empty-bridges-link[href="/halls/#{hall.id}/bridges"]))
+    end
   end
 
   describe "Live" do

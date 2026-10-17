@@ -21,8 +21,8 @@ msgstr "\"%{move}\" is geen toegestane zet op dat punt. Er is niets gewijzigd."
 msgid "\"%{move}\" is not a legal move there. Nothing was added."
 msgstr "\"%{move}\" is daar geen toegestane zet. Er is niets toegevoegd."
 
-#: lib/alnasl_web/live/boards_live.ex:127
-#: lib/alnasl_web/live/boards_live.ex:194
+#: lib/alnasl_web/live/boards_live.ex:147
+#: lib/alnasl_web/live/boards_live.ex:214
 #, elixir-autogen, elixir-format
 msgid "\"%{name}\" added and connected."
 msgstr "\"%{name}\" toegevoegd en verbonden."
@@ -37,7 +37,7 @@ msgstr "\"%{name}\" speelt die partij op bord %{n}."
 msgid "\"%{name}\" linked to this board of the round."
 msgstr "\"%{name}\" gekoppeld aan dit bord van de ronde."
 
-#: lib/alnasl_web/live/boards_live.ex:250
+#: lib/alnasl_web/live/boards_live.ex:270
 #, elixir-autogen, elixir-format
 msgid "\"%{name}\" removed. Its game is kept."
 msgstr "\"%{name}\" verwijderd. De partij blijft bewaard."
@@ -78,7 +78,7 @@ msgstr "%{n} partij(en) konden niet gebruikt worden"
 msgid "%{n} game(s) read."
 msgstr "%{n} partij(en) gelezen."
 
-#: lib/alnasl_web/live/boards_live.ex:466
+#: lib/alnasl_web/live/boards_live.ex:486
 #, elixir-autogen, elixir-format
 msgid "%{n} known"
 msgstr "%{n} bekend"
@@ -94,7 +94,7 @@ msgstr "%{n} zet(ten) toegevoegd."
 msgid "%{n} played"
 msgstr "%{n} gespeeld"
 
-#: lib/alnasl_web/live/boards_live.ex:781
+#: lib/alnasl_web/live/boards_live.ex:836
 #, elixir-autogen, elixir-format
 msgid "%{n} readings"
 msgstr "%{n} aflezingen"
@@ -104,12 +104,12 @@ msgstr "%{n} aflezingen"
 msgid "%{n} simulator board(s) are playing these games."
 msgstr "%{n} simulatorbord(en) spelen deze partijen."
 
-#: lib/alnasl_web/live/boards_live.ex:837
+#: lib/alnasl_web/live/boards_live.ex:892
 #, elixir-autogen, elixir-format
 msgid "%{n} wrong"
 msgstr "%{n} fout"
 
-#: lib/alnasl_web/live/boards_live.ex:775
+#: lib/alnasl_web/live/boards_live.ex:830
 #, elixir-autogen, elixir-format
 msgid "%{ok} answered, %{missed} missed"
 msgstr "%{ok} beantwoord, %{missed} gemist"
@@ -134,7 +134,7 @@ msgstr "%{square}: %{seen} in plaats van %{expected}"
 msgid "(running)"
 msgstr "(actief)"
 
-#: lib/alnasl_web/live/boards_live.ex:844
+#: lib/alnasl_web/live/boards_live.ex:899
 #: lib/alnasl_web/live/game_live.ex:996
 #, elixir-autogen, elixir-format
 msgid "...and %{n} more"
@@ -220,7 +220,7 @@ msgstr "Over"
 msgid "Access from other machines"
 msgstr "Toegang vanaf andere machines"
 
-#: lib/alnasl_web/live/boards_live.ex:665
+#: lib/alnasl_web/live/boards_live.ex:720
 #: lib/alnasl_web/live/halls_live.ex:416
 #: lib/alnasl_web/live/pgn_live.ex:419
 #: lib/alnasl_web/live/pgn_live.ex:527
@@ -230,17 +230,17 @@ msgstr "Toegang vanaf andere machines"
 msgid "Actions"
 msgstr "Acties"
 
-#: lib/alnasl_web/live/boards_live.ex:641
+#: lib/alnasl_web/live/boards_live.ex:696
 #, elixir-autogen, elixir-format
 msgid "Add a DGT board on a serial port below - or a simulator board, to see everything work without hardware."
 msgstr "Voeg hieronder een DGT-bord op een seriële poort toe - of een simulatorbord om alles te zien werken zonder hardware."
 
-#: lib/alnasl_web/live/boards_live.ex:1039
+#: lib/alnasl_web/live/boards_live.ex:1094
 #, elixir-autogen, elixir-format
 msgid "Add a board"
 msgstr "Een bord toevoegen"
 
-#: lib/alnasl_web/live/boards_live.ex:1128
+#: lib/alnasl_web/live/boards_live.ex:1183
 #, elixir-autogen, elixir-format
 msgid "Add and connect"
 msgstr "Toevoegen en verbinden"
@@ -335,7 +335,7 @@ msgid "Black"
 msgstr "Zwart"
 
 #: lib/alnasl_web/components/layouts.ex:720
-#: lib/alnasl_web/live/boards_live.ex:651
+#: lib/alnasl_web/live/boards_live.ex:706
 #: lib/alnasl_web/live/outbox_live.ex:593
 #: lib/alnasl_web/live/pgn_live.ex:411
 #: lib/alnasl_web/live/recordings_live.ex:255
@@ -355,7 +355,7 @@ msgstr "Bord \"%{name}\" toegevoegd."
 msgid "Board \"%{name}\" removed."
 msgstr "Bord \"%{name}\" verwijderd."
 
-#: lib/alnasl_web/live/boards_live.ex:167
+#: lib/alnasl_web/live/boards_live.ex:187
 #: lib/alnasl_web/live/game_live.ex:44
 #: lib/alnasl_web/live/game_live.ex:713
 #, elixir-autogen, elixir-format
@@ -378,14 +378,14 @@ msgstr "Bord voor partij %{i}"
 msgid "Board number"
 msgstr "Bordnummer"
 
-#: lib/alnasl_web/live/boards_live.ex:927
+#: lib/alnasl_web/live/boards_live.ex:982
 #, elixir-autogen, elixir-format
 msgid "Board number for %{name}"
 msgstr "Bordnummer voor %{name}"
 
-#: lib/alnasl_web/live/boards_live.ex:663
-#: lib/alnasl_web/live/boards_live.ex:905
-#: lib/alnasl_web/live/boards_live.ex:923
+#: lib/alnasl_web/live/boards_live.ex:718
+#: lib/alnasl_web/live/boards_live.ex:960
+#: lib/alnasl_web/live/boards_live.ex:978
 #: lib/alnasl_web/live/pgn_live.ex:525
 #, elixir-autogen, elixir-format
 msgid "Board of round %{n}"
@@ -393,7 +393,7 @@ msgstr "Bord van ronde %{n}"
 
 #: lib/alnasl_web/components/layouts.ex:219
 #: lib/alnasl_web/live/boards_live.ex:48
-#: lib/alnasl_web/live/boards_live.ex:465
+#: lib/alnasl_web/live/boards_live.ex:485
 #: lib/alnasl_web/live/round_live.ex:832
 #: lib/alnasl_web/words.ex:1111
 #, elixir-autogen, elixir-format
@@ -420,7 +420,7 @@ msgstr "Alleen defecte"
 msgid "Broken:"
 msgstr "Defect:"
 
-#: lib/alnasl_web/live/boards_live.ex:732
+#: lib/alnasl_web/live/boards_live.ex:787
 #, elixir-autogen, elixir-format
 msgid "Cannot open the port"
 msgstr "De poort kan niet worden geopend"
@@ -460,7 +460,7 @@ msgstr "Kies eerst het bord waartoe deze partij behoort."
 msgid "Choose the board to compare with first."
 msgstr "Kies eerst het bord om mee te vergelijken."
 
-#: lib/alnasl_web/live/boards_live.ex:113
+#: lib/alnasl_web/live/boards_live.ex:133
 #, elixir-autogen, elixir-format
 msgid "Choose the serial port the board is on."
 msgstr "Kies de seriële poort waarop het bord zit."
@@ -491,12 +491,12 @@ msgstr "Vergelijken"
 msgid "Confirm %{r}"
 msgstr "%{r} bevestigen"
 
-#: lib/alnasl_web/live/boards_live.ex:983
+#: lib/alnasl_web/live/boards_live.ex:1038
 #, elixir-autogen, elixir-format
 msgid "Connect"
 msgstr "Verbinden"
 
-#: lib/alnasl_web/live/boards_live.ex:240
+#: lib/alnasl_web/live/boards_live.ex:260
 #, elixir-autogen, elixir-format
 msgid "Connect the board first."
 msgstr "Verbind eerst het bord."
@@ -508,7 +508,7 @@ msgstr "Verbind eerst het bord."
 msgid "Connected"
 msgstr "Verbonden"
 
-#: lib/alnasl_web/live/boards_live.ex:607
+#: lib/alnasl_web/live/boards_live.ex:627
 #, elixir-autogen, elixir-format
 msgid "Connected and known boards"
 msgstr "Verbonden en bekende borden"
@@ -543,12 +543,12 @@ msgstr "Verwijderen"
 msgid "Delete this capture? It cannot be brought back."
 msgstr "Deze opname verwijderen? Dit kan niet ongedaan worden gemaakt."
 
-#: lib/alnasl_web/live/boards_live.ex:983
+#: lib/alnasl_web/live/boards_live.ex:1038
 #, elixir-autogen, elixir-format
 msgid "Disconnect"
 msgstr "Loskoppelen"
 
-#: lib/alnasl_web/live/boards_live.ex:729
+#: lib/alnasl_web/live/boards_live.ex:784
 #, elixir-autogen, elixir-format
 msgid "Disconnected here"
 msgstr "Hier losgekoppeld"
@@ -631,7 +631,7 @@ msgstr "Vier bestanden tegelijk."
 msgid "Game %{i} (%{white} - %{black}): %{message}"
 msgstr "Partij %{i} (%{white} - %{black}): %{message}"
 
-#: lib/alnasl_web/live/boards_live.ex:1071
+#: lib/alnasl_web/live/boards_live.ex:1126
 #, elixir-autogen, elixir-format
 msgid "Game to play (1-%{n})"
 msgstr "Te spelen partij (1-%{n})"
@@ -665,7 +665,7 @@ msgstr "Naar Borden"
 msgid "Go to Setup"
 msgstr "Naar Instellingen"
 
-#: lib/alnasl_web/live/boards_live.ex:1085
+#: lib/alnasl_web/live/boards_live.ex:1140
 #, elixir-autogen, elixir-format
 msgid "Hands"
 msgstr "Handen"
@@ -707,7 +707,7 @@ msgstr "De korte naam in de link (het deel na /t/), of plak de hele link naar de
 msgid "Keep at most this much raw capture (MB)"
 msgstr "Bewaar hoogstens zoveel ruwe opname (MB)"
 
-#: lib/alnasl_web/live/boards_live.ex:1052
+#: lib/alnasl_web/live/boards_live.ex:1107
 #, elixir-autogen, elixir-format
 msgid "Kind"
 msgstr "Soort"
@@ -747,7 +747,7 @@ msgstr "Koppel er een bord aan op de pagina Borden."
 msgid "Link a physical board to it, or attach a game from a PGN."
 msgstr "Koppel er een fysiek bord aan, of wijs een partij toe uit een PGN."
 
-#: lib/alnasl_web/live/boards_live.ex:482
+#: lib/alnasl_web/live/boards_live.ex:502
 #, elixir-autogen, elixir-format
 msgid "Linking for round"
 msgstr "Koppelen voor ronde"
@@ -767,7 +767,7 @@ msgstr "Live"
 msgid "Log"
 msgstr "Logboek"
 
-#: lib/alnasl_web/live/boards_live.ex:1135
+#: lib/alnasl_web/live/boards_live.ex:1190
 #: lib/alnasl_web/live/recordings_live.ex:153
 #, elixir-autogen, elixir-format
 msgid "Look again"
@@ -832,7 +832,7 @@ msgstr "Toe te voegen zetten, in volgorde"
 msgid "Moves went by unseen and the board cannot say which they were. Pick the right ones below; the box has kept following the game underneath."
 msgstr "Er gingen zetten ongezien voorbij en het bord kan niet zeggen welke. Kies hieronder de juiste; het kastje heeft de partij eronder blijven volgen."
 
-#: lib/alnasl_web/live/boards_live.ex:1061
+#: lib/alnasl_web/live/boards_live.ex:1116
 #: lib/alnasl_web/live/halls_live.ex:480
 #: lib/alnasl_web/live/halls_live.ex:525
 #: lib/alnasl_web/live/halls_live.ex:528
@@ -883,7 +883,8 @@ msgstr "Er is geen bord aan deze partij gekoppeld. Koppel er een op de pagina Bo
 msgid "No boards in round %{n} yet"
 msgstr "Nog geen borden in ronde %{n}"
 
-#: lib/alnasl_web/live/boards_live.ex:639
+#: lib/alnasl_web/live/boards_live.ex:663
+#: lib/alnasl_web/live/boards_live.ex:694
 #, elixir-autogen, elixir-format
 msgid "No boards yet"
 msgstr "Nog geen borden"
@@ -929,7 +930,7 @@ msgstr "Er is geen relaissleutel ingevuld. Een beheerder van de uitslagensite ma
 msgid "No sequence of up to 6 moves leads to what the board reads. Type the moves, or set the position."
 msgstr "Geen reeks van hoogstens 6 zetten leidt naar wat het bord leest. Typ de zetten of stel de stelling in."
 
-#: lib/alnasl_web/live/boards_live.ex:1145
+#: lib/alnasl_web/live/boards_live.ex:1200
 #, elixir-autogen, elixir-format
 msgid "No serial port found. Plug in the board or its adapter and look again."
 msgstr "Geen seriële poort gevonden. Steek het bord of zijn adapter in en zoek opnieuw."
@@ -1037,13 +1038,13 @@ msgid "One file may hold many games."
 msgstr "Eén bestand kan veel partijen bevatten."
 
 #: lib/alnasl_web/controllers/door_html.ex:35
-#: lib/alnasl_web/live/boards_live.ex:977
+#: lib/alnasl_web/live/boards_live.ex:1032
 #: lib/alnasl_web/live/outbox_live.ex:356
 #, elixir-autogen, elixir-format
 msgid "Open"
 msgstr "Openen"
 
-#: lib/alnasl_web/live/boards_live.ex:1088
+#: lib/alnasl_web/live/boards_live.ex:1143
 #, elixir-autogen, elixir-format
 msgid "Ordinary (lifts, slides, a takeback)"
 msgstr "Gewoon (optillen, schuiven, een terugname)"
@@ -1085,7 +1086,7 @@ msgstr "Versturen pauzeren"
 msgid "Pawn left on the last rank counts as"
 msgstr "Pion op de laatste rij telt als"
 
-#: lib/alnasl_web/live/boards_live.ex:1087
+#: lib/alnasl_web/live/boards_live.ex:1142
 #, elixir-autogen, elixir-format
 msgid "Perfect"
 msgstr "Perfect"
@@ -1113,7 +1114,7 @@ msgstr "Alles op simulatorborden spelen"
 msgid "Players"
 msgstr "Spelers"
 
-#: lib/alnasl_web/live/boards_live.ex:1151
+#: lib/alnasl_web/live/boards_live.ex:1206
 #, elixir-autogen, elixir-format
 msgid "Port"
 msgstr "Poort"
@@ -1153,12 +1154,12 @@ msgstr "Deze tekst lezen"
 msgid "Readings"
 msgstr "Aflezingen"
 
-#: lib/alnasl_web/live/boards_live.ex:653
+#: lib/alnasl_web/live/boards_live.ex:708
 #, elixir-autogen, elixir-format
 msgid "Reads"
 msgstr "Leest"
 
-#: lib/alnasl_web/live/boards_live.ex:550
+#: lib/alnasl_web/live/boards_live.ex:570
 #: lib/alnasl_web/words.ex:263
 #, elixir-autogen, elixir-format
 msgid "Ready"
@@ -1193,7 +1194,7 @@ msgstr "Geweigerd: %{code}."
 msgid "Relay key"
 msgstr "Relaissleutel"
 
-#: lib/alnasl_web/live/boards_live.ex:1008
+#: lib/alnasl_web/live/boards_live.ex:1063
 #: lib/alnasl_web/live/bridge_components.ex:176
 #: lib/alnasl_web/live/setup_live.ex:1440
 #: lib/alnasl_web/live/setup_live.ex:1506
@@ -1202,7 +1203,7 @@ msgstr "Relaissleutel"
 msgid "Remove"
 msgstr "Verwijderen"
 
-#: lib/alnasl_web/live/boards_live.ex:1005
+#: lib/alnasl_web/live/boards_live.ex:1060
 #, elixir-autogen, elixir-format
 msgid "Remove \"%{name}\"? Its game and captures are kept."
 msgstr "\"%{name}\" verwijderen? De partij en opnames blijven bewaard."
@@ -1299,12 +1300,12 @@ msgstr "Versturen hervatten"
 msgid "Resync from here"
 msgstr "Hier hersynchroniseren"
 
-#: lib/alnasl_web/live/boards_live.ex:830
+#: lib/alnasl_web/live/boards_live.ex:885
 #, elixir-autogen, elixir-format
 msgid "Right"
 msgstr "Juist"
 
-#: lib/alnasl_web/live/boards_live.ex:1089
+#: lib/alnasl_web/live/boards_live.ex:1144
 #, elixir-autogen, elixir-format
 msgid "Rough (knocks, swaps, missed moves)"
 msgstr "Ruw (stoten, verwisselingen, gemiste zetten)"
@@ -1395,12 +1396,12 @@ msgstr "Onlangs verstuurd"
 msgid "Sent to the results site as provisional; the published result comes from the pairing program."
 msgstr "Als voorlopig naar de uitslagensite verstuurd; het gepubliceerde resultaat komt uit het paringsprogramma."
 
-#: lib/alnasl_web/live/boards_live.ex:1098
+#: lib/alnasl_web/live/boards_live.ex:1153
 #, elixir-autogen, elixir-format
 msgid "Serial port"
 msgstr "Seriële poort"
 
-#: lib/alnasl_web/live/boards_live.ex:1133
+#: lib/alnasl_web/live/boards_live.ex:1188
 #, elixir-autogen, elixir-format
 msgid "Serial ports on this machine"
 msgstr "Seriële poorten op deze machine"
@@ -1460,8 +1461,8 @@ msgstr "Alles tonen"
 msgid "Shown at the top left: tells two boxes apart."
 msgstr "Linksboven getoond: onderscheidt twee kastjes van elkaar."
 
-#: lib/alnasl_web/live/boards_live.ex:657
-#: lib/alnasl_web/live/boards_live.ex:770
+#: lib/alnasl_web/live/boards_live.ex:712
+#: lib/alnasl_web/live/boards_live.ex:825
 #, elixir-autogen, elixir-format
 msgid "Signal"
 msgstr "Signaal"
@@ -1476,12 +1477,12 @@ msgstr "Simuleren"
 msgid "Simulator"
 msgstr "Simulator"
 
-#: lib/alnasl_web/live/boards_live.ex:166
+#: lib/alnasl_web/live/boards_live.ex:186
 #, elixir-autogen, elixir-format
 msgid "Simulator %{n}"
 msgstr "Simulator %{n}"
 
-#: lib/alnasl_web/live/boards_live.ex:1054
+#: lib/alnasl_web/live/boards_live.ex:1109
 #, elixir-autogen, elixir-format
 msgid "Simulator (no hardware)"
 msgstr "Simulator (geen hardware)"
@@ -1501,8 +1502,8 @@ msgstr "Naar de pagina springen"
 msgid "Start from a position"
 msgstr "Starten vanuit een stelling"
 
-#: lib/alnasl_web/live/boards_live.ex:659
-#: lib/alnasl_web/live/boards_live.ex:791
+#: lib/alnasl_web/live/boards_live.ex:714
+#: lib/alnasl_web/live/boards_live.ex:846
 #, elixir-autogen, elixir-format
 msgid "Start position"
 msgstr "Beginstelling"
@@ -1512,8 +1513,8 @@ msgstr "Beginstelling"
 msgid "Start round %{n}"
 msgstr "Ronde %{n} starten"
 
-#: lib/alnasl_web/live/boards_live.ex:655
-#: lib/alnasl_web/live/boards_live.ex:724
+#: lib/alnasl_web/live/boards_live.ex:710
+#: lib/alnasl_web/live/boards_live.ex:779
 #: lib/alnasl_web/live/outbox_live.ex:321
 #: lib/alnasl_web/live/round_live.ex:1093
 #, elixir-autogen, elixir-format
@@ -1563,8 +1564,8 @@ msgstr "Dat adres antwoordt, maar niet als uitslagensite."
 msgid "That address answers, but not as a results server. Check the address."
 msgstr "Dat adres antwoordt, maar niet als uitslagensite. Controleer het adres."
 
-#: lib/alnasl_web/live/boards_live.ex:133
-#: lib/alnasl_web/live/boards_live.ex:200
+#: lib/alnasl_web/live/boards_live.ex:153
+#: lib/alnasl_web/live/boards_live.ex:220
 #, elixir-autogen, elixir-format
 msgid "That board could not be added. Check the fields."
 msgstr "Dat bord kon niet worden toegevoegd. Controleer de velden."
@@ -2091,12 +2092,12 @@ msgstr "Deze relaissleutel is ingetrokken. Vraag een nieuwe."
 msgid "This step failed."
 msgstr "Deze stap is mislukt."
 
-#: lib/alnasl_web/live/boards_live.ex:1079
+#: lib/alnasl_web/live/boards_live.ex:1134
 #, elixir-autogen, elixir-format
 msgid "Times faster than life"
 msgstr "Keer sneller dan echt"
 
-#: lib/alnasl_web/live/boards_live.ex:475
+#: lib/alnasl_web/live/boards_live.ex:495
 #: lib/alnasl_web/live/pgn_live.ex:330
 #: lib/alnasl_web/live/setup_live.ex:1947
 #: lib/alnasl_web/live/setup_live.ex:2048
@@ -2110,17 +2111,17 @@ msgstr "Toernooi"
 msgid "Tries"
 msgstr "Pogingen"
 
-#: lib/alnasl_web/live/boards_live.ex:992
+#: lib/alnasl_web/live/boards_live.ex:1047
 #, elixir-autogen, elixir-format
 msgid "Turn %{name} round"
 msgstr "%{name} omdraaien"
 
-#: lib/alnasl_web/live/boards_live.ex:995
+#: lib/alnasl_web/live/boards_live.ex:1050
 #, elixir-autogen, elixir-format
 msgid "Turn round"
 msgstr "Omdraaien"
 
-#: lib/alnasl_web/live/boards_live.ex:993
+#: lib/alnasl_web/live/boards_live.ex:1048
 #: lib/alnasl_web/live/game_live.ex:1414
 #, elixir-autogen, elixir-format
 msgid "Turn the board round"
@@ -2161,7 +2162,7 @@ msgstr "Onverklaard bord: alarm na"
 msgid "Unknown"
 msgstr "Onbekend"
 
-#: lib/alnasl_web/live/boards_live.ex:1155
+#: lib/alnasl_web/live/boards_live.ex:1210
 #, elixir-autogen, elixir-format
 msgid "Used by"
 msgstr "Gebruikt door"
@@ -2192,7 +2193,7 @@ msgstr "Wacht op de beginstelling"
 msgid "What"
 msgstr "Wat"
 
-#: lib/alnasl_web/live/boards_live.ex:719
+#: lib/alnasl_web/live/boards_live.ex:774
 #, elixir-autogen, elixir-format
 msgid "What %{name} reads"
 msgstr "Wat %{name} leest"
@@ -2212,7 +2213,7 @@ msgstr "Wat zeker is"
 msgid "What is waiting"
 msgstr "Wat er wacht"
 
-#: lib/alnasl_web/live/boards_live.ex:1153
+#: lib/alnasl_web/live/boards_live.ex:1208
 #, elixir-autogen, elixir-format
 msgid "What it says it is"
 msgstr "Wat het zegt te zijn"
@@ -2272,7 +2273,7 @@ msgstr "loper"
 msgid "black %{piece}"
 msgstr "%{piece} (zwart)"
 
-#: lib/alnasl_web/live/boards_live.ex:945
+#: lib/alnasl_web/live/boards_live.ex:1000
 #: lib/alnasl_web/live/log_live.ex:129
 #: lib/alnasl_web/live/pgn_live.ex:559
 #: lib/alnasl_web/live/setup_live.ex:1026
@@ -2290,20 +2291,20 @@ msgstr "bordnr."
 msgid "by hand"
 msgstr "met de hand"
 
-#: lib/alnasl_web/live/boards_live.ex:584
-#: lib/alnasl_web/live/boards_live.ex:590
-#: lib/alnasl_web/live/boards_live.ex:1099
+#: lib/alnasl_web/live/boards_live.ex:604
+#: lib/alnasl_web/live/boards_live.ex:610
+#: lib/alnasl_web/live/boards_live.ex:1154
 #: lib/alnasl_web/live/pgn_live.ex:550
 #, elixir-autogen, elixir-format
 msgid "choose..."
 msgstr "kies..."
 
-#: lib/alnasl_web/live/boards_live.ex:786
+#: lib/alnasl_web/live/boards_live.ex:841
 #, elixir-autogen, elixir-format
 msgid "clock"
 msgstr "klok"
 
-#: lib/alnasl_web/live/boards_live.ex:787
+#: lib/alnasl_web/live/boards_live.ex:842
 #, elixir-autogen, elixir-format
 msgid "clock battery low"
 msgstr "klokbatterij bijna leeg"
@@ -2313,7 +2314,7 @@ msgstr "klokbatterij bijna leeg"
 msgid "decoded from raw bytes"
 msgstr "gedecodeerd uit ruwe bytes"
 
-#: lib/alnasl_web/live/boards_live.ex:713
+#: lib/alnasl_web/live/boards_live.ex:768
 #, elixir-autogen, elixir-format
 msgid "firmware %{v}"
 msgstr "firmware %{v}"
@@ -2324,7 +2325,7 @@ msgstr "firmware %{v}"
 msgid "from PGN"
 msgstr "uit PGN"
 
-#: lib/alnasl_web/live/boards_live.ex:796
+#: lib/alnasl_web/live/boards_live.ex:851
 #, elixir-autogen, elixir-format
 msgid "game under way"
 msgstr "partij bezig"
@@ -2340,12 +2341,12 @@ msgstr "koning"
 msgid "knight"
 msgstr "paard"
 
-#: lib/alnasl_web/live/boards_live.ex:785
+#: lib/alnasl_web/live/boards_live.ex:840
 #, elixir-autogen, elixir-format
 msgid "last seen %{t}"
 msgstr "laatst gezien %{t}"
 
-#: lib/alnasl_web/live/boards_live.ex:967
+#: lib/alnasl_web/live/boards_live.ex:1022
 #, elixir-autogen, elixir-format
 msgid "linked to round %{r}, board %{n}"
 msgstr "gekoppeld aan ronde %{r}, bord %{n}"
@@ -2379,7 +2380,7 @@ msgstr "geen verbinding."
 msgid "none since the box started"
 msgstr "geen sinds het kastje is gestart"
 
-#: lib/alnasl_web/live/boards_live.ex:931
+#: lib/alnasl_web/live/boards_live.ex:986
 #, elixir-autogen, elixir-format
 msgid "not linked"
 msgstr "niet gekoppeld"
@@ -2400,7 +2401,7 @@ msgstr "niets luistert op dat adres."
 msgid "nothing more"
 msgstr "niets meer"
 
-#: lib/alnasl_web/live/boards_live.ex:1062
+#: lib/alnasl_web/live/boards_live.ex:1117
 #, elixir-autogen, elixir-format
 msgid "optional"
 msgstr "optioneel"
@@ -2437,7 +2438,7 @@ msgstr "resultaat %{r}"
 msgid "rook"
 msgstr "toren"
 
-#: lib/alnasl_web/live/boards_live.ex:712
+#: lib/alnasl_web/live/boards_live.ex:767
 #: lib/alnasl_web/live/walk_live.ex:533
 #: lib/alnasl_web/table_words.ex:14
 #, elixir-autogen, elixir-format
@@ -2481,7 +2482,7 @@ msgstr "er is geen netwerk."
 msgid "there is no route to it. Is the network up?"
 msgstr "er is geen route ernaartoe. Is het netwerk in orde?"
 
-#: lib/alnasl_web/live/boards_live.ex:721
+#: lib/alnasl_web/live/boards_live.ex:776
 #, elixir-autogen, elixir-format
 msgid "turned round"
 msgstr "omgedraaid"
@@ -2521,7 +2522,7 @@ msgstr "Klok niet in beginstelling: de kant van zwart zou eerst lopen - de klok 
 msgid "Clock not in starting position: White's side would run first - the clock is turned or the lever is the wrong way"
 msgstr "Klok niet in beginstelling: de kant van wit zou eerst lopen - de klok staat omgekeerd of de wip staat verkeerd"
 
-#: lib/alnasl_web/live/boards_live.ex:823
+#: lib/alnasl_web/live/boards_live.ex:878
 #, elixir-autogen, elixir-format
 msgid "Clock wrong"
 msgstr "Klok fout"
@@ -2557,7 +2558,7 @@ msgstr "De stukken worden gevolgd, maar de kloktijden bij de zetten staan verkee
 msgid "White's clock is running and Black has not moved"
 msgstr "De klok van wit loopt en zwart heeft nog niet gezet"
 
-#: lib/alnasl_web/live/boards_live.ex:833
+#: lib/alnasl_web/live/boards_live.ex:888
 #, elixir-autogen, elixir-format
 msgid "pieces and clock"
 msgstr "stukken en klok"
@@ -2567,7 +2568,7 @@ msgstr "stukken en klok"
 msgid "\"%{a}\" and \"%{b}\" changed places for the round."
 msgstr "\"%{a}\" en \"%{b}\" hebben voor de ronde van plaats gewisseld."
 
-#: lib/alnasl_web/live/boards_live.ex:348
+#: lib/alnasl_web/live/boards_live.ex:368
 #, elixir-autogen, elixir-format
 msgid "\"%{a}\" and \"%{b}\" changed places for this round."
 msgstr "\"%{a}\" en \"%{b}\" hebben voor deze ronde van plaats gewisseld."
@@ -2602,7 +2603,7 @@ msgstr "\"%{name}\" is tafel %{table}."
 msgid "\"%{name}\" no longer has a table number."
 msgstr "\"%{name}\" heeft geen tafelnummer meer."
 
-#: lib/alnasl_web/live/boards_live.ex:300
+#: lib/alnasl_web/live/boards_live.ex:320
 #, elixir-autogen, elixir-format
 msgid "%{count} board(s) numbered %{from}-%{to}: table and board of round %{round}."
 msgstr "%{count} bord(en) genummerd %{from}-%{to}: tafel en bord van ronde %{round}."
@@ -2642,12 +2643,12 @@ msgstr "%{n} bord(en) hebben nog geen tafelnummer en staan niet op dit blad."
 msgid "%{n} waiting"
 msgstr "%{n} wachtend"
 
-#: lib/alnasl_web/live/boards_live.ex:524
+#: lib/alnasl_web/live/boards_live.ex:544
 #, elixir-autogen, elixir-format
 msgid "A DGT board carries its serial number on a label underneath. Lift a piece on the board you think it is: the box says whether you are right."
 msgstr "Een DGT-bord draagt zijn serienummer op een etiket aan de onderkant. Til een stuk op van het bord waarvan je denkt dat het dit is: het kastje zegt of je gelijk hebt."
 
-#: lib/alnasl_web/live/boards_live.ex:1117
+#: lib/alnasl_web/live/boards_live.ex:1172
 #, elixir-autogen, elixir-format
 msgid "A board the box already knows is recognised by its serial number, whichever port it is on now: it keeps its table number."
 msgstr "Een bord dat het kastje al kent, wordt herkend aan zijn serienummer, op welke poort het nu ook zit: het houdt zijn tafelnummer."
@@ -2667,7 +2668,7 @@ msgstr "Een persoonlijk toegangstoken van de eigenaar van de uitzending, met het
 msgid "A token is stored (%{hint}). Leave this empty to keep it."
 msgstr "Er is een token opgeslagen (%{hint}). Laat dit leeg om het te behouden."
 
-#: lib/alnasl_web/live/boards_live.ex:602
+#: lib/alnasl_web/live/boards_live.ex:622
 #, elixir-autogen, elixir-format
 msgid "All back to their table numbers"
 msgstr "Alles terug naar de tafelnummers"
@@ -2713,7 +2714,7 @@ msgstr "Lichess wordt gevraagd..."
 msgid "Back to Boards"
 msgstr "Terug naar Borden"
 
-#: lib/alnasl_web/live/boards_live.ex:962
+#: lib/alnasl_web/live/boards_live.ex:1017
 #, elixir-autogen, elixir-format
 msgid "Back to board %{n}"
 msgstr "Terug naar bord %{n}"
@@ -2753,7 +2754,7 @@ msgstr "Bord %{n}: de stukken op \"%{name}\" staan niet in de beginstelling (%{c
 msgid "Board %{serial} is back on another port (%{to}): recognised as \"%{name}\", it keeps its number."
 msgstr "Bord %{serial} is terug op een andere poort (%{to}): herkend als \"%{name}\", het houdt zijn nummer."
 
-#: lib/alnasl_web/live/boards_live.ex:356
+#: lib/alnasl_web/live/boards_live.ex:376
 #, elixir-autogen, elixir-format
 msgid "Choose two different boards to swap."
 msgstr "Kies twee verschillende borden om te wisselen."
@@ -2768,12 +2769,12 @@ msgstr "Doe dit voor de ronde, met de stukken opgesteld en niemand aan de borden
 msgid "Each destination has its own queue and its own patience. One being offline, refused or switched off never holds up another."
 msgstr "Elke bestemming heeft haar eigen wachtrij en haar eigen geduld. Is er een offline, geweigerd of uitgeschakeld, dan houdt dat een andere nooit op."
 
-#: lib/alnasl_web/live/boards_live.ex:558
+#: lib/alnasl_web/live/boards_live.ex:578
 #, elixir-autogen, elixir-format
 msgid "Every board answers, has its table number, feeds its own board of the round and shows the starting position - the clock too, where there is one."
 msgstr "Elk bord antwoordt, heeft zijn tafelnummer, levert zijn eigen bord van de ronde en toont de beginstelling - ook de klok, waar er een is."
 
-#: lib/alnasl_web/live/boards_live.ex:332
+#: lib/alnasl_web/live/boards_live.ex:352
 #, elixir-autogen, elixir-format
 msgid "Every board feeds the board of its table number again."
 msgstr "Elk bord levert weer het bord van zijn tafelnummer."
@@ -2783,7 +2784,7 @@ msgstr "Elk bord levert weer het bord van zijn tafelnummer."
 msgid "Every board has a number"
 msgstr "Elk bord heeft een nummer"
 
-#: lib/alnasl_web/live/boards_live.ex:540
+#: lib/alnasl_web/live/boards_live.ex:560
 #, elixir-autogen, elixir-format
 msgid "Every board touched for the first time gets the next table number."
 msgstr "Elk bord dat voor het eerst wordt aangeraakt, krijgt het volgende tafelnummer."
@@ -2798,7 +2799,7 @@ msgstr "Zoeken"
 msgid "First table number"
 msgstr "Eerste tafelnummer"
 
-#: lib/alnasl_web/live/boards_live.ex:582
+#: lib/alnasl_web/live/boards_live.ex:602
 #, elixir-autogen, elixir-format
 msgid "For this round, swap the boards of"
 msgstr "Wissel voor deze ronde de borden van"
@@ -2814,12 +2815,12 @@ msgstr "Vergeten"
 msgid "Forget the Lichess round and its token?"
 msgstr "De Lichess-ronde en haar token vergeten?"
 
-#: lib/alnasl_web/live/boards_live.ex:627
+#: lib/alnasl_web/live/boards_live.ex:647
 #, elixir-autogen, elixir-format
 msgid "Give every board, in the order listed, consecutive table numbers - and link each to that board of round %{n}?"
 msgstr "Elk bord, in de getoonde volgorde, opeenvolgende tafelnummers geven - en elk koppelen aan dat bord van ronde %{n}?"
 
-#: lib/alnasl_web/live/boards_live.ex:541
+#: lib/alnasl_web/live/boards_live.ex:561
 #, elixir-autogen, elixir-format
 msgid "Go to the run"
 msgstr "Naar de gang"
@@ -2831,7 +2832,7 @@ msgstr "Naar de gang"
 msgid "How, step by step"
 msgstr "Hoe, stap voor stap"
 
-#: lib/alnasl_web/live/boards_live.ex:501
+#: lib/alnasl_web/live/boards_live.ex:521
 #, elixir-autogen, elixir-format
 msgid "Labels"
 msgstr "Etiketten"
@@ -2932,17 +2933,17 @@ msgstr "Til een stuk op van het bord van tafel"
 msgid "Lift a piece on the board you mean"
 msgstr "Til een stuk op van het bord dat je bedoelt"
 
-#: lib/alnasl_web/live/boards_live.ex:505
+#: lib/alnasl_web/live/boards_live.ex:525
 #, elixir-autogen, elixir-format
 msgid "Lift a piece on the board you mean."
 msgstr "Til een stuk op van het bord dat je bedoelt."
 
-#: lib/alnasl_web/live/boards_live.ex:517
+#: lib/alnasl_web/live/boards_live.ex:537
 #, elixir-autogen, elixir-format
 msgid "Look for \"%{name}\": %{sticker}."
 msgstr "Zoek \"%{name}\": %{sticker}."
 
-#: lib/alnasl_web/live/boards_live.ex:678
+#: lib/alnasl_web/live/boards_live.ex:733
 #: lib/alnasl_web/live/walk_live.ex:496
 #, elixir-autogen, elixir-format
 msgid "New board"
@@ -2973,12 +2974,12 @@ msgstr "Geen verbinding met %{name}. De partijen blijven ervoor bewaard."
 msgid "Not reachable yet"
 msgstr "Nog niet bereikbaar"
 
-#: lib/alnasl_web/live/boards_live.ex:553
+#: lib/alnasl_web/live/boards_live.ex:573
 #, elixir-autogen, elixir-format
 msgid "Not ready"
 msgstr "Niet klaar"
 
-#: lib/alnasl_web/live/boards_live.ex:530
+#: lib/alnasl_web/live/boards_live.ex:550
 #, elixir-autogen, elixir-format
 msgid "Not that one - that was \"%{name}\"."
 msgstr "Niet dat bord - dat was \"%{name}\"."
@@ -2988,17 +2989,17 @@ msgstr "Niet dat bord - dat was \"%{name}\"."
 msgid "Number"
 msgstr "Nummeren"
 
-#: lib/alnasl_web/live/boards_live.ex:610
+#: lib/alnasl_web/live/boards_live.ex:630
 #, elixir-autogen, elixir-format
 msgid "Number all in connection order, starting at"
 msgstr "Alles nummeren in aansluitvolgorde, te beginnen bij"
 
-#: lib/alnasl_web/live/boards_live.ex:499
+#: lib/alnasl_web/live/boards_live.ex:519
 #, elixir-autogen, elixir-format
 msgid "Number by touching"
 msgstr "Nummeren door aan te raken"
 
-#: lib/alnasl_web/live/boards_live.ex:633
+#: lib/alnasl_web/live/boards_live.ex:653
 #, elixir-autogen, elixir-format
 msgid "Number in order"
 msgstr "In volgorde nummeren"
@@ -3013,7 +3014,7 @@ msgstr "De borden nummeren"
 msgid "Number the boards by touching them"
 msgstr "Nummer de borden door ze aan te raken"
 
-#: lib/alnasl_web/live/boards_live.ex:539
+#: lib/alnasl_web/live/boards_live.ex:559
 #, elixir-autogen, elixir-format
 msgid "Numbering by touch is running."
 msgstr "Het nummeren door aanraken loopt."
@@ -3033,12 +3034,12 @@ msgstr "Open dit adres op je telefoon, of richt de camera op de code:"
 msgid "Open this board"
 msgstr "Dit bord openen"
 
-#: lib/alnasl_web/live/boards_live.ex:511
+#: lib/alnasl_web/live/boards_live.ex:531
 #, elixir-autogen, elixir-format
 msgid "Open this on a phone-sized page"
 msgstr "Dit openen op een pagina op telefoonformaat"
 
-#: lib/alnasl_web/live/boards_live.ex:1030
+#: lib/alnasl_web/live/boards_live.ex:1085
 #: lib/alnasl_web/live/setup_live.ex:2296
 #: lib/alnasl_web/live/setup_live.ex:2478
 #, elixir-autogen, elixir-format
@@ -3082,7 +3083,7 @@ msgstr "Druk deze pagina af (Ctrl+P), knip de etiketten los en kleef elk op zijn
 msgid "QR code of %{url}"
 msgstr "QR-code van %{url}"
 
-#: lib/alnasl_web/live/boards_live.ex:547
+#: lib/alnasl_web/live/boards_live.ex:567
 #, elixir-autogen, elixir-format
 msgid "Ready for round %{n}?"
 msgstr "Klaar voor ronde %{n}?"
@@ -3102,7 +3103,7 @@ msgstr "Serienummer %{serial} wordt meer dan een keer gezien (%{names}): hetzelf
 msgid "Set it up"
 msgstr "Instellen"
 
-#: lib/alnasl_web/live/boards_live.ex:979
+#: lib/alnasl_web/live/boards_live.ex:1034
 #, elixir-autogen, elixir-format
 msgid "Show me"
 msgstr "Toon mij"
@@ -3142,12 +3143,12 @@ msgstr "Start"
 msgid "Stop"
 msgstr "Stop"
 
-#: lib/alnasl_web/live/boards_live.ex:535
+#: lib/alnasl_web/live/boards_live.ex:555
 #, elixir-autogen, elixir-format
 msgid "Stop looking"
 msgstr "Stoppen met zoeken"
 
-#: lib/alnasl_web/live/boards_live.ex:594
+#: lib/alnasl_web/live/boards_live.ex:614
 #, elixir-autogen, elixir-format
 msgid "Swap"
 msgstr "Wisselen"
@@ -3169,7 +3170,7 @@ msgid "Switched off"
 msgstr "Uitgeschakeld"
 
 #: lib/alnasl_web/controllers/labels_html.ex:30
-#: lib/alnasl_web/live/boards_live.ex:661
+#: lib/alnasl_web/live/boards_live.ex:716
 #, elixir-autogen, elixir-format
 msgid "Table"
 msgstr "Tafel"
@@ -3195,7 +3196,7 @@ msgstr "Tafel %{table} is nu \"%{to}\"; \"%{from}\" is dat nummer kwijt."
 msgid "Table labels"
 msgstr "Tafeletiketten"
 
-#: lib/alnasl_web/live/boards_live.ex:857
+#: lib/alnasl_web/live/boards_live.ex:912
 #, elixir-autogen, elixir-format
 msgid "Table number of %{name}"
 msgstr "Tafelnummer van %{name}"
@@ -3215,7 +3216,7 @@ msgstr "Testen"
 msgid "That is not a Lichess round. Paste the link to the round, or its id of eight characters."
 msgstr "Dat is geen Lichess-ronde. Plak de link naar de ronde, of haar id van acht tekens."
 
-#: lib/alnasl_web/live/boards_live.ex:406
+#: lib/alnasl_web/live/boards_live.ex:426
 #, elixir-autogen, elixir-format
 msgid "That is the one: \"%{name}\"."
 msgstr "Dat is het: \"%{name}\"."
@@ -3235,7 +3236,7 @@ msgstr "Het bord aan de kabel van \"%{name}\" zegt dat het serienummer %{seen} h
 msgid "The board on this cable says it is serial %{seen}, not %{serial}. Left alone: a game is under way."
 msgstr "Het bord aan deze kabel zegt dat het serienummer %{seen} heeft, niet %{serial}. Ongemoeid gelaten: er is een partij bezig."
 
-#: lib/alnasl_web/live/boards_live.ex:507
+#: lib/alnasl_web/live/boards_live.ex:527
 #, elixir-autogen, elixir-format
 msgid "The board that feels it lights up here for a few seconds. With several boards touched, the last one wins."
 msgstr "Het bord dat het voelt, licht hier een paar seconden op. Worden er meerdere borden aangeraakt, dan wint het laatste."
@@ -3331,7 +3332,7 @@ msgstr "Wat te doen"
 msgid "Where the games go"
 msgstr "Waar de partijen heen gaan"
 
-#: lib/alnasl_web/live/boards_live.ex:495
+#: lib/alnasl_web/live/boards_live.ex:515
 #: lib/alnasl_web/live/walk_live.ex:48
 #, elixir-autogen, elixir-format
 msgid "Which board is this?"
@@ -3347,7 +3348,7 @@ msgstr "Welke ronde van het toernooi het is"
 msgid "a destination"
 msgstr "een bestemming"
 
-#: lib/alnasl_web/live/boards_live.ex:588
+#: lib/alnasl_web/live/boards_live.ex:608
 #: lib/alnasl_web/live/halls_live.ex:343
 #, elixir-autogen, elixir-format
 msgid "and"
@@ -3363,7 +3364,7 @@ msgstr "geen poort"
 msgid "no serial"
 msgstr "geen serienummer"
 
-#: lib/alnasl_web/live/boards_live.ex:868
+#: lib/alnasl_web/live/boards_live.ex:923
 #, elixir-autogen, elixir-format
 msgid "no."
 msgstr "nr."
@@ -3384,7 +3385,7 @@ msgstr "plaats %{s}"
 msgid "table %{n}"
 msgstr "tafel %{n}"
 
-#: lib/alnasl_web/live/boards_live.ex:952
+#: lib/alnasl_web/live/boards_live.ex:1007
 #, elixir-autogen, elixir-format
 msgid "table %{t} plays board %{b}"
 msgstr "tafel %{t} speelt bord %{b}"
@@ -3394,7 +3395,7 @@ msgstr "tafel %{t} speelt bord %{b}"
 msgid "the results server"
 msgstr "de uitslagensite"
 
-#: lib/alnasl_web/live/boards_live.ex:682
+#: lib/alnasl_web/live/boards_live.ex:737
 #, elixir-autogen, elixir-format
 msgid "touched %{t}"
 msgstr "aangeraakt %{t}"
@@ -3404,7 +3405,7 @@ msgstr "aangeraakt %{t}"
 msgid "touched at %{t}"
 msgstr "aangeraakt om %{t}"
 
-#: lib/alnasl_web/live/boards_live.ex:1090
+#: lib/alnasl_web/live/boards_live.ex:1145
 #, elixir-autogen, elixir-format
 msgid "Bullet (a move a second, slammed and knocked-over pieces)"
 msgstr "Bullet (een zet per seconde, neergekwakte en omgestoten stukken)"
@@ -4075,12 +4076,12 @@ msgstr "%{host}: de groep \"%{group}\""
 msgid "%{name}: %{n} waiting"
 msgstr "%{name}: %{n} wachtend"
 
-#: lib/alnasl_web/live/boards_live.ex:915
+#: lib/alnasl_web/live/boards_live.ex:970
 #, elixir-autogen, elixir-format
 msgid "%{name}: not linked"
 msgstr "%{name}: niet gekoppeld"
 
-#: lib/alnasl_web/live/boards_live.ex:909
+#: lib/alnasl_web/live/boards_live.ex:964
 #, elixir-autogen, elixir-format
 msgid "%{name}: round %{r}, board %{n}"
 msgstr "%{name}: ronde %{r}, bord %{n}"
@@ -4687,7 +4688,7 @@ msgstr "Deze partij is begonnen als %{white} - %{black}. Het paringsprogramma he
 msgid "This tournament has no pairing program to ask: say here who plays, or attach a PGN that says it."
 msgstr "Dit toernooi heeft geen paringsprogramma om te vragen: geef hier op wie speelt, of wijs een PGN toe waarin dat staat."
 
-#: lib/alnasl_web/live/boards_live.ex:880
+#: lib/alnasl_web/live/boards_live.ex:935
 #, elixir-autogen, elixir-format
 msgid "Tournament of %{name}"
 msgstr "Toernooi van %{name}"
@@ -4952,7 +4953,7 @@ msgstr "De eerste keer vraagt Windows of het programma vanaf het netwerk bereikt
 msgid "The last update (to %{version}) did not succeed, and the version before it was put back: %{why}"
 msgstr "De laatste update (naar %{version}) is niet gelukt, en de versie van daarvoor is teruggezet: %{why}"
 
-#: lib/alnasl_web/live/boards_live.ex:1139
+#: lib/alnasl_web/live/boards_live.ex:1194
 #, elixir-autogen, elixir-format
 msgid "The serial port library is not built into this copy of Alnasl, so real boards cannot be opened here. Simulator boards work. The installed versions have it; a copy built from the source code on Windows has it when asked for (README, \"Serial ports\")."
 msgstr "De bibliotheek voor seriële poorten is niet ingebouwd in deze kopie van Alnasl, dus echte borden kunnen hier niet worden geopend. Simulatorborden werken wel. De geïnstalleerde versies hebben haar; een kopie die op Windows uit de broncode gebouwd is, heeft haar als erom gevraagd is (README, \"Serial ports\")."
@@ -5062,8 +5063,8 @@ msgstr[1] "%{port} is een lus: er antwoorden %{count} borden op. Elk heeft nu ee
 msgid "A board was plugged into the loop on %{port}: added as \"%{name}\"."
 msgstr "Er is een bord in de lus op %{port} gestoken: toegevoegd als \"%{name}\"."
 
-#: lib/alnasl_web/live/boards_live.ex:765
-#: lib/alnasl_web/live/boards_live.ex:1127
+#: lib/alnasl_web/live/boards_live.ex:820
+#: lib/alnasl_web/live/boards_live.ex:1182
 #, elixir-autogen, elixir-format
 msgid "Asking the port..."
 msgstr "De poort wordt gevraagd..."
@@ -5073,61 +5074,61 @@ msgstr "De poort wordt gevraagd..."
 msgid "DGT board on a loop"
 msgstr "DGT-bord op een lus"
 
-#: lib/alnasl_web/live/boards_live.ex:1055
+#: lib/alnasl_web/live/boards_live.ex:1110
 #, elixir-autogen, elixir-format
 msgid "DGT board, or several on a loop (serial port)"
 msgstr "DGT-bord, of meerdere op een lus (seriële poort)"
 
-#: lib/alnasl_web/live/boards_live.ex:740
+#: lib/alnasl_web/live/boards_live.ex:795
 #, elixir-autogen, elixir-format
 msgid "Does not answer on the loop: taken off it, switched off, or the cable before it is out. It is back by itself when it answers."
 msgstr "Antwoordt niet op de lus: eraf gehaald, uitgeschakeld, of de kabel ervoor zit los. Het is vanzelf terug zodra het antwoordt."
 
-#: lib/alnasl_web/live/boards_live.ex:747
+#: lib/alnasl_web/live/boards_live.ex:802
 #, elixir-autogen, elixir-format
 msgid "More than one board answers on this port: it is a loop."
 msgid_plural "More than one board answers on this port (%{count}): it is a loop."
 msgstr[0] "Op deze poort antwoordt meer dan één bord: het is een lus."
 msgstr[1] "Op deze poort antwoordt meer dan één bord (%{count}): het is een lus."
 
-#: lib/alnasl_web/live/boards_live.ex:1111
+#: lib/alnasl_web/live/boards_live.ex:1166
 #, elixir-autogen, elixir-format
 msgid "One board or a loop of them: the box asks the port who is on it, which takes a few seconds, and gives every board that answers a row of its own."
 msgstr "Eén bord of een lus van borden: het kastje vraagt de poort wie erop zit, wat een paar seconden duurt, en geeft elk bord dat antwoordt een eigen rij."
 
-#: lib/alnasl_web/live/boards_live.ex:217
+#: lib/alnasl_web/live/boards_live.ex:237
 #, elixir-autogen, elixir-format
 msgid "Only one board answers on that port now. It is read as one board again."
 msgstr "Op die poort antwoordt nu maar één bord. Het wordt weer als één bord gelezen."
 
-#: lib/alnasl_web/live/boards_live.ex:755
+#: lib/alnasl_web/live/boards_live.ex:810
 #, elixir-autogen, elixir-format
 msgid "Read as one board, a loop gives nonsense: every board answers at once. Nothing is read from it until you say so."
 msgstr "Als één bord gelezen geeft een lus onzin: alle borden antwoorden tegelijk. Er wordt niets van gelezen tot je het zegt."
 
-#: lib/alnasl_web/live/boards_live.ex:766
+#: lib/alnasl_web/live/boards_live.ex:821
 #, elixir-autogen, elixir-format
 msgid "Read it as a loop"
 msgstr "Als lus lezen"
 
-#: lib/alnasl_web/live/boards_live.ex:138
+#: lib/alnasl_web/live/boards_live.ex:158
 #, elixir-autogen, elixir-format
 msgid "That port is a loop. %{count} board answers on it: %{names}."
 msgid_plural "That port is a loop. %{count} boards answer on it, each with its own row: %{names}."
 msgstr[0] "Die poort is een lus. Er antwoordt %{count} bord op: %{names}."
 msgstr[1] "Die poort is een lus. Er antwoorden %{count} borden op, elk met een eigen rij: %{names}."
 
-#: lib/alnasl_web/live/boards_live.ex:224
+#: lib/alnasl_web/live/boards_live.ex:244
 #, elixir-autogen, elixir-format
 msgid "The port could not be opened. Try again in a moment."
 msgstr "De poort kon niet worden geopend. Probeer het zo meteen opnieuw."
 
-#: lib/alnasl_web/live/boards_live.ex:698
+#: lib/alnasl_web/live/boards_live.ex:753
 #, elixir-autogen, elixir-format
 msgid "This board does not say its serial number on a loop. Plug it into a port of its own once, and the box knows it by its serial number from then on."
 msgstr "Dit bord zegt op een lus zijn serienummer niet. Steek het één keer in een eigen poort, en het kastje kent het voortaan aan zijn serienummer."
 
-#: lib/alnasl_web/live/boards_live.ex:689
+#: lib/alnasl_web/live/boards_live.ex:744
 #, elixir-autogen, elixir-format
 msgid "answers as %{a}"
 msgstr "antwoordt als %{a}"
@@ -5142,6 +5143,7 @@ msgstr "nr. %{a} op de lus"
 msgid "%{board} now plays in %{tournament}."
 msgstr "%{board} speelt nu in %{tournament}."
 
+#: lib/alnasl_web/live/boards_live.ex:675
 #: lib/alnasl_web/live/bridge_components.ex:148
 #: lib/alnasl_web/live/setup_live.ex:1134
 #: lib/alnasl_web/live/setup_live.ex:2197
@@ -5865,6 +5867,7 @@ msgstr "geweigerd: %{reason}"
 msgid "A bridge is a small program (Arkab) beside boards somewhere else - a Raspberry Pi in another hall - that sends them here. It dials out; nothing has to be opened for it."
 msgstr "Een brug is een klein programma (Arkab) naast borden ergens anders - een Raspberry Pi in een andere zaal - dat ze hierheen stuurt. De brug belt zelf naar buiten; er hoeft niets voor opengezet te worden."
 
+#: lib/alnasl_web/live/boards_live.ex:688
 #: lib/alnasl_web/live/bridge_components.ex:73
 #, elixir-autogen, elixir-format
 msgid "Add a bridge"
@@ -7286,3 +7289,28 @@ msgstr "Dit kastje antwoordt alleen zichzelf, dus een telefoon krijgt geen antwo
 #, elixir-autogen, elixir-format
 msgid "This box has no accounts: everybody on the hall's network may do everything, as before. Make the first account on Setup, Access, to change that."
 msgstr "Deze box heeft geen accounts: iedereen op het netwerk van de zaal mag alles, zoals voorheen. Maak het eerste account onder Instellingen, Toegang, om dat te veranderen."
+
+#: lib/alnasl_web/live/boards_live.ex:665
+#, elixir-autogen, elixir-format
+msgid "Boards reach this server through bridges: Arkab, running in a hall, reads the boards there and sends them on."
+msgstr "Borden komen op deze server via bruggen: Arkab, dat in een zaal draait, leest daar de borden en stuurt ze door."
+
+#: lib/alnasl_web/live/boards_live.ex:689
+#, elixir-autogen, elixir-format
+msgid "Open the Bridges tab"
+msgstr "Open het tabblad Bruggen"
+
+#: lib/alnasl_web/live/boards_live.ex:680
+#, elixir-autogen, elixir-format
+msgid "This hall has no bridge yet."
+msgstr "Deze zaal heeft nog geen brug."
+
+#: lib/alnasl_web/live/boards_live.ex:673
+#, elixir-autogen, elixir-format
+msgid "offline"
+msgstr "offline"
+
+#: lib/alnasl_web/live/boards_live.ex:672
+#, elixir-autogen, elixir-format
+msgid "online"
+msgstr "online"

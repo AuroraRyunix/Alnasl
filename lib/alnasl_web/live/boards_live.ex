@@ -93,8 +93,28 @@ defmodule AlnaslWeb.BoardsLive do
       shown: Alnasl.Halls.active(scope),
       names: Map.new(everyone, &{&1.id, Tournaments.title(&1) || gettext("This box")}),
       by_id: Map.new(everyone, &{&1.id, &1}),
+      hall_id: Alnasl.Accounts.Scope.hall_id(scope),
+      hall_bridges: hall_bridges(scope),
       refresh_due?: false
     )
+  end
+
+  # This hall's bridges, for the server's empty state: name, whether one is
+  # connected, how many boards it reports.
+  defp hall_bridges(scope) do
+    if Alnasl.Accounts.server?() do
+      hall = Alnasl.Accounts.Scope.hall_id(scope)
+
+      for b <- Alnasl.Halls.visible(scope, Alnasl.Bridges.list()), Alnasl.Halls.of(b) == hall do
+        %{
+          bridge: b,
+          up?: Alnasl.Bridges.live(b.id) != nil,
+          boards: length(Alnasl.Bridges.rows(b))
+        }
+      end
+    else
+      []
+    end
   end
 
   # The tournaments a board's select offers: those placed in this hall, and
@@ -635,7 +655,42 @@ defmodule AlnaslWeb.BoardsLive do
           </.form>
         </:actions>
 
-        <div :if={@snapshots == []} id="boards-empty" class="empty">
+        <div
+          :if={@snapshots == [] and @server?}
+          id="boards-empty"
+          class="empty empty-bridges"
+        >
+          <b>{gettext("No boards yet")}</b>
+          <p>
+            {gettext(
+              "Boards reach this server through bridges: Arkab, running in a hall, reads the boards there and sends them on."
+            )}
+          </p>
+          <ul :if={@hall_bridges != []} id="boards-empty-bridges" class="empty-bridge-list">
+            <li :for={%{bridge: b, up?: up?, boards: n} <- @hall_bridges} id={"boards-bridge-#{b.id}"}>
+              <b>{b.name}</b>
+              <.badge :if={up?} tone="ok" icon="live">{gettext("online")}</.badge>
+              <.badge :if={!up?} tone="bad" icon="offline">{gettext("offline")}</.badge>
+              <span class="hint">
+                {ngettext("%{count} board", "%{count} boards", n)}
+              </span>
+            </li>
+          </ul>
+          <p :if={@hall_bridges == []} id="boards-empty-no-bridges">
+            {gettext("This hall has no bridge yet.")}
+          </p>
+          <.link
+            id="boards-empty-bridges-link"
+            navigate={~p"/halls/#{@hall_id}/bridges"}
+            class="btn"
+          >
+            {if @hall_bridges == [],
+              do: gettext("Add a bridge"),
+              else: gettext("Open the Bridges tab")}
+          </.link>
+        </div>
+
+        <div :if={@snapshots == [] and not @server?} id="boards-empty" class="empty">
           <b>{gettext("No boards yet")}</b>
           <p>
             {gettext(
