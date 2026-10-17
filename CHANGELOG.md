@@ -19,6 +19,7 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+- [Fix] **The Mac app opens on macOS 11 and newer**, not only on 15. The Erlang inside is compiled for 11 now, SQLite too, and the build fails, naming the file, if anything in the app asks for a newer macOS. The ready-made runtime had demanded the latest macOS all along; it just never said so to anyone who had it.
 - [Change] The docs and the screens now call them what they are to the person using them: live boards.
 
 ## [0.2.1] - 2026-10-17
