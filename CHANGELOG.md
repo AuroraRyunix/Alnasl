@@ -49,6 +49,7 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 - [Fix] Two test helpers carried default arguments nobody passed, and the compiler said so at every run. They take three arguments now, like everyone calling them.
 - [Change] The older notes that pointed at `lib/alnasl/dgt/` and `Alnasl.Dgt.*` point at Arkab, where that code has lived since it moved.
 - [Verified] **A real bridge, a real socket, a recorded game.** The same capture is read by the box's own replay driver and through an Arkab bridge in the same test: the line cut mid-game and the bridge restarted with half the game in its queue; this end's link and the board's own process killed mid-game; two servers on one bridge with one of them away. Every time, the game through the bridge is the game read here: the same moves, the same result, and the positions the board was given are the recording's, in order, with nothing missing and nothing applied twice.
+- [Fix] **The hall picker is one menu again, not two.** An older dropdown rule for the connection actions shared the class of the picker's list, so the list floated off as a second bordered box, pinned to the right and spilling past the menu, with an empty divider on top. The older dropdown has its own class now, and the picker is a plain column under its button: halls, then *All halls*.
 
 ## [0.1.6] - 2026-10-16
 

@@ -4112,7 +4112,7 @@ h1 .manual-help-link, h2 .manual-help-link { transform: translateY(-2px); }
   display: none;
 }
 
-.menu-list {
+.link-menu-list {
   position: absolute;
   right: 0;
   z-index: 5;

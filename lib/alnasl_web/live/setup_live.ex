@@ -1692,7 +1692,7 @@ defmodule AlnaslWeb.SetupLive do
                       {gettext("Actions")} <.icon name="chevron" />
                     </summary>
 
-                    <div class="menu-list">
+                    <div class="link-menu-list">
                       <.button
                         id={"test-link-#{link.id}"}
                         small
