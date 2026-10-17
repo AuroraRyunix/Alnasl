@@ -37,7 +37,7 @@ defmodule AlnaslWeb.TableWords do
       table: board.table_no,
       tournament:
         (tournament && Alnasl.Tournaments.title(tournament)) ||
-          gettext("this box's own tournament")
+          gettext("the hall's own tournament")
     )
   end
 

@@ -278,7 +278,7 @@ defmodule AlnaslWeb.SetupLive do
         {:noreply,
          socket
          |> assign(server_form: to_form(params, as: :server))
-         |> put_flash(:error, gettext("Give the server's address and the tournament."))}
+         |> put_flash(:error, gettext("Give the results site's address and the tournament."))}
 
       true ->
         Tournaments.update!(Tournaments.default(), %{
@@ -422,7 +422,7 @@ defmodule AlnaslWeb.SetupLive do
          |> put_flash(
            :error,
            gettext(
-             "The code is kept, but could not be checked: %{why} The box asks again by itself.",
+             "The code is kept, but could not be checked: %{why} Alnasl asks again by itself.",
              why: LinkWords.error(reason)
            )
          )
@@ -489,7 +489,7 @@ defmodule AlnaslWeb.SetupLive do
      |> put_flash(
        :info,
        gettext(
-         "The code and its tournaments are off the box. Their boards are back in the box's own tournament, not linked."
+         "The code and its tournaments are removed from Alnasl. Their boards are back in the hall's own tournament, not linked."
        )
      )
      |> load()}
@@ -498,7 +498,9 @@ defmodule AlnaslWeb.SetupLive do
   # A tournament the pairing program no longer lists, taken off by itself.
   def handle_event("remove_tournament", %{"id" => id}, socket) do
     with %{} = tournament <- Tournaments.get(id), do: Tournaments.remove(tournament)
-    {:noreply, socket |> put_flash(:info, gettext("The tournament is off the box.")) |> load()}
+
+    {:noreply,
+     socket |> put_flash(:info, gettext("The tournament is removed from Alnasl.")) |> load()}
   end
 
   def handle_event("assign_tables", %{"tables" => %{"id" => id} = params}, socket) do
@@ -906,7 +908,7 @@ defmodule AlnaslWeb.SetupLive do
     this = Enum.find(all, &(&1.hall_id == placement.hall_id)) || placement
 
     gettext("%{name} in %{hall}: %{tables}, %{boards}.",
-      name: Tournaments.title(tournament) || gettext("This box's own tournament"),
+      name: Tournaments.title(tournament) || gettext("The hall's own tournament"),
       hall: hall.name,
       tables: tables_words(this),
       boards: boards_words(Alnasl.Placements.boards(this, all))
@@ -1104,7 +1106,7 @@ defmodule AlnaslWeb.SetupLive do
   defp dot_tone(%{state: "running"}), do: "ok"
   defp dot_tone(_t), do: nil
 
-  defp name_of(t), do: Tournaments.title(t) || gettext("This box's own tournament")
+  defp name_of(t), do: Tournaments.title(t) || gettext("The hall's own tournament")
 
   # One tournament: a line that says the most, and the rest when it is opened.
   defp tournament_row(assigns) do
@@ -1497,7 +1499,7 @@ defmodule AlnaslWeb.SetupLive do
         phx-value-id={t.id}
         data-confirm={
           gettext(
-            "Take this tournament off the box? Its boards go back to the box's own tournament, not linked; its games are forgotten here (the PGN files already written stay on the disk)."
+            "Remove this tournament from Alnasl? Its boards go back to the hall's own tournament, not linked; its games are forgotten here (the PGN files already written stay on the disk)."
           )
         }
       >{gettext("Remove")}</.button>
@@ -1557,7 +1559,7 @@ defmodule AlnaslWeb.SetupLive do
           <.panel :if={@section == :tournaments} id="setup-tournaments" title={gettext("Tournaments")}>
             <p class="note">
               {gettext(
-                "The tournaments this box serves. The ones with boards on this box come first; a connect code or an OpenPairings account brings more."
+                "The tournaments Alnasl serves. The ones with boards in this hall come first; a connect code or an OpenPairings account brings more."
               )} <.link patch={~p"/setup/connections"}>{gettext("Connections")}</.link>
               <.link navigate={AlnaslWeb.Components.ManualLink.path(:setup)}>{gettext(
                 "How, step by step"
@@ -1670,7 +1672,7 @@ defmodule AlnaslWeb.SetupLive do
           <.panel :if={@section == :connections} id="setup-connections" title={gettext("Connections")}>
             <p class="note">
               {gettext(
-                "A connect code from OpenPairings (Settings, Live boards) brings a tournament - or a whole group of them - to the box: pairings, colours, rate of play, and the results page with its relay key. A round paired there starts here by itself. One box can hold several codes."
+                "A connect code from OpenPairings (Settings, Live boards) brings a tournament - or a whole group of them - to Alnasl: pairings, colours, rate of play, and the results page with its relay key. A round paired there starts here by itself. One hall can hold several codes."
               )}
               <.link navigate={AlnaslWeb.Components.ManualLink.path(:setup)}>{gettext(
                 "How, step by step"
@@ -1720,7 +1722,7 @@ defmodule AlnaslWeb.SetupLive do
                         }
                         data-confirm={
                           gettext(
-                            "Take this code and its tournaments off the box? Their boards go back to the box's own tournament, not linked; their games are forgotten here (the PGN files already written stay on the disk). OpenPairings keeps what was reported to it."
+                            "Remove this code and its tournaments from Alnasl? Their boards go back to the hall's own tournament, not linked; their games are forgotten here (the PGN files already written stay on the disk). OpenPairings keeps what was reported to it."
                           )
                         }
                       >{gettext("Remove")}</.button>
@@ -1883,7 +1885,7 @@ defmodule AlnaslWeb.SetupLive do
               <div :if={@may_connect?} id="op-connect" class="callout mt-5">
                 <p class="note mt-0">
                   {gettext(
-                    "Or, without a code: connect your OpenPairings account. You sign in there and allow this box once; it then sees every tournament you may edit that is current, including the ones you make later."
+                    "Or, without a code: connect your OpenPairings account. You sign in there and allow Alnasl once; it then sees every tournament you may edit that is current, including the ones you make later."
                   )}
                 </p>
 
@@ -1918,11 +1920,11 @@ defmodule AlnaslWeb.SetupLive do
             <.panel
               :if={@own_hall?}
               id="setup-server"
-              title={gettext("Results page of this box's own tournament")}
+              title={gettext("Results page of the hall's own tournament")}
             >
               <p class="note">
                 {gettext(
-                  "Only for a tournament without a connect code: a tournament of OpenPairings brings its results page and relay key with it. Who plays is then said by hand on each board's page, or read from a PGN - the box does not read pairings from the results site."
+                  "Only for a tournament without a connect code: a tournament of OpenPairings brings its results page and relay key with it. Who plays is then said by hand on each board's page, or read from a PGN - Alnasl does not read pairings from the results site."
                 )}
               </p>
 
@@ -1991,7 +1993,7 @@ defmodule AlnaslWeb.SetupLive do
                 class="note mt-5"
                 role="status"
               >
-                {gettext("Asking the server...")}
+                {gettext("Asking the results site...")}
               </p>
 
               <ul
@@ -2022,7 +2024,7 @@ defmodule AlnaslWeb.SetupLive do
             <.panel :if={@own_hall?} id="setup-lichess" title={gettext("Lichess broadcast")}>
               <p class="note">
                 {gettext(
-                  "Optional. The box pushes each game of one round to a Lichess broadcast round as it changes - besides the results site, and without waiting for it. On Lichess, make the broadcast and its round first; leave the round's source empty."
+                  "Optional. Alnasl pushes each game of one round to a Lichess broadcast round as it changes - besides the results site, and without waiting for it. On Lichess, make the broadcast and its round first; leave the round's source empty."
                 )}
                 <.link navigate={AlnaslWeb.Components.ManualLink.path(:lichess)}>{gettext(
                   "How, step by step"
@@ -2038,7 +2040,7 @@ defmodule AlnaslWeb.SetupLive do
                 <label for="lichess-tournament" class="note">{gettext("Tournament")}</label>
                 <select id="lichess-tournament" name="tournament_id" class="input fit">
                   <option :for={t <- @tournaments} value={t.id} selected={t.id == @lichess.id}>
-                    {Tournaments.title(t) || gettext("This box")}
+                    {Tournaments.title(t) || gettext("The hall's own tournament")}
                   </option>
                 </select>
               </form>
@@ -2226,7 +2228,7 @@ defmodule AlnaslWeb.SetupLive do
                     type="number"
                     min="1"
                     max="999"
-                    label={gettext("Round in play (this box's own tournament)")}
+                    label={gettext("Round in play (the hall's own tournament)")}
                   />
                   <.input
                     field={@box_form[:clock_heartbeat_s]}
@@ -2270,7 +2272,7 @@ defmodule AlnaslWeb.SetupLive do
                   ]}
                   hint={
                     gettext(
-                      "For game after game on one board: when the starting position is back on a board whose game is over - or is more than two moves old - the box closes that game and begins the next. In a paired round a board has one game, so by default this is left to the arbiter there."
+                      "For game after game on one board: when the starting position is back on a board whose game is over - or is more than two moves old - Alnasl closes that game and begins the next. In a paired round a board has one game, so by default this is left to the arbiter there."
                     )
                   }
                 />
@@ -2795,7 +2797,7 @@ defmodule AlnaslWeb.SetupLive do
 
                 <p class="note">
                   {gettext(
-                    "For games of a few minutes or less. It changes two things: a move must stand for %{settle} ms instead of %{settle_default}, and a board put back to the position before the last move is not read as a takeback - at that speed it is a piece going to and fro. Nothing else is touched, how many moves the box reconstructs included. \"Back to the defaults\" undoes it.",
+                    "For games of a few minutes or less. It changes two things: a move must stand for %{settle} ms instead of %{settle_default}, and a board put back to the position before the last move is not read as a takeback - at that speed it is a piece going to and fro. Nothing else is touched, how many moves Alnasl reconstructs included. \"Back to the defaults\" undoes it.",
                     settle: @preset.settle_ms,
                     settle_default: @defaults.settle_ms
                   )}
@@ -2856,7 +2858,7 @@ defmodule AlnaslWeb.SetupLive do
                   />
                   <p id="tracker-depth-note" class="note">
                     {gettext(
-                      "When the board has run ahead of the game, the box looks for the moves in between rather than stop: up to this many (%{default} by default) over the squares it saw change, and up to 4 when it saw nothing of them. Every move found that way is marked: \"reconstructed\" when one line of moves fits, \"guessed\" when several did and one was taken. 2 is the least: one move missed and the next one seen.",
+                      "When the board has run ahead of the game, Alnasl looks for the moves in between rather than stop: up to this many (%{default} by default) over the squares it saw change, and up to 4 when it saw nothing of them. Every move found that way is marked: \"reconstructed\" when one line of moves fits, \"guessed\" when several did and one was taken. 2 is the least: one move missed and the next one seen.",
                       default: @defaults.search_depth
                     )}
                   </p>
@@ -2895,7 +2897,7 @@ defmodule AlnaslWeb.SetupLive do
                 />
                 <p id="tracker-unseen-note" class="note">
                   {gettext(
-                    "A player parks a piece beside the board, or a sensor loses one: the box follows the moves and shows \"not seen on ...\" until the piece is seen again, moves, or is taken. One piece at a time; a king never. Off: such a board waits, and becomes an alarm."
+                    "A player parks a piece beside the board, or a sensor loses one: Alnasl follows the moves and shows \"not seen on ...\" until the piece is seen again, moves, or is taken. One piece at a time; a king never. Off: such a board waits, and becomes an alarm."
                   )}
                 </p>
 

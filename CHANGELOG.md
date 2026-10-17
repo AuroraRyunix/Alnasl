@@ -20,6 +20,9 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 ## [Unreleased]
 
 - [Change] The docs and the screens now call them what they are to the person using them: live boards.
+- [Change] **One word per thing.** The program is *Alnasl* in every sentence the server can show too, so the server no longer apologises for being a box: "Arbiter in Alnasl: move 12 changed", "This game stays in Alnasl", "This page lost its connection to Alnasl". OpenResults is the *results site* everywhere, including the Test connection steps and the Outbox's errors, which used to call it "the server" - a word that now means the hosted Alnasl and nothing else. The tournament a hall keeps for unpaired boards is *the hall's own tournament*, not "This box". The page in the rail called Results is called Results at the top as well. The Dutch follows ("Alnasl" for "het kastje" in shared sentences, *Resultaten* for the page, the last "box" and "indeling" gone). The list lives in `docs/glossary.md`, and a test reads both catalogues for the retired words, because a glossary nobody checks is a suggestion.
+- [Change] The PIN page and the page a bridge's join link opens in a browser wear the same door frame as signing in, and can show a flash.
+- [Change] The templates' inline styles are classes in the stylesheet, with spacing tokens; the classes that were used but never styled have CSS, and the progress bar along the top takes the theme's accent instead of a teal nobody chose. Nothing moves, give or take a tenth of a rem.
 
 ## [0.2.1] - 2026-10-17
 

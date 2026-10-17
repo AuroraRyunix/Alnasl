@@ -12,7 +12,7 @@ defmodule AlnaslWeb.LabelsHTML do
         <h1>{gettext("Table labels")}</h1>
         <p class="note">
           {gettext(
-            "Print this page (Ctrl+P), cut the labels apart and stick each on its board. The small line is what the box knows the board by."
+            "Print this page (Ctrl+P), cut the labels apart and stick each on its board. The small line is what Alnasl knows the board by."
           )}
         </p>
         <p :if={@without > 0} id="labels-without" class="note">

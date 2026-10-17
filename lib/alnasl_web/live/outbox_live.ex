@@ -17,7 +17,7 @@ defmodule AlnaslWeb.OutboxLive do
   def mount(_params, _session, socket) do
     if connected?(socket), do: Alnasl.Boards.subscribe()
 
-    {:ok, socket |> assign(page_title: gettext("Outbox"), refresh_due?: false) |> load()}
+    {:ok, socket |> assign(page_title: gettext("Results"), refresh_due?: false) |> load()}
   end
 
   defp load(socket) do
@@ -244,7 +244,7 @@ defmodule AlnaslWeb.OutboxLive do
       locale={@locale}
       scope={@current_scope}
       path={@current_path}
-      title={gettext("Outbox")}
+      title={gettext("Results")}
     >
       <:actions>
         <.button
@@ -259,7 +259,7 @@ defmodule AlnaslWeb.OutboxLive do
       <.panel :if={@linked != []} id="linked-panel" title={gettext("Linked tournaments")}>
         <p class="note">
           {gettext(
-            "These are the tournaments in use. Each is reported to OpenPairings, and sent to its results site when it has one and OpenPairings has given the box a relay key for it."
+            "These are the tournaments in use. Each is reported to OpenPairings, and sent to its results site when it has one and OpenPairings has given Alnasl a relay key for it."
           )}
         </p>
 
@@ -313,7 +313,7 @@ defmodule AlnaslWeb.OutboxLive do
         id="link-panel"
         title={
           if @linked == [],
-            do: gettext("Connection to the results server"),
+            do: gettext("Connection to the results site"),
             else: gettext("Results site")
         }
       >
@@ -334,11 +334,11 @@ defmodule AlnaslWeb.OutboxLive do
             <% end %>
           </dd>
 
-          <dt>{gettext("Server")}</dt>
+          <dt>{gettext("Results site")}</dt>
 
           <dd id="link-targets">
             <div :for={t <- @tournaments} id={"link-target-#{t.id}"}>
-              <b :if={@many?}>{@names[t.id] || gettext("This box")}:</b>
+              <b :if={@many?}>{@names[t.id] || gettext("The hall's own tournament")}:</b>
               <%= if t.server_url == "" do %>
                 <%= if t.kind == "linked" do %>
                   {gettext("not on a results site (yet)")}
@@ -372,7 +372,7 @@ defmodule AlnaslWeb.OutboxLive do
           <dd id="last-ok">
             {if @link.last_ok,
               do: Words.time(@link.last_ok),
-              else: gettext("none since the box started")}
+              else: gettext("none since Alnasl started")}
           </dd>
 
           <dt :if={@link.last_error && @link.state in [:offline, :blocked]}>{gettext("Why not")}</dt>
@@ -392,7 +392,7 @@ defmodule AlnaslWeb.OutboxLive do
 
         <p class="note mt-5">
           {gettext(
-            "Every move is written on the box before it is sent, and stays here until the server has answered for it. Without a connection the box simply keeps them; they go out in order when it is back."
+            "Every move is written down by Alnasl before it is sent, and stays here until the results site has answered for it. Without a connection Alnasl simply keeps them; they go out in order when it is back."
           )}
         </p>
       </.panel>
@@ -429,7 +429,7 @@ defmodule AlnaslWeb.OutboxLive do
                 t:
                   if(d.last_ok,
                     do: Words.time(d.last_ok),
-                    else: gettext("none since the box started")
+                    else: gettext("none since Alnasl started")
                   )
               )}
               <span :if={d.last_error && d.state in [:offline, :blocked]} id={"dest-error-#{d.id}"}>
@@ -443,7 +443,7 @@ defmodule AlnaslWeb.OutboxLive do
 
             <ul :if={d.id == "openresults"} id="dest-sites" class="note dest-sites">
               <li :for={t <- @tournaments} id={"dest-site-#{t.id}"}>
-                <b :if={@many?}>{@names[t.id] || gettext("This box")}:</b>
+                <b :if={@many?}>{@names[t.id] || gettext("The hall's own tournament")}:</b>
                 <%= if ResultsSite.page?(t) do %>
                   {gettext("sends to")}
                   <.site_link id={"dest-site-link-#{t.id}"} href={ResultsSite.tournament_url(t)}>
@@ -462,7 +462,7 @@ defmodule AlnaslWeb.OutboxLive do
                 id={"dest-by-#{d.id}-#{t.id}"}
               >
                 {gettext("%{name}: %{n} waiting",
-                  name: @names[t.id] || gettext("This box"),
+                  name: @names[t.id] || gettext("The hall's own tournament"),
                   n: Map.get(@waiting_by[d.id] || %{}, t.id, 0)
                 )}
               </li>
@@ -521,7 +521,7 @@ defmodule AlnaslWeb.OutboxLive do
                 phx-click="force_pairing"
                 data-confirm={
                   gettext(
-                    "OpenPairings holds a newer report of these games than this box has - from another box, or from this one before it was set up again. Replace what it holds with what this box has?"
+                    "OpenPairings holds a newer report of these games than this copy of Alnasl has - from another copy, or from this one before it was set up again. Replace what it holds with what this copy has?"
                   )
                 }
               >
@@ -542,9 +542,9 @@ defmodule AlnaslWeb.OutboxLive do
             :for={%{tournament: t, game: game} <- @staying_home}
             id={"staying-home-#{t.id}-#{game.board_no}"}
           >
-            <b :if={@many?}>{@names[t.id] || gettext("This box")}:</b>
+            <b :if={@many?}>{@names[t.id] || gettext("The hall's own tournament")}:</b>
             <.link navigate={Scope.game_path(t.id, game.round, game.board_no)}>
-              {gettext("Board %{n} plays a game that stays on the box (game %{g}).",
+              {gettext("Board %{n} plays a game that stays in Alnasl (game %{g}).",
                 n: game.board_no,
                 g: game.game_no
               )}
@@ -560,7 +560,7 @@ defmodule AlnaslWeb.OutboxLive do
       <.panel
         :if={@rejected != []}
         id="rejected"
-        title={gettext("Refused by the server (%{n})", n: @counts["rejected"] || 0)}
+        title={gettext("Refused on arrival (%{n})", n: @counts["rejected"] || 0)}
         flush
       >
         <.entries id="rejected-table" entries={@rejected} mode={:rejected} />

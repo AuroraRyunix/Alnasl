@@ -345,11 +345,11 @@ defmodule AlnaslWeb.Layouts do
       <.icon name="offline" />
       <span>
         <%= if @link.state == :blocked do %>
-          {gettext("The results server refuses this box. Nothing is lost: %{count} waiting.",
+          {gettext("The results site refuses what Alnasl sends. Nothing is lost: %{count} waiting.",
             count: @link.pending
           )}
         <% else %>
-          {gettext("No connection to the results server. Nothing is lost: %{count} waiting.",
+          {gettext("No connection to the results site. Nothing is lost: %{count} waiting.",
             count: @link.pending
           )}
         <% end %>
@@ -833,7 +833,7 @@ defmodule AlnaslWeb.Layouts do
         phx-connected={JS.set_attribute({"hidden", ""}, to: "#client-error")}
       >
         <.icon name="offline" />
-        <p>{gettext("This page lost its connection to the box. Trying again...")}</p>
+        <p>{gettext("This page lost its connection to Alnasl. Trying again...")}</p>
       </div>
     </div>
     """

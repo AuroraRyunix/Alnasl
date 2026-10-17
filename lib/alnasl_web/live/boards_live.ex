@@ -91,7 +91,8 @@ defmodule AlnaslWeb.BoardsLive do
       rounds: Enum.uniq(Tournaments.rounds(tid) ++ [round]) |> Enum.sort(),
       tournaments: tournaments,
       shown: Alnasl.Halls.active(scope),
-      names: Map.new(everyone, &{&1.id, Tournaments.title(&1) || gettext("This box")}),
+      names:
+        Map.new(everyone, &{&1.id, Tournaments.title(&1) || gettext("The hall's own tournament")}),
       by_id: Map.new(everyone, &{&1.id, &1}),
       hall_id: Alnasl.Accounts.Scope.hall_id(scope),
       hall_bridges: hall_bridges(scope),
@@ -542,7 +543,7 @@ defmodule AlnaslWeb.BoardsLive do
 
         <span>
           {gettext(
-            "An electronic board carries its serial number on a label underneath. Lift a piece on the board you think it is: the box says whether you are right."
+            "An electronic board carries its serial number on a label underneath. Lift a piece on the board you think it is: Alnasl says whether you are right."
           )}
         </span>
 

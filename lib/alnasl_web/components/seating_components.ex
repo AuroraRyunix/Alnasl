@@ -197,7 +197,7 @@ defmodule AlnaslWeb.SeatingComponents do
       )}</b>
       <p class="note">
         {gettext(
-          "The box's boards are not in these tournaments yet, so nothing they read is sent there. Say which table numbers play in which; the first table is the tournament's board 1."
+          "The hall's boards are not in these tournaments yet, so nothing they read is sent there. Say which table numbers play in which; the first table is the tournament's board 1."
         )}
       </p>
 
@@ -249,7 +249,7 @@ defmodule AlnaslWeb.SeatingComponents do
           phx-click="seat_decline"
           phx-value-t={a.tournament.id}
         >
-          {gettext("None of this box's boards")}
+          {gettext("None of this hall's boards")}
         </.button>
       </.form>
     </div>

@@ -37,7 +37,7 @@ defmodule AlnaslWeb.SessionHTML do
         </div>
         <p class="note">
           {gettext(
-            "Forgot your password? There is no mail from this box: an admin can give you a temporary one."
+            "Forgot your password? Alnasl sends no mail: an admin can give you a temporary one."
           )}
         </p>
       </div>

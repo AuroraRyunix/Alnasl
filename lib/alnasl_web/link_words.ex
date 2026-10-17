@@ -25,7 +25,7 @@ defmodule AlnaslWeb.LinkWords do
         "That is not a connect code: it should begin with the address of OpenPairings (https://... or http://127.0.0.1:...)."
       )
 
-  def code_error(:already), do: gettext("The box has this code already.")
+  def code_error(:already), do: gettext("Alnasl has this code already.")
 
   def code_error(:unauthorized),
     do:
@@ -36,7 +36,7 @@ defmodule AlnaslWeb.LinkWords do
   def code_error({:unsupported, api}),
     do:
       gettext(
-        "That OpenPairings speaks version %{api} of the board link, which this box does not know. Update the box.",
+        "That OpenPairings speaks version %{api} of the board link, which this Alnasl does not know. Update Alnasl.",
         api: inspect(api)
       )
 
@@ -46,7 +46,7 @@ defmodule AlnaslWeb.LinkWords do
   def error(:unauthorized),
     do:
       gettext(
-        "OpenPairings refuses the connect code: it is wrong, or it was withdrawn there. The box has stopped asking. Make a new code in OpenPairings (Settings, Live boards) and add it here."
+        "OpenPairings refuses the connect code: it is wrong, or it was withdrawn there. Alnasl has stopped asking. Make a new code in OpenPairings (Settings, Live boards) and add it here."
       )
 
   def error({:unreachable, reason}),
@@ -61,7 +61,7 @@ defmodule AlnaslWeb.LinkWords do
   def error({:unsupported, api}), do: code_error({:unsupported, api})
 
   def error({:rate_limited, _wait}),
-    do: gettext("OpenPairings asks to slow down. The box tries again by itself.")
+    do: gettext("OpenPairings asks to slow down. Alnasl tries again by itself.")
 
   def error({:http, status}),
     do: gettext("OpenPairings answers with an error of its own (%{status}).", status: status)
@@ -126,7 +126,7 @@ defmodule AlnaslWeb.LinkWords do
   def elsewhere(shared) when is_list(shared) do
     Enum.map_join(shared, " ", fn found ->
       gettext(
-        "This code reaches %{tournament}, which this box already has through %{other} (code %{hint}).",
+        "This code reaches %{tournament}, which Alnasl already has through %{other} (code %{hint}).",
         tournament: found.name || "?",
         other: about(found.through),
         hint: Alnasl.Tournaments.secret_hint(found.through)
@@ -145,12 +145,12 @@ defmodule AlnaslWeb.LinkWords do
         ),
       else:
         gettext(
-          "No answer. The boards go on with the pairings the box has; it asks again by itself."
+          "No answer. The boards go on with the pairings Alnasl has; it asks again by itself."
         )
   end
 
   def why(%Link{state: "unsupported"}),
-    do: gettext("That OpenPairings speaks a version of the board link this box does not know.")
+    do: gettext("That OpenPairings speaks a version of the board link this Alnasl does not know.")
 
   def why(_link), do: nil
 

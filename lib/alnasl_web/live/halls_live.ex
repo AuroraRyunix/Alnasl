@@ -218,7 +218,7 @@ defmodule AlnaslWeb.HallsLive do
           {:noreply,
            socket
            |> assign(deleting: false)
-           |> put_flash(:error, gettext("The box's own hall cannot be deleted."))}
+           |> put_flash(:error, gettext("Alnasl's own hall cannot be deleted."))}
 
         {:error, _forbidden} ->
           {:noreply, refuse(assign(socket, deleting: false))}

@@ -53,7 +53,8 @@ defmodule AlnaslWeb.PgnLive do
       rounds: Enum.uniq(Tournaments.rounds(tid) ++ Games.rounds(tid) ++ [round]) |> Enum.sort(),
       numbers: tid |> Tournaments.boards(round) |> Enum.map(& &1.board),
       shown: shown,
-      names: Map.new(shown, &{&1.id, Tournaments.title(&1) || gettext("This box")})
+      names:
+        Map.new(shown, &{&1.id, Tournaments.title(&1) || gettext("The hall's own tournament")})
     )
   end
 
@@ -216,7 +217,7 @@ defmodule AlnaslWeb.PgnLive do
      |> put_flash(
        :info,
        gettext(
-         "The game is now board %{n} of round %{r}, and is on its way to the results server.",
+         "The game is now board %{n} of round %{r}, and is on its way to the results site.",
          n: number,
          r: socket.assigns.round
        )
@@ -238,7 +239,7 @@ defmodule AlnaslWeb.PgnLive do
       {:noreply, assign(socket, verdicts: Map.put(socket.assigns.verdicts, i, verdict))}
     else
       {:game, nil} ->
-        {:noreply, put_flash(socket, :error, gettext("The box has no game for that board yet."))}
+        {:noreply, put_flash(socket, :error, gettext("Alnasl has no game for that board yet."))}
 
       _none ->
         {:noreply, put_flash(socket, :error, gettext("Choose the board to compare with first."))}
@@ -400,7 +401,7 @@ defmodule AlnaslWeb.PgnLive do
           </:actions>
 
           <div :if={@stored == []} class="empty">
-            {gettext("The box has no games for this round yet.")}
+            {gettext("Alnasl has no games for this round yet.")}
           </div>
 
           <table :if={@stored != []} id="stored-games">
@@ -480,13 +481,13 @@ defmodule AlnaslWeb.PgnLive do
           )}</b>
           <p :if={existing && existing.plies != "[]"}>
             {gettext(
-              "The box already has a game of %{n} move(s) for that board. It will be replaced, here and on the results server.",
+              "Alnasl already has a game of %{n} move(s) for that board. It will be replaced, here and on the results site.",
               n: div(length(Games.sans(existing)) + 1, 2)
             )}
           </p>
 
           <p :if={!existing || existing.plies == "[]"}>
-            {gettext("It will be sent to the results server as that board's game.")}
+            {gettext("It will be sent to the results site as that board's game.")}
           </p>
 
           <div class="row mt-3">

@@ -10,6 +10,11 @@ manual chapters `priv/manual/nl/17-live-boards.md` and `18-setting-up-boards.md`
 of the OpenPairings repository. Only `msgstr` lines of Alnasl's
 `priv/gettext/nl/LC_MESSAGES/default.po` change; the English `msgid`s stay.
 
+See [glossary.md](glossary.md) for the whole list, English and Dutch side by
+side. Since 2026-10-17 a sentence the server can show says "Alnasl" where it
+said "het kastje", and "het eigen toernooi van de zaal" where it said "het
+eigen toernooi van dit kastje"; "kastje" is left to what only a box shows.
+
 ## Changed in Alnasl
 
 | English | OpenPairings (nl) | Alnasl before | Alnasl now |
@@ -46,7 +51,7 @@ of the OpenPairings repository. Only `msgstr` lines of Alnasl's
 | State | Toestand |
 | Log | Logboek |
 | Labels (sheet of stickers) | Etiketten |
-| Outbox | Wachtrij (the page's menu item and title; was Verzendlijst, chosen because the queue is what it shows and the manual already calls it "de wachtrij van Alnasl"; OpenPairings has no such page) |
+| Outbox, now the page Results | Resultaten (the rail said Resultaten and the title Wachtrij until step 4 of the UI plan, 2026-10-17; both say Resultaten now, as the English says Results twice; the manual may still call what it holds "de wachtrij") |
 | Round N starting | Ronde N starten |
 | the Live link on the public pages | Live-link |
 

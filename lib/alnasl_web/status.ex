@@ -191,7 +191,7 @@ defmodule AlnaslWeb.Status do
     do:
       {"warn",
        gettext(
-         "No relay key yet: OpenPairings has none saved for this tournament, so nothing is sent to its results site. In OpenPairings: Settings > Live boards > The results site. The box starts sending by itself a few seconds after the key is there."
+         "No relay key yet: OpenPairings has none saved for this tournament, so nothing is sent to its results site. In OpenPairings: Settings > Live boards > The results site. Alnasl starts sending by itself a few seconds after the key is there."
        )}
 
   def results_line(tournament) do

@@ -409,7 +409,7 @@ defmodule AlnaslWeb.GameLive do
     with_board(socket, fn board ->
       case Boards.set_fen(board.id, String.trim(fen)) do
         :ok -> {:info, gettext("The game now starts from that position.")}
-        {:error, _message} -> {:error, gettext("That is not a position (FEN) the box can use.")}
+        {:error, _message} -> {:error, gettext("That is not a position (FEN) Alnasl can use.")}
       end
     end)
   end
@@ -498,7 +498,7 @@ defmodule AlnaslWeb.GameLive do
          |> put_flash(
            :info,
            gettext(
-             "This game is the one that leaves the box now. The results site, OpenPairings and Lichess are sent it in full; the game before it is kept below."
+             "This game is the one that leaves Alnasl now. The results site, OpenPairings and Lichess are sent it in full; the game before it is kept below."
            )
          )
          |> load()}
@@ -800,7 +800,7 @@ defmodule AlnaslWeb.GameLive do
         role="status"
       >
         <b>
-          {gettext("This game stays on the box: it is game %{n} on this board.", n: @game.game_no)}
+          {gettext("This game stays in Alnasl: it is game %{n} on this board.", n: @game.game_no)}
         </b>
 
         <p>
@@ -1089,13 +1089,13 @@ defmodule AlnaslWeb.GameLive do
               <b>{Words.marks(:guessed, marked(@view.snap.plies, :guessed))}</b>
               <p :if={several?(@view.snap.plies)} id="guess-why-several">
                 {gettext(
-                  "More than one line of moves led to what the board showed. The box took one and went on. Compare with a scoresheet when there is a moment."
+                  "More than one line of moves led to what the board showed. Alnasl took one and went on. Compare with a scoresheet when there is a moment."
                 )}
               </p>
 
               <p :if={!several?(@view.snap.plies)} id="guess-why-alone">
                 {gettext(
-                  "One line of moves was found for what the board showed, and the box cannot vouch for it: it could not rule out others, or it has more moves than the clock was pressed for. Compare with a scoresheet when there is a moment."
+                  "One line of moves was found for what the board showed, and Alnasl cannot vouch for it: it could not rule out others, or it has more moves than the clock was pressed for. Compare with a scoresheet when there is a moment."
                 )}
               </p>
 
@@ -1216,7 +1216,7 @@ defmodule AlnaslWeb.GameLive do
               >
                 {if @new_kind == :replace,
                   do: gettext("New game on this board"),
-                  else: gettext("An extra game: it stays on this box")}
+                  else: gettext("An extra game: it stays in Alnasl")}
               </.button>
 
               <.button
@@ -1271,8 +1271,8 @@ defmodule AlnaslWeb.GameLive do
 
                   <span id={"game-here-where-#{game.game_no}"} class="note">
                     {if game.local,
-                      do: gettext("stays on the box"),
-                      else: gettext("is the one that leaves the box")}
+                      do: gettext("stays in Alnasl"),
+                      else: gettext("is the one that leaves Alnasl")}
                   </span>
 
                   <.link
@@ -1560,7 +1560,7 @@ defmodule AlnaslWeb.GameLive do
         <b>{gettext("No other line of the same moves fits what the board showed.")}</b>
         <p class="note">
           {gettext(
-            "Moves %{from} to %{to} in the list are the only way the box can find from the first board to the second. If the scoresheet says otherwise, a move before them was not what the box has, or a move was made that the rules do not allow. Keep them (they become yours, and lose their mark), take them back, or type what was played.",
+            "Moves %{from} to %{to} in the list are the only way Alnasl can find from the first board to the second. If the scoresheet says otherwise, a move before them was not what Alnasl has, or a move was made that the rules do not allow. Keep them (they become yours, and lose their mark), take them back, or type what was played.",
             from: @alt.from,
             to: @alt.to
           )}
