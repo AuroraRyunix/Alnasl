@@ -1261,8 +1261,7 @@ defmodule AlnaslWeb.SetupLive do
       for={to_form(%{"id" => t.id, "from" => table_from, "to" => table_to}, as: :tables)}
       id={"tables-form-#{t.id}"}
       phx-submit="assign_tables"
-      class="row"
-      style="align-items:flex-end"
+      class="row align-end"
     >
       <input type="hidden" name="tables[id]" value={t.id} />
       <div class="field">
@@ -1295,7 +1294,7 @@ defmodule AlnaslWeb.SetupLive do
 
       <div :if={Tournaments.team_event?(t)} class="field">
         <input type="hidden" name="tables[keep_matches]" value="false" />
-        <label for={"tables-keep-#{t.id}"} class="row" style="gap:0.35rem">
+        <label for={"tables-keep-#{t.id}"} class="row tight">
           <input
             id={"tables-keep-#{t.id}"}
             name="tables[keep_matches]"
@@ -1353,8 +1352,7 @@ defmodule AlnaslWeb.SetupLive do
               }
               id={"placement-form-#{t.id}-#{row.placement.hall_id}"}
               phx-submit="placement_save"
-              class="row"
-              style="align-items:flex-end"
+              class="row align-end"
             >
               <b class="placement-hall">{(row.hall && row.hall.name) || "?"}</b>
               <input type="hidden" name="place[t]" value={t.id} />
@@ -1454,8 +1452,7 @@ defmodule AlnaslWeb.SetupLive do
         for={to_form(%{"t" => t.id}, as: :add)}
         id={"placement-add-#{t.id}"}
         phx-submit="placement_add"
-        class="row"
-        style="align-items:flex-end"
+        class="row align-end"
       >
         <input type="hidden" name="add[t]" value={t.id} />
         <div class="field">
@@ -1799,15 +1796,13 @@ defmodule AlnaslWeb.SetupLive do
                 <ul
                   :if={@link_tests[link.id]}
                   id={"link-test-#{link.id}"}
-                  class="stack"
-                  style="list-style:none;padding:0;margin:0.6rem 0 0"
+                  class="stack bare-list mt-4"
                   role="status"
                 >
                   <li
                     :for={{step, result} <- @link_tests[link.id]}
                     id={"link-check-#{link.id}-#{step}"}
-                    class="row"
-                    style="align-items:flex-start;flex-wrap:nowrap"
+                    class="row top nowrap"
                   >
                     <% {tone, sentence} = LinkWords.test_step(step, result) %>
                     <.badge
@@ -1832,8 +1827,7 @@ defmodule AlnaslWeb.SetupLive do
                             )
                         }
                         id={"link-found-#{link.id}-#{index}"}
-                        class="note"
-                        style="display:block"
+                        class="note own-line"
                       >
                         {elem(LinkWords.summary(found), 1)}
                       </span>
@@ -1886,8 +1880,8 @@ defmodule AlnaslWeb.SetupLive do
                 </.form>
               </div>
 
-              <div :if={@may_connect?} id="op-connect" class="callout" style="margin-top:0.8rem">
-                <p class="note" style="margin-top:0">
+              <div :if={@may_connect?} id="op-connect" class="callout mt-5">
+                <p class="note mt-0">
                   {gettext(
                     "Or, without a code: connect your OpenPairings account. You sign in there and allow this box once; it then sees every tournament you may edit that is current, including the ones you make later."
                   )}
@@ -1985,7 +1979,7 @@ defmodule AlnaslWeb.SetupLive do
                 </div>
               </.form>
 
-              <p :if={ResultsSite.page?(@own)} id="server-site" style="margin-top:0.8rem">
+              <p :if={ResultsSite.page?(@own)} id="server-site" class="mt-5">
                 <.site_link id="server-site-link" href={ResultsSite.tournament_url(@own)}>
                   {gettext("Open the results page: %{address}", address: ResultsSite.display(@own))}
                 </.site_link>
@@ -1994,9 +1988,8 @@ defmodule AlnaslWeb.SetupLive do
               <p
                 :if={@testing?}
                 id="test-running"
-                class="note"
+                class="note mt-5"
                 role="status"
-                style="margin-top:0.8rem"
               >
                 {gettext("Asking the server...")}
               </p>
@@ -2004,15 +1997,13 @@ defmodule AlnaslWeb.SetupLive do
               <ul
                 :if={@checks}
                 id="test-result"
-                class="stack"
-                style="list-style:none;padding:0;margin:0.8rem 0 0"
+                class="stack bare-list mt-5"
                 role="status"
               >
                 <li
                   :for={{step, result} <- @checks}
                   id={"check-#{step}"}
-                  class="row"
-                  style="align-items:flex-start;flex-wrap:nowrap"
+                  class="row top nowrap"
                 >
                   <% {tone, sentence} = Words.test_step(step, result) %>
                   <.badge
@@ -2042,11 +2033,10 @@ defmodule AlnaslWeb.SetupLive do
                 :if={length(@tournaments) > 1}
                 id="lichess-tournament-form"
                 phx-change="pick_lichess"
-                class="row"
-                style="margin-bottom:0.6rem"
+                class="row mb-4"
               >
                 <label for="lichess-tournament" class="note">{gettext("Tournament")}</label>
-                <select id="lichess-tournament" name="tournament_id" class="input" style="width:auto">
+                <select id="lichess-tournament" name="tournament_id" class="input fit">
                   <option :for={t <- @tournaments} value={t.id} selected={t.id == @lichess.id}>
                     {Tournaments.title(t) || gettext("This box")}
                   </option>
@@ -2126,9 +2116,8 @@ defmodule AlnaslWeb.SetupLive do
               <p
                 :if={@lichess_testing?}
                 id="lichess-test-running"
-                class="note"
+                class="note mt-5"
                 role="status"
-                style="margin-top:0.8rem"
               >
                 {gettext("Asking Lichess...")}
               </p>
@@ -2136,15 +2125,13 @@ defmodule AlnaslWeb.SetupLive do
               <ul
                 :if={@lichess_checks}
                 id="lichess-test-result"
-                class="stack"
-                style="list-style:none;padding:0;margin:0.8rem 0 0"
+                class="stack bare-list mt-5"
                 role="status"
               >
                 <li
                   :for={{step, result} <- @lichess_checks}
                   id={"lichess-check-#{step}"}
-                  class="row"
-                  style="align-items:flex-start;flex-wrap:nowrap"
+                  class="row top nowrap"
                 >
                   <% {tone, sentence} = DestinationWords.test_step(step, result) %>
                   <.badge
@@ -2159,7 +2146,7 @@ defmodule AlnaslWeb.SetupLive do
                 </li>
               </ul>
 
-              <p class="note" style="margin-top:0.8rem">
+              <p class="note mt-5">
                 {gettext(
                   "The test asks Lichess who the token belongs to and whether the round exists. It sends no game and changes nothing there."
                 )}
@@ -2450,8 +2437,7 @@ defmodule AlnaslWeb.SetupLive do
                 for={@pin_form}
                 id="pin-form"
                 phx-submit="save_pin"
-                class="row"
-                style="align-items:flex-end"
+                class="row align-end"
               >
                 <.input
                   field={@pin_form[:pin]}
@@ -2574,7 +2560,7 @@ defmodule AlnaslWeb.SetupLive do
                     />
                     <span>
                       {gettext("Yes, and tell me when there is one")}
-                      <span class="hint" style="display:block">
+                      <span class="hint own-line">
                         {gettext(
                           "One small question to GitHub every half hour. Nothing is downloaded and nothing is installed until you say so."
                         )}
@@ -2594,7 +2580,7 @@ defmodule AlnaslWeb.SetupLive do
                 </fieldset>
               </form>
 
-              <div class="row" style="margin-top:0.6rem">
+              <div class="row mt-4">
                 <.button id="check-update" type="button" phx-click="check_update">
                   {gettext("Look now")}
                 </.button>
@@ -2613,9 +2599,8 @@ defmodule AlnaslWeb.SetupLive do
               <div
                 :if={match?({:failed, _, _}, @update_result)}
                 id="update-failed"
-                class="callout bad"
+                class="callout bad mt-5"
                 role="status"
-                style="margin-top:0.8rem"
               >
                 <p>
                   {gettext(
@@ -2626,7 +2611,7 @@ defmodule AlnaslWeb.SetupLive do
                 </p>
               </div>
 
-              <div :if={@update_available} id="update-offer" class="callout" style="margin-top:0.8rem">
+              <div :if={@update_available} id="update-offer" class="callout mt-5">
                 <p>
                   <b>
                     {gettext("Alnasl %{version} is out.", version: @update_available.version)}
@@ -2760,8 +2745,7 @@ defmodule AlnaslWeb.SetupLive do
                 :if={@autostart?}
                 id="autostart-form"
                 phx-change="set_autostart"
-                class="stack"
-                style="margin-top:0.8rem"
+                class="stack mt-5"
               >
                 <label class="check" for="autostart">
                   <input type="hidden" name="on" value="false" />
@@ -2774,7 +2758,7 @@ defmodule AlnaslWeb.SetupLive do
                   />
                   <span>
                     {gettext("Start Alnasl when Windows starts")}
-                    <span class="hint" style="display:block">
+                    <span class="hint own-line">
                       {gettext(
                         "For a computer that stays in the hall. It starts without opening the browser; the small Alnasl window is how you stop it."
                       )}

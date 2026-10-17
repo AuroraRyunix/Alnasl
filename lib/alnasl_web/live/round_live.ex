@@ -912,8 +912,7 @@ defmodule AlnaslWeb.RoundLive do
             :if={section.has_boards? and section.current?}
             id={sid("round-ready", section.tid)}
             navigate={~p"/boards"}
-            class="row"
-            style="gap:0.3rem"
+            class="row tight"
           >
             <.badge :if={section.ready?} tone="ok" icon="ok">
               {gettext("Ready for round %{n}", n: section.round)}
@@ -1011,8 +1010,7 @@ defmodule AlnaslWeb.RoundLive do
               ]
             }
             :if={section.counts[state]}
-            class="row"
-            style="gap:0.3rem"
+            class="row tight"
           >
             <b>{section.counts[state]}</b><.state state={state} />
           </span>

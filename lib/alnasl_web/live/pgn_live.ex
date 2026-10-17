@@ -328,14 +328,14 @@ defmodule AlnaslWeb.PgnLive do
           class="row"
         >
           <label for="pgn-tournament" class="note">{gettext("Tournament")}</label>
-          <select id="pgn-tournament" name="tournament_id" class="input" style="width:auto">
+          <select id="pgn-tournament" name="tournament_id" class="input fit">
             <option :for={t <- @shown} value={t.id} selected={t.id == @tid}>{@names[t.id]}</option>
           </select>
         </form>
 
         <form id="pgn-round-form" phx-change="round" class="row">
           <label for="pgn-round" class="note">{gettext("Round")}</label>
-          <select id="pgn-round" name="round" class="input" style="width:auto">
+          <select id="pgn-round" name="round" class="input fit">
             <option :for={n <- @rounds} value={n} selected={n == @round}>{n}</option>
           </select>
         </form>
@@ -354,12 +354,11 @@ defmodule AlnaslWeb.PgnLive do
               {entry.client_name}
               <span
                 :for={err <- upload_errors(@uploads.pgn, entry)}
-                class="error"
-                style="color:var(--bad)"
+                class="error bad-text"
               >{upload_error(err)}</span>
             </p>
 
-            <p :for={err <- upload_errors(@uploads.pgn)} class="error" style="color:var(--bad)">
+            <p :for={err <- upload_errors(@uploads.pgn)} class="error bad-text">
               {upload_error(err)}
             </p>
 
@@ -372,8 +371,7 @@ defmodule AlnaslWeb.PgnLive do
             for={@paste_form}
             id="paste-form"
             phx-submit="paste"
-            class="stack"
-            style="margin-top:1rem"
+            class="stack mt-6"
           >
             <.input
               field={@paste_form[:text]}
@@ -453,7 +451,7 @@ defmodule AlnaslWeb.PgnLive do
         <.icon name="warning" />
         <div>
           <b>{gettext("%{n} game(s) could not be used", n: length(@problems))}</b>
-          <ul style="margin:0.3rem 0 0;padding-left:1.1rem;color:var(--ink)">
+          <ul class="callout-list">
             <li :for={{index, white, black, message} <- @problems}>
               {gettext("Game %{i} (%{white} - %{black}): %{message}",
                 i: index,
@@ -491,7 +489,7 @@ defmodule AlnaslWeb.PgnLive do
             {gettext("It will be sent to the results server as that board's game.")}
           </p>
 
-          <div class="row" style="margin-top:0.5rem">
+          <div class="row mt-3">
             <.button id="attach-yes" variant="primary" phx-click="attach">{gettext("Yes, attach it")}</.button>
             <.button id="attach-no" phx-click="cancel_attach">{gettext("No")}</.button>
           </div>
@@ -546,7 +544,7 @@ defmodule AlnaslWeb.PgnLive do
                   <form id={"target-form-#{i}"} phx-change="target">
                     <input type="hidden" name="index" value={i} />
                     <label class="sr-only" for={"target-#{i}"}>{gettext("Board for game %{i}", i: i)}</label>
-                    <select id={"target-#{i}"} name="board_no" class="input" style="width:auto">
+                    <select id={"target-#{i}"} name="board_no" class="input fit">
                       <option value="">{gettext("choose...")}</option>
 
                       <option

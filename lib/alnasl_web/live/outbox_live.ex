@@ -390,7 +390,7 @@ defmodule AlnaslWeb.OutboxLive do
           </dd>
         </dl>
 
-        <p class="note" style="margin-top:0.8rem">
+        <p class="note mt-5">
           {gettext(
             "Every move is written on the box before it is sent, and stays here until the server has answered for it. Without a connection the box simply keeps them; they go out in order when it is back."
           )}

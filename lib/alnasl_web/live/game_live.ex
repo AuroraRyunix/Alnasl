@@ -821,7 +821,7 @@ defmodule AlnaslWeb.GameLive do
       <div :if={@view} class="game">
         <div class="stack">
           <.panel id="position">
-            <div class="row spread" style="margin-bottom:0.6rem">
+            <div class="row spread mb-4">
               <.state id="game-state" state={@view.snap.status} />
               <span :if={@view.snap[:paused]} id="game-paused" class="flag plain">{gettext(
                 "Not sending"
@@ -902,7 +902,7 @@ defmodule AlnaslWeb.GameLive do
               />
             </div>
 
-            <p :if={@view.apart? and !@at} class="note" style="margin-top:0.5rem">
+            <p :if={@view.apart? and !@at} class="note mt-3">
               {gettext("The outlined squares are where the two differ.")}
             </p>
 
@@ -989,7 +989,7 @@ defmodule AlnaslWeb.GameLive do
             <.icon name="warning" />
             <div>
               <b>{gettext("The starting position is not right")}</b>
-              <ul style="margin:0.3rem 0 0;padding-left:1.1rem;color:var(--ink)">
+              <ul class="callout-list">
                 <li :for={problem <- Enum.take(@view.snap.problems, 8)}>{Words.problem(problem)}</li>
 
                 <li :if={length(@view.snap.problems) > 8}>
@@ -1016,7 +1016,7 @@ defmodule AlnaslWeb.GameLive do
                 variant="primary"
                 phx-click="result"
                 phx-value-result={@view.snap.suggestion}
-                style="margin-top:0.4rem"
+                class="mt-3"
               >
                 {gettext("Confirm %{r}", r: @view.snap.suggestion)}
               </.button>
@@ -1104,7 +1104,7 @@ defmodule AlnaslWeb.GameLive do
                 small
                 phx-click="review"
                 phx-value-ply={first_marked(@view.snap.plies, :guessed)}
-                style="margin-top:0.4rem"
+                class="mt-3"
               >{gettext("Check them")}</.button>
             </div>
           </div>
@@ -1130,7 +1130,7 @@ defmodule AlnaslWeb.GameLive do
                 small
                 phx-click="review"
                 phx-value-ply={number}
-                style="margin-top:0.4rem"
+                class="mt-3"
               >{gettext("Check it")}</.button>
             </div>
           </div>
@@ -1200,7 +1200,7 @@ defmodule AlnaslWeb.GameLive do
               )}
             </p>
 
-            <div class="row" style="margin-top:0.5rem">
+            <div class="row mt-3">
               <.button
                 :if={@board}
                 id="new-game"
@@ -1240,8 +1240,7 @@ defmodule AlnaslWeb.GameLive do
               for={@names_form}
               id="names-form"
               phx-submit="save_names"
-              class="stack"
-              style="margin-top:0.8rem"
+              class="stack mt-5"
             >
               <b>{gettext("Players")}</b>
               <div class="form-grid">
@@ -1644,7 +1643,7 @@ defmodule AlnaslWeb.GameLive do
         </p>
       </div>
 
-      <div class="row choice-actions" style="margin-top:0.6rem">
+      <div class="row choice-actions mt-4">
         <.button
           :if={@ask.line && @total > 1}
           id="choice-apply"
@@ -1722,7 +1721,7 @@ defmodule AlnaslWeb.GameLive do
           id="alarm-missing-move"
           small
           phx-click="missing_move"
-          style="margin-top:0.4rem"
+          class="mt-3"
         >{gettext("A move is missing before this")}</.button>
       </div>
     </div>

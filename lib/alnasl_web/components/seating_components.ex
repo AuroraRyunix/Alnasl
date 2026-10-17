@@ -206,8 +206,7 @@ defmodule AlnaslWeb.SeatingComponents do
         for={to_form(%{"id" => a.tournament.id, "from" => a.from, "to" => a.to}, as: :seat)}
         id={"seat-form-#{a.tournament.id}"}
         phx-submit="seat_tables"
-        class="row"
-        style="align-items:flex-end"
+        class="row align-end"
       >
         <input type="hidden" name="seat[id]" value={a.tournament.id} />
         <b>{Tournaments.title(a.tournament)}</b>
