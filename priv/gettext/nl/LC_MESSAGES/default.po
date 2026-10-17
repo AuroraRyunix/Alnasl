@@ -6628,7 +6628,7 @@ msgstr "Of, zonder code: koppel je OpenPairings-account. Je meldt je daar aan en
 #: lib/alnasl_web/controllers/open_pairings_connect_controller.ex:102
 #, elixir-autogen, elixir-format
 msgid "That OpenPairings account already has 8 copies of Alnasl connected. Withdraw one there (account page, Live boards) and try again."
-msgstr "Aan dat OpenPairings-account zijn al 8 keer Alnasl gekoppeld. Trek er daar een in (accountpagina, Live borden) en probeer opnieuw."
+msgstr "Aan dat OpenPairings-account hangen al 8 Alnasl-installaties. Ontkoppel er daar een (accountpagina, Live borden) en probeer opnieuw."
 
 #: lib/alnasl_web/controllers/open_pairings_connect_controller.ex:88
 #, elixir-autogen, elixir-format
