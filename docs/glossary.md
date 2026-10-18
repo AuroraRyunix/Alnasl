@@ -47,6 +47,7 @@ The rail and the page title say the same word.
 | `/outbox` | Results | Resultaten (no longer "Outbox" / "Wachtrij" in the title) |
 | `/halls` | Halls | Zalen |
 | `/setup` | Setup | Instellingen |
+| `/setup/wizard` | Setup wizard | Installatiewizard |
 | `/log` | Log | Logboek |
 | `/recordings` | Recordings | Opnames |
 | `/help` | Help | Help |

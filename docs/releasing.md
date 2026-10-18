@@ -22,8 +22,8 @@ GitHub release, and the changelog has a section for exactly that version.
 A version without notes publishes nothing (the run says so in a notice and
 stays green); so does a push that changes neither. That second condition is
 the one difference from OpenPairings, where the version alone decides, and
-it is there for one reason: **`main` says 0.1.0 today and no release
-exists**, so without it, merging the installer work would have published
+it is there for one reason: **`main` said 0.1.0 when this was written and
+no release existed**, so without it, merging the installer work would have published
 0.1.0 on the spot.
 
 Do not tag by hand. If you do, the tag must be `v` + the version in

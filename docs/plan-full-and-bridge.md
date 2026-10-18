@@ -19,7 +19,7 @@
 > one step, many-to-many, logins, halls, roles, the server instance)
 > stands as written.
 
-Status: plan, nothing built (2026-10-16). The bridge code lives in its own repository, **Arkab** (Apache-2.0); see "Decided" below.
+Status: built. Arkab 0.1.0 (2026-10-16) holds the drivers; the bridge link and "Add a bridge" shipped in Alnasl 0.2.0 (2026-10-17) and the Setup wizard in 0.3.0 (2026-10-18). The bridge code lives in its own repository, **Arkab** (Apache-2.0); see "Decided" below. The plan text below is kept as it was written.
 
 ## What the maintainer asked for
 

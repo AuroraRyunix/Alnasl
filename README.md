@@ -341,10 +341,17 @@ format, the rules a pack's stylesheet must keep, and
 | **Games** | Read PGN files or pasted moves (checked for legality). Play a game on a simulator board; attach a game that was not captured to its board, after asking; compare a scoresheet with the captured game (the first difference). Export a game or the whole round |
 | **Recordings** | The raw captures per board. Replay one through the tracker as a dry run (what it makes of it, where it lost the thread); export it as a test fixture; download it |
 | **Log** | What happened, in sentences, with filters: board connected, moves recovered, out of sync, repaired by the arbiter, offline, back |
-| **Setup** | This copy (version, how started, data folder); Tournaments: a connect code from OpenPairings (pasted once, never shown again), what each tournament came with, which tables play in it, "Test connection" that really asks and explains failures - a wrong code, a withdrawn one, nobody home, a tournament that is not published; for a box without OpenPairings the results site, tournament and relay key typed in; a Lichess broadcast round and its token per tournament, with a test of its own; the box's name, language, round; a PIN for other machines and the address they open; the tracker's timings, with "Bullet / fast play" for games of a few minutes or less |
+| **Setup** | The **Setup wizard** comes first: it asks what the hall looks like (one hall and one tournament, several tournaments, several halls or rooms), how many Arkab bridges, roughly how many boards and what else is wanted, then lists the steps for that hall and ticks each one by what is really there. Then: this copy (version, how started, data folder); Tournaments: a connect code from OpenPairings (pasted once, never shown again), what each tournament came with, which tables play in it, "Test connection" that really asks and explains failures - a wrong code, a withdrawn one, nobody home, a tournament that is not published; for a box without OpenPairings the results site, tournament and relay key typed in; a Lichess broadcast round and its token per tournament, with a test of its own; the box's name, language, round; a PIN for other machines and the address they open; the tracker's timings, with "Bullet / fast play" for games of a few minutes or less |
 | **Help** | The manual, in English and Dutch: seven chapters from getting started to troubleshooting, with a search, and a small *?* on every page that opens the section about it. The chapters are `priv/manual/*.md` (Dutch in `priv/manual/nl/`) |
 
 A banner on every page says so when the results site cannot be reached.
+
+Boards in another hall, or on a Raspberry Pi in the next room, come in
+through **Arkab**: a small bridge program beside those boards that sends
+their moves here over an outgoing connection. Here, go to Halls, the hall,
+its **Bridges** tab and "Add a bridge"; paste the link on Arkab's page, or
+scan its code. The hosted server has no boards of its own and takes bridges
+only. [docs/glossary.md](docs/glossary.md) has the names in both languages.
 
 ## Which board is which
 
