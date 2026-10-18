@@ -49,7 +49,7 @@ defmodule Alnasl.Updates do
   alias Alnasl.{Boards, Paths, Settings}
   alias Alnasl.Updates.Checker
 
-  @repo "AuroraRyunix/Alnasl"
+  @repo "teapot-chess/Alnasl"
   @latest_url "https://api.github.com/repos/#{@repo}/releases/latest"
   @releases_page "https://github.com/#{@repo}/releases"
   @user_agent "Alnasl-UpdateCheck"

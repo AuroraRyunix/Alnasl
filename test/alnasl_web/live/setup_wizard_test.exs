@@ -167,7 +167,7 @@ defmodule AlnaslWeb.SetupWizardTest do
 
       assert has_element?(
                view,
-               "#wizard-step-arkab-go[href='https://github.com/AuroraRyunix/Arkab/releases/latest']"
+               "#wizard-step-arkab-go[href='https://github.com/teapot-chess/Arkab/releases/latest']"
              )
 
       assert has_element?(view, "#wizard-step-bridge-1", "1 of 2")

@@ -19,6 +19,7 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+- [Change] **New address.** The repository moved to github.com/teapot-chess; old links still redirect, out of politeness rather than obligation.
 ## [0.3.1] - 2026-10-18
 
 - [Fix] **Quitting Alnasl on the Mac stops Alnasl, and whatever it started.** The launcher script signalled the server and nobody else, so a helper program could outlive the thing that asked for it; it now reads the whole tree under the server before saying goodbye, and after twenty seconds (or a clean exit, which is no proof of anything) SIGKILLs all of it. The app's own last resort, ten seconds later, did the same trick with only the script, and left the server to launchd; it now takes the tree as well.

@@ -5,7 +5,7 @@
 
 [Unit]
 Description=Alnasl - live chess boards
-Documentation=https://github.com/AuroraRyunix/Alnasl
+Documentation=https://github.com/teapot-chess/Alnasl
 After=network.target
 
 [Service]

@@ -195,7 +195,7 @@ defmodule Alnasl.MixProject do
       # bridge that brings a hall's boards here from elsewhere. Pinned by tag,
       # as OpenPairings pins Ainalrami: a new Arkab reaches Alnasl when this
       # line says so, not when somebody pushes.
-      {:arkab, github: "AuroraRyunix/Arkab", tag: "v0.1.0"}
+      {:arkab, github: "teapot-chess/Arkab", tag: "v0.1.0"}
     ] ++ uart()
   end
 

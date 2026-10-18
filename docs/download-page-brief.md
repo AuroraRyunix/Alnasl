@@ -43,22 +43,22 @@ not host copies.
 
 | What | Address |
 |---|---|
-| Windows installer | `https://github.com/AuroraRyunix/Alnasl/releases/latest/download/Alnasl-Setup.exe` |
-| Windows, portable zip | `https://github.com/AuroraRyunix/Alnasl/releases/latest/download/alnasl-windows-x86_64-portable.zip` |
-| Linux, PC (x86_64) | `https://github.com/AuroraRyunix/Alnasl/releases/latest/download/alnasl-linux-x86_64.tar.gz` |
-| Linux, Raspberry Pi and other arm64 | `https://github.com/AuroraRyunix/Alnasl/releases/latest/download/alnasl-linux-aarch64.tar.gz` |
-| Linux installer script | `https://github.com/AuroraRyunix/Alnasl/releases/latest/download/install.sh` |
-| Mac, Apple Silicon (M1 and later) only | `https://github.com/AuroraRyunix/Alnasl/releases/latest/download/alnasl-macos-aarch64.zip` |
-| Checksums | `https://github.com/AuroraRyunix/Alnasl/releases/latest/download/SHA256SUMS` |
-| All versions, release notes | `https://github.com/AuroraRyunix/Alnasl/releases` |
-| The newest version's notes | `https://github.com/AuroraRyunix/Alnasl/releases/latest` |
+| Windows installer | `https://github.com/teapot-chess/Alnasl/releases/latest/download/Alnasl-Setup.exe` |
+| Windows, portable zip | `https://github.com/teapot-chess/Alnasl/releases/latest/download/alnasl-windows-x86_64-portable.zip` |
+| Linux, PC (x86_64) | `https://github.com/teapot-chess/Alnasl/releases/latest/download/alnasl-linux-x86_64.tar.gz` |
+| Linux, Raspberry Pi and other arm64 | `https://github.com/teapot-chess/Alnasl/releases/latest/download/alnasl-linux-aarch64.tar.gz` |
+| Linux installer script | `https://github.com/teapot-chess/Alnasl/releases/latest/download/install.sh` |
+| Mac, Apple Silicon (M1 and later) only | `https://github.com/teapot-chess/Alnasl/releases/latest/download/alnasl-macos-aarch64.zip` |
+| Checksums | `https://github.com/teapot-chess/Alnasl/releases/latest/download/SHA256SUMS` |
+| All versions, release notes | `https://github.com/teapot-chess/Alnasl/releases` |
+| The newest version's notes | `https://github.com/teapot-chess/Alnasl/releases/latest` |
 
 How this works: the files carry **no version in their names**, on purpose,
 so GitHub's `releases/latest/download/<name>` always resolves to the newest
 release. There are no versioned copies beside them. The version is inside
 each file and on the releases page; do not print a version number on the
 download page unless you fetch it (the releases page's API,
-`https://api.github.com/repos/AuroraRyunix/Alnasl/releases/latest`, field
+`https://api.github.com/repos/teapot-chess/Alnasl/releases/latest`, field
 `tag_name`) - a number typed into the page will be wrong within a month.
 
 The same holds for the file sizes. In 0.1.0: Windows installer 27 MB,
@@ -86,7 +86,7 @@ change; take them from the API (`assets[].size`) or say nothing.
 "Bookworm" or newer)**
 
 1. On the box, in a terminal:
-   `curl -fsSL https://github.com/AuroraRyunix/Alnasl/releases/latest/download/install.sh | sudo sh`
+   `curl -fsSL https://github.com/teapot-chess/Alnasl/releases/latest/download/install.sh | sudo sh`
 2. Open `http://localhost:4040` on the box. Alnasl now starts with the box.
 3. For a hall without internet: download the archive beforehand, unpack it
    on the box, and run `sudo sh alnasl/install.sh` from it.
@@ -165,10 +165,10 @@ Do not use any board maker's name or logo on the page.
 
 ## Links
 
-- Source and issues: <https://github.com/AuroraRyunix/Alnasl>
-- Releases: <https://github.com/AuroraRyunix/Alnasl/releases>
+- Source and issues: <https://github.com/teapot-chess/Alnasl>
+- Releases: <https://github.com/teapot-chess/Alnasl/releases>
 - Install, update, where the data is, in full: the README's "Install"
-  section, <https://github.com/AuroraRyunix/Alnasl#install>
+  section, <https://github.com/teapot-chess/Alnasl#install>
 - The arbiter's guide to setting up electronic boards is a chapter of the
   OpenPairings manual, which is public (no login):
   <https://pairings.zerotwo.cloud/help>, chapter "Setting up electronic

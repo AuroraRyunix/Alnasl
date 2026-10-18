@@ -115,7 +115,7 @@
 #define DEFAULT_PORT 4040
 #define MAXP 1024
 
-#define REPO_URL "https://github.com/AuroraRyunix/Alnasl"
+#define REPO_URL "https://github.com/teapot-chess/Alnasl"
 #define RUN_KEY L"Software\\Microsoft\\Windows\\CurrentVersion\\Run"
 #define RUN_VALUE L"Alnasl"
 

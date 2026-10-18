@@ -2,7 +2,7 @@
 # Installs Alnasl on a Linux box - a small PC or a Raspberry Pi in the hall -
 # as a service that starts with the machine.
 #
-#   curl -fsSL https://github.com/AuroraRyunix/Alnasl/releases/latest/download/install.sh | sudo sh
+#   curl -fsSL https://github.com/teapot-chess/Alnasl/releases/latest/download/install.sh | sudo sh
 #
 # or, in a hall without internet, from a release unpacked on a stick:
 #
@@ -31,7 +31,7 @@
 
 set -eu
 
-REPO="AuroraRyunix/Alnasl"
+REPO="teapot-chess/Alnasl"
 INSTALL_DIR="/opt/alnasl"
 DATA_DIR="/var/lib/alnasl"
 CONF_DIR="/etc/alnasl"

@@ -14,9 +14,9 @@ defmodule AlnaslWeb.WizardComponents do
 
   alias Alnasl.Wizard
 
-  @arkab_releases "https://github.com/AuroraRyunix/Arkab/releases/latest"
-  @polis_releases "https://github.com/AuroraRyunix/Polis/releases/latest"
-  @nunki_releases "https://github.com/AuroraRyunix/Nunki/releases/latest"
+  @arkab_releases "https://github.com/teapot-chess/Arkab/releases/latest"
+  @polis_releases "https://github.com/teapot-chess/Polis/releases/latest"
+  @nunki_releases "https://github.com/teapot-chess/Nunki/releases/latest"
 
   @doc "Where Arkab is downloaded."
   def arkab_releases, do: @arkab_releases

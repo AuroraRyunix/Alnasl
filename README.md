@@ -22,7 +22,7 @@ for the arbiter - and keeps working when the hall's internet does not.
 ## The name
 
 Alnasl is γ² Sagittarii, "the arrowhead" - the point of the archer's arrow.
-Its sibling [Ainalrami](https://github.com/AuroraRyunix/Ainalrami), the pairing
+Its sibling [Ainalrami](https://github.com/teapot-chess/Ainalrami), the pairing
 engine, is ν¹ Sagittarii, "the eye of the archer". The eye decides who plays
 whom; the arrow carries the games out of the hall.
 
@@ -123,7 +123,7 @@ kind of place, and need nothing installed first - the runtime is inside.
 
 ### Windows
 
-Download **[Alnasl-Setup.exe](https://github.com/AuroraRyunix/Alnasl/releases/latest/download/Alnasl-Setup.exe)**
+Download **[Alnasl-Setup.exe](https://github.com/teapot-chess/Alnasl/releases/latest/download/Alnasl-Setup.exe)**
 and run it. It installs for you alone, asks for no administrator, puts
 "Alnasl" in the Start menu and on the desktop, and starts.
 
@@ -141,7 +141,7 @@ long it has run, processor, memory, the database, boards connected, the
 results relay); **Copy** puts them and the last 200 log lines on the
 clipboard, ready to mail.
 
-Rather install nothing? **[alnasl-windows-x86_64-portable.zip](https://github.com/AuroraRyunix/Alnasl/releases/latest/download/alnasl-windows-x86_64-portable.zip)**:
+Rather install nothing? **[alnasl-windows-x86_64-portable.zip](https://github.com/teapot-chess/Alnasl/releases/latest/download/alnasl-windows-x86_64-portable.zip)**:
 unzip it anywhere and start `Alnasl.exe` in it. (`Alnasl.bat`, beside it,
 starts the same thing with a console window that shows what the program
 says - for when something is wrong.) Both are a folder with a small
@@ -155,7 +155,7 @@ Windows 10 or 11, 64-bit. An electronic board on USB is a COM port; see
 ### Linux and the Raspberry Pi
 
 ```
-curl -fsSL https://github.com/AuroraRyunix/Alnasl/releases/latest/download/install.sh | sudo sh
+curl -fsSL https://github.com/teapot-chess/Alnasl/releases/latest/download/install.sh | sudo sh
 ```
 
 That installs Alnasl under `/opt/alnasl`, makes a system user `alnasl` in
@@ -167,8 +167,8 @@ with the box and comes back when it falls over. Then
   network in from the first start. There is no PIN yet at that moment: open
   Setup from your laptop and set one before anybody else finds the address.
 - **A hall without internet**: download
-  [alnasl-linux-x86_64.tar.gz](https://github.com/AuroraRyunix/Alnasl/releases/latest/download/alnasl-linux-x86_64.tar.gz)
-  (or [`-aarch64`](https://github.com/AuroraRyunix/Alnasl/releases/latest/download/alnasl-linux-aarch64.tar.gz)
+  [alnasl-linux-x86_64.tar.gz](https://github.com/teapot-chess/Alnasl/releases/latest/download/alnasl-linux-x86_64.tar.gz)
+  (or [`-aarch64`](https://github.com/teapot-chess/Alnasl/releases/latest/download/alnasl-linux-aarch64.tar.gz)
   for a Pi) at home, and on the box: `tar -xzf alnasl-linux-*.tar.gz && sudo sh alnasl/install.sh`.
 - **Without installing**: unpack the same archive and run `alnasl/alnasl.sh`.
   `alnasl/alnasl.sh details` (`--once` for one snapshot to paste) shows what
@@ -191,7 +191,7 @@ root shell; it is two hundred lines and says what it does at the top.
 > started on GitHub's Macs on every push; [docs/macos.md](docs/macos.md)
 > has the test list for a person with one.
 
-Download **[alnasl-macos-aarch64.zip](https://github.com/AuroraRyunix/Alnasl/releases/latest/download/alnasl-macos-aarch64.zip)**
+Download **[alnasl-macos-aarch64.zip](https://github.com/teapot-chess/Alnasl/releases/latest/download/alnasl-macos-aarch64.zip)**
 for a Mac with an Apple chip (M1 and later; there is no
 build for Intel Macs), open it, and drag **Alnasl** into *Applications*.
 
@@ -566,7 +566,7 @@ the release was not built for, or to run a version nobody has released:
 
 ```
 sudo apt install elixir erlang build-essential   # or asdf/mise for a newer Elixir
-git clone https://github.com/AuroraRyunix/Alnasl && cd Alnasl
+git clone https://github.com/teapot-chess/Alnasl && cd Alnasl
 MIX_ENV=prod mix deps.get
 MIX_ENV=prod mix assets.deploy
 MIX_ENV=prod ALNASL_LISTEN=lan mix phx.server

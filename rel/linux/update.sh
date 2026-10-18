@@ -25,7 +25,7 @@
 
 set -eu
 
-REPO="AuroraRyunix/Alnasl"
+REPO="teapot-chess/Alnasl"
 INSTALL_DIR="/opt/alnasl"
 DATA_DIR="/var/lib/alnasl"
 CONF_FILE="/etc/alnasl/alnasl.env"
