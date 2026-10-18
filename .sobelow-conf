@@ -1,0 +1,32 @@
+# Sobelow (Phoenix security scanner) - `mix sobelow --config`, run by precommit and CI.
+#
+# skip: true  - findings recorded in .sobelow-skips are accepted. Every entry there
+# was read in context and is a false positive:
+#   * Traversal.* - paths are built by the app (its data dir, temp files, a
+#     bundled catalogue) or looked up by id in the app's own listing before they
+#     are touched; no request string is ever joined into a path.
+#   * XSS.* - bodies are fixed SVG/PDF/ndjson/escaped-HTML builders or the app's own
+#     bundled manual; content types are literals.
+#   * DOS.StringToAtom - atoms come from the app's own literals, bundled data or a
+#     regex-bounded letter set, never from a request.
+#   * CI.System - fixed commands with an argument list (no shell string).
+#   * Config.CSWH - the socket origin is checked in config.
+#   * Config.CSP - no script-src policy is set; Phoenix's default
+#     put_secure_browser_headers is on the browser pipeline. Reported, not fixed:
+#     it listens on localhost / behind the operator's own access layer only.
+#   * Config.CSRF - the /join JSON endpoint is called by a bridge program, not a browser: the one-time code in the body is the credential, there is no session to forge.
+[
+  exit: :low,
+  format: "txt",
+  ignore: [],
+  ignore_files: [],
+  include_mix_tasks: false,
+  include_scripts: false,
+  out: nil,
+  private: false,
+  router: nil,
+  skip: true,
+  summary: false,
+  threshold: :low,
+  verbose: false
+]

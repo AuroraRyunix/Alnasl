@@ -174,6 +174,9 @@ defmodule Alnasl.MixProject do
   defp deps do
     [
       {:phoenix, "~> 1.8.9"},
+      # Security tooling, wired into `precommit` and CI; never part of a release.
+      {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
+      {:sobelow, "~> 0.16", only: [:dev, :test], runtime: false},
       {:phoenix_ecto, "~> 4.5"},
       {:ecto_sql, "~> 3.13"},
       {:ecto_sqlite3, ">= 0.0.0"},
@@ -237,7 +240,14 @@ defmodule Alnasl.MixProject do
       ],
       # No "deps.unlock --unused" here: on a machine that leaves the serial
       # library out (see uart/0) it would drop it from the lock file.
-      precommit: ["compile --warnings-as-errors", "format", "test"]
+      precommit: [
+        "compile --warnings-as-errors",
+        "format",
+        "deps.audit",
+        "hex.audit",
+        "sobelow --config",
+        "test"
+      ]
     ]
   end
 end
