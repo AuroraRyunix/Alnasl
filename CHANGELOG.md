@@ -19,6 +19,8 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-18
+
 - [Feature] **A Setup wizard, first in Setup.** It asks what the hall looks like - one hall and one tournament, several tournaments, several halls or rooms - how many Arkab bridges, roughly how many boards, and what else is wanted (results for spectators, Lichess, a Polis print station, a Nunki announcer, phones behind a PIN on a box). Then it lists the steps for exactly that hall, in order, "Bridge 2 of 3" included, each with one button to where it is done. Every tick comes from what is really there: a bridge that has connected, the boards that arrived, the tournaments a connect code brought, table numbers on every board, a results page with its relay key. The two Alnasl cannot see, the print station and the announcer, are ticked by hand and say so, rather than pretend. The answers are kept per hall, so it can be reopened, re-answered and still tick. A step your role cannot do keeps its tick and tells you who can.
 - [Change] **Setup opens on the wizard until the hall is set up**, and an address that leads nowhere leads there too. Once every step is done it opens on Tournaments again, as before; the wizard stays in the list for the day something changes.
 - [Change] **The word "bridge" now comes with its name.** This server's Edition line says the boards come from Arkab bridges and links to the wizard; "Add a bridge" lists what to do on the other side (install Arkab beside the boards, open its page on port 4050, paste the link under "Join a server" or scan the code), with the download; the server's empty Boards page links to the wizard. Nobody new should have to guess that a bridge is a program you install.
