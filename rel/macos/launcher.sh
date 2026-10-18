@@ -31,7 +31,8 @@
 #
 # SIGTERM, SIGINT or SIGHUP to this script sends SIGTERM to the BEAM - a
 # clean `init:stop()`, the database closed in order - and up to twenty
-# seconds before insisting. The app sends the SIGTERM on Quit (after asking),
+# seconds before insisting with SIGKILL - on the BEAM and on every program
+# it had started (see stop_server). The app sends the SIGTERM on Quit (after asking),
 # on logout and on shutdown (without asking).
 #
 # If the app itself disappears without that (Force Quit, a crash), this
@@ -98,14 +99,34 @@ echo "Starting $release ($url, data in $ALNASL_DATA)"
 "$release" start &
 pid=$!
 
+# The server and everything under it, deepest first: the BEAM, its
+# erl_child_setup, and whatever programs that one started. Erlang puts each
+# port program in a process group of its own, so a process-group signal never
+# reaches them; the parentage does, as long as it is read before the BEAM is
+# gone and they are handed to launchd.
+tree() {
+  for child in $(pgrep -P "$1" 2>/dev/null); do
+    tree "$child"
+  done
+  echo "$1"
+}
+
+# SIGTERM to the BEAM, twenty seconds, then SIGKILL - to the BEAM and to
+# every process that was under it, whether the BEAM went quietly or not.
 stop_server() {
-  kill -TERM "$pid" 2>/dev/null || return 0
+  kill -0 "$pid" 2>/dev/null || return 0
+  under=$(tree "$pid")
+  kill -TERM "$pid" 2>/dev/null
   i=0
   while kill -0 "$pid" 2>/dev/null && [ "$i" -lt 20 ]; do
     sleep 1
     i=$((i + 1))
   done
-  kill -KILL "$pid" 2>/dev/null || true
+  # Read again: something may have started since. Then no more asking.
+  under="$under $(tree "$pid")"
+  # shellcheck disable=SC2086 # one pid per word, on purpose
+  kill -KILL $under 2>/dev/null
+  return 0
 }
 
 # The parent watch: the app, gone without a word, takes the server with it.

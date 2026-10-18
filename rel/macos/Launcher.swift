@@ -101,6 +101,30 @@ func onStopSignals(_ handler: @escaping () -> Void) {
     }
 }
 
+// A process and everything under it, the process first (so that it starts
+// nothing more while the rest is collected), read from the kernel's own
+// parent links. Port programs sit in process groups of their own, so a
+// killpg would miss them.
+func processTree(_ root: pid_t) -> [pid_t] {
+    var found: [pid_t] = [root]
+    var index = 0
+    while index < found.count && found.count < 512 {
+        let parent = found[index]
+        index += 1
+        let wanted = proc_listchildpids(parent, nil, 0)
+        guard wanted > 0 else { continue }
+        var children = [pid_t](repeating: 0, count: Int(wanted) + 16)
+        let got = children.withUnsafeMutableBytes { raw in
+            proc_listchildpids(parent, raw.baseAddress, Int32(raw.count))
+        }
+        guard got > 0 else { continue }
+        for child in children.prefix(Int(got)) where child > 0 && !found.contains(child) {
+            found.append(child)
+        }
+    }
+    return found
+}
+
 func serverProcess() -> Process {
     let child = Process()
     child.executableURL = URL(fileURLWithPath: "/bin/sh")
@@ -630,10 +654,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         guard let server = child, server.isRunning else { return }
         setState(.stopping)
         // launcher.sh gives the BEAM twenty seconds before insisting; this
-        // gives launcher.sh thirty, and then insists on it.
+        // gives launcher.sh thirty, and then insists on it - and on the
+        // whole tree under it. Killing only the script would hand the BEAM,
+        // and whatever it started, to launchd: a server nobody can see.
         kill(server.processIdentifier, SIGTERM)
         DispatchQueue.main.asyncAfter(deadline: .now() + 30) { [weak self] in
-            if let late = self?.child, late.isRunning { kill(late.processIdentifier, SIGKILL) }
+            if let late = self?.child, late.isRunning {
+                for pid in processTree(late.processIdentifier) { kill(pid, SIGKILL) }
+            }
         }
     }
 

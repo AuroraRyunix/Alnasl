@@ -240,6 +240,16 @@ defmodule Alnasl.ReleaseFilesTest do
       assert Enum.sort(List.flatten(imports)) == ["AppKit", "Foundation"]
     end
 
+    test "a stop on the Mac reaches what the server started, not just the server" do
+      sh = read("rel/macos/launcher.sh")
+      # The tree is read before the BEAM goes, and all of it gets SIGKILL.
+      assert sh =~ ~s[for child in $(pgrep -P "$1" 2>/dev/null)]
+      assert sh =~ ~s[under=$(tree "$pid")]
+      assert sh =~ "kill -KILL $under"
+      # The app's own last resort takes the whole tree too, not the script alone.
+      assert read("rel/macos/Launcher.swift") =~ "processTree(late.processIdentifier)"
+    end
+
     test "the Mac icon has Apple's margin around the tile" do
       png = File.read!(Path.join(@root, "rel/macos/Alnasl-icon.png"))
       assert <<0x89, "PNG", _::binary-size(12), width::32, height::32, _::binary>> = png
