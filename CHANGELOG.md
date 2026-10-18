@@ -19,6 +19,8 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+- [Fix] **Stopping no longer ends in a red stack trace.** On the way out the launcher-details process tidied up its secret by asking the application controller, which at that point is busy dying and answers everyone with an exit. The secret goes with the VM anyway, so now it lets the question go unanswered and leaves quietly.
+
 - [Change] **New address.** The repository moved to github.com/teapot-chess; old links still redirect, out of politeness rather than obligation.
 ## [0.3.1] - 2026-10-18
 
