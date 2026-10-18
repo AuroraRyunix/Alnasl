@@ -79,7 +79,7 @@ defmodule AlnaslWeb.EditionTest do
       refute has_element?(view, "#setup-nav-updates")
 
       for slug <- ~w(access updates) do
-        assert {:error, {:live_redirect, %{to: "/setup/tournaments"}}} =
+        assert {:error, {:live_redirect, %{to: "/setup/wizard"}}} =
                  live(conn, "/setup/#{slug}")
       end
 

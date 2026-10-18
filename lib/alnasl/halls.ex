@@ -172,6 +172,7 @@ defmodule Alnasl.Halls do
           Repo.delete_all(from b in Bridge, where: b.hall_id == ^id)
           Repo.delete_all(from p in Placement, where: p.hall_id == ^id)
           Repo.delete_all(from t in Tournament, where: t.hall_id == ^id and t.kind == "local")
+          Alnasl.Wizard.forget(id)
           Repo.delete!(hall)
         end
       end)

@@ -13,7 +13,7 @@ De brug belt zelf naar Alnasl. In het netwerk van de zaal hoeft niets open te st
 **Arkab** is de brug: het bordenlezen van Alnasl en niets anders - de stuurprogramma's, de seriële bus, een wachtrij die elke zet bijhoudt tot de server hem heeft, en de uitgaande lijn naar een of meer Alnasls. Geen rondes, geen aanmeldingen, geen eigen partijen. Het is een apart programma met een eigen repository, [github.com/AuroraRyunix/Arkab](https://github.com/AuroraRyunix/Arkab), Apache-2.0 zoals Alnasl, en het deelt zijn bordcode met Alnasl, zodat een bord op beide hetzelfde leest.
 
 > [!NOTE] Arkab krijgen
-> Een kant-en-klare download is er nog niet: voorlopig start je Arkab vanuit de broncode met Elixir (`mix deps.get`, daarna `mix run --no-halt`), zoals de README beschrijft. Een pakket voor een Raspberry Pi komt eraan. Zijn pagina antwoordt dan op poort 4050 van de machine waarop het draait.
+> Download het van [zijn releasepagina](https://github.com/AuroraRyunix/Arkab/releases/latest): een installatieprogramma voor Windows, Linux-archieven voor een pc en voor een Raspberry Pi (met een installatie in één regel die er een dienst van maakt), en een Mac-app. Installeer het op de computer waaraan de borden hangen, en start het. Zijn pagina antwoordt dan op poort 4050 van die computer. De Installatiewizard (Instellingen, eerste onderdeel) zet deze stappen voor jouw zaal op een rij en vinkt ze af zodra de brug aansluit.
 
 ## Een brug laten aansluiten {#joining}
 
@@ -21,7 +21,7 @@ Eén handeling, op één plaats, en niemand typt een sleutel.
 
 1. Open op Alnasl de pagina van de zaal waar de borden bij horen: Zalen, dan de zaal, dan haar tabblad **Bruggen** (Instellingen, Toegang - Deze server op de server - heeft een knop "Bruggen van deze zaal" die er voor de zaal waar je naar kijkt meteen heen leidt). Druk op "Een brug toevoegen".
 2. Er verschijnt een link en hetzelfde als QR-code. De link is goed voor **één brug en vijftien minuten**, en zegt tot wanneer.
-3. Op de pagina van de brug, "Aansluiten bij een server": plak de link, of scan de code met de camera. Druk op Aansluiten. (Een telefoon die de link in zijn eigen browser opent, krijgt een pagina die zegt dat de link voor een brug is, en waar je hem plakt.)
+3. Op de pagina van de brug (op de computer naast de borden, poort 4050), "Aansluiten bij een server": plak de link, of scan de code met de camera. Druk op Aansluiten. (Een telefoon die de link in zijn eigen browser opent, krijgt een pagina die zegt dat de link voor een brug is, en waar je hem plakt.)
 4. De brug toont "Aangesloten." en de server staat in haar lijst. Op Alnasl verschijnt de brug in de lijst van bruggen van de zaal, met haar naam en "verbonden".
 
 Daarna heeft de brug een eigen sleutel, die ze zelf opgehaald heeft. Niemand ziet hem ooit, leest hem voor of kopieert hem, en Alnasl bewaart enkel een hash ervan. Is de link verlopen voor hij gebruikt werd, druk dan opnieuw op "Een brug toevoegen".

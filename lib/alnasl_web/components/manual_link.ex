@@ -28,7 +28,8 @@ defmodule AlnaslWeb.Components.ManualLink do
     bridges: {"bridges", "joining"},
     setup: {"openpairings-and-openresults", "linking-to-openpairings"},
     lichess: {"openpairings-and-openresults", "lichess"},
-    accounts: {"accounts-and-halls", "open-until-the-first-account"}
+    accounts: {"accounts-and-halls", "open-until-the-first-account"},
+    wizard: {"getting-started", "setup-wizard"}
   }
 
   @doc "Every topic, as `topic => {chapter slug, heading id}`."

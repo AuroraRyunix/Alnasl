@@ -4223,3 +4223,106 @@ h1 .manual-help-link, h2 .manual-help-link { transform: translateY(-2px); }
 .bare-list { list-style: none; padding: 0; margin-bottom: 0; margin-left: 0; margin-right: 0; }
 .tight-list { margin-bottom: 0; padding-left: var(--space-6); }
 .callout-list { margin: var(--space-2) 0 0; padding-left: 1.1rem; color: var(--ink); }
+
+/* The Setup wizard: the steps in order. The current one stands out (the
+   accent edge, the primary button), the done ones step back, and the rest
+   wait their turn in plain ink. */
+
+.wsteps {
+  list-style: none;
+  margin: 0.8rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.wstep {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--bg);
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.wstep.current {
+  border-left-color: var(--accent);
+  background: var(--sunken);
+}
+
+.wstep.done {
+  color: var(--quiet);
+  padding-block: 0.4rem;
+}
+
+.wstep-n {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  border: 1px solid var(--rule);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.wstep.current .wstep-n {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.wstep.done .wstep-n {
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+.wstep-n svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.wstep-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.wstep-line {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.wstep-body .note {
+  margin: 0;
+}
+
+#wizard-extras {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+/* "Add a bridge": what to do on the bridge's side, in order. */
+
+.join-steps {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}

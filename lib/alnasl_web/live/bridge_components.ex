@@ -28,7 +28,7 @@ defmodule AlnaslWeb.BridgeComponents do
     <div id="bridges" class="stack">
       <p class="note">
         {gettext(
-          "A bridge is a small program (Arkab) beside boards somewhere else - a Raspberry Pi in another hall - that sends them here. It dials out; nothing has to be opened for it."
+          "A bridge is Arkab: a small program on a computer beside the boards (a Raspberry Pi will do) that reads them and sends them here. It dials out; nothing has to be opened for it."
         )}
       </p>
 
@@ -53,11 +53,24 @@ defmodule AlnaslWeb.BridgeComponents do
             </svg>
           </div>
           <div class="stack">
-            <p>
-              {gettext(
-                "Paste this link in the bridge's \"Join a server\" field, or scan the code there:"
-              )}
-            </p>
+            <ol id="bridge-join-steps" class="join-steps">
+              <li>
+                {gettext("Install Arkab on the computer beside the boards, and start it.")}
+                <.link
+                  href={AlnaslWeb.WizardComponents.arkab_releases()}
+                  target="_blank"
+                  rel="noopener"
+                >
+                  {gettext("Download Arkab")}
+                </.link>
+              </li>
+              <li>{gettext("Open Arkab's page on that computer (port 4050).")}</li>
+              <li>
+                {gettext(
+                  "Under \"Join a server\", paste this link, or press Scan and point the camera at the code. Then press Join."
+                )}
+              </li>
+            </ol>
             <p id="bridge-join-link" class="addresses mono">{@join.url}</p>
             <p id="bridge-join-expiry" class="note">
               {gettext("Good for one bridge, until %{time} (UTC).",

@@ -82,6 +82,10 @@ defmodule AlnaslWeb.Permit do
     OutboxLive => %{"dest_toggle" => :admin, "prune" => :admin},
     SetupLive => %{
       "pick_lichess" => :viewer,
+      "wizard_change" => :viewer,
+      "wizard_edit" => :viewer,
+      "wizard_cancel" => :viewer,
+      "save_wizard" => :owner,
       "add_bridge" => :owner,
       "bridge_command" => :owner,
       "remove_bridge" => :owner,
@@ -167,7 +171,8 @@ defmodule AlnaslWeb.Permit do
   # arbiter of the Open in the annex is not one in the main hall because
   # the Open is played there too.
   @here_events %{
-    SetupLive => ~w(assign_tables add_code add_bridge bridge_command remove_bridge),
+    SetupLive =>
+      ~w(assign_tables add_code add_bridge bridge_command remove_bridge save_wizard wizard_mark),
     BoardsLive => ~w(link_in_order clear_remaps swap)
   }
   @here_everywhere ~w(seat_tables)

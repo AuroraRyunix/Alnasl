@@ -13,7 +13,7 @@ The bridge dials out to Alnasl. Nothing has to be opened in the hall's network: 
 **Arkab** is the bridge: Alnasl's board reading and nothing else - the board drivers, the serial bus, a queue that keeps every move until the server has it, and the outgoing line to one or more Alnasls. No rounds, no logins, no games of its own. It is a separate program with its own repository, [github.com/AuroraRyunix/Arkab](https://github.com/AuroraRyunix/Arkab), Apache-2.0 like Alnasl, and it shares its board code with Alnasl, so a board reads the same on both.
 
 > [!NOTE] Getting Arkab
-> There is no ready-made download yet: for now Arkab is started from its source with Elixir (`mix deps.get`, then `mix run --no-halt`), as its README describes. A packaged build for a Raspberry Pi is coming. Its page then answers on port 4050 of the machine it runs on.
+> Download it from [its releases page](https://github.com/AuroraRyunix/Arkab/releases/latest): a Windows installer, Linux archives for a PC and for a Raspberry Pi (with a one-line installer that makes it a service), and a Mac app. Install it on the computer the boards are plugged into, and start it. Its page then answers on port 4050 of that computer. The Setup wizard (Setup, first section) lists these steps for your hall and ticks them off as the bridge joins.
 
 ## Joining a bridge {#joining}
 
@@ -21,7 +21,7 @@ One action, in one place, and nobody types a key.
 
 1. On Alnasl, open the page of the hall the boards are in: Halls, then the hall, then its **Bridges** tab (Setup, Access - This server on the server - has a "Bridges of this hall" button that leads straight there for the hall you are looking at). Press "Add a bridge".
 2. It shows a link and the same thing as a QR code. The link is good for **one bridge and fifteen minutes**, and says until when.
-3. On the bridge's page, "Join a server": paste the link, or scan the code with the camera. Press Join. (A phone that opens the link in its own browser gets a page saying the link is for a bridge, and where to paste it.)
+3. On the bridge's page (on the computer beside the boards, port 4050), "Join a server": paste the link, or scan the code with the camera. Press Join. (A phone that opens the link in its own browser gets a page saying the link is for a bridge, and where to paste it.)
 4. The bridge shows "Joined." and the server appears in its list. On Alnasl the bridge appears in the hall's list of bridges, with its name and "connected".
 
 After that the bridge has a key of its own, which it fetched itself. Nobody ever sees it, reads it aloud or copies it, and Alnasl keeps only a hash of it. If the link runs out before it was used, press "Add a bridge" again.

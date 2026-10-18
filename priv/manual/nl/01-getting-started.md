@@ -31,7 +31,32 @@ Meldingen (de uitslagensite is niet bereikbaar, een bord speelt buiten zijn toer
 
 Een pagina of lijst waar nog niets in staat, zegt dat in een zin, en zegt wat er iets in brengt: een koppeling voor de toernooien, een brug voor de borden van een zaal, een bord voor een ronde. Is er één voor de hand liggende volgende stap, dan brengt een knop je erheen.
 
-Instellingen is in onderdelen, elk met een eigen adres en een lijst ernaast (een keuzelijst op een telefoon): **Toernooien** (een regel per toernooi; open er een voor de details, zijn zalen en tafels en het automatisch starten; die met borden in deze zaal staan bovenaan, de afgelopen en de niet begonnen zitten achter een schakelaar), **Koppelingen** (codes en accountkoppelingen, een regel elk met een menu voor Testen, Opnieuw proberen en Verwijderen, en "+ Toevoegen"), **Uitslagen en Lichess**, **Dit kastje** (op de server **Deze server**), **Toegang** en **Updates** (alleen een kastje) en **Geavanceerd** (de tracker, voor beheerders). Een onderdeel dat jouw editie of rol niet kan gebruiken, wordt niet getekend.
+Instellingen is in onderdelen, elk met een eigen adres en een lijst ernaast (een keuzelijst op een telefoon): de **Installatiewizard** (zie [hieronder](#setup-wizard)), **Toernooien** (een regel per toernooi; open er een voor de details, zijn zalen en tafels en het automatisch starten; die met borden in deze zaal staan bovenaan, de afgelopen en de niet begonnen zitten achter een schakelaar), **Koppelingen** (codes en accountkoppelingen, een regel elk met een menu voor Testen, Opnieuw proberen en Verwijderen, en "+ Toevoegen"), **Uitslagen en Lichess**, **Dit kastje** (op de server **Deze server**), **Toegang** en **Updates** (alleen een kastje) en **Geavanceerd** (de tracker, voor beheerders). Een onderdeel dat jouw editie of rol niet kan gebruiken, wordt niet getekend.
+
+## De installatiewizard {#setup-wizard}
+
+Het eerste onderdeel van Instellingen is de **Installatiewizard**. Zolang niet elke stap gedaan is, opent Instellingen daar; daarna opent het op Toernooien, en de wizard blijft in de lijst staan voor de volgende wijziging. Hij is per zaal: open hem op de server in elke zaal, met de zaalkiezer bovenaan.
+
+Hij begint met een paar vragen: hoe de zaal eruitziet (één zaal met één toernooi, één zaal met meerdere toernooien, of meerdere zalen of ruimtes), hoeveel Arkab-bruggen (op de server altijd; op een kastje alleen voor de ruimtes buiten de zijne), ongeveer hoeveel borden, en wat je er nog bij wilt: uitslagen voor toeschouwers, een Lichess-uitzending, een printstation, een omroeper, en op een kastje telefoons en laptops achter een pincode. Eén kabelketting neemt tot twaalf borden; meer borden is een tweede ketting op een eigen poort.
+
+Daarna somt hij de stappen voor precies die zaal op, in volgorde, met elk één knop die naar de plaats gaat waar je de stap doet. De eerste stap die niet gedaan is, is de huidige. Elk vinkje komt uit wat Alnasl echt heeft, niet uit iemand die op Volgende drukt:
+
+| Stap | Afgevinkt als |
+| --- | --- |
+| De zalen maken (server, meerdere zalen) | Je zoveel zalen ziet als je opgaf |
+| De borden aansluiten (kastje) | Het kastje zoveel borden op zijn eigen poorten heeft als je opgaf |
+| Arkab installeren | Een brug van deze zaal minstens één keer verbonden is geweest |
+| Brug 1 van N, 2 van N... | Die brug bij deze zaal aangesloten is en verbonden is geweest; "nu niet verbonden" als ze plat ligt |
+| Borden die binnenkomen (server) | De zaal zoveel borden heeft als bruggen maal borden per brug |
+| Het toernooi of de toernooien koppelen | Zoveel toernooien uit OpenPairings in deze zaal staan |
+| Tafels per toernooi (meerdere toernooien) | Hoogstens één toernooi "elke vrije tafel" houdt; de andere hebben een reeks |
+| De borden nummeren | Elk bord van de zaal een tafelnummer heeft |
+| Uitslagen voor toeschouwers | Een toernooi hier een uitslagenpagina en zijn relaissleutel heeft |
+| Lichess | Een toernooi hier een Lichess-ronde en zijn token heeft |
+| Telefoons en laptops (kastje) | Andere machines in de zaal binnengelaten zijn (Instellingen, Toegang) |
+| Printstation, omroeper | Je ze zelf als gedaan aanduidt: Polis en Nunki praten met OpenPairings, niet met Alnasl, dus Alnasl kan ze niet zien |
+
+De koppelcode komt uit OpenPairings: open het toernooi, dan Instellingen, Live borden, en druk op "Nieuwe code". Een stap waar je met jouw rol niets aan kunt doen, houdt zijn vinkje, verliest zijn knop en zegt wie het wel kan. Alleen de eigenaar van de zaal beantwoordt de vragen; "De antwoorden wijzigen" stelt ze opnieuw en de vinkjes lopen gewoon door.
 
 ## Twee manieren om het te draaien {#two-ways}
 

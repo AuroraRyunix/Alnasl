@@ -221,7 +221,7 @@ defmodule AlnaslWeb.TournamentsTest do
     } do
       FakeOpenPairings.add_tournament(17, group: "Festival", label: "Open")
       {:ok, _link, _} = OpenPairings.add_code(FakeOpenPairings.group_code("Festival"))
-      {:ok, view, _html} = live(conn, ~p"/setup")
+      {:ok, view, _html} = live(conn, ~p"/setup/tournaments")
 
       FakeOpenPairings.add_tournament(18, group: "Festival", label: "U12")
       poll()
