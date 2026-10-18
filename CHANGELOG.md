@@ -19,6 +19,8 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+- [Fix] **Quitting Alnasl on the Mac stops Alnasl, and whatever it started.** The launcher script signalled the server and nobody else, so a helper program could outlive the thing that asked for it; it now reads the whole tree under the server before saying goodbye, and after twenty seconds (or a clean exit, which is no proof of anything) SIGKILLs all of it. The app's own last resort, ten seconds later, did the same trick with only the script, and left the server to launchd; it now takes the tree as well.
+
 ## [0.3.0] - 2026-10-18
 
 - [Feature] **A Setup wizard, first in Setup.** It asks what the hall looks like - one hall and one tournament, several tournaments, several halls or rooms - how many Arkab bridges, roughly how many boards, and what else is wanted (results for spectators, Lichess, a Polis print station, a Nunki announcer, phones behind a PIN on a box). Then it lists the steps for exactly that hall, in order, "Bridge 2 of 3" included, each with one button to where it is done. Every tick comes from what is really there: a bridge that has connected, the boards that arrived, the tournaments a connect code brought, table numbers on every board, a results page with its relay key. The two Alnasl cannot see, the print station and the announcer, are ticked by hand and say so, rather than pretend. The answers are kept per hall, so it can be reopened, re-answered and still tick. A step your role cannot do keeps its tick and tells you who can.
