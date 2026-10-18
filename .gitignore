@@ -54,3 +54,6 @@ __pycache__/
 # Release builds made by hand: the installer's output, the archives.
 /installer_out/
 /dist/
+
+# Dialyzer PLTs (mix dialyzer), rebuilt on demand.
+/priv/plts/
