@@ -687,6 +687,9 @@ defmodule AlnaslWeb.BoardsLive do
               do: gettext("Add a bridge"),
               else: gettext("Open the Bridges tab")}
           </.link>
+          <.link id="boards-empty-wizard" navigate={~p"/setup/wizard"} class="btn ghost">
+            {gettext("Setup wizard")}
+          </.link>
         </div>
 
         <div :if={@snapshots == [] and not @server?} id="boards-empty" class="empty">

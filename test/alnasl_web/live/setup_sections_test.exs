@@ -63,12 +63,14 @@ defmodule AlnaslWeb.SetupSectionsTest do
       refute has_element?(view, "#setup-tracker")
     end
 
-    test "/setup is the first section, and an unknown one leads there", %{conn: conn} do
+    test "/setup is the wizard until it is done, and an unknown section leads there", %{
+      conn: conn
+    } do
       {:ok, view, _html} = live(conn, ~p"/setup")
-      assert has_element?(view, "#setup-tournaments")
-      assert has_element?(view, "#setup-nav-tournaments.current")
+      assert has_element?(view, "#setup-wizard")
+      assert has_element?(view, "#setup-nav-wizard.current")
 
-      assert {:error, {:live_redirect, %{to: "/setup/tournaments"}}} =
+      assert {:error, {:live_redirect, %{to: "/setup/wizard"}}} =
                live(conn, "/setup/nothing-here")
     end
 
@@ -77,7 +79,7 @@ defmodule AlnaslWeb.SetupSectionsTest do
     } do
       {:ok, view, _html} = live(conn, ~p"/setup")
 
-      for slug <- ~w(tournaments connections results this-box access updates advanced) do
+      for slug <- ~w(wizard tournaments connections results this-box access updates advanced) do
         assert has_element?(view, "#setup-nav-#{slug}[href='/setup/#{slug}']")
         assert has_element?(view, "#setup-select option[value=#{slug}]")
       end
@@ -122,7 +124,7 @@ defmodule AlnaslWeb.SetupSectionsTest do
       refute has_element?(view, "#setup-nav-results")
 
       for slug <- ~w(updates advanced results) do
-        assert {:error, {:live_redirect, %{to: "/setup/tournaments"}}} =
+        assert {:error, {:live_redirect, %{to: "/setup/wizard"}}} =
                  live(conn, "/setup/#{slug}")
       end
     end

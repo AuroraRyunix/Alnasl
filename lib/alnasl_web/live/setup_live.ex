@@ -1,7 +1,7 @@
 defmodule AlnaslWeb.SetupLive do
   @moduledoc """
   First run, and whenever something changes. Split into sections, each its
-  own address (`/setup/tournaments`, `/setup/connections`, ...): the edition
+  own address (`/setup/wizard`, `/setup/tournaments`, ...): the edition
   and the role decide which exist (`sections/1`); a section the program
   cannot use is absent, not greyed. What the sections hold: which tournaments the box
   serves - a connect code from OpenPairings brings each with its pairings
@@ -9,6 +9,12 @@ defmodule AlnaslWeb.SetupLive do
   the box's own tournament, a Lichess round per tournament; the box's name
   and language; a PIN for browsers on other machines; how patient the
   tracker is.
+
+  The first section is the Setup wizard (`AlnaslWeb.WizardComponents`,
+  `Alnasl.Wizard`): what the hall looks like, then the steps for it, each
+  ticked by what is really there. Until every step is, `/setup` opens on it
+  and an address that leads nowhere leads there; after that, on
+  Tournaments, which is where the work is once the hall is set up.
 
   "Test connection" really asks - the pairing program, or the results
   server with what is in the form (saved or not) - and says in words which
@@ -36,7 +42,8 @@ defmodule AlnaslWeb.SetupLive do
     Settings,
     Tournaments,
     Tracker,
-    Updates
+    Updates,
+    Wizard
   }
 
   alias Alnasl.Destination.{LichessApi, LichessBroadcast}
@@ -49,6 +56,7 @@ defmodule AlnaslWeb.SetupLive do
     LinkWords,
     SeatingComponents,
     Status,
+    WizardComponents,
     Words
   }
 
@@ -56,7 +64,12 @@ defmodule AlnaslWeb.SetupLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    if connected?(socket), do: Tournaments.subscribe()
+    if connected?(socket) do
+      Tournaments.subscribe()
+      # The wizard's ticks: a bridge that connects, a board that arrives.
+      Alnasl.Bridges.subscribe()
+      Boards.subscribe()
+    end
 
     {:ok,
      socket
@@ -67,6 +80,7 @@ defmodule AlnaslWeb.SetupLive do
      |> assign(update_step: nil, update_games: [], update_looked: nil)
      |> assign(section: :tournaments, open: MapSet.new(), search: "")
      |> assign(show_rest?: false, show_quiet?: false, adding?: false)
+     |> assign(wizard_editing?: false, wizard_params: nil, wizard_due?: false)
      |> load()}
   end
 
@@ -75,11 +89,11 @@ defmodule AlnaslWeb.SetupLive do
   # drawn, and its address leads to the first one.
   @impl true
   def handle_params(params, _uri, socket) do
-    slug = params["section"] || "tournaments"
+    slug = params["section"] || landing(socket.assigns)
 
     case Enum.find(sections(socket.assigns), &(&1.slug == slug)) do
       nil ->
-        {:noreply, push_navigate(socket, to: ~p"/setup/tournaments")}
+        {:noreply, push_navigate(socket, to: "/setup/" <> landing(socket.assigns))}
 
       %{key: key} ->
         open =
@@ -100,6 +114,7 @@ defmodule AlnaslWeb.SetupLive do
   """
   def sections(a) do
     [
+      %{key: :wizard, slug: "wizard", label: gettext("Setup wizard")},
       %{key: :tournaments, slug: "tournaments", label: gettext("Tournaments")},
       %{key: :connections, slug: "connections", label: gettext("Connections")},
       a.own_hall? && %{key: :results, slug: "results", label: gettext("Results and Lichess")},
@@ -115,6 +130,13 @@ defmodule AlnaslWeb.SetupLive do
     ]
     |> Enum.filter(& &1)
   end
+
+  @doc """
+  Where `/setup` opens: the wizard while a step of it is not done (or it
+  was never answered), Tournaments once the hall is set up.
+  """
+  def landing(%{wizard: %{complete?: true}}), do: "tournaments"
+  def landing(_assigns), do: "wizard"
 
   # The hall the pages are about (the box's own on a box without accounts).
   defp here(socket),
@@ -217,7 +239,24 @@ defmodule AlnaslWeb.SetupLive do
       autostart?: Autostart.supported?(),
       autostart_on?: Autostart.supported?() and Autostart.enabled?()
     )
+    |> assign_wizard()
   end
+
+  # The wizard's plan, and the form of its questions: what was being typed,
+  # else the answers, else the defaults.
+  defp assign_wizard(socket) do
+    a = socket.assigns
+    plan = Wizard.plan(a.current_scope, a.hall_id, wizard_ctx(a))
+
+    assign(socket,
+      wizard: plan,
+      wizard_form:
+        to_form(a.wizard_params || plan.answers || Wizard.defaults(a.server?), as: :wizard),
+      may_answer?: Alnasl.Accounts.Scope.can?(a.current_scope, :owner, a.hall_id)
+    )
+  end
+
+  defp wizard_ctx(a), do: %{server?: a.server?, own_hall?: a.own_hall?, lan?: a.listening_lan?}
 
   # What is in the server form, as it would be saved.
   defp read_server(params) do
@@ -641,6 +680,30 @@ defmodule AlnaslWeb.SetupLive do
     {:noreply, load(socket)}
   end
 
+  # --- the wizard ----------------------------------------------------------------
+
+  # Only what this browser shows: the questions as they are being answered.
+  def handle_event("wizard_change", %{"wizard" => params}, socket),
+    do: {:noreply, socket |> assign(wizard_params: params) |> assign_wizard()}
+
+  def handle_event("wizard_edit", _params, socket),
+    do: {:noreply, assign(socket, wizard_editing?: true)}
+
+  def handle_event("wizard_cancel", _params, socket),
+    do:
+      {:noreply, socket |> assign(wizard_editing?: false, wizard_params: nil) |> assign_wizard()}
+
+  def handle_event("save_wizard", %{"wizard" => params}, socket) do
+    Wizard.save(socket.assigns.hall_id, params, wizard_ctx(socket.assigns))
+    Log.add(:info, "setup.saved", %{})
+    {:noreply, socket |> assign(wizard_editing?: false, wizard_params: nil) |> assign_wizard()}
+  end
+
+  def handle_event("wizard_mark", %{"key" => key, "done" => done}, socket) do
+    Wizard.mark(socket.assigns.hall_id, key, done == "true")
+    {:noreply, assign_wizard(socket)}
+  end
+
   # The page's own state: nothing is stored, nothing changes anywhere else.
   def handle_event("goto_section", %{"section" => slug}, socket) do
     if Enum.any?(sections(socket.assigns), &(&1.slug == slug)),
@@ -988,6 +1051,22 @@ defmodule AlnaslWeb.SetupLive do
 
   # The checker heard of a release, or the setting changed in another window.
   def handle_info(:update_changed, socket), do: {:noreply, load(socket)}
+
+  # A board says something many times a minute; the wizard needs to know
+  # that it exists, not what it said. So once a second at most, and only
+  # while the wizard is on screen.
+  def handle_info({tag, _what}, %{assigns: %{section: :wizard}} = socket)
+      when tag in [:board, :bridges] do
+    if socket.assigns.wizard_due? do
+      {:noreply, socket}
+    else
+      Process.send_after(self(), :wizard_refresh, 1_000)
+      {:noreply, assign(socket, wizard_due?: true)}
+    end
+  end
+
+  def handle_info(:wizard_refresh, socket),
+    do: {:noreply, socket |> assign(wizard_due?: false) |> assign_wizard()}
 
   def handle_info(_other, socket), do: {:noreply, socket}
 
@@ -1556,6 +1635,18 @@ defmodule AlnaslWeb.SetupLive do
         </form>
 
         <div class="setup-body">
+          <WizardComponents.wizard
+            :if={@section == :wizard}
+            plan={@wizard}
+            form={@wizard_form}
+            editing?={@wizard_editing?}
+            server?={@server?}
+            own_hall?={@own_hall?}
+            scope={@current_scope}
+            hall_id={@hall_id}
+            may_answer?={@may_answer?}
+          />
+
           <.panel :if={@section == :tournaments} id="setup-tournaments" title={gettext("Tournaments")}>
             <p class="note">
               {gettext(
@@ -2196,10 +2287,14 @@ defmodule AlnaslWeb.SetupLive do
                 <dt>{gettext("Edition")}</dt>
 
                 <dd id="about-edition">
-                  {if(@server?,
-                    do: gettext("Server (boards come from bridges)"),
-                    else: gettext("Box (in a hall)")
-                  )}
+                  <%= if @server? do %>
+                    {gettext("Server: the boards come from Arkab bridges in the halls.")}
+                    <.link id="about-edition-wizard" patch={~p"/setup/wizard"}>
+                      {gettext("Setup wizard")}
+                    </.link>
+                  <% else %>
+                    {gettext("Box (in a hall)")}
+                  <% end %>
                 </dd>
 
                 <dt>{gettext("Started as")}</dt>

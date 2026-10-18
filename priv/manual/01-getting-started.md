@@ -31,7 +31,32 @@ Notices (the results site cannot be reached, a board plays outside its tournamen
 
 A page or a list with nothing in it yet says so in a sentence, and says what brings something: a connection for the tournaments, a bridge for a hall's boards, a board for a round. Where there is one obvious next step, a button takes you there.
 
-Setup is in sections, each with its own address and a list beside it (a drop-down on a phone): **Tournaments** (a line each; open one for its details, its halls and tables and its automatic start; the ones with boards in this hall come first, the finished and the not started are behind a toggle), **Connections** (codes and account links, a line each with a menu for Test, Retry and Remove, and "+ Add"), **Results and Lichess**, **This box** (on the server **This server**), **Access** and **Updates** (a box only) and **Advanced** (the tracker, for admins). A section your edition or role cannot use is not drawn.
+Setup is in sections, each with its own address and a list beside it (a drop-down on a phone): the **Setup wizard** (see [below](#setup-wizard)), **Tournaments** (a line each; open one for its details, its halls and tables and its automatic start; the ones with boards in this hall come first, the finished and the not started are behind a toggle), **Connections** (codes and account links, a line each with a menu for Test, Retry and Remove, and "+ Add"), **Results and Lichess**, **This box** (on the server **This server**), **Access** and **Updates** (a box only) and **Advanced** (the tracker, for admins). A section your edition or role cannot use is not drawn.
+
+## The setup wizard {#setup-wizard}
+
+The first section of Setup is the **Setup wizard**. Until every step of it is done, Setup opens there; after that it opens on Tournaments, and the wizard stays in the list for the next change. It is per hall: on the server, open it in each hall with the hall picker at the top.
+
+It starts with a few questions: what the hall looks like (one hall with one tournament, one hall with several tournaments, or several halls or rooms), how many Arkab bridges (on the server always; on a box only for rooms beyond its own), roughly how many boards, and what else you want: results for spectators, a Lichess broadcast, a print station, a hall announcer, and on a box phones and laptops behind a PIN. One cable chain takes up to twelve boards; more boards is a second chain on a port of its own.
+
+Then it lists the steps for exactly that hall, in order, with one button each that goes where the step is done. The first step not done is the current one. Each tick comes from what Alnasl really has, not from anybody pressing Next:
+
+| Step | Ticked when |
+| --- | --- |
+| Make the halls (server, several halls) | You can see as many halls as you said |
+| Plug the boards in (box) | The box has as many boards on its own ports as you said |
+| Install Arkab | A bridge of this hall has connected at least once |
+| Bridge 1 of N, 2 of N... | That bridge has joined this hall and connected; "not connected now" if it is down |
+| Boards arriving (server) | The hall has as many boards as bridges times boards per bridge |
+| Connect the tournament(s) | That many tournaments from OpenPairings are in this hall |
+| Tables per tournament (several tournaments) | At most one tournament keeps "every free table"; the others have a range |
+| Number the boards | Every board of the hall has a table number |
+| Results for spectators | A tournament here has a results page and its relay key |
+| Lichess | A tournament here has a Lichess round and its token |
+| Phones and laptops (box) | Other machines in the hall are let in (Setup, Access) |
+| Print station, hall announcer | You mark them done: Polis and Nunki talk to OpenPairings, not to Alnasl, so Alnasl cannot see them |
+
+The connect code comes from OpenPairings: open the tournament, then Settings, Live boards, and press "New code". A step you cannot act on with your role keeps its tick, loses its button and says who can. Only the hall's owner answers the questions; "Change the answers" asks them again and the ticks carry on.
 
 ## Two ways to run it {#two-ways}
 
