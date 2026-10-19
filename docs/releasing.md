@@ -45,6 +45,7 @@ is a link that stays right. The version is inside each file.
 | `alnasl-linux-x86_64.tar.gz` | The Linux release, PCs | `install.sh`, `update.sh`, the download page |
 | `alnasl-linux-aarch64.tar.gz` | The Linux release, 64-bit Raspberry Pi and other arm64 | the same |
 | `alnasl-macos-aarch64.zip` | `Alnasl.app` for Apple Silicon (M1 and later), zipped with `ditto` | the download page; a Mac copy's update notice (its size) |
+| `alnasl-macos-x86_64.zip` | `Alnasl.app` for Intel Macs (macOS 10.13 and newer), zipped with `ditto`; built only for a release or by hand | the same |
 | `install.sh` | The one-line installer | `curl ... \| sudo sh` |
 | `update.sh`, `uninstall.sh` | Copies of what the archive carries, for reading | nobody; a person |
 | `SHA256SUMS` | Checksums of everything above and below | `install.sh`, `update.sh` |

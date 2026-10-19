@@ -19,6 +19,8 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+- [Feature] **Intel Macs, from macOS 10.13.** `alnasl-macos-x86_64.zip` joins the Apple Silicon one on every release. The Intel runner takes thirteen minutes where the others take a few, so it builds only when a release goes out or somebody starts the workflow by hand, not on every push. The update notice picks the zip by the Mac's architecture (an Intel build under Rosetta counts as Apple Silicon), and no longer tells Intel Macs there is nothing for them. Untested on a real Mac that old, which docs/macos.md says in plain words.
+
 ## [0.4.3] - 2026-10-19
 
 - [Change] **Arkab 0.3.3 inside.** A loop board that misses a question now says in the log what came back instead, so a mute board and a mangled answer can be told apart.

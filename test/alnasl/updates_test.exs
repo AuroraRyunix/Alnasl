@@ -62,15 +62,26 @@ defmodule Alnasl.UpdatesTest do
                ~r/^alnasl-linux-(x86_64|aarch64)\.tar\.gz$/
     end
 
-    test "an Intel Mac is told there is no build, not sent to a file that does not exist" do
-      assert Updates.no_build?({:unix, :darwin}) == (Updates.arch() == "x86_64")
+    test "a Mac asks for the zip of its own architecture, and no Mac is told there is no build" do
+      refute Updates.no_build?({:unix, :darwin})
       refute Updates.no_build?({:unix, :linux})
       refute Updates.no_build?({:win32, :nt})
 
-      # The name must be nil exactly when the notice says "no build".
-      name = Updates.asset_name(:manual, newer(), {:unix, :darwin})
-      assert is_nil(name) == Updates.no_build?({:unix, :darwin})
-      assert name in [nil, "alnasl-macos-aarch64.zip"]
+      assert Updates.asset_name(:manual, newer(), {:unix, :darwin}) ==
+               "alnasl-macos-#{Updates.arch()}.zip"
+
+      assert Updates.asset_name(:manual, newer(), {:unix, :darwin}) =~
+               ~r/^alnasl-macos-(x86_64|aarch64)\.zip$/
+    end
+
+    test "the machine's architecture: Rosetta counts as Apple Silicon" do
+      assert Updates.arch("aarch64-apple-darwin25.0.0", false) == "aarch64"
+      assert Updates.arch("arm64-apple-darwin25.0.0", false) == "aarch64"
+      assert Updates.arch("x86_64-apple-darwin25.0.0", false) == "x86_64"
+      # An x86_64 Erlang that Rosetta is translating runs on an arm64 Mac.
+      assert Updates.arch("x86_64-apple-darwin25.0.0", true) == "aarch64"
+      assert Updates.arch("x86_64-pc-linux-gnu", false) == "x86_64"
+      assert Updates.arch("aarch64-unknown-linux-gnu", false) == "aarch64"
     end
 
     test "the Windows installation is told the size of the full package" do

@@ -2,7 +2,7 @@ name: Build and release
 
 # Builds what people download - the Windows installer and its update feed,
 # the Windows portable zip, the Linux archives for x86_64 and arm64, the Mac
-# app for Apple Silicon - on
+# app for Apple Silicon (and, for a release, Intel) - on
 # every push to main, each on its own kind of machine, and starts each one
 # to see that it answers. A release that is only built on the day it is
 # published is only tested on that day.
@@ -16,6 +16,14 @@ name: Build and release
 # in the changelog (docs/releasing.md). A version without notes publishes
 # nothing; neither does a push that changes neither. A tag `vX.Y.Z` pushed
 # by hand publishes too, under the same two conditions.
+#
+# One target is built ONLY when a release is about to be published (or when
+# started by hand): the Mac app for Intel Macs, from macOS 10.13. GitHub's
+# Intel runner is slow, and built on every push it cost some thirteen minutes
+# each time (it is why Intel Macs were dropped on 2026-10-14). The `plan` job
+# below decides, from the same two conditions as the release itself. Started
+# by hand from a branch, it builds and uploads and publishes nothing: the
+# `release` job runs on main and on tags only.
 #
 # The whole file follows OpenPairings' binaries.yml, which has published
 # some fifty releases this way; where it differs, the comment says why.
@@ -35,32 +43,111 @@ permissions:
   contents: read
 
 jobs:
+  # Which version this is, whether it will be published, and so which
+  # targets to build. The release job reads the answer from here.
+  plan:
+    name: Plan
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      tag: ${{ steps.ver.outputs.tag }}
+      version: ${{ steps.ver.outputs.version }}
+      publish: ${{ steps.ver.outputs.publish }}
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Work out which version this is, and whether to publish it
+        id: ver
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          version=$(grep -m1 "version:" mix.exs | cut -d'"' -f2)
+          if ! printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Could not read a version out of mix.exs" >&2
+            exit 1
+          fi
+          tag="v${version}"
+
+          # A tag pushed by hand must be the version the code says it is:
+          # the assets were built from mix.exs, not from the tag's name.
+          if [ "${GITHUB_REF_TYPE}" = "tag" ] && [ "${GITHUB_REF_NAME}" != "$tag" ]; then
+            echo "::error::tag ${GITHUB_REF_NAME} was pushed, but mix.exs says ${version}"
+            exit 1
+          fi
+
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+          publish=true
+
+          if gh release view "${tag}" >/dev/null 2>&1; then
+            echo "Release ${tag} already exists - nothing to publish."
+            publish=false
+          fi
+
+          # The notes are the changelog's section for this version, and a
+          # version without one is not released: "## [Unreleased]" is work
+          # in progress, whatever mix.exs says.
+          sh tools/release_notes.sh "$version" > release_notes.md || true
+          if [ "$publish" = true ] && [ ! -s release_notes.md ]; then
+            echo "::notice::CHANGELOG.md has no section '## [${version}]' - not publishing. Name the section and push."
+            publish=false
+          fi
+
+          echo "publish=${publish}" >> "$GITHUB_OUTPUT"
+
+      # Linux on Ubuntu 22.04, not 24.04, and that is the point: the Erlang
+      # runtime inside the archive is linked against the C library of the
+      # machine that built it, and runs on that version or newer. 22.04 has
+      # glibc 2.35; Debian 12 and Raspberry Pi OS "Bookworm" have 2.36. An
+      # archive built on 24.04 (2.39) would not start on the Pi it is meant
+      # for. install.sh checks for 2.35 and says so. The arm64 runner is
+      # GitHub's own, free for public repositories; a Pi is arm64 (with the
+      # 64-bit system; there is no 32-bit build). macOS (2026-10-14):
+      # Alnasl.app, zipped - docs/macos.md. No Windows on ARM: Erlang
+      # publishes no build for it, and the x86_64 one runs under Windows' own
+      # emulation.
+      #
+      # `macos_min` is the oldest macOS the build promises. The Intel one is
+      # the only reason to read docs/macos.md, "Intel Macs".
+      #
+      # The Intel Mac build is in the matrix when a release is going out, or
+      # when somebody asked for it by starting the workflow by hand.
+      - name: Choose the targets
+        id: matrix
+        env:
+          PUBLISH: ${{ steps.ver.outputs.publish }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          base='[
+            {"runner":"ubuntu-22.04","target":"linux-x86_64"},
+            {"runner":"ubuntu-22.04-arm","target":"linux-aarch64"},
+            {"runner":"windows-latest","target":"windows-x86_64"},
+            {"runner":"macos-15","target":"macos-aarch64","macos_min":"11.0"}
+          ]'
+          if [ "$PUBLISH" = true ] || [ "$EVENT" = workflow_dispatch ]; then
+            matrix=$(echo "$base" | jq -c '. + [{"runner":"macos-15-intel","target":"macos-x86_64","macos_min":"10.13"}]')
+          else
+            matrix=$(echo "$base" | jq -c .)
+          fi
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "$matrix" | jq .
+
   build:
     name: ${{ matrix.target }}
+    needs: plan
     runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
     strategy:
       fail-fast: false
       matrix:
-        include:
-          # Linux on Ubuntu 22.04, not 24.04, and that is the point: the
-          # Erlang runtime inside the archive is linked against the C library
-          # of the machine that built it, and runs on that version or newer.
-          # 22.04 has glibc 2.35; Debian 12 and Raspberry Pi OS "Bookworm"
-          # have 2.36. An archive built on 24.04 (2.39) would not start on
-          # the Pi it is meant for. install.sh checks for 2.35 and says so.
-          - { runner: ubuntu-22.04, target: linux-x86_64 }
-          # GitHub's own arm64 runners, free for public repositories. A Pi
-          # is arm64 (with the 64-bit system; there is no 32-bit build).
-          - { runner: ubuntu-22.04-arm, target: linux-aarch64 }
-          - { runner: windows-latest, target: windows-x86_64 }
-          # macOS (2026-10-14): Alnasl.app, zipped - docs/macos.md. Apple
-          # Silicon only; Intel Macs were dropped the same day, by the
-          # owner, with feeling.
-          - { runner: macos-15, target: macos-aarch64 }
-          # No Windows on ARM: Erlang publishes no build for it. It runs
-          # the x86_64 one under Windows' own emulation.
+        include: ${{ fromJSON(needs.plan.outputs.matrix) }}
 
     env:
       MIX_ENV: prod
@@ -88,19 +175,21 @@ jobs:
           elixir-version: "1.20"
 
       # Everything compiled on the Mac - the runtime, the SQLite NIF, the
-      # serial program - for macOS 11, the first with Apple Silicon, rather
-      # than clang's default of the runner's own version. EXQLITE_FORCE_BUILD
+      # serial program (circuits_uart's C port, native on either runner) -
+      # for the target's oldest macOS (11, the first with Apple Silicon, or
+      # the Intel build's), rather than clang's default of the runner's own
+      # version. EXQLITE_FORCE_BUILD
       # (config/config.exs): the precompiled SQLite NIF wants macOS 14.
-      - name: Build for macOS 11 and newer (macOS)
+      - name: Build for ${{ matrix.macos_min }} and newer (macOS)
         if: runner.os == 'macOS'
         run: |
-          echo "MACOSX_DEPLOYMENT_TARGET=11.0" >> "$GITHUB_ENV"
+          echo "MACOSX_DEPLOYMENT_TARGET=${{ matrix.macos_min }}" >> "$GITHUB_ENV"
           echo "EXQLITE_FORCE_BUILD=true" >> "$GITHUB_ENV"
 
       # Erlang/OTP and OpenSSL from source take a while; only the first run
       # with a given set of versions pays. The script is in the key, so a
       # change to how it builds is a new build too.
-      - name: Cache Erlang/OTP for macOS 11 (macOS)
+      - name: Cache Erlang/OTP for macOS ${{ matrix.macos_min }} (macOS)
         if: runner.os == 'macOS'
         id: otp-cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -468,7 +557,7 @@ jobs:
       # (a fresh download runs from a read-only, translocated copy), and
       # started through the file Finder runs (with --headless: no window, no
       # browser). First, that it is a Dock citizen: no LSUIElement, and the
-      # executable a Mach-O arm64 program. Then, as on Linux: it answers,
+      # executable a Mach-O program of the architecture it was built for. Then, as on Linux: it answers,
       # on loopback alone, without distribution, with the serial library;
       # and, for the app: a second start leaves at once, SIGTERM to the
       # launcher stops the server, nothing is left running, the bundle's
@@ -494,7 +583,7 @@ jobs:
           fail() { echo "::error::$1"; status=1; }
 
           # A Dock icon needs no LSUIElement, and an executable that is a
-          # real program: the compiled launcher, for Apple Silicon.
+          # real program: the compiled launcher, of the target's architecture.
           plist="$app/Contents/Info.plist"
           if /usr/libexec/PlistBuddy -c 'Print :LSUIElement' "$plist" >/dev/null 2>&1; then
             fail "Info.plist has LSUIElement: the app would have no Dock icon"
@@ -504,10 +593,23 @@ jobs:
             fail "CFBundleExecutable is '$exe', not the launcher this test starts"
           kind=$(file -b "$launcher")
           echo "Contents/MacOS/$exe: $kind"
-          case "$kind" in
-            "Mach-O 64-bit executable arm64"*) ;;
-            *) fail "Contents/MacOS/$exe is not a Mach-O arm64 executable: $kind" ;;
+          case "${{ matrix.target }}" in
+            macos-x86_64) arch=x86_64 ;;
+            *) arch=arm64 ;;
           esac
+          case "$kind" in
+            "Mach-O 64-bit executable $arch"*) ;;
+            *) fail "Contents/MacOS/$exe is not a Mach-O $arch executable: $kind" ;;
+          esac
+          # What the bundle promises, in Info.plist, and what its programs
+          # ask for: both printed, and the second also checked by
+          # build_app.sh. The proof that the oldest macOS is real.
+          echo "LSMinimumSystemVersion: $(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$plist")"
+          [ "$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$plist")" = "${{ matrix.macos_min }}" ] ||
+            fail "LSMinimumSystemVersion is not ${{ matrix.macos_min }}"
+          find "$app" -type f -print0 | xargs -0 file | grep 'Mach-O' | cut -d: -f1 | while IFS= read -r f; do
+            echo "$(vtool -show-build "$f" 2>/dev/null | awk '$1 == "minos" || $1 == "version" {print "minos " $2; exit}') $f"
+          done | sort | uniq -c | sort -rn | head -40
 
           # The serial library, from inside the bundle, as on Linux.
           serial=$(RELEASE_TMP="$RUNNER_TEMP/alnasl-eval" "$app/Contents/Resources/app/bin/alnasl" \
@@ -585,7 +687,7 @@ jobs:
   # is published unless every target built and answered.
   release:
     name: Publish the release
-    needs: build
+    needs: [plan, build]
     if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     permissions:
@@ -594,50 +696,14 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Work out which version this is, and whether to publish it
-        id: ver
+      - name: The notes for this version
+        if: needs.plan.outputs.publish == 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-
-          version=$(grep -m1 "version:" mix.exs | cut -d'"' -f2)
-          if ! printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "Could not read a version out of mix.exs" >&2
-            exit 1
-          fi
-          tag="v${version}"
-
-          # A tag pushed by hand must be the version the code says it is:
-          # the assets were built from mix.exs, not from the tag's name.
-          if [ "${GITHUB_REF_TYPE}" = "tag" ] && [ "${GITHUB_REF_NAME}" != "$tag" ]; then
-            echo "::error::tag ${GITHUB_REF_NAME} was pushed, but mix.exs says ${version}"
-            exit 1
-          fi
-
-          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
-          echo "version=${version}" >> "$GITHUB_OUTPUT"
-
-          publish=true
-
-          if gh release view "${tag}" >/dev/null 2>&1; then
-            echo "Release ${tag} already exists - nothing to publish."
-            publish=false
-          fi
-
-          # The notes are the changelog's section for this version, and a
-          # version without one is not released: "## [Unreleased]" is work
-          # in progress, whatever mix.exs says.
-          sh tools/release_notes.sh "$version" > release_notes.md || true
-          if [ "$publish" = true ] && [ ! -s release_notes.md ]; then
-            echo "::notice::CHANGELOG.md has no section '## [${version}]' - not publishing. Name the section and push."
-            publish=false
-          fi
-
-          echo "publish=${publish}" >> "$GITHUB_OUTPUT"
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: sh tools/release_notes.sh "$VERSION" > release_notes.md
 
       - name: Collect every target's files
-        if: steps.ver.outputs.publish == 'true'
+        if: needs.plan.outputs.publish == 'true'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: release_assets_*
@@ -647,9 +713,9 @@ jobs:
       # Everything the download page and the two updaters will ask for by
       # name. One missing is a release that half works; better none.
       - name: Check the set is complete, and sum it
-        if: steps.ver.outputs.publish == 'true'
+        if: needs.plan.outputs.publish == 'true'
         env:
-          VERSION: ${{ steps.ver.outputs.version }}
+          VERSION: ${{ needs.plan.outputs.version }}
         run: |
           set -euo pipefail
           cd dist
@@ -660,6 +726,7 @@ jobs:
             alnasl-linux-x86_64.tar.gz \
             alnasl-linux-aarch64.tar.gz \
             alnasl-macos-aarch64.zip \
+            alnasl-macos-x86_64.zip \
             install.sh update.sh uninstall.sh \
             releases.win.json \
             "AlnaslApp-${VERSION}-full.nupkg"; do
@@ -673,12 +740,12 @@ jobs:
           ls -lh
 
       - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
-        if: steps.ver.outputs.publish == 'true'
+        if: needs.plan.outputs.publish == 'true'
         with:
           # Named, because on a push to main there is no tag to infer: the
           # action makes this one, at the commit that was built.
-          tag_name: ${{ steps.ver.outputs.tag }}
-          name: Alnasl ${{ steps.ver.outputs.version }}
+          tag_name: ${{ needs.plan.outputs.tag }}
+          name: Alnasl ${{ needs.plan.outputs.version }}
           body_path: release_notes.md
           files: dist/*
           fail_on_unmatched_files: true
@@ -688,10 +755,10 @@ jobs:
       # drafts, only this tag, only without files, and only once a published
       # release exists.
       - name: Remove empty duplicate drafts for this tag
-        if: steps.ver.outputs.publish == 'true'
+        if: needs.plan.outputs.publish == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.ver.outputs.tag }}
+          TAG: ${{ needs.plan.outputs.tag }}
         run: |
           set -euo pipefail
           releases=$(gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100")
