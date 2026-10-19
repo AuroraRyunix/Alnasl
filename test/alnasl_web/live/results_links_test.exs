@@ -276,13 +276,26 @@ defmodule AlnaslWeb.ResultsLinksTest do
   end
 
   describe "the bar" do
-    test "with one tournament in use, the results badge has a link to its page", %{conn: conn} do
+    test "with one tournament in use, the bar links to its live boards, in words", %{conn: conn} do
       pairing_program()
       open = linked(17, name: "Open", boards: 2)
       {:ok, view, _html} = live(conn, ~p"/")
       assert has_element?(view, "#head-results")
-      assert new_tab?(view, "head-results-open", "http://results.test/t/slug-17")
+      assert new_tab?(view, "head-results-open", "http://results.test/t/slug-17/live")
+      assert has_element?(view, "#head-results-open", "Live boards")
       assert open.id != Tournaments.default_id()
+    end
+
+    test "each tournament's card on Setup links to its live boards", %{conn: conn} do
+      pairing_program()
+      open = linked(17, name: "Open", boards: 2)
+      {:ok, view, _html} = live(conn, ~p"/setup/tournaments?open=#{open.id}")
+
+      assert new_tab?(
+               view,
+               "tournament-live-link-#{open.id}",
+               "http://results.test/t/slug-17/live"
+             )
     end
 
     test "with several in use there is no telling which one, so no link", %{conn: conn} do

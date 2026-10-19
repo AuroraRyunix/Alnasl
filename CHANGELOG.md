@@ -21,6 +21,7 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 
 - [Fix] **Signal for a board that reaches the box through a bridge counts what it answered.** A bridge sends one "answered" a second but every miss, so a loop board polled sixty times a second showed 95% with nine misses, and one with a handful of misses showed 17%. The bridge's answer now says how many answers it stands for, and Signal adds that many. (Needs a bridge that says so, which is the next Arkab; an older one counts as before.)
 - [Change] **A board on a port of its own shows "dropped N times" instead of a percentage.** It is asked for its whole position every three seconds and counts a miss only when the cable goes, so 97% meant nothing in particular. The percentage stays for boards on a loop, where it does.
+- [Change] **The live boards are one click away.** The bar's link to the results site went to the tournament's front page, a click short of where everyone actually goes during a round, behind an arrow nobody recognised as a link. It now says "Live boards" and goes straight there, and each tournament's card on Setup has the same link beside the results page.
 
 ## [0.4.1] - 2026-10-19
 

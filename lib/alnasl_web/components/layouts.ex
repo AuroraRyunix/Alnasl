@@ -169,9 +169,9 @@ defmodule AlnaslWeb.Layouts do
                 target="_blank"
                 rel="noopener"
                 class="head-open"
-                aria-label={gettext("Open the results site")}
-                title={gettext("Open the results site")}
+                title={gettext("Open the live boards on the results site")}
               >
+                <span class="head-open-text">{gettext("Live boards")}</span>
                 <.icon name="external" />
               </a>
             <% else %>

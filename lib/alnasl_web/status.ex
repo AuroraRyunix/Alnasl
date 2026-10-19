@@ -116,11 +116,14 @@ defmodule AlnaslWeb.Status do
     end
   end
 
-  # With exactly one tournament in use, the badge has a link to its page on
-  # the results site; with several there is no telling which one is meant.
+  # With exactly one tournament in use, the bar links to its live boards on
+  # the results site: where people actually go during a round, and the one
+  # address that was hard to find (the tournament's front page is a click
+  # further from them). With several there is no telling which one is meant;
+  # each tournament's card on Setup links to its own.
   defp open_address(scope) do
     case active(scope) do
-      [one] -> Alnasl.ResultsSite.tournament_url(one)
+      [one] -> Alnasl.ResultsSite.live_url(one)
       _several -> nil
     end
   end
