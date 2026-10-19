@@ -19,6 +19,10 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-10-19
+
+- [Change] **Arkab 0.3.3 inside.** A loop board that misses a question now says in the log what came back instead, so a mute board and a mangled answer can be told apart.
+
 - [Change] **A loop is read as a loop without asking.** When two boards answered on a port added as one board, the page explained the problem, refused to read anything and offered a button for the only possible answer. It now just does it; the button stays for the rare port that will not cooperate.
 - [Fix] **A board through a bridge shows its signal as a percentage again.** 0.4.2 decided "port of its own" by a field only local loops carry, so every bridged loop board was told it had "never dropped", which was true and useless.
 
