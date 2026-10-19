@@ -16,14 +16,14 @@ Traversal.FileModule: Directory Traversal in `File.mkdir_p!`,lib/alnasl/applicat
 Traversal.FileModule: Directory Traversal in `File.mkdir_p!`,lib/alnasl/games.ex:767,51A48FC
 Traversal.FileModule: Directory Traversal in `File.mkdir_p!`,lib/alnasl/paths.ex:14,566248B
 Traversal.FileModule: Directory Traversal in `File.mkdir_p`,lib/alnasl/launcher_details.ex:205,3C6699F
-Traversal.FileModule: Directory Traversal in `File.mkdir_p`,lib/alnasl/updates.ex:342,5337416
+Traversal.FileModule: Directory Traversal in `File.mkdir_p`,lib/alnasl/updates.ex:381,5037C97
 Traversal.FileModule: Directory Traversal in `File.open`,lib/alnasl/launcher_details/cli.ex:223,3FAE107
 Traversal.FileModule: Directory Traversal in `File.read!`,lib/alnasl/pgn.ex:52,622CF0
 Traversal.FileModule: Directory Traversal in `File.read!`,lib/alnasl_web/live/pgn_live.ex:79,4AF85C6
 Traversal.FileModule: Directory Traversal in `File.read`,lib/alnasl/launcher_details/cli.ex:265,3B966BB
 Traversal.FileModule: Directory Traversal in `File.read`,lib/alnasl/listen.ex:32,403022C
 Traversal.FileModule: Directory Traversal in `File.read`,lib/alnasl/theme_packs.ex:260,1D3383E
-Traversal.FileModule: Directory Traversal in `File.read`,lib/alnasl/updates.ex:363,3ECBE4E
+Traversal.FileModule: Directory Traversal in `File.read`,lib/alnasl/updates.ex:402,10EA8A7
 Traversal.FileModule: Directory Traversal in `File.read`,lib/alnasl_web/controllers/theme_pack_controller.ex:46,9D46D
 Traversal.FileModule: Directory Traversal in `File.rm`,lib/alnasl/application.ex:92,596266E
 Traversal.FileModule: Directory Traversal in `File.rm`,lib/alnasl/games.ex:470,48A1ECA
@@ -37,7 +37,7 @@ Traversal.FileModule: Directory Traversal in `File.write`,lib/alnasl/games.ex:78
 Traversal.FileModule: Directory Traversal in `File.write`,lib/alnasl/launcher_details.ex:210,7E9C8BD
 Traversal.FileModule: Directory Traversal in `File.write`,lib/alnasl/launcher_details.ex:212,7E7CB8E
 Traversal.FileModule: Directory Traversal in `File.write`,lib/alnasl/listen.ex:38,BBBC2C
-Traversal.FileModule: Directory Traversal in `File.write`,lib/alnasl/updates.ex:343,4FDE166
+Traversal.FileModule: Directory Traversal in `File.write`,lib/alnasl/updates.ex:382,793F855
 Traversal.SendFile: Directory Traversal in `send_file`,lib/alnasl_web/controllers/file_controller.ex:56,2C5B7AA
 XSS.ContentType: XSS in `put_resp_content_type`,lib/alnasl_web/controllers/file_controller.ex:75,7530DC1
 XSS.ContentType: XSS in `put_resp_content_type`,lib/alnasl_web/controllers/theme_pack_controller.ex:63,6F9F818

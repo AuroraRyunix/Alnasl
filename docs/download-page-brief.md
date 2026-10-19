@@ -48,7 +48,8 @@ not host copies.
 | Linux, PC (x86_64) | `https://github.com/teapot-chess/Alnasl/releases/latest/download/alnasl-linux-x86_64.tar.gz` |
 | Linux, Raspberry Pi and other arm64 | `https://github.com/teapot-chess/Alnasl/releases/latest/download/alnasl-linux-aarch64.tar.gz` |
 | Linux installer script | `https://github.com/teapot-chess/Alnasl/releases/latest/download/install.sh` |
-| Mac, Apple Silicon (M1 and later) only | `https://github.com/teapot-chess/Alnasl/releases/latest/download/alnasl-macos-aarch64.zip` |
+| Mac, Apple Silicon (M1 and later) | `https://github.com/teapot-chess/Alnasl/releases/latest/download/alnasl-macos-aarch64.zip` |
+| Mac, Intel (macOS 10.13 or newer) | `https://github.com/teapot-chess/Alnasl/releases/latest/download/alnasl-macos-x86_64.zip` |
 | Checksums | `https://github.com/teapot-chess/Alnasl/releases/latest/download/SHA256SUMS` |
 | All versions, release notes | `https://github.com/teapot-chess/Alnasl/releases` |
 | The newest version's notes | `https://github.com/teapot-chess/Alnasl/releases/latest` |
@@ -91,9 +92,9 @@ change; take them from the API (`assets[].size`) or say nothing.
 3. For a hall without internet: download the archive beforehand, unpack it
    on the box, and run `sudo sh alnasl/install.sh` from it.
 
-**Mac (macOS 11 or newer)**
+**Mac (macOS 11 or newer on Apple Silicon; macOS 10.13 or newer on Intel)**
 
-1. Download the zip for your Mac (Apple Silicon, M1 and later), open it, and drag
+1. Download the zip for your Mac (Apple Silicon, M1 and later, or Intel), open it, and drag
    Alnasl into Applications.
 2. The first time, macOS refuses it, because Apple has not signed it yet:
    System Settings, Privacy & Security, "Open Anyway" (macOS 14 or older:
@@ -114,7 +115,7 @@ GitHub.
   Ubuntu 22.04, Raspberry Pi OS "Bookworm" **64-bit**, or later. Root is
   needed once, to install. **There is no build for 32-bit Raspberry Pi
   OS**; say so, because that is what many Pis run.
-- **macOS**: macOS 11 or newer; Apple Silicon (M1 and later) only.
+- **macOS**: macOS 11 or newer on Apple Silicon (M1 and later); macOS 10.13 or newer on Intel.
   **Not signed by Apple yet**, and **not yet tried on a real Mac** (it is
   built and started on GitHub's): until `docs/macos.md`'s test list has
   been worked through, show the Mac downloads as "preview", or not at all.

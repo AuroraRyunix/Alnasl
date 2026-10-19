@@ -192,8 +192,10 @@ root shell; it is two hundred lines and says what it does at the top.
 > has the test list for a person with one.
 
 Download **[alnasl-macos-aarch64.zip](https://github.com/teapot-chess/Alnasl/releases/latest/download/alnasl-macos-aarch64.zip)**
-for a Mac with an Apple chip (M1 and later; there is no
-build for Intel Macs), open it, and drag **Alnasl** into *Applications*.
+for a Mac with an Apple chip (M1 and later), or
+**[alnasl-macos-x86_64.zip](https://github.com/teapot-chess/Alnasl/releases/latest/download/alnasl-macos-x86_64.zip)**
+for an Intel Mac (macOS 10.13 or newer), open it, and drag **Alnasl** into
+*Applications*.
 
 **macOS will refuse it, once.** Alnasl is not signed by Apple yet (that
 needs a paid developer account, which is coming). The first time:
