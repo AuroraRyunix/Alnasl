@@ -24,6 +24,12 @@ defmodule Alnasl.LoopsTest do
   defp line(port, device),
     do: start_supervised!({Fake, port: port, device: {Emulator, device}}, id: port)
 
+  defp loop_rows(port) do
+    Boards.list()
+    |> Enum.filter(&(&1.port == port and &1.driver != "dgt_serial"))
+    |> Enum.sort_by(& &1.address)
+  end
+
   defp connected(board) do
     eventually(fn -> Boards.snapshot(board.id).connected? end)
     Boards.get!(board.id)
@@ -112,30 +118,27 @@ defmodule Alnasl.LoopsTest do
   end
 
   describe "a loop that was added as one board" do
-    test "is said in words, reads nothing, and is read as a loop on one tap" do
+    test "is read as a loop by itself, without one single-board command" do
       line("FAKE-S1", [old_board(), new_board()])
 
       {:ok, row} =
         Boards.create(%{name: "Board 1", driver: "dgt_serial", port: "FAKE-S1", options: %{}})
 
-      # Both boards answered the ping: the row says so, and is not connected.
-      eventually(fn -> Boards.snapshot(row.id).info[:loop] == [6310, 12_799] end)
-      snapshot = Boards.snapshot(row.id)
-      refute snapshot.connected?
-      assert snapshot.raw == nil
-
-      # Not one single-board command went out: on a loop every board
-      # answers those at once.
-      written = Fake.written("FAKE-S1")
-      for <<byte <- written>>, byte < 0x80 and byte in 0x40..0x55, do: assert(byte == 0x4A)
-
-      assert {:ok, [first, second]} = Loops.read_as_loop(Boards.get!(row.id))
+      # Both boards answered the ping: nobody is asked, the port is read as
+      # the loop it is, a row for each board.
+      eventually(fn -> length(loop_rows("FAKE-S1")) == 2 end)
+      [first, second] = loop_rows("FAKE-S1")
       assert Enum.map([first, second], & &1.address) == [6310, 12_799]
       # Nobody had given the row a number: it is gone.
       assert Boards.get(row.id) == nil
       connected(first)
       connected(second)
       assert "loop.read" in log_kinds()
+
+      # Not one single-board command went out: on a loop every board
+      # answers those at once.
+      written = Fake.written("FAKE-S1")
+      for <<byte <- written>>, byte < 0x80 and byte in 0x40..0x55, do: assert(byte == 0x4A)
     end
 
     test "a second board plugged into a single board's line is noticed" do
@@ -149,8 +152,7 @@ defmodule Alnasl.LoopsTest do
 
       # Now two boards answer every single-board command at once.
       Fake.update("FAKE-S2", fn one -> {<<>>, [one, new_board()]} end)
-      eventually(fn -> Boards.snapshot(row.id).info[:loop] == [6310, 12_799] end, 30_000)
-      refute Boards.snapshot(row.id).connected?
+      eventually(fn -> length(loop_rows("FAKE-S2")) == 2 end, 30_000)
     end
 
     test "a numbered row whose board is on the loop becomes that board's row" do
@@ -162,12 +164,11 @@ defmodule Alnasl.LoopsTest do
       assert row.address == 6310
 
       Fake.update("FAKE-S3", fn one -> {<<>>, [one, new_board()]} end)
-      eventually(fn -> Boards.snapshot(row.id).info[:loop] end, 30_000)
+      eventually(fn -> length(loop_rows("FAKE-S3")) == 2 end, 30_000)
 
-      assert {:ok, boards} = Loops.read_as_loop(Boards.get!(row.id))
       # Table 7 is still table 7, still serial 06310 - now read on the loop.
       kept = Boards.get!(row.id)
-      assert kept.id in Enum.map(boards, & &1.id)
+      assert kept.id in Enum.map(loop_rows("FAKE-S3"), & &1.id)
 
       assert {kept.driver, kept.address, kept.table_no, kept.serial} ==
                {"dgt_bus", 6310, 7, "06310"}

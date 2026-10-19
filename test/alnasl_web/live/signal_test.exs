@@ -9,11 +9,11 @@ defmodule AlnaslWeb.SignalTest do
 
   alias Alnasl.BoardServer
 
-  defp still(name) do
+  defp still(name, driver \\ "simulator") do
     {:ok, board} =
       Boards.create(%{
         name: name,
-        driver: "simulator",
+        driver: driver,
         port: "sim-" <> name,
         options: %{"moves" => ~w(e4 e5), "speed" => 1, "start_delay_ms" => 600_000}
       })
@@ -35,6 +35,18 @@ defmodule AlnaslWeb.SignalTest do
     assert %{polls_ok: 60, polls_missed: 1} = stats(board)
   end
 
+  test "a board through a bridge shows a percentage, whatever it says about itself",
+       %{conn: conn} do
+    board = still("bridged-pct")
+    say(board, {:poll, :ok, 95})
+    for _ <- 1..5, do: say(board, {:poll, :missed})
+    _ = stats(board)
+
+    {:ok, view, _html} = live(conn, ~p"/boards")
+    assert has_element?(view, "#board-#{board.id} td.b-signal .meter")
+    refute has_element?(view, "#board-#{board.id} td.b-signal", "dropped")
+  end
+
   test "a loop board shows a percentage of what it answered, not of what was sent",
        %{conn: conn} do
     board = still("loop")
@@ -50,7 +62,9 @@ defmodule AlnaslWeb.SignalTest do
 
   test "a board on a port of its own shows how often it dropped, not a percentage",
        %{conn: conn} do
-    board = still("alone")
+    # A single board's driver, on a port that is not there: it never
+    # connects, and the events are said to it by hand.
+    board = still("alone", "dgt_serial")
     for _ <- 1..10, do: say(board, {:poll, :ok})
     say(board, {:poll, :missed})
     say(board, {:poll, :missed})
