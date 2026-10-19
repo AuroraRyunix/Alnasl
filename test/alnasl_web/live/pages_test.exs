@@ -141,7 +141,7 @@ defmodule AlnaslWeb.PagesTest do
       refute has_element?(view, "#loop-absent-#{old.id}")
     end
 
-    test "a loop added as one board says so, and one tap reads it as a loop", %{conn: conn} do
+    test "a loop added as one board is read as a loop by itself", %{conn: conn} do
       loop = [
         Arkab.Dgt.Emulator.new(serial: "06310", version: "1.9"),
         Arkab.Dgt.Emulator.new(serial: "40730", version: "4.0", address: 12_799)
@@ -154,13 +154,12 @@ defmodule AlnaslWeb.PagesTest do
 
       {:ok, view, _html} = live(conn, ~p"/boards")
 
-      eventually_html(view, fn _ -> has_element?(view, "#is-a-loop-#{row.id}") end)
-      assert has_element?(view, "#is-a-loop-#{row.id}", "it is a loop")
+      # Nobody taps anything: two boards answered, so it is a loop.
+      eventually_html(view, fn _ ->
+        Enum.map(Boards.list(), & &1.address) |> Enum.sort() == [6310, 12_799]
+      end)
 
-      html = view |> element("#read-as-loop-#{row.id}") |> render_click()
-      assert html =~ "That port is a loop"
-      refute has_element?(view, "#board-#{row.id}")
-      assert Enum.map(Boards.list(), & &1.address) |> Enum.sort() == [6310, 12_799]
+      eventually_html(view, fn _ -> not has_element?(view, "#board-#{row.id}") end)
     end
 
     test "the start-position check takes the clock in: right is pieces and clock, and a clock the wrong way is said in words",

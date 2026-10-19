@@ -282,6 +282,7 @@ defmodule Alnasl.BoardServer do
 
   defp driver_event(state, {:info, info}, _t) do
     state = %{state | info: Map.merge(state.info, info)}
+    loop_by_itself(state, info)
 
     # A board alone on its port says which number it answers to on a loop:
     # kept with the row, so that it is known again when it is on one.
@@ -344,6 +345,27 @@ defmodule Alnasl.BoardServer do
   end
 
   defp driver_event(state, _other, _t), do: state
+
+  # Two or more boards answered a single board's questions: it is a loop.
+  # There is nothing to ask anybody about that, so it is read as one at
+  # once. The switch stops this very process, so it runs beside it, and
+  # only once per process: the row it leaves behind, if any, starts afresh.
+  defp loop_by_itself(%{board: %Board{driver: "dgt_serial", id: id}}, %{loop: [_, _ | _]}) do
+    unless Process.get(:reading_as_loop) do
+      Process.put(:reading_as_loop, true)
+
+      Task.Supervisor.start_child(Alnasl.TaskSupervisor, fn ->
+        case Alnasl.Boards.get(id) do
+          %Board{} = row -> Alnasl.Loops.read_as_loop(row)
+          nil -> :gone
+        end
+      end)
+    end
+
+    :ok
+  end
+
+  defp loop_by_itself(_state, _info), do: :ok
 
   # A start position that reads upside down is a board plugged in turned
   # round. Only decided while no move has been made: after that, a board

@@ -19,6 +19,9 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+- [Change] **A loop is read as a loop without asking.** When two boards answered on a port added as one board, the page explained the problem, refused to read anything and offered a button for the only possible answer. It now just does it; the button stays for the rare port that will not cooperate.
+- [Fix] **A board through a bridge shows its signal as a percentage again.** 0.4.2 decided "port of its own" by a field only local loops carry, so every bridged loop board was told it had "never dropped", which was true and useless.
+
 ## [0.4.2] - 2026-10-19
 
 - [Fix] **Signal for a board that reaches the box through a bridge counts what it answered.** A bridge sends one "answered" a second but every miss, so a loop board polled sixty times a second showed 95% with nine misses, and one with a handful of misses showed 17%. The bridge's answer now says how many answers it stands for, and Signal adds that many. (Needs a bridge that says so, which is the next Arkab; an older one counts as before.)

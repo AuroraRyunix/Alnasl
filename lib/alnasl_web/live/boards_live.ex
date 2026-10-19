@@ -457,9 +457,10 @@ defmodule AlnaslWeb.BoardsLive do
   # A board on a loop is asked dozens of times a second, so answered against
   # missed is a signal. A board on a port of its own is asked once in three
   # seconds and misses only by being dropped (cable out, port gone), so
-  # what it can honestly be given is the number of times it dropped.
-  defp signal(%{polls_ok: ok, polls_missed: missed}, info) when ok + missed > 0 do
-    if info[:loop_number], do: percent_signal(ok, missed), else: {:drops, missed}
+  # what it can honestly be given is the number of times it dropped. Told
+  # by the driver: a board through a bridge is on a loop on its own side.
+  defp signal(%{polls_ok: ok, polls_missed: missed}, driver) when ok + missed > 0 do
+    if driver == "dgt_serial", do: {:drops, missed}, else: percent_signal(ok, missed)
   end
 
   defp signal(_stats, _info), do: nil
@@ -818,13 +819,12 @@ defmodule AlnaslWeb.BoardsLive do
 
                     <div class="note">
                       {gettext(
-                        "Read as one board, a loop gives nonsense: every board answers at once. Nothing is read from it until you say so."
+                        "It is being read as a loop: a row for each board appears in a moment. If none does, try it by hand."
                       )}
                     </div>
 
                     <.button
                       id={"read-as-loop-#{s.id}"}
-                      variant="primary"
                       phx-click="read_as_loop"
                       phx-value-id={s.id}
                       phx-disable-with={gettext("Asking the port...")}
@@ -833,7 +833,7 @@ defmodule AlnaslWeb.BoardsLive do
                 </td>
 
                 <td class="b-signal" data-label={gettext("Signal")}>
-                  <%= case signal(s.stats, s.info) do %>
+                  <%= case signal(s.stats, s.driver) do %>
                     <% {:drops, 0} -> %>
                       <span class="note">{gettext("never dropped")}</span>
                     <% {:drops, n} -> %>
