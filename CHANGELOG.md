@@ -19,6 +19,9 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+- [Fix] **Signal for a board that reaches the box through a bridge counts what it answered.** A bridge sends one "answered" a second but every miss, so a loop board polled sixty times a second showed 95% with nine misses, and one with a handful of misses showed 17%. The bridge's answer now says how many answers it stands for, and Signal adds that many. (Needs a bridge that says so, which is the next Arkab; an older one counts as before.)
+- [Change] **A board on a port of its own shows "dropped N times" instead of a percentage.** It is asked for its whole position every three seconds and counts a miss only when the cable goes, so 97% meant nothing in particular. The percentage stays for boards on a loop, where it does.
+
 ## [0.4.1] - 2026-10-19
 
 - [Fix] **A stop no longer waits fifteen seconds for every open page to hang up.** Bandit's default courtesy to open connections, which on a board relay means every spectator, made the Mac app's "Stopping..." look like a hang and every restart slower than it needed to be. Open pages now get three seconds, and the Mac launcher writes into the log how long a stop took, or that it had to insist.

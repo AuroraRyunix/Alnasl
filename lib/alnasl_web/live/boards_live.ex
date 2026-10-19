@@ -454,7 +454,17 @@ defmodule AlnaslWeb.BoardsLive do
 
   # --- page --------------------------------------------------------------------
 
-  defp signal(%{polls_ok: ok, polls_missed: missed}) when ok + missed > 0 do
+  # A board on a loop is asked dozens of times a second, so answered against
+  # missed is a signal. A board on a port of its own is asked once in three
+  # seconds and misses only by being dropped (cable out, port gone), so
+  # what it can honestly be given is the number of times it dropped.
+  defp signal(%{polls_ok: ok, polls_missed: missed}, info) when ok + missed > 0 do
+    if info[:loop_number], do: percent_signal(ok, missed), else: {:drops, missed}
+  end
+
+  defp signal(_stats, _info), do: nil
+
+  defp percent_signal(ok, missed) do
     percent = round(ok * 100 / (ok + missed))
 
     tone =
@@ -466,8 +476,6 @@ defmodule AlnaslWeb.BoardsLive do
 
     {percent, tone}
   end
-
-  defp signal(_stats), do: nil
 
   @impl true
   def render(assigns) do
@@ -825,7 +833,13 @@ defmodule AlnaslWeb.BoardsLive do
                 </td>
 
                 <td class="b-signal" data-label={gettext("Signal")}>
-                  <%= case signal(s.stats) do %>
+                  <%= case signal(s.stats, s.info) do %>
+                    <% {:drops, 0} -> %>
+                      <span class="note">{gettext("never dropped")}</span>
+                    <% {:drops, n} -> %>
+                      <span class={["note", n >= 3 && "flag"]}>
+                        {ngettext("dropped %{count} time", "dropped %{count} times", n)}
+                      </span>
                     <% {percent, tone} -> %>
                       <span class={["meter", tone]}><i style={"width:#{percent}%"}></i></span>{percent}%
                       <div class="note">

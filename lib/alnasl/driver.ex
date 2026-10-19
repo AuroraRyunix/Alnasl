@@ -11,7 +11,7 @@ defmodule Alnasl.Driver do
   | `{:clock, %{white_ms, black_ms, running}}` | a clock reading; `running` is `:white`, `:black` or `:none`. Never sent by a board without a clock |
   | `:connected` / `:disconnected` | the board answers / has stopped answering |
   | `{:info, map}` | what the board says about itself: `:serial`, `:firmware`, `:battery` |
-  | `{:poll, :ok \\| :missed}` | one question to the board was answered / was not - the signal quality |
+  | `{:poll, :ok \\| :missed}` | one question to the board was answered / was not - the signal quality. `{:poll, :ok, n}` (from a bridge): `n` answers in one event |
   | `{:raw, :rx \\| :tx, binary}` | the bytes on the wire, for the capture file |
 
   A driver that plays recorded or simulated time wraps each event as
