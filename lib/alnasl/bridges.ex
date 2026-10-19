@@ -79,8 +79,12 @@ defmodule Alnasl.Bridges do
   @doc """
   A bridge redeems a code with who it is (`%{"v", "bridge", "name",
   "software"}`): `{:ok, %{key, bridge}}`, or `{:error, :used_or_expired |
-  :version | :bad_request}`. A bridge that was here before (the same
-  `uid`) is the same row with a new key, removed or not.
+  :version | :bad_request | :elsewhere}`. A bridge that was here before (the
+  same `uid`) is the same row with a new key. A bridge that was removed may
+  join any hall; one that is still in a hall stays there, and a code of
+  another hall is refused with `:elsewhere`: the `uid` is no secret (a
+  bridge tells it to every server it joins), so it proves nothing about who
+  holds the bridge. Removing the bridge from its hall first is the way to move it.
   """
   def redeem(code, identity, now \\ DateTime.utc_now(:second))
 
@@ -106,10 +110,13 @@ defmodule Alnasl.Bridges do
               nil ->
                 Repo.insert!(struct(Bridge, Map.put(fields, :uid, uid)))
 
+              %Bridge{revoked_at: nil, hall_id: hall_id} when hall_id != fields.hall_id ->
+                Repo.rollback(:elsewhere)
+
               old ->
                 bridge = old |> Ecto.Changeset.change(fields) |> Repo.update!()
-                # Joined again from another hall: its boards (if any are
-                # left from before) go with it.
+                # Joined again from another hall after it was removed: its
+                # boards (if any are left from before) go with it.
                 if old.hall_id != bridge.hall_id, do: move_rows(bridge)
                 bridge
             end

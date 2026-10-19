@@ -347,14 +347,14 @@ defmodule AlnaslWeb.PagesTest do
     test "a PIN is set and removed", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/setup/access")
       assert has_element?(view, "#pin-state", "No PIN")
-      assert view |> form("#pin-form", door: %{pin: "12"}) |> render_submit() =~ "at least 4"
-      view |> form("#pin-form", door: %{pin: "2468"}) |> render_submit()
+      assert view |> form("#pin-form", door: %{pin: "12"}) |> render_submit() =~ "at least 6"
+      view |> form("#pin-form", door: %{pin: "246810"}) |> render_submit()
 
-      assert Settings.pin_set?() and Settings.pin_valid?("2468") and
+      assert Settings.pin_set?() and Settings.pin_valid?("246810") and
                not Settings.pin_valid?("1111")
 
       assert has_element?(view, "#pin-state", "A PIN is set")
-      refute Jason.encode!(Settings.get("pin")) =~ "2468"
+      refute Jason.encode!(Settings.get("pin")) =~ "246810"
 
       view |> element("#clear-pin") |> render_click()
       refute Settings.pin_set?()
@@ -654,7 +654,7 @@ defmodule AlnaslWeb.PagesTest do
            board.moved board.flipped board.out_of_sync board.resumed move.recovered move.guessed move.assumed move.corrected
            clock.move_missing clock.wrong_side clock.side_ok result.suggested result.set result.reopened repair.undo repair.append repair.edit
            repair.set_fen repair.resync repair.choose repair.paused repair.resumed pgn.attached outbox.offline
-           outbox.online outbox.blocked outbox.conflict outbox.server_ahead door.unlocked door.refused setup.saved
+           outbox.online outbox.blocked outbox.conflict outbox.server_ahead door.unlocked door.refused door.throttled setup.saved
            destination.offline destination.online destination.blocked destination.enabled destination.disabled
            table.set table.cleared table.moved table.remapped table.swapped board.recognised
            board.other_serial board.replaced piece.unseen piece.accounted game.new game.switched move.rewritten move.out_of_turn move.illegal

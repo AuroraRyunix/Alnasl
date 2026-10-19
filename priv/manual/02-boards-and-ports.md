@@ -62,6 +62,8 @@ Walking along the tables with a phone in your hand is easier than going back and
 > [!WARNING] Never without the PIN
 > Anybody on the hall's network who finds the address could renumber your boards.
 
+A PIN has at least six characters; a shorter one set before that rule keeps working, and Setup, Access asks you to replace it. Guessing is slowed down: from the fifth wrong PIN an address has to wait, five seconds at first and twice as long with every further failure (a quarter of an hour at most), even if the next try is right, and the whole box accepts at most forty wrong PINs a minute.
+
 Do this before the round, with the pieces set up and nobody at the boards. The run ends by itself when every board has a number, or after fifteen minutes without a touch.
 
 ## The start-position check {#start-position}

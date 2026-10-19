@@ -158,6 +158,8 @@ defmodule Alnasl.Halls do
     boards = Repo.all(from b in Boards.Board, where: b.hall_id == ^id)
     Enum.each(boards, &Boards.stop/1)
 
+    members = Repo.all(from m in Member, where: m.hall_id == ^id, select: m.user_id)
+
     result =
       Repo.transaction(fn ->
         left = leftovers(hall)
@@ -180,6 +182,7 @@ defmodule Alnasl.Halls do
     case result do
       {:ok, hall} ->
         Log.add(:info, "hall.deleted", %{name: hall.name}, %{})
+        kick(members)
         notify()
         {:ok, hall}
 
@@ -318,8 +321,14 @@ defmodule Alnasl.Halls do
   def put_member(%Hall{id: hall_id}, %User{id: user_id}, role)
       when role in ["owner", "arbiter", "viewer"] do
     case Repo.get_by(Member, hall_id: hall_id, user_id: user_id) do
-      nil -> Repo.insert(%Member{hall_id: hall_id, user_id: user_id, role: role})
-      member -> member |> Ecto.Changeset.change(role: role) |> Repo.update()
+      nil ->
+        Repo.insert(%Member{hall_id: hall_id, user_id: user_id, role: role})
+
+      member ->
+        member
+        |> Ecto.Changeset.change(role: role)
+        |> Repo.update()
+        |> tap(fn _ -> kick([user_id]) end)
     end
     |> tap(fn _ -> notify() end)
   end
@@ -342,9 +351,17 @@ defmodule Alnasl.Halls do
             {:error, :role}
         end
 
+      if match?({:ok, _}, result), do: kick([member.user_id])
       notify()
       result
     end
+  end
+
+  # A page's scope, and with it the rights, is built when the page mounts. A
+  # changed role or a removal ends that user's open pages, so they come back
+  # (the browser reconnects by itself) with the rights they have now.
+  defp kick(user_ids) do
+    Enum.each(user_ids, &AlnaslWeb.UserAuth.disconnect_user/1)
   end
 
   # A hall is never left without an owner by its owners: the last one cannot

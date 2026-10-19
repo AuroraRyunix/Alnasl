@@ -19,6 +19,16 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+- [Security] **A role that changed now counts.** The rights of an open page were worked out once, when it opened, so an arbiter who was demoted or taken out of a hall kept entering results there until they reloaded, which on a tournament day can be a long time. Any change of someone's membership, and the deletion of a hall, now sends their open pages away; the browser reconnects by itself and gets what they may do now.
+- [Security] **"Send again, whatever is held" keeps to your hall.** It used to re-send every game that OpenPairings had called stale, in every hall on the box, which let an arbiter of one hall overwrite a correction made in another's tournament. It now covers the tournaments of the hall you are in; an admin, and a box without accounts, still get all of them.
+- [Security] **The PIN is no longer a guessing game.** After five wrong tries an address has to wait, five seconds and then twice as long each time, a quarter of an hour at most, even if the next try is right; the box as a whole takes at most forty wrong tries a minute. New PINs need six characters. An older, shorter one keeps working, and Setup, Access asks you to replace it.
+- [Security] **A bridge stays in its hall.** The code of another hall used to take over a bridge that was still in a hall, as long as it said which bridge it was, and that name is no secret. The server now refuses (403) until the bridge has been removed from its hall, as an admin can move it.
+- [Security] **A stranger's listing is nobody's twin.** A second server could claim a tournament of another hall by listing the same id and version, and then take it over with "Use this code". Two codes on different servers are one tournament now only when both are in the same hall, and using a code for a tournament of another hall needs a role there.
+- [Security] **Captures of a removed board** can be deleted, replayed or exported by an admin only, as they can be listed and downloaded by an admin only.
+- [Security] **The declared admin's address is for an admin to invite**, everywhere. An owner of a hall could invite that address on a box, open the link, pick a password and be admin. Invitations of that kind made earlier no longer make the account either.
+- [Security] **The hosted server no longer knocks on its own doors.** An address typed for OpenPairings or a results page that resolves to loopback, a private range or link-local (also through a redirect) is refused on the server, with a message that says so. A box keeps allowing any address, because a desktop OpenPairings lives at 127.0.0.1.
+- [Change] **The OpenPairings address offered under "Connect an account" is remembered per hall, and only after an account really connected.** It used to be one for the whole box, set the moment anybody typed something. The address you used before has to be typed once more.
+
 ## [0.3.2] - 2026-10-18
 
 - [Fix] **Stopping no longer ends in a red stack trace.** On the way out the launcher-details process tidied up its secret by asking the application controller, which at that point is busy dying and answers everyone with an exit. The secret goes with the VM anyway, so now it lets the question go unanswered and leaves quietly.

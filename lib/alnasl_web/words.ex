@@ -873,6 +873,10 @@ defmodule AlnaslWeb.Words do
     do: gettext("A wrong password was tried from %{from}.", from: d["from"])
 
   defp log("door.refused", d), do: gettext("A wrong PIN was tried from %{from}.", from: d["from"])
+
+  defp log("door.throttled", d),
+    do: gettext("%{from} tried the PIN too often and was made to wait.", from: d["from"])
+
   defp log("setup.saved", _d), do: gettext("Setup was changed.")
 
   defp log("link.added", %{"reason" => _} = d),

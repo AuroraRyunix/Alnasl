@@ -203,8 +203,26 @@ defmodule AlnaslWeb.Permit do
         do: for(%Tournaments.Tournament{} = t <- rows, do: Alnasl.Halls.of(t)),
         else: []
 
-    here ++ home ++ board_halls(view, event, params, assigns)
+    here ++ home ++ code_halls(view, event, params) ++ board_halls(view, event, params, assigns)
   end
+
+  # "Use this code for that tournament" re-points a tournament, which another
+  # hall may own, to another code: the role in the tournament's home hall is
+  # needed, whatever the hall of the code is.
+  defp code_halls(SetupLive, "use_code", params) do
+    with id when is_integer(id) <- int(params["id"]),
+         remote when is_integer(remote) <- int(params["remote"]),
+         %Alnasl.Tournaments.Link{} = link <- Tournaments.get_link(id),
+         %{"tournament_id" => tid} <-
+           Alnasl.OpenPairings.Duplicates.elsewhere(link)[to_string(remote)],
+         %Tournaments.Tournament{} = t <- Tournaments.get(tid) do
+      [Alnasl.Halls.of(t)]
+    else
+      _none -> []
+    end
+  end
+
+  defp code_halls(_view, _event, _params), do: []
 
   defp board_halls(RoundLive, event, params, _assigns) do
     if event in @board_events[RoundLive] do
@@ -291,11 +309,18 @@ defmodule AlnaslWeb.Permit do
 
   defp reached(_view, _event, rows), do: rows
 
+  # Through a second code only on the same pairing program: a listing from
+  # another server says what it likes about ids and versions, and holding a
+  # code there proves nothing about the tournament here.
   defp reached?(%Tournaments.Tournament{} = t, hall_id) do
     Enum.any?(Tournaments.links(), fn link ->
       Alnasl.Halls.of(link) == hall_id and
         (t.link_id == link.id or
-           Enum.any?(Alnasl.OpenPairings.Duplicates.shared(link), &(&1.tournament.id == t.id)))
+           Enum.any?(
+             Alnasl.OpenPairings.Duplicates.shared(link),
+             &(&1.tournament.id == t.id and
+                 Alnasl.OpenPairings.Duplicates.same_server?(link.root, &1.through.root))
+           ))
     end)
   end
 

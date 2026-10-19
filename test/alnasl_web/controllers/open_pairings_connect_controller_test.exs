@@ -14,7 +14,7 @@ defmodule AlnaslWeb.OpenPairingsConnectControllerTest do
   import Alnasl.LinkHelpers
   import AlnaslWeb.AccountHelpers
 
-  alias Alnasl.{FakeOpenPairings, Halls, Settings, Tournaments}
+  alias Alnasl.{FakeOpenPairings, Halls, Tournaments}
   alias Alnasl.OpenPairings.Connect
 
   @address "http://pairings.test"
@@ -55,8 +55,8 @@ defmodule AlnaslWeb.OpenPairingsConnectControllerTest do
       assert %{"state" => state} = get_session(out, :openpairings_connect)
       assert state == params["state"]
 
-      # Remembered for next time.
-      assert Connect.default_address() == "https://pairings.test"
+      # Not remembered yet: only an account that really connected is.
+      refute Connect.default_address(Halls.own_id()) == "https://pairings.test"
     end
 
     test "behind the tunnel the way back is the public https address", %{conn: conn} do
@@ -92,6 +92,9 @@ defmodule AlnaslWeb.OpenPairingsConnectControllerTest do
       back = round_trip(conn, %{"grant" => grant})
       assert redirected_to(back) == ~p"/setup/connections"
       assert Phoenix.Flash.get(back.assigns.flash, :info) =~ "Connected"
+
+      # Remembered for next time, in this hall.
+      assert Connect.default_address(Halls.own_id()) == @address
 
       assert [link] = Tournaments.links()
       assert link.kind == "account"
@@ -183,11 +186,25 @@ defmodule AlnaslWeb.OpenPairingsConnectControllerTest do
       assert Connect.normalize("https://p.example/?a=1") == {:error, :not_an_address}
     end
 
-    test "offered: the last one used, else the configured one" do
+    test "offered: the last one that worked in the hall, else the configured one" do
       put_app_env(:openpairings_url, "https://configured.example")
-      assert Connect.default_address() == "https://configured.example"
-      Settings.put("openpairings_url", "https://used.example")
-      assert Connect.default_address() == "https://used.example"
+      assert Connect.default_address(1) == "https://configured.example"
+      Connect.remember("https://used.example", 1)
+      assert Connect.default_address(1) == "https://used.example"
+      # Another hall is not told where the first one connected.
+      assert Connect.default_address(2) == "https://configured.example"
+    end
+
+    test "an address that was typed but never connected is not offered to anybody", %{conn: conn} do
+      first_owner()
+      hall = hall_fixture("Hall A")
+      other = hall_fixture("Hall B")
+      arbiter = member(hall, user_fixture("arbiter@example.org"), "arbiter")
+
+      out = conn |> log_in(arbiter, hall) |> start("https://look-alike.example")
+      assert redirected_to(out) =~ "look-alike.example"
+      refute Connect.default_address(hall.id) == "https://look-alike.example"
+      refute Connect.default_address(other.id) == "https://look-alike.example"
     end
   end
 end

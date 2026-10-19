@@ -135,14 +135,22 @@ defmodule Alnasl.Destination.OpenPairings do
 
   @doc """
   "Send again, whatever is held": the games the pairing program called
-  stale go out once more with `replace: true`.
+  stale go out once more with `replace: true`. `tournament_ids` keeps it to
+  the games of those tournaments (the halls of whoever asked; see
+  `Alnasl.Halls.tournament_ids/1`); `nil` is every tournament on the box.
   """
-  def force do
-    {count, _} =
-      Repo.update_all(
-        from(c in Cursor, where: c.destination == @id and c.error == "stale"),
-        set: [force: true, acked_seq: 0, error: nil]
-      )
+  def force(tournament_ids \\ nil) do
+    stale = from(c in Cursor, where: c.destination == @id and c.error == "stale")
+
+    stale =
+      if is_list(tournament_ids) do
+        mine = from(g in Game, where: g.tournament_id in ^tournament_ids, select: g.id)
+        from(c in stale, where: c.game_id in subquery(mine))
+      else
+        stale
+      end
+
+    {count, _} = Repo.update_all(stale, set: [force: true, acked_seq: 0, error: nil])
 
     if count > 0, do: Log.add(:info, "destination.forced", %{destination: @id, games: count})
     Alnasl.Destination.send_now(__MODULE__)

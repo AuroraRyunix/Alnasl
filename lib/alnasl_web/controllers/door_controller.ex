@@ -17,12 +17,38 @@ defmodule AlnaslWeb.DoorController do
   end
 
   def enter(conn, %{"pin" => pin}) do
-    if Settings.pin_valid?(pin) do
-      Log.add(:info, "door.unlocked", %{from: conn.remote_ip |> :inet.ntoa() |> to_string()})
-      conn |> put_session(:unlocked, true) |> redirect(to: ~p"/")
-    else
-      Log.add(:warn, "door.refused", %{from: conn.remote_ip |> :inet.ntoa() |> to_string()})
-      conn |> put_status(:unauthorized) |> render(:unlock, error: gettext("That is not the PIN."))
+    ip = conn.remote_ip
+    from = ip |> :inet.ntoa() |> to_string()
+
+    case Alnasl.DoorGuard.check(ip) do
+      {:wait, seconds} ->
+        Log.add(:warn, "door.throttled", %{from: from})
+
+        conn
+        |> put_resp_header("retry-after", Integer.to_string(seconds))
+        |> put_status(:too_many_requests)
+        |> render(:unlock,
+          error:
+            ngettext(
+              "Too many wrong PINs. Try again in %{count} second.",
+              "Too many wrong PINs. Try again in %{count} seconds.",
+              seconds
+            )
+        )
+
+      :ok ->
+        if Settings.pin_valid?(pin) do
+          Alnasl.DoorGuard.succeeded(ip)
+          Log.add(:info, "door.unlocked", %{from: from})
+          conn |> put_session(:unlocked, true) |> redirect(to: ~p"/")
+        else
+          Alnasl.DoorGuard.failed(ip)
+          Log.add(:warn, "door.refused", %{from: from})
+
+          conn
+          |> put_status(:unauthorized)
+          |> render(:unlock, error: gettext("That is not the PIN."))
+        end
     end
   end
 

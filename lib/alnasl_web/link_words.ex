@@ -78,6 +78,10 @@ defmodule AlnaslWeb.LinkWords do
     do: gettext("nothing answers at that address. Is OpenPairings running?")
 
   defp unreachable(:nxdomain), do: gettext("that name does not exist. Is the network up?")
+
+  defp unreachable(:forbidden_address),
+    do: gettext("that address is on this server's own network, not the internet.")
+
   defp unreachable(:timeout), do: gettext("no answer in time.")
   defp unreachable(:closed), do: gettext("the connection was closed.")
 

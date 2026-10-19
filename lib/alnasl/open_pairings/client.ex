@@ -52,6 +52,7 @@ defmodule Alnasl.OpenPairings.Client do
     |> Keyword.merge(Keyword.delete(opts, :headers))
     |> Keyword.merge(req_options())
     |> Req.new()
+    |> Alnasl.Http.guard()
   end
 
   @doc "`{:ok, listing, etag}`, `:not_modified` or `{:error, reason}`."

@@ -12,7 +12,7 @@ defmodule Alnasl.OpenPairings.Connect do
   the duplicate check do not know it arrived differently.
 
   The address of OpenPairings is what the arbiter typed, or the last one
-  used, or `ALNASL_OPENPAIRINGS_URL` (`config :alnasl, :openpairings_url`).
+  that worked in this hall, or `ALNASL_OPENPAIRINGS_URL` (`config :alnasl, :openpairings_url`).
   A desktop copy is `http://127.0.0.1:<port>`; nothing here insists on
   https or on a public name.
   """
@@ -22,13 +22,20 @@ defmodule Alnasl.OpenPairings.Connect do
 
   @setting "openpairings_url"
 
-  @doc "The address to offer: the last one used, else the configured one, else nil."
-  def default_address do
-    Settings.get(@setting) || Application.get_env(:alnasl, :openpairings_url)
+  @doc """
+  The address to offer in a hall: the last one that worked there, else the
+  configured one, else nil. Per hall, so that an arbiter of one hall cannot
+  decide where the arbiters of another are sent to sign in.
+  """
+  def default_address(hall_id) do
+    Settings.get(setting(hall_id)) || Application.get_env(:alnasl, :openpairings_url)
   end
 
-  @doc "Remembers the address for next time."
-  def remember(address) when is_binary(address), do: Settings.put(@setting, address)
+  @doc "Remembers the address for next time in this hall. Called once an account was really connected."
+  def remember(address, hall_id) when is_binary(address),
+    do: Settings.put(setting(hall_id), address)
+
+  defp setting(hall_id), do: "#{@setting}:#{hall_id}"
 
   @doc """
   What was typed, as the address of an OpenPairings: `{:ok,
@@ -82,6 +89,7 @@ defmodule Alnasl.OpenPairings.Connect do
       ]
       |> Keyword.merge(Client.req_options())
       |> Req.new()
+      |> Alnasl.Http.guard()
 
     case Req.post(request) do
       {:ok, %{status: 200, body: %{"code" => code}}} when is_binary(code) ->

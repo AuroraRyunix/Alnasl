@@ -317,6 +317,7 @@ defmodule Alnasl.Outbox do
       ]
       |> Keyword.merge(Alnasl.Http.req_options())
       |> Req.new()
+      |> Alnasl.Http.guard()
 
     entry = entry |> Ecto.Changeset.change(%{attempts: entry.attempts + 1}) |> Repo.update!()
 
