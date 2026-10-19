@@ -19,6 +19,8 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+- [Fix] **A stop no longer waits fifteen seconds for every open page to hang up.** Bandit's default courtesy to open connections, which on a board relay means every spectator, made the Mac app's "Stopping..." look like a hang and every restart slower than it needed to be. Open pages now get three seconds, and the Mac launcher writes into the log how long a stop took, or that it had to insist.
+
 ## [0.4.0] - 2026-10-19
 
 - [Security] **A role that changed now counts.** The rights of an open page were worked out once, when it opened, so an arbiter who was demoted or taken out of a hall kept entering results there until they reloaded, which on a tournament day can be a long time. Any change of someone's membership, and the deletion of a hall, now sends their open pages away; the browser reconnects by itself and gets what they may do now.

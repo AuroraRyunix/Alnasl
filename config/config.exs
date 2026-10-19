@@ -44,6 +44,10 @@ config :phoenix_live_view, :colocated_assets, disable_symlink_warning: true
 config :alnasl, AlnaslWeb.Endpoint,
   url: [host: "localhost"],
   adapter: Bandit.PhoenixAdapter,
+  # At a stop, open connections (every spectator's live page) get three
+  # seconds to go, not Bandit's fifteen, which the Mac launcher's twenty
+  # barely covered and a restart did not need.
+  http: [thousand_island_options: [shutdown_timeout: 3_000]],
   render_errors: [
     formats: [html: AlnaslWeb.ErrorHTML, json: AlnaslWeb.ErrorJSON],
     layout: false

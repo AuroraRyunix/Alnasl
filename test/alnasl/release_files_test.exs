@@ -250,6 +250,16 @@ defmodule Alnasl.ReleaseFilesTest do
       assert read("rel/macos/Launcher.swift") =~ "processTree(late.processIdentifier)"
     end
 
+    test "a stop does not wait fifteen seconds for open pages, and says how it went" do
+      # Bandit's default gives every open connection fifteen seconds at a stop.
+      http = Application.fetch_env!(:alnasl, AlnaslWeb.Endpoint)[:http]
+      assert http[:thousand_island_options][:shutdown_timeout] <= 3_000
+
+      sh = read("rel/macos/launcher.sh")
+      assert sh =~ "Stopping: the server stopped after"
+      assert sh =~ "Stopping: still running after 20 seconds"
+    end
+
     test "the Mac icon has Apple's margin around the tile" do
       png = File.read!(Path.join(@root, "rel/macos/Alnasl-icon.png"))
       assert <<0x89, "PNG", _::binary-size(12), width::32, height::32, _::binary>> = png
