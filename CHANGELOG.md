@@ -19,6 +19,8 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-19
+
 - [Fix] **A stop no longer waits fifteen seconds for every open page to hang up.** Bandit's default courtesy to open connections, which on a board relay means every spectator, made the Mac app's "Stopping..." look like a hang and every restart slower than it needed to be. Open pages now get three seconds, and the Mac launcher writes into the log how long a stop took, or that it had to insist.
 
 ## [0.4.0] - 2026-10-19
