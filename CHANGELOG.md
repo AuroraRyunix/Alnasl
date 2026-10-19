@@ -19,6 +19,8 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-19
+
 - [Security] **A role that changed now counts.** The rights of an open page were worked out once, when it opened, so an arbiter who was demoted or taken out of a hall kept entering results there until they reloaded, which on a tournament day can be a long time. Any change of someone's membership, and the deletion of a hall, now sends their open pages away; the browser reconnects by itself and gets what they may do now.
 - [Security] **"Send again, whatever is held" keeps to your hall.** It used to re-send every game that OpenPairings had called stale, in every hall on the box, which let an arbiter of one hall overwrite a correction made in another's tournament. It now covers the tournaments of the hall you are in; an admin, and a box without accounts, still get all of them.
 - [Security] **The PIN is no longer a guessing game.** After five wrong tries an address has to wait, five seconds and then twice as long each time, a quarter of an hour at most, even if the next try is right; the box as a whole takes at most forty wrong tries a minute. New PINs need six characters. An older, shorter one keeps working, and Setup, Access asks you to replace it.
