@@ -3379,8 +3379,26 @@ tr.sought td:first-child {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 0.3rem;
   min-width: 2.75rem;
   min-height: 2.75rem;
+}
+
+/* Said in words beside the icon: a bare arrow in the bar was not found. On a
+   phone the bar has no room for it, and the icon alone stays. */
+.head-open-text {
+  font-size: 0.85rem;
+}
+
+@media (max-width: 600px) {
+  .head-open-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }
 
 .head-open svg {

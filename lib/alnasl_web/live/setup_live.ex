@@ -1336,7 +1336,10 @@ defmodule AlnaslWeb.SetupLive do
       </p>
     <% end %>
 
-    <p :if={ResultsSite.page?(t)} id={"tournament-site-#{t.id}"}>
+    <p :if={ResultsSite.page?(t)} id={"tournament-site-#{t.id}"} class="row">
+      <.site_link id={"tournament-live-link-#{t.id}"} href={ResultsSite.live_url(t)}>
+        {gettext("Open the live boards")}
+      </.site_link>
       <.site_link id={"tournament-site-link-#{t.id}"} href={ResultsSite.tournament_url(t)}>
         {gettext("Open the results page: %{address}", address: ResultsSite.display(t))}
       </.site_link>
