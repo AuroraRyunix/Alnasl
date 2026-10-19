@@ -309,10 +309,15 @@ defmodule Alnasl.BoardServer do
     dirty(state)
   end
 
-  defp driver_event(state, {:poll, :ok}, _t),
+  defp driver_event(state, {:poll, :ok}, t), do: driver_event(state, {:poll, :ok, 1}, t)
+
+  # A bridge sends one "answered" a second for a loop board that answers
+  # sixty times a second, and says how many it stands for. An older bridge
+  # says nothing and counts as one.
+  defp driver_event(state, {:poll, :ok, n}, _t) when is_integer(n) and n > 0,
     do: %{
       state
-      | stats: state.stats |> Map.update!(:polls_ok, &(&1 + 1)) |> Map.put(:missed_run, 0),
+      | stats: state.stats |> Map.update!(:polls_ok, &(&1 + n)) |> Map.put(:missed_run, 0),
         last_seen: DateTime.utc_now(:second)
     }
 
