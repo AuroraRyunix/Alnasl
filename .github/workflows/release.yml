@@ -412,7 +412,10 @@ jobs:
           $wide = Get-NetTCPConnection -State Listen -LocalPort 4046 -ErrorAction SilentlyContinue |
             Where-Object { $_.LocalAddress -ne "127.0.0.1" }
 
-          & taskkill /T /F /PID $proc.Id | Out-Null
+          # A server that already went leaves taskkill nothing to kill, and
+          # its complaint would otherwise become this step's exit code.
+          & taskkill /T /F /PID $proc.Id 2>$null | Out-Null
+          $global:LASTEXITCODE = 0
 
           if (-not $body -or $body -notmatch 'id="manual"') {
             Write-Host "::error::the release did not serve a page"
