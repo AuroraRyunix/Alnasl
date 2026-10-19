@@ -19,6 +19,8 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+## [0.4.5] - 2026-10-20
+
 - [Fix] **Stopping from Ascella, an update or a logout no longer hangs on "Stopping".** On a Mac, the window waited for its server to end inside the very queue that was to bring the news, so the server ended and the window kept saying "Stopping" until somebody force-quit it. Quit from the menu never had the problem, which is how it survived this long. Any stop that hangs anyway now ends after forty seconds.
 
 ## [0.4.4] - 2026-10-19
