@@ -116,12 +116,19 @@ tree() {
 stop_server() {
   kill -0 "$pid" 2>/dev/null || return 0
   under=$(tree "$pid")
+  echo "Stopping: asked the server to stop"
   kill -TERM "$pid" 2>/dev/null
   i=0
   while kill -0 "$pid" 2>/dev/null && [ "$i" -lt 20 ]; do
     sleep 1
     i=$((i + 1))
   done
+  # Said in the log, so that "it did not stop" comes with a number.
+  if kill -0 "$pid" 2>/dev/null; then
+    echo "Stopping: still running after 20 seconds, killing it"
+  else
+    echo "Stopping: the server stopped after ${i} seconds"
+  fi
   # Read again: something may have started since. Then no more asking.
   under="$under $(tree "$pid")"
   # shellcheck disable=SC2086 # one pid per word, on purpose
