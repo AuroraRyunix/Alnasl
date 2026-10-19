@@ -24,7 +24,9 @@ defmodule Alnasl.OpenPairings.Duplicates do
      (`same_games?/2`): game ids are random and live as long as a pairing.
 
   The second rule is for a desktop copy reached at `127.0.0.1` and at its
-  address on the hall's network. A machine reached by two names whose
+  address on the hall's network. It is not trusted across halls: a listing
+  is whatever its server says, so two listings of different servers name the
+  same tournament only when both codes are in the same hall (`holder/2`). A machine reached by two names whose
   versions never once agree at the moment of a listing is caught by the
   game ids as soon as a round is paired.
 
@@ -86,19 +88,34 @@ defmodule Alnasl.OpenPairings.Duplicates do
         _none -> nil
       end
 
-    if noted && noted.kind == "linked" && noted.link_id != link.id && noted.remote_id == id do
+    if noted && noted.kind == "linked" && noted.link_id != link.id && noted.remote_id == id &&
+         trusted?(link, noted) do
       noted
     else
       Enum.find(others(link), fn t ->
         t.remote_id == id and
           (same_server?(root(t), link.root) or
-             (not t.gone and is_binary(entry["version"]) and
+             (same_hall?(link, t) and not t.gone and is_binary(entry["version"]) and
                 entry["version"] in [t.listed_version, t.version]))
       end)
     end
   end
 
   def holder(_link, _entry), do: nil
+
+  # Two codes of one server are one tournament's doors; two codes of different
+  # servers only when the same hall holds both.
+  defp trusted?(nil, _t), do: false
+
+  defp trusted?(%Link{} = link, %Tournament{} = t),
+    do: same_server?(root(t), link.root) or same_hall?(link, t)
+
+  defp same_hall?(%Link{} = link, %Tournament{} = t) do
+    case Tournaments.link_of(t) do
+      %Link{} = other -> Alnasl.Halls.of(other) == Alnasl.Halls.of(link)
+      nil -> false
+    end
+  end
 
   defp others(%Link{id: id}) do
     Tournament
@@ -144,6 +161,7 @@ defmodule Alnasl.OpenPairings.Duplicates do
     twin =
       Enum.find(others_than(tournament), fn t ->
         t.remote_id == tournament.remote_id and not t.gone and
+          trusted?(Tournaments.link_of(tournament), t) and
           same_games?(document, Tournaments.document(t))
       end)
 

@@ -120,6 +120,23 @@ defmodule Alnasl.DuplicateCodesTest do
       refute Duplicates.same_server?("http://127.0.0.1:4747/api", "http://127.0.0.1:4748/api")
     end
 
+    test "a listing from another server, in another hall, is not taken for a tournament the box has" do
+      FakeOpenPairings.add_tournament(17, name: "Open", boards: 2)
+      code = FakeOpenPairings.code(17)
+      {:ok, _here, [open]} = OpenPairings.add_code(code)
+
+      # Same id and same version, but another server and another hall: a
+      # listing says what its server likes, so this is nobody's twin.
+      hall_b = Repo.insert!(%Alnasl.Halls.Hall{name: "Hall B", own: false})
+      stranger = FakeOpenPairings.at(code, "http://pc-in-the-hall:4747/api/boards/v1")
+
+      assert {:ok, other, [second]} = OpenPairings.add_code(stranger, hall_b.id)
+      assert second.id != open.id
+      assert Duplicates.shared(other) == []
+      assert length(rows(17)) == 2
+      assert Tournaments.link_of(Tournaments.get(open.id)).hall_id == Alnasl.Halls.own_id()
+    end
+
     test "found late, by a game they share, the later row is merged into the first" do
       FakeOpenPairings.add_tournament(17, name: "Open", boards: 2)
       code = FakeOpenPairings.code(17)

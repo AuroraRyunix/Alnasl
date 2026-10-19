@@ -117,7 +117,20 @@ defmodule Alnasl.Settings do
 
   def set_pin(pin) when is_binary(pin) do
     salt = 16 |> :crypto.strong_rand_bytes() |> Base.encode16(case: :lower)
-    put("pin", %{"salt" => salt, "hash" => hash(pin, salt)})
+    put("pin", %{"salt" => salt, "hash" => hash(pin, salt), "long" => String.length(pin) >= 6})
+  end
+
+  @doc """
+  Was the PIN set before the minimum became six characters, or shorter than
+  that? Only the hash is kept, so a PIN from before the rule counts as short
+  until it is set again.
+  """
+  def pin_short? do
+    case get("pin") do
+      %{"long" => true} -> false
+      %{} -> true
+      _none -> false
+    end
   end
 
   def pin_valid?(pin) when is_binary(pin) do

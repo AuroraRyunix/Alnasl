@@ -262,7 +262,10 @@ defmodule Alnasl.Accounts do
   Invites `email` to `hall` with `role`: `{:ok, url_token}` for the link,
   shown to whoever invited (there is no mail on a box). An owner of the
   hall may invite; on the server an address with no account yet needs an
-  admin, because that is a new account.
+  admin, because that is a new account. So does an address the deployment
+  names an admin (`ALNASL_ADMIN_EMAILS`) wherever it is: the account made
+  from an invitation proves nothing about the address, and admin follows the
+  address alone.
   """
   def invite(%Scope{} = scope, %Hall{} = hall, email, role)
       when role in ["owner", "arbiter", "viewer"] do
@@ -277,7 +280,8 @@ defmodule Alnasl.Accounts do
       not Regex.match?(~r/^[^@,;\s]+@[^@,;\s]+\.[^@,;\s]+$/, email) ->
         {:error, :email}
 
-      server?() and not Scope.can?(scope, :admin) and get_user_by_email(email) == nil ->
+      (server?() or declared_admin?(email)) and not Scope.can?(scope, :admin) and
+          get_user_by_email(email) == nil ->
         {:error, :admin_only}
 
       true ->
@@ -388,19 +392,34 @@ defmodule Alnasl.Accounts do
       nil ->
         {:error, :used_or_expired}
 
-      invitation ->
-        attrs =
-          Map.put(Map.new(attrs, fn {k, v} -> {to_string(k), v} end), "email", invitation.email)
-
-        Repo.transaction(fn ->
-          with {:ok, user} <- %User{} |> User.registration_changeset(attrs) |> Repo.insert(),
-               {:ok, user} <- accept_invitation(url_token, user) do
-            user
-          else
-            {:error, reason} -> Repo.rollback(reason)
-          end
-        end)
+      # An invitation is no proof of the address an admin account answers to
+      # (see `invite/4`); one made by an owner who is no admin, before that
+      # rule or by hand, does not make that account.
+      %Invitation{email: email, invited_by_id: by}
+      when is_binary(email) ->
+        if declared_admin?(email) and not inviter_admin?(by),
+          do: {:error, :used_or_expired},
+          else: register_invited(url_token, attrs)
     end
+  end
+
+  defp inviter_admin?(nil), do: false
+  defp inviter_admin?(id), do: admin?(get_user(id))
+
+  defp register_invited(url_token, attrs) do
+    invitation = get_invitation(url_token)
+
+    attrs =
+      Map.put(Map.new(attrs, fn {k, v} -> {to_string(k), v} end), "email", invitation.email)
+
+    Repo.transaction(fn ->
+      with {:ok, user} <- %User{} |> User.registration_changeset(attrs) |> Repo.insert(),
+           {:ok, user} <- accept_invitation(url_token, user) do
+        user
+      else
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
   end
 
   # --- 02cloud ---------------------------------------------------------------

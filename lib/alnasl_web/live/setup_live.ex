@@ -208,7 +208,10 @@ defmodule AlnaslWeb.SetupLive do
       links: links,
       also_here: also_here(links, scope),
       connect_form:
-        to_form(%{"address" => Alnasl.OpenPairings.Connect.default_address() || ""}, as: :connect),
+        to_form(
+          %{"address" => Alnasl.OpenPairings.Connect.default_address(here(socket)) || ""},
+          as: :connect
+        ),
       may_connect?: Alnasl.Accounts.Scope.can?(scope, :arbiter, here(socket)),
       board_counts: boards,
       hall_id: here(socket),
@@ -229,6 +232,7 @@ defmodule AlnaslWeb.SetupLive do
       key_hint: Tournaments.relay_key_hint(own),
       about: Alnasl.BoxInfo.info(),
       pin_set?: Settings.pin_set?(),
+      pin_short?: Settings.pin_short?(),
       listen: Listen.chosen(),
       listen_forced: Listen.forced(),
       listening_lan?: Access.info().lan?,
@@ -753,8 +757,8 @@ defmodule AlnaslWeb.SetupLive do
       pin == "" ->
         {:noreply, put_flash(socket, :error, gettext("Type a PIN, or use \"Remove the PIN\"."))}
 
-      String.length(pin) < 4 ->
-        {:noreply, put_flash(socket, :error, gettext("A PIN needs at least 4 characters."))}
+      String.length(pin) < Alnasl.DoorGuard.min_length() ->
+        {:noreply, put_flash(socket, :error, gettext("A PIN needs at least 6 characters."))}
 
       true ->
         Settings.set_pin(pin)
@@ -1646,7 +1650,6 @@ defmodule AlnaslWeb.SetupLive do
             hall_id={@hall_id}
             may_answer?={@may_answer?}
           />
-
           <.panel :if={@section == :tournaments} id="setup-tournaments" title={gettext("Tournaments")}>
             <p class="note">
               {gettext(
@@ -1707,6 +1710,7 @@ defmodule AlnaslWeb.SetupLive do
                   "A tournament arrives with a connection: a connect code from OpenPairings, or your OpenPairings account. Its rounds, pairings and results page come with it."
                 )}
               </p>
+
               <.button id="tournaments-empty-add" navigate={~p"/setup/connections"} variant="primary">
                 {gettext("Add a connection")}
               </.button>
@@ -2558,6 +2562,12 @@ defmodule AlnaslWeb.SetupLive do
                 <.badge :if={@pin_set?} tone="ok" icon="ok">{gettext("A PIN is set")}</.badge>
 
                 <.badge :if={!@pin_set?} icon="waiting">{gettext("No PIN")}</.badge>
+              </p>
+
+              <p :if={@pin_short?} id="pin-short" class="note">
+                {gettext(
+                  "This PIN may be shorter than 6 characters, which is quickly guessed. Set a new one."
+                )}
               </p>
 
               <.form

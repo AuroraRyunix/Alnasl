@@ -15,6 +15,7 @@ defmodule AlnaslWeb.UserAuth do
 
   import Plug.Conn
   import Phoenix.Controller
+  import Ecto.Query, only: [from: 2]
 
   alias Alnasl.Accounts
   alias Alnasl.Accounts.{User, UserToken}
@@ -90,6 +91,23 @@ defmodule AlnaslWeb.UserAuth do
 
     :ok
   end
+
+  @doc """
+  Disconnects every open page of an account, in every browser. The pages
+  come back by themselves and are built again with what the account may do now.
+  """
+  def disconnect_user(user_id) do
+    tokens =
+      Alnasl.Repo.all(
+        from t in UserToken,
+          where: t.user_id == ^user_id and t.context == "session"
+      )
+
+    disconnect_sessions(tokens)
+  end
+
+  @doc "The topic of a session token's pages, the one `disconnect_sessions/1` broadcasts on."
+  def session_topic(token), do: topic(token)
 
   @doc "A place on this site to go back to; anything else is the front page."
   def safe(path) when is_binary(path) do

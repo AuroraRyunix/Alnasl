@@ -160,6 +160,28 @@ defmodule Alnasl.OpenPairingsReportsTest do
     end
   end
 
+  describe "stale, in a hall that is not the arbiter's" do
+    test "send again keeps to the tournaments it is given" do
+      mine = linked(18, name: "Rapid", boards: 1)
+      theirs = linked(19, name: "Blitz", boards: 1)
+      FakeOpenPairings.plant(18, "g18r1b1s0", 9_000_000_000_000_000)
+      FakeOpenPairings.plant(19, "g19r1b1s0", 9_000_000_000_000_000)
+      mine |> game(1) |> play(~w(e4))
+      theirs |> game(1) |> play(~w(d4))
+
+      OpenPairings.deliver()
+      assert length(OpenPairings.refused()) == 2
+
+      assert OpenPairings.force([mine.id]) == 1
+      assert [{%{tournament_id: left}, "stale"}] = OpenPairings.refused()
+      assert left == theirs.id
+
+      # No list is every tournament: the admin's, and the box without accounts.
+      assert OpenPairings.force() == 1
+      assert OpenPairings.refused() == []
+    end
+  end
+
   describe "offline" do
     test "nothing is lost: the games wait, and go out as they stand when the line is back",
          %{open: open} do

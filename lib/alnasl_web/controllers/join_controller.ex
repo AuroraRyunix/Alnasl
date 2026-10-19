@@ -4,7 +4,8 @@ defmodule AlnaslWeb.JoinController do
 
   `POST` is the bridge redeeming it - who it is in, its own key out, as
   JSON. A used, expired or unknown code is a 410 and nothing more; a bridge
-  that speaks another version of the link is a 409. `GET` is somebody who
+  that speaks another version of the link is a 409, one that is still in
+  another hall a 403. `GET` is somebody who
   scanned the code with a phone instead of the bridge: a page that says
   where it goes.
   """
@@ -29,6 +30,9 @@ defmodule AlnaslWeb.JoinController do
 
       {:error, :version} ->
         conn |> put_status(409) |> json(%{error: "version"})
+
+      {:error, :elsewhere} ->
+        conn |> put_status(403) |> json(%{error: "elsewhere"})
 
       {:error, :bad_request} ->
         conn |> put_status(400) |> json(%{error: "bad_request"})

@@ -43,7 +43,6 @@ defmodule AlnaslWeb.OpenPairingsConnectController do
         case Connect.normalize(typed) do
           {:ok, address} ->
             state = Connect.new_state()
-            Connect.remember(address)
 
             conn
             |> put_session(@session, %{
@@ -112,6 +111,7 @@ defmodule AlnaslWeb.OpenPairingsConnectController do
   defp finish(conn, address, hall_id, %{"grant" => grant}) when is_binary(grant) do
     case Connect.redeem(address, grant) do
       {:ok, code} ->
+        Connect.remember(address, hall_id)
         added(conn, OpenPairings.add_code(code, hall_id))
 
       {:error, :expired} ->

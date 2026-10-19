@@ -50,7 +50,8 @@ defmodule Alnasl.Application do
       {Registry, keys: :unique, name: Alnasl.BridgeRegistry},
       {Registry, keys: :unique, name: Alnasl.RemoteRegistry},
       {Task.Supervisor, name: Alnasl.TaskSupervisor},
-      Alnasl.Recorder
+      Alnasl.Recorder,
+      Alnasl.DoorGuard
     ] ++
       if(local?,
         do: [

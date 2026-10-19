@@ -82,7 +82,8 @@ defmodule AlnaslWeb.RecordingsLive do
     do: {:noreply, socket |> assign(page: Pager.page(to)) |> load()}
 
   def handle_event("dry_run", %{"board" => board, "name" => name}, socket) do
-    with %{} = capture <- find(board, name), {:ok, report} <- Recorder.dry_run(capture.path) do
+    with %{} = capture <- find(board, name, socket.assigns.current_scope),
+         {:ok, report} <- Recorder.dry_run(capture.path) do
       {:noreply,
        assign(socket, report: Map.merge(report, %{name: name, board_id: capture.board_id}))}
     else
@@ -95,7 +96,7 @@ defmodule AlnaslWeb.RecordingsLive do
   def handle_event("close_report", _params, socket), do: {:noreply, assign(socket, report: nil)}
 
   def handle_event("export", %{"board" => board, "name" => name}, socket) do
-    with %{} = capture <- find(board, name),
+    with %{} = capture <- find(board, name, socket.assigns.current_scope),
          {:ok, path} <-
            Recorder.export_fixture(
              capture.path,
@@ -110,7 +111,7 @@ defmodule AlnaslWeb.RecordingsLive do
   end
 
   def handle_event("delete", %{"board" => board, "name" => name}, socket) do
-    case find(board, name) do
+    case find(board, name, socket.assigns.current_scope) do
       %{path: path} ->
         File.rm(path)
         {:noreply, socket |> put_flash(:info, gettext("The capture was deleted.")) |> load()}
@@ -120,9 +121,14 @@ defmodule AlnaslWeb.RecordingsLive do
     end
   end
 
-  defp find(board, name) do
-    case Integer.parse(board) do
-      {id, ""} -> Recorder.find(id, name)
+  # A capture of a board since removed has no hall to give a role in
+  # (`AlnaslWeb.Permit` finds no board), so only whoever sees everything may
+  # touch it, as in the list and the download.
+  defp find(board, name, scope) do
+    with {id, ""} <- Integer.parse(board),
+         true <- Boards.get(id) != nil or Alnasl.Accounts.Scope.everything?(scope) do
+      Recorder.find(id, name)
+    else
       _bad -> nil
     end
   end
@@ -173,8 +179,9 @@ defmodule AlnaslWeb.RecordingsLive do
         />
         <label :if={not @current_scope.open?} class="check" for="captures-all">
           <input type="hidden" name="filter[all]" value="" />
-          <input id="captures-all" type="checkbox" name="filter[all]" value="1" checked={@all?} />
-          {gettext("All my halls")}
+          <input id="captures-all" type="checkbox" name="filter[all]" value="1" checked={@all?} /> {gettext(
+            "All my halls"
+          )}
         </label>
       </.form>
 

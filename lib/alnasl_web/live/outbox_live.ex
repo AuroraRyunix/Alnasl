@@ -143,7 +143,15 @@ defmodule AlnaslWeb.OutboxLive do
   # The pairing program holds something newer than this box has to say - it
   # was another box, or this one was wiped. The arbiter says: ours.
   def handle_event("force_pairing", _params, socket) do
-    count = OpenPairings.force()
+    # Whatever is held for another hall's tournaments is not this arbiter's to overrule.
+    scope = socket.assigns.current_scope
+
+    ids =
+      if Alnasl.Accounts.Scope.everything?(scope),
+        do: nil,
+        else: Alnasl.Halls.tournament_ids(scope)
+
+    count = OpenPairings.force(ids)
 
     {:noreply,
      socket
