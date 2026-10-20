@@ -221,6 +221,15 @@ defmodule AlnaslWeb.Words do
            "Nothing was added to the game. Put the piece back and the board carries on by itself. If a move was made before it that the board did not see, add that move below."
          )}
 
+  def state_help(:out_of_sync, {:set_up_again, plies}),
+    do:
+      {gettext("The board is set up for a new game"),
+       ngettext(
+         "The pieces stand in the starting position, but this game already has a move. If a new game is starting on this board, start a new game below. If the pieces were knocked over, put the position back.",
+         "The pieces stand in the starting position, but this game already has %{count} moves. If a new game is starting on this board, start a new game below. If the pieces were knocked over, put the position back.",
+         plies
+       )}
+
   def state_help(:out_of_sync, :piece_missing),
     do:
       {gettext("A piece is missing from the board"),
@@ -312,6 +321,8 @@ defmodule AlnaslWeb.Words do
         from: Position.square_name(from),
         to: Position.square_name(to)
       )
+
+  def alarm({:set_up_again, _plies}), do: gettext("The board is set up for a new game")
 
   def alarm(_other), do: nil
 

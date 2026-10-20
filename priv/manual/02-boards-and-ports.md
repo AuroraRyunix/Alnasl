@@ -4,7 +4,7 @@ Everything about getting the boards recognised: plugging them in, putting severa
 
 ## What the Boards page shows {#the-boards-page}
 
-One row per board: its live picture, the signal, its serial number and firmware, the start-position check, its table number and its board of the round. At the top: "Ready for round N?", the address and QR code for a phone, and a sheet of printable labels. A board that is not plugged in keeps its row and says "No signal" and why.
+One row per board: its live picture, the signal, its serial number and firmware, the clock beside it (both times, the running one dark; "No clock heard" when none has reported), the start-position check, its table number and its board of the round. At the top: "Ready for round N?", the address and QR code for a phone, and a sheet of printable labels. A board that is not plugged in keeps its row and says "No signal" and why.
 
 ## Adding a board {#adding-a-board}
 

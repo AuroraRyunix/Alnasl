@@ -1002,6 +1002,20 @@ defmodule Alnasl.BoardServer do
 
   # --- what the site sees ------------------------------------------------------
 
+  # "Out of sync, unexplained" is true but useless when the board stands in
+  # the starting position and the game already has moves: somebody set up
+  # for a new game on a board still linked to the old one (2026-10-20, a
+  # board linked to yesterday's game). Said by name, so the game page can
+  # say what to do about it.
+  defp detail(%{seen: seen}, %{status: :out_of_sync, detail: :unexplained, plies: [_ | _]} = tr)
+       when seen != nil do
+    if Position.to_text(seen) == Position.to_text(Position.start()),
+      do: {:set_up_again, length(tr.plies)},
+      else: tr.detail
+  end
+
+  defp detail(_state, tracker), do: tracker.detail
+
   defp snapshot(state) do
     board = state.board
     tracker = state.session && state.session.tracker
@@ -1031,7 +1045,11 @@ defmodule Alnasl.BoardServer do
         if(is_pid(state.driver) and board.driver in ["simulator", "replay"],
           do: Arkab.Driver.Player.progress(state.driver)
         ),
-      linked?: tracker != nil
+      linked?: tracker != nil,
+      # The clock beside the board, linked to a game or not: the boards page
+      # shows it, so an arbiter can see the clock is in and talking before
+      # a game is ever linked.
+      board_clock: Clock.read(state.clock, t)
     }
 
     if tracker do
@@ -1040,7 +1058,7 @@ defmodule Alnasl.BoardServer do
 
       Map.merge(base, %{
         status: ui_status(state, tracker),
-        detail: tracker.detail,
+        detail: detail(state, tracker),
         fen: Tracker.fen(tracker),
         certain: Position.to_text(tracker.pos.board),
         start_fen: tracker.start_fen,

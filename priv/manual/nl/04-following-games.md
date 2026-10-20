@@ -35,7 +35,7 @@ Alleen borden die hier bestaan krijgen een tegel: een bord van deze zaal dat op 
 
 De stelling groot, de zettenlijst, en het gereedschap. De pijltoetsen links en rechts, de knoppen onder het bord, of een tik op een zet laten je door de partij terugstappen; Home is het begin, End of "Live" is de partij zoals ze gespeeld wordt. Zetten die binnenkomen terwijl je terugkijkt, komen in de lijst en verschuiven het bord niet.
 
-Als bord en partij uit elkaar gelopen zijn, toont de pagina wat het bord leest naast wat zeker is.
+Als bord en partij uit elkaar gelopen zijn, toont de pagina wat het bord leest naast wat zeker is. Eén geval krijgt een naam: het bord staat in de beginstelling terwijl de partij al zetten heeft. Dat is bijna altijd een nieuwe partij, opgezet op een bord dat nog aan de oude gekoppeld is; start een nieuwe partij met "Nieuwe partij", of zet de stelling terug als de stukken omgevallen zijn.
 
 ## Zetten die Alnasl afgeleid heeft {#reconstructed}
 
