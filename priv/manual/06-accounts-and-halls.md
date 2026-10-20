@@ -55,7 +55,7 @@ In each hall an account is an owner, an arbiter or a viewer. The same person can
 | Owner | All that, and add and remove bridges, and invite people |
 | Admin | See every hall and Alnasl itself: its name, updates, the tracker, the switches on the Results page |
 
-One thing is the owner's alone, whatever an admin may otherwise do: [fair-play screening](08-fair-play.md). An admin who is not an owner of the hall sees nothing of it.
+One thing is the owner's alone, whatever an admin may otherwise do: [fair play](08-fair-play.md). An admin who is not an owner of the hall sees nothing of it.
 
 A changed role counts at once: when an owner demotes someone or takes them out of a hall (or the hall is deleted), that person's open pages reconnect by themselves and come back with what they may do now, instead of keeping the old role until they reload.
 

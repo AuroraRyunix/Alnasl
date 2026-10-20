@@ -1,6 +1,6 @@
 defmodule Alnasl.FairPlay.Engines do
   @moduledoc """
-  The engines fair-play screening will run, pinned: which file to fetch for
+  The engines fair play will run, pinned: which file to fetch for
   which machine, what that file must hash to, and what `bench` must print
   once it is installed.
 
@@ -189,13 +189,13 @@ defmodule Alnasl.FairPlay.Engines do
   @doc false
   def macos_message(version),
     do:
-      "Fair-play screening needs macOS 10.15 or newer; this Mac runs #{version}. " <>
+      "Fair play needs macOS 10.15 or newer; this Mac runs #{version}. " <>
         "Everything else in Alnasl works as before."
 
   @doc "A sentence for the owner who asked for an engine on a machine with none."
   @spec unsupported_message(String.t()) :: String.t()
   def unsupported_message(what) do
     "There is no official Stockfish 19 build for this machine (#{what}). " <>
-      "Fair-play screening runs on Windows (x86-64 or ARM64), macOS, and Linux (x86-64 or ARM64)."
+      "Fair play runs on Windows (x86-64 or ARM64), macOS, and Linux (x86-64 or ARM64)."
   end
 end

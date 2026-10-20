@@ -180,7 +180,7 @@ defmodule AlnaslWeb.FairPlayAccessTest do
 
     test "the menu offers fair play to the owner and to nobody else", %{conn: conn} = ctx do
       {:ok, owner, _} = reach(conn, ctx.owner, ctx.hall, ~p"/halls/#{ctx.hall.id}")
-      assert has_element?(owner, "#nav-fair_play", "Fair-play screening")
+      assert has_element?(owner, "#nav-fair_play", "Fair play")
       refute has_element?(owner, "#hall-fair-play")
 
       for who <- [:arbiter, :viewer] do

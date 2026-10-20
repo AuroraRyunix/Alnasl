@@ -19,6 +19,9 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+- [Fix] **The Mac app no longer gives way to an older server in silence.** Replace the app with a newer one while the old server is still running and the new one found the port answering, concluded that all was well, opened the browser, and left. The browser then showed the old version, and the new app had politely vanished. The server now says its version in a header (to this machine only), and the app compares it with its own: the same version is a genuine second start and behaves as before; any other, or none, gets a window saying which Alnasl is still running, with *Stop it and start this one* and *Open it anyway*. Stopping works on a server the app did not start, finds it by the port, refuses anything whose command line is not Alnasl's, gives it 25 seconds to leave cleanly, and only then insists. Untested on a real Mac until someone double-clicks it.
+- [Change] **"Fair-play screening" is now just "Fair play".** In the menu, the page titles, the buttons and the manual, in English and in Dutch. The screening was always more of a number than a verdict, and the longer name promised a rigour the shorter one does not pretend to. Routes, settings and data keep their names.
+
 ## [0.5.1] - 2026-10-20
 
 - [Change] **Fair-play screening has its own place in the menu.** It used to hide behind a button on a hall's page, which is where one looks for a hall and not for a suspicion. It is now an item under Manage, for owners of at least one hall and nobody else (an admin who owns no hall still sees nothing, as before), and opens on a list of the halls you own: on or off, engine or no engine, and a link to each tournament's report. The button on the hall page is gone; nothing points at the new place from the old one, because the menu does that.
