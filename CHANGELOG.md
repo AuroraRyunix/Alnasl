@@ -19,6 +19,8 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+## [0.5.3] - 2026-10-20
+
 - [Feature] **The Boards page shows the clock beside each board**, linked to a game or not: both times, the running one dark, or "No clock heard" when the board is talking and its clock is not. Checking that a clock is plugged in used to require starting a game, which is a strange way to test a cable.
 - [Fix] **A board set up for a new game while still linked to the old one now says so.** The board read the starting position, the game had nineteen moves from yesterday, and the box reported "Out of sync" with the explanatory power of a shrug. It is still out of sync, because it is, but the page now says the board is set up for a new game and that "New game" is the button you want.
 
