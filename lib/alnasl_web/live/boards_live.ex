@@ -794,6 +794,24 @@ defmodule AlnaslWeb.BoardsLive do
                   />
                   <div :if={!s.running?} class="note">{gettext("Disconnected here")}</div>
 
+                  <div :if={s[:board_clock]} id={"board-clock-#{s.id}"} class="b-clock">
+                    <.clock
+                      ms={s.board_clock.white_ms}
+                      running={s.board_clock.running == :white}
+                    />
+                    <.clock
+                      ms={s.board_clock.black_ms}
+                      running={s.board_clock.running == :black}
+                    />
+                  </div>
+                  <div
+                    :if={s.running? && s.connected? && !s[:board_clock]}
+                    id={"board-no-clock-#{s.id}"}
+                    class="note"
+                  >
+                    {gettext("No clock heard")}
+                  </div>
+
                   <div :if={s.info[:error] && !s.connected?} class="note">
                     {gettext("Cannot open the port")}
                   </div>

@@ -272,6 +272,22 @@ defmodule Alnasl.BoardServerTest do
       {:ok, board: board, played: played}
     end
 
+    test "set up again: the starting position on a board whose game has moves says so by name",
+         %{board: board} do
+      played = ~w(e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6)
+      play_on("FAKE1", board.id, Enum.drop(played, 2), ~w(e4 e5))
+
+      set_pieces("FAKE1", Alnasl.Position.start())
+
+      snapshot =
+        eventually(fn ->
+          s = Boards.snapshot(board.id)
+          s.status == :out_of_sync && s
+        end)
+
+      assert snapshot.detail == {:set_up_again, length(played)}
+    end
+
     test "out of sync: the raw board beside the certain one, resync, a guess and the arbiter's pick",
          %{
            board: board
