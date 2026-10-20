@@ -99,6 +99,10 @@ jobs:
       - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
         with:
           version: 0.15.2
+          # No zig cache: a cancelled run saved half of one, and every run
+          # after it restored the half, failed to link, and saved another
+          # half (2026-10-20). The launcher builds in seconds without it.
+          use-cache: false
 
       - name: Restore dependencies and build cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
