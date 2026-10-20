@@ -230,6 +230,8 @@ jobs:
         if: runner.os == 'Windows'
         with:
           version: 0.15.2
+          # No zig cache, as in ci.yml: a half-saved one poisons every run after.
+          use-cache: false
 
       - name: Check the C toolchain (Windows)
         if: runner.os == 'Windows'
