@@ -24,7 +24,7 @@ Gegevens over fair play staan nooit op de uitslagenpagina's, in de PGN-bestanden
 
 ## Aanzetten, en de engine {#installing-the-engine}
 
-Open de zaal (Zalen, de naam van de zaal) en druk op **Fair-playscreening**. Het staat **uit** tot je het aanzet, zaal per zaal.
+Kies **Fair-playscreening** in het menu links, onder Beheren, en dan **Instellingen** bij de zaal. Het staat er alleen als je een zaal bezit; wie dat niet doet, ziet het niet. Het staat **uit** tot je het aanzet, zaal per zaal.
 
 Alnasl heeft een engine nodig om het werk te doen: Stockfish 19, de officiële release. Alnasl wordt er niet mee geleverd. De pagina toont of hij geïnstalleerd is.
 

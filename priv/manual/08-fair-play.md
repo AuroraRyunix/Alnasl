@@ -24,7 +24,7 @@ Fair-play data is never in the results pages, the PGN files, what is sent to Ope
 
 ## Switching it on, and the engine {#installing-the-engine}
 
-Open the hall (Halls, the hall's name) and press **Fair-play screening**. It is **off** until you switch it on, hall by hall.
+Press **Fair-play screening** in the menu on the left, under Manage, and then **Settings** at the hall. The item is there only if you own a hall; anybody else does not see it. It is **off** until you switch it on, hall by hall.
 
 Alnasl needs the engine to do the work: Stockfish 19, the official release. Alnasl does not come with it. The page shows whether it is installed.
 

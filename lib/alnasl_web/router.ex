@@ -138,6 +138,7 @@ defmodule AlnaslWeb.Router do
       # gives an admin. Before the generic tab below, which would take it.
       live "/halls/:id/fair-play", FairPlayLive, :settings
       live "/halls/:id/:tab", HallsLive, :show
+      live "/fair-play", FairPlayLive, :index
       live "/fair-play/:tid", FairPlayLive, :report
       live "/fair-play/:tid/round/:round", FairPlayLive, :report
       live "/fair-play/:tid/player", FairPlayLive, :player
