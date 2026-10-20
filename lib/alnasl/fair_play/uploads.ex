@@ -330,7 +330,7 @@ defmodule Alnasl.FairPlay.Uploads do
          {:ok, games} <- read(bytes) do
       store(scope, hall_id, games, %{
         tournament_id: tournament_id,
-        filename: attrs[:filename] |> text() |> then(&(&1 && Path.basename(&1))),
+        filename: attrs[:filename] |> text() |> then(&(&1 && file_name(&1))),
         name: text(attrs[:name]),
         byte_size: byte_size(bytes),
         sha256: sha256
@@ -699,4 +699,9 @@ defmodule Alnasl.FairPlay.Uploads do
   defp email(_scope), do: nil
   defp user_id(%Scope{user: %{id: id}}), do: id
   defp user_id(_scope), do: nil
+
+  # The name without the folder it came from. Some browsers on Windows send
+  # the whole "C:\games\club.pgn"; `Path.basename/1` only knows the separator
+  # of the machine it runs on, which on the server is not a backslash.
+  defp file_name(name), do: name |> String.split(["/", "\\"]) |> List.last()
 end
