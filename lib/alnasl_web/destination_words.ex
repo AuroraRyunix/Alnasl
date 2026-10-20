@@ -34,6 +34,11 @@ defmodule AlnaslWeb.DestinationWords do
   def state(%{state: :blocked}), do: {"bad", "out_of_sync", gettext("Refused")}
   def state(%{state: :unconfigured}), do: {nil, "waiting", gettext("Not set up")}
   def state(%{state: :disabled}), do: {nil, "waiting", gettext("Switched off")}
+  # Every waiting row is one that can go nowhere: not "Waiting", which
+  # promises that something will happen.
+  def state(%{pending: n, stuck: n}) when n > 0,
+    do: {"warn", "warning", gettext("Nothing can be sent")}
+
   def state(%{pending: n}) when n > 0, do: {nil, "waiting", gettext("Waiting")}
   def state(_idle), do: {nil, "waiting", gettext("Nothing sent yet")}
 
@@ -68,6 +73,20 @@ defmodule AlnaslWeb.DestinationWords do
       gettext(
         "No results page yet: a tournament from OpenPairings brings its own; for the hall's own tournament give one under Setup, Results and Lichess."
       )
+
+  @doc """
+  Why one tournament's rows wait (`Alnasl.Outbox.waiting_report/1`), as a
+  sentence that follows its name and count.
+  """
+  def waiting_why(:gone), do: gettext("this tournament is gone")
+  def waiting_why(:no_page), do: gettext("no results page for this tournament yet")
+  def waiting_why(:sending), do: gettext("sending")
+
+  def waiting_why({:blocked, reason}),
+    do: gettext("refused: %{why}", why: error(reason))
+
+  def waiting_why({:offline, reason}),
+    do: gettext("offline: %{why}", why: error(reason))
 
   @doc "Why a destination is not sending."
   def error({:lichess, 401, _message}),

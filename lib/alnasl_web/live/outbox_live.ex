@@ -55,6 +55,7 @@ defmodule AlnaslWeb.OutboxLive do
       names: Map.new(Tournaments.list(), &{&1.id, Tournaments.title(&1)}),
       many?: length(tournaments) > 1,
       waiting_by: waiting_by,
+      why_waiting: Outbox.waiting_report(ids),
       pending_here: Map.new(waiting_by, fn {id, by} -> {id, here_sum(by, ids)} end),
       refresh_due?: false
     )
@@ -162,6 +163,28 @@ defmodule AlnaslWeb.OutboxLive do
      |> load()}
   end
 
+  # Rows that can go nowhere, thrown away - one tournament's, and only when
+  # the arbiter presses the button (there is a confirm). Never by itself.
+  def handle_event("discard", %{"id" => id}, socket) do
+    tournament_id = String.to_integer(id)
+
+    stuck? =
+      Enum.any?(
+        socket.assigns.why_waiting,
+        &(&1.tournament_id == tournament_id and &1.why in [:gone, :no_page])
+      )
+
+    socket =
+      with true <- stuck?,
+           {:ok, n} <- Outbox.discard(tournament_id) do
+        put_flash(socket, :info, gettext("%{n} move(s) discarded.", n: n))
+      else
+        _no -> put_flash(socket, :error, gettext("Those moves can still be sent, so they stay."))
+      end
+
+    {:noreply, load(socket)}
+  end
+
   def handle_event("prune", _params, socket) do
     removed = Outbox.prune(0)
 
@@ -223,6 +246,10 @@ defmodule AlnaslWeb.OutboxLive do
   end
 
   def handle_info(_other, socket), do: {:noreply, socket}
+
+  defp waiting_name(%{why: :gone}), do: gettext("A tournament that is gone")
+  defp waiting_name(%{title: nil}), do: gettext("The hall's own tournament")
+  defp waiting_name(%{title: title}), do: title
 
   defp schedule_report(id, before), do: Process.send_after(self(), {:report, id, before}, 2_500)
 
@@ -374,6 +401,35 @@ defmodule AlnaslWeb.OutboxLive do
           <dt>{gettext("Waiting")}</dt>
 
           <dd id="waiting-count">{@link.pending}</dd>
+
+          <dt :if={@why_waiting != []}>{gettext("Why")}</dt>
+
+          <dd :if={@why_waiting != []} id="waiting-why">
+            <ul class="note">
+              <li :for={w <- @why_waiting} id={"waiting-why-#{w.tournament_id}"}>
+                {gettext("%{name}: %{n} waiting - %{why}",
+                  name: waiting_name(w),
+                  n: w.count,
+                  why: DestinationWords.waiting_why(w.why)
+                )}
+                <.button
+                  :if={w.why in [:gone, :no_page]}
+                  id={"discard-#{w.tournament_id}"}
+                  small
+                  phx-click="discard"
+                  phx-value-id={w.tournament_id}
+                  data-confirm={
+                    gettext(
+                      "Discard these %{n} moves? They will never be sent to the results site. The games themselves stay in Alnasl.",
+                      n: w.count
+                    )
+                  }
+                >
+                  {gettext("Discard these %{n} moves", n: w.count)}
+                </.button>
+              </li>
+            </ul>
+          </dd>
 
           <dt>{gettext("Last success")}</dt>
 

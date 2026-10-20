@@ -3,7 +3,8 @@ defmodule Alnasl.Outbox.Entry do
   One message for the results server: the state of one game at one moment,
   as the JSON body the live-boards API takes. `state` is `pending`, `sent`,
   `rejected` (the server said this message is wrong) or `superseded` (a later
-  message for the same game said the same and more).
+  message for the same game said the same and more) or `discarded` (the
+  arbiter threw it away: its tournament was gone or had no results page).
   """
   use Ecto.Schema
 
