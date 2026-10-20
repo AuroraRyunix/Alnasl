@@ -51,7 +51,8 @@ What this forces on us:
   "universal" build for each platform.
   - **Downloaded, never shipped.** Alnasl's source holds only the URLs and
     GitHub's SHA256 digests (§3).
-  - Downloaded when the owner switches fair play on, or chosen from a file
+  - Downloaded when the owner presses "Download Stockfish 19" after switching
+    fair play on (never by itself), or chosen from a file
     (USB stick) when the hall has no internet. Same digest check either way.
   - After installing: `bench` must give sf_19's signature, so we know it is
     the calibrated build and nothing else.
@@ -85,7 +86,8 @@ What this forces on us:
 URL pattern:
 `https://github.com/official-stockfish/Stockfish/releases/download/sf_19/<asset>`
 
-Still to check: the macOS universal build's minimum macOS version. Intel
+Checked: the macOS build needs macOS 10.15 (`-mmacosx-version-min=10.15`,
+src/Makefile at sf_19). Intel
 Macs on 10.13 may not be able to run it; the page must say so rather than
 fail silently.
 
