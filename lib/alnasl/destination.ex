@@ -137,7 +137,13 @@ defmodule Alnasl.Destination do
     base
     |> Map.merge(%{id: module.id(), module: module, enabled?: enabled?, state: state})
     |> Map.put(:pending, module.pending_count())
+    |> Map.put(:stuck, stuck(module))
   end
+
+  # Rows that can go nowhere (their tournament is gone, or has no results
+  # page): only the results server's queue has them.
+  defp stuck(Alnasl.Destination.OpenResults), do: Alnasl.Outbox.stuck_count()
+  defp stuck(_module), do: 0
 
   def statuses, do: Enum.map(@all, &status/1)
 
