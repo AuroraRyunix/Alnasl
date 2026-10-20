@@ -2,7 +2,8 @@ defmodule Alnasl.FairPlay.Live do
   @moduledoc """
   What fair play keeps running, as one supervised unit: the task
   supervisor the jobs run under, the pool of engines, the queue that feeds
-  them and the daily retention job.
+  them, a one-off task that queues the uploaded games a restart left
+  waiting, and the daily retention job.
 
   Started with the application unless `config :alnasl, fair_play_live:
   false` (the tests start their own). Nothing in it starts an engine until
@@ -22,7 +23,9 @@ defmodule Alnasl.FairPlay.Live do
     children = [
       {Task.Supervisor, name: Alnasl.FairPlay.TaskSupervisor},
       {Alnasl.FairPlay.Pool, Keyword.take(opts, [:limit])},
-      {Alnasl.FairPlay.Queue, Keyword.take(opts, [:slots, :max, :job])},
+      {Alnasl.FairPlay.Queue, Keyword.take(opts, [:slots, :max, :bulk_max, :job])},
+      # Uploaded games a restart left waiting go back in the queue, once.
+      Supervisor.child_spec({Task, &Alnasl.FairPlay.Uploads.resume/0}, restart: :temporary),
       {Alnasl.FairPlay.Retention, Keyword.take(opts, [:timer])}
     ]
 

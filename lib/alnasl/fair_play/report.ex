@@ -89,7 +89,9 @@ defmodule Alnasl.FairPlay.Report do
       key: key,
       name: last.player_name || key,
       rating: rows |> Enum.map(& &1.rating) |> Enum.reject(&is_nil/1) |> List.last(),
-      games: rows |> Enum.map(& &1.game_id) |> Enum.uniq() |> length(),
+      # A board game and an uploaded one can share an id: they are in
+      # different tables.
+      games: rows |> Enum.map(&{&1.__struct__, &1.game_id}) |> Enum.uniq() |> length(),
       verdict: verdict(numbers.score)
     })
   end

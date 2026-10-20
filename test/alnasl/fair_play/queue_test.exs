@@ -101,6 +101,62 @@ defmodule Alnasl.FairPlay.QueueTest do
       assert_receive {:done, 2}
     end
 
+    test "bulk work waits for the live games, whatever the order it came in", %{job: job} do
+      start_supervised!({Queue, slots: 1, job: job})
+
+      Queue.enqueue(1)
+      assert_receive {:started, 1, one}
+      Queue.enqueue({:upload_game, 7})
+      Queue.enqueue({:game, 8})
+      Queue.enqueue(2)
+      assert %{waiting: 3, bulk: 2} = Queue.info()
+
+      send(one, {:finish, 1})
+      assert_receive {:started, 2, two}
+      send(two, {:finish, 2})
+      assert_receive {:started, {:upload_game, 7}, up}
+      send(up, {:finish, {:upload_game, 7}})
+      assert_receive {:started, {:game, 8}, eight}
+      send(eight, {:finish, {:game, 8}})
+      assert :ok = Queue.drain()
+    end
+
+    test "a board game is one piece of work in either lane", %{job: job} do
+      start_supervised!({Queue, slots: 1, job: job})
+
+      Queue.enqueue(1)
+      assert_receive {:started, 1, one}
+      Queue.enqueue({:game, 3})
+      Queue.enqueue(3)
+      Queue.enqueue({:game, 3})
+      assert %{waiting: 1} = Queue.info()
+
+      # Asked for on demand while it runs live: once more after, not twice now.
+      Queue.enqueue({:game, 1})
+      send(one, {:finish, 1})
+      assert_receive {:started, 1, again}
+      send(again, {:finish, 1})
+      assert_receive {:started, {:game, 3}, three}
+      send(three, {:finish, {:game, 3}})
+      refute_receive {:started, _, _}, 50
+    end
+
+    test "a full bulk lane drops bulk work and leaves the live lane alone", %{job: job} do
+      start_supervised!({Queue, slots: 1, bulk_max: 1, job: job})
+
+      Queue.enqueue(1)
+      assert_receive {:started, 1, one}
+      Queue.enqueue({:upload_game, 1})
+      Queue.enqueue({:upload_game, 2})
+      Queue.enqueue(2)
+      assert %{waiting: 2, bulk: 1, dropped: 1} = Queue.info()
+      send(one, {:finish, 1})
+      assert_receive {:started, 2, two}
+      send(two, {:finish, 2})
+      assert_receive {:started, {:upload_game, 1}, up}
+      send(up, {:finish, {:upload_game, 1}})
+    end
+
     test "telling a queue that is not running is a no-op" do
       assert Queue.enqueue(1, :nobody_home) == :ok
       assert FairPlay.game_changed(%{id: 1}) == :ok

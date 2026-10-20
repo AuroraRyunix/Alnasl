@@ -102,6 +102,22 @@ defmodule Alnasl.FairPlay.StatsTest do
       assert numbers.reason == :too_few_moves
     end
 
+    test "the score is scaled by the measured covariance, when the model has one" do
+      records = List.duplicate(match(), 30) ++ List.duplicate(miss(), 10)
+
+      # Every test twice as spread as its formula says, and independent:
+      # the same z-scores, a score half as large.
+      wide = %{coin_model() | covariance: [[4.0, 0.0, 0.0], [0.0, 4.0, 0.0], [0.0, 0.0, 4.0]]}
+      plain = Stats.player(records, coin_model())
+      scaled = Stats.player(records, wide)
+
+      assert scaled.mm_z == plain.mm_z
+      assert_in_delta scaled.score, plain.score / 2, 1.0e-9
+
+      # A model from before there was a covariance divides by its correlation.
+      assert Model.dispersion(coin_model()) == coin_model().correlation
+    end
+
     test "without a model: the raw counts and no score" do
       records = List.duplicate(match(), 50) ++ [record(skip: :decided), record(skip: :decided)]
       numbers = Stats.player(records, nil)

@@ -44,9 +44,11 @@ defmodule Alnasl.FairPlay.Move do
 
   @doc """
   The row as the record `Alnasl.FairPlay.Stats` reads: the best lines
-  decoded, the colour and the skip reason as atoms.
+  decoded, the colour and the skip reason as atoms. Takes an
+  `Alnasl.FairPlay.UploadMove` as well: the same columns, another table.
   """
-  def to_record(%__MODULE__{} = row) do
+  def to_record(%{__struct__: kind, ply: _} = row)
+      when kind in [__MODULE__, Alnasl.FairPlay.UploadMove] do
     %{
       ply: row.ply,
       colour: String.to_existing_atom(row.colour),

@@ -132,19 +132,45 @@ centipawn loss / (1 + |eval|/100), capped at 5.00.
   - **MM**: `(Σ match − Σ p) / sqrt(Σ p(1−p))`.
   - **EV**: the same, but a move within 0.01 of the best counts as a match.
   - **ASD**: `(Σ E[d] − Σ d) / sqrt(Σ Var[d])`.
-- **Combined.** A weighted sum divided by its standard deviation, using the
-  three tests' correlation measured in calibration.
+- **Combined.** `wᵀz / sqrt(wᵀΣw)`, Σ being the three tests' **covariance**
+  measured on the fitting player-events (about zero, not about their mean:
+  under the null each z has mean 0). Phase 1 used the correlation, which
+  assumes every z has variance exactly 1; real player-events are
+  overdispersed (their z's spread wider than the model's variances say),
+  so the combined score ran high and its false-positive rate was
+  optimistic. A model file without a covariance falls back to the
+  correlation (`Alnasl.FairPlay.Model.dispersion/1`).
+- **False-positive rates.** On the held-out player-events, the share
+  scoring at or above 2.0, 2.5, 3.0, 3.5, 4.0, 4.5 and 5.0, with the
+  exact (Clopper-Pearson) 95% interval and the sample size, stored in the
+  model json (`false_positives`) and shown on the report next to each
+  score as "about 1 in N" (`Alnasl.FairPlay.FalsePositives`). No model, no
+  table: the report says "not calibrated" and invents nothing.
 - **Shown only with at least 40 counted moves** for that player in the
   event. Below that: "too few moves".
 - **Calibration** (a mix task, run on the VM or the lab):
   - Corpus: Lichess broadcast games (database.lichess.org, CC BY-SA 4.0):
     real over-the-board events with FIDE Elo and clocks. Standard time
     controls, 2024-2025.
-  - 5,000 games to fit, 2,000 held out.
+  - The held-out set is **whole events** (by the PGN `Event` tag), never
+    single games: phase 1 split by game, which put one player's games
+    from one event on both sides and tested the model on players it had
+    been fitted on.
+  - Size, revised: the gate below needs at least ln(40)·700 ≈ 2,583
+    held-out player-events with none at 3 or more to demonstrate
+    "under 1 in 700" at 95% confidence (with one, about 3,900). A
+    player-event (one player, one event, 40+ counted moves) takes about
+    seven games, each shared by two players, so a game yields roughly a
+    quarter of one: 2,000 held-out games (about 450 player-events) cannot
+    show it.
+    The run sheet asks for about 15,000 games with two thirds held out.
   - We keep only derived parameters, in `priv/fair_play/model-sf19.json`,
     attributed and under CC BY-SA 4.0.
-  - Gate: on the held-out games, more than about 1 in 700 normal
-    player-events scoring over 3 means the model does not ship.
+  - Gate: on the held-out player-events, more than about 1 in 700 scoring
+    3 or more means the model does not ship; "passed" needs the upper
+    end of the interval under 1/700, not just the point estimate
+    (`Alnasl.FairPlay.Calibration.gate_verdict/1`).
+  - Run sheet for the 80-core VM: `docs/fair-play-calibration-run.md`.
 
 ## 6. Data
 
@@ -153,7 +179,9 @@ centipawn loss / (1 + |eval|/100), capped at 5.00.
 | `fair_play_settings` | per hall: on/off, engine path, installed version and bench, nodes |
 | `fair_play_moves` | per analysed ply: game, ply, eval best, eval played, rank of played, gap, near-count, material, skip reason |
 | `fair_play_keeps` | per tournament: extended retention date and reason |
-| `fair_play_views` | who opened which report and when (the audit) |
+| `fair_play_views` | who opened which report and when, and every share, revocation, upload, deletion and round on demand (the audit) |
+| `fair_play_uploads`, `fair_play_upload_games`, `fair_play_upload_moves` | uploaded PGNs (name, size, sha256, problems; never the file), their games, their analysed plies |
+| `fair_play_grants` | who may see which report (or a whole hall's) until when, revoked when and by whom |
 
 The retention job deletes `fair_play_moves` and the keeps once their date
 passes. Reports are computed on the fly from the moves, so a deleted move is
@@ -185,8 +213,21 @@ a deleted report.
    - live analysis;
    - owner-only access, view audit and retention;
    - screens, manual (EN + NL), CHANGELOG.
-2. **Phase 2:** PGN upload for games without boards; analysis of a finished
-   round on demand; a bigger calibration; rapid and blitz models.
+2. **Phase 2 (branch fairplay-2):**
+   - PGN upload for games without boards and whole events
+     (`Alnasl.FairPlay.Uploads`, tables `fair_play_uploads`,
+     `fair_play_upload_games`, `fair_play_upload_moves`), through a bulk
+     lane of the queue behind the live games, resumed after a restart;
+   - analysis of a finished round on demand (the same bulk lane);
+   - sharing: explicit, expiring, revocable grants of one report or a
+     whole hall to members of the hall (`Alnasl.FairPlay.Grants`, table
+     `fair_play_grants`), view-only, audited, never implied by admin;
+   - the audit (`fair_play_views`) gains an action and a detail, and
+     lines about a hall or an upload rather than a tournament;
+   - false-positive rates per threshold, the covariance fix, holdout by
+     event (section 5);
+   - still to come: the bigger calibration itself (run sheet written),
+     rapid and blitz models.
 3. **Phase 3:** Maia (the Lc0 network trained per rating) as the human
    expectation beside Stockfish.
 

@@ -18,7 +18,19 @@ defmodule Alnasl.FairPlay.Model do
       none, one, two or more), falling back to the band, then to all
       plies, where a cell has fewer than 30 plies;
     * the correlation of the three z-scores across the calibration's
-      player-events, which `Stats.combined/3` divides by.
+      player-events, and their **covariance** (second moments about zero),
+      which `Stats.combined/3` divides by (`dispersion/1`). The covariance
+      and not the correlation, because the z-scores are not unit-variance
+      in real life: moves of one game are not independent, and a player's
+      form on the day is not in the rating. Dividing by the correlation
+      assumes a variance of one that the data do not have, and every
+      tail probability that follows from it is too small. Phase 1 did
+      that; a model without a covariance (a file from then) still falls
+      back to the correlation;
+    * the held-out false-positive table (`false_positives`): for each
+      threshold, how many normal player-events scored that high, with a
+      95% interval. Written by the fit (`Alnasl.FairPlay.Calibration`),
+      read by the report. `nil` in a model fitted without one.
 
   A model belongs to one engine build and one node count: the json says
   which, and a model fitted on one is not used with another.
@@ -39,7 +51,9 @@ defmodule Alnasl.FairPlay.Model do
             ev: nil,
             loss: %{cells: %{}, bands: %{}, global: {0.0, 0.0, 0}},
             correlation: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+            covariance: nil,
             weights: [1.0, 1.0, 1.0],
+            false_positives: nil,
             meta: %{}
 
   @min_cell 30
@@ -66,6 +80,14 @@ defmodule Alnasl.FairPlay.Model do
   end
 
   def feature_names, do: @feature_names
+
+  @doc """
+  The matrix `Stats.combined/3` divides by: the covariance of the three
+  z-scores when the model has one, else their correlation (a model from
+  before there was one).
+  """
+  def dispersion(%__MODULE__{covariance: [_ | _] = covariance}), do: covariance
+  def dispersion(%__MODULE__{correlation: correlation}), do: correlation
 
   @doc "The model's chance that this ply is the engine's first choice."
   def p_match(%__MODULE__{match: beta}, record), do: logistic(dot(beta, features(record)))
@@ -142,7 +164,8 @@ defmodule Alnasl.FairPlay.Model do
         )
     }
 
-    %{model | correlation: correlation(events, model)}
+    {correlation, covariance} = dispersion_of(events, model)
+    %{model | correlation: correlation, covariance: covariance}
   end
 
   @doc """
@@ -258,23 +281,33 @@ defmodule Alnasl.FairPlay.Model do
     {mean, var, n}
   end
 
-  # The three z-scores of every player-event with enough moves for them to
-  # mean something, and their Pearson correlations. Too few events, or a
-  # test with no spread: the identity, which is the honest "don't know".
-  defp correlation(events, model) do
+  # The three z-scores of every player-event with as many counted moves
+  # as the report wants before it shows a score, and from them their
+  # Pearson correlations and their covariance about zero. About zero, not
+  # about their mean: a z-score is supposed to have mean zero, and a model
+  # whose scores drift off it should pay for that in a wider spread rather
+  # than have it subtracted away. Too few events, or a test with no spread:
+  # the identity and no covariance, which is the honest "don't know".
+  defp dispersion_of(events, model) do
     zs =
       for records <- events,
           numbers = Stats.player(records, model),
-          numbers.counted >= 10,
+          numbers.counted >= Stats.min_moves(),
           z = [numbers.mm_z, numbers.ev_z, numbers.asd_z],
           Enum.all?(z, &is_number/1),
           do: z
 
     if length(zs) < 3 do
-      model.correlation
+      {model.correlation, nil}
     else
       columns = zs |> Enum.zip() |> Enum.map(&Tuple.to_list/1)
-      for a <- columns, do: for(b <- columns, do: pearson(a, b))
+      n = length(zs)
+
+      {for(a <- columns, do: for(b <- columns, do: pearson(a, b))),
+       for(
+         a <- columns,
+         do: for(b <- columns, do: Enum.zip_reduce(a, b, 0.0, &(&1 * &2 + &3)) / n)
+       )}
     end
   end
 
@@ -328,7 +361,9 @@ defmodule Alnasl.FairPlay.Model do
         "global" => triple.(m.loss.global)
       },
       "correlation" => m.correlation,
+      "covariance" => m.covariance,
       "weights" => m.weights,
+      "false_positives" => m.false_positives,
       "meta" => m.meta
     }
   end
@@ -349,7 +384,9 @@ defmodule Alnasl.FairPlay.Model do
          global: triple.(j["loss"]["global"])
        },
        correlation: j["correlation"],
+       covariance: j["covariance"],
        weights: j["weights"],
+       false_positives: j["false_positives"],
        meta: j["meta"] || %{}
      }}
   end

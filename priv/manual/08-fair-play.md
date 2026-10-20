@@ -1,6 +1,6 @@
 # Fair play: the numbers
 
-Alnasl can compare the moves in the games its boards record with a strong chess engine, and show the hall's owner which players' moves matched the engine more often, and lost less, than their rating predicts. It is a reason to look closer at a game. It is not evidence, not an accusation, and not visible to anybody but the owner.
+Alnasl can compare the moves in the games its boards record with a strong chess engine, and show the hall's owner which players' moves matched the engine more often, and lost less, than their rating predicts. It is a reason to look closer at a game. It is not evidence, not an accusation, and not visible to anybody but the owner and whoever the owner shares a report with.
 
 ## What it is, and what it is not {#what-it-is}
 
@@ -14,11 +14,13 @@ It only flags unusually strong play. Weak play is nobody's business.
 
 ## Who sees it {#who-sees-it}
 
-**The hall's owner, and nobody else.** Not the arbiters, not the viewers, and not the administrator of the Alnasl server either: an administrator can run every hall, and still sees nothing of another hall's fair play. The page is not in anybody else's menu and answers anybody else as a page that is not there.
+**The hall's owner, and the people the owner shares it with. Nobody else.** Not the arbiters, not the viewers, and not the administrator of the Alnasl server either: an administrator can run every hall, and still sees nothing of another hall's fair play. The page is not in anybody else's menu and answers anybody else as a page that is not there.
+
+The owner can **share** (below) one report, or all of the hall's, with named people of the hall: the Chief Arbiter, a fair-play officer. They can look, until a date the owner chose, and nothing else: they change no setting, upload nothing, keep nothing longer and share nothing further. Being the administrator gives nobody a share.
 
 A box without accounts has no owners to tell apart: everybody on the hall's network is the owner there, as for everything else, so the settings and the report are open to all of them. Make the first account (Setup, Access) before you switch fair play on, if that matters in your hall.
 
-Every time the owner opens a report or a player's page, Alnasl writes down who and when, and the report lists the latest openings.
+Every time the owner, or somebody it was shared with, opens a report or a player's page, Alnasl writes down who and when, and the report lists the latest openings. Sharing, stopping a share, uploading, deleting an upload and having a round analysed are written down too.
 
 Fair-play data is never in the results pages, the PGN files, what is sent to OpenResults or Lichess, the arbiter's log or the queue of results. It is in the database of the hall's copy of Alnasl and on the owner's screen.
 
@@ -82,10 +84,51 @@ Those two words and those two numbers are Alnasl's own, for its own score. They 
 
 The interval beside the score is the range the player's true standing probably lies in: a score of 2.4 from 40 moves is not very different from a score of 0.5.
 
+### How often an honest player scores this high {#false-positives}
+
+Beside a score of 2 or more the report says how rare it is: **"about 1 in N normal player-events score this high"**, with a range. A player-event is one player's games in one event. The number is measured, not computed from a formula: when the model is made, part of the games (whole events, never used to fit the model) are kept aside, every player in them is scored, and Alnasl counts how many reach 2.0, 2.5, 3.0 and so on up to 5.0. The range is the 95% exact (Clopper-Pearson) interval of that count.
+
+- When none of the kept-aside player-events reached that score, the page says **"fewer than about 1 in N"**: with a few thousand player-events, a zero only proves so much.
+- Those games are mostly honest, not certainly honest. A real cheater among them makes the rate a little higher, which errs on the careful side.
+- The rate is for the population the model was made from (rated players at standard time controls, games of 40 counted moves or more). A junior event with ratings that lag far behind the players' strength will produce more high scores than the table says.
+
+**Not calibrated** means what it says: there is no model for the installed engine, so there is no score, and there is no rate either. Alnasl does not make one up.
+
 > [!IMPORTANT] No calibration, no score
 > The model is a file that belongs to one engine build. Until Alnasl has one for the engine you installed, the report shows the counts and says plainly that there is **no score**. The counts are real. They are not a score, and they should not be read as one. The model is made for standard time controls; rapid and blitz are not calibrated.
 
-What the screening cannot see: a game played without the boards, a move the tracker could not read, opening knowledge, a player who is simply much stronger than their rating, a player who prepared one line very well. Strong, simple, forced-looking positions give high matching without anybody doing anything wrong.
+What the screening cannot see: a game played without the boards (unless you upload it, below), a move the tracker could not read, opening knowledge, a player who is simply much stronger than their rating, a player who prepared one line very well. Strong, simple, forced-looking positions give high matching without anybody doing anything wrong.
+
+## Games from a PGN file {#pgn-upload}
+
+Games played without the boards, or a whole event from elsewhere, can be screened too. On the fair-play settings of the hall, under **Games from a PGN file**:
+
+1. Choose the `.pgn` file (plain text, at most 10 MB and 2,000 games; unpack a zipped one first).
+2. Pick the tournament it belongs to, or **None** for a report of its own. Attached to a tournament, its players are matched with the tournament's (by FIDE ID, then by name, whichever way round it is written) and its games count in the tournament's report.
+3. Give it a name if the file's event name will not do, and press **Upload and analyse**.
+
+The ratings come from the `WhiteElo` and `BlackElo` tags. A player without one is not scored, and the upload says so; Alnasl never guesses a rating. Clocks (`[%clk]`) are used when the file has them. The round comes from the `Round` tag ("5" or "5.12" for round 5, board 12).
+
+Each game is checked first. A game with an illegal move, a starting position that cannot be read, or a variant other than standard chess is refused, and a game that appears twice is taken once; the upload lists each one with its number in the file and the reason. A game of an attached tournament that the boards already recorded is not analysed a second time.
+
+The games are analysed in the background, after the live games: an upload never slows the analysis of the round being played. The upload's report shows how many are done and how many wait, and fills itself in as they finish. If Alnasl was restarted in the meantime, it picks up where it left off; **Queue the waiting games again** is there in case it did not.
+
+The file itself is not kept: only its name, size and fingerprint (to recognise it if it is uploaded again), its games and their analysis. Nothing of it is ever served to anybody but the owner and the people the owner shares the report with. **Delete this upload** deletes its games, their analysis and its audit at once.
+
+## A round on demand {#round-on-demand}
+
+A round played while fair play was off, before the engine was installed, or that the queue could not keep up with, can be analysed afterwards. On the tournament's report, under **Analyse a round on demand**, pick the round and press **Analyse this round**. The round's games wait behind the live games. Moves already analysed with the same engine are kept, so asking twice costs nothing.
+
+## Sharing {#sharing}
+
+The owner decides who else sees fair play, by name and until a date:
+
+- **One report**: on the report, under **Shared with**.
+- **All of the hall's reports**: on the fair-play settings, under **Sharing**.
+
+Pick the person and the number of days (at most 365), and press **Share**. Only people of the hall can be picked, as arbiter or viewer; invite the person to the hall first. **Stop sharing** ends it at once. A share also ends by itself on its date, and when the person is taken off the hall.
+
+The person finds the reports under **Fair play** in their menu, under **Shared with you**. They see the report, its rounds and its players' pages, with a line saying it was shared with them and is confidential. They do not see who else opened it, how long it is kept, or who else it is shared with, and they cannot change or share anything.
 
 ## The rules you are bound by {#the-rules}
 
@@ -110,5 +153,7 @@ An owner who is not the Chief Arbiter of the event should hand the matter to the
 The analysis of a tournament, and the list of who opened its reports, are deleted **30 days after the tournament's last round** (the last time any game of it was finished or changed). A job removes them once a day. The administrator of the installation can change the number of days (`ALNASL_FAIR_PLAY_RETENTION_DAYS`).
 
 A case that is going to the FIDE Fair Play Commission may need the data longer. On the tournament's report, under **How long this is kept**, give a number of days after the last round, **at most 365**, and **a reason**. The reason is kept with it. When that date has passed, everything goes.
+
+An uploaded PGN attached to a tournament is kept as long as the tournament. One on its own counts its 30 days from the moment it was uploaded, and can be kept longer in the same way. A share of one report goes with the report. Shares of the whole hall, and the lines about them in the hall's own record, are deleted a year after they ended.
 
 Switching fair play off stops the analysis of new moves. It does not delete what is there; the retention does that.

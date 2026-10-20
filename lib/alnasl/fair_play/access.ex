@@ -20,7 +20,10 @@ defmodule Alnasl.FairPlay.Access do
       anybody's guest.
 
   Every door - the pages, their events, the context functions that change
-  something - asks this and nothing else.
+  something - asks this and nothing else. Seeing a report has a second way
+  in, a grant from the owner (`Alnasl.FairPlay.Grants`, through
+  `Alnasl.FairPlay.can_view?/2`), and only seeing: a grant changes nothing
+  of what `owner?/2` answers.
   """
 
   alias Alnasl.Accounts.Scope
@@ -47,6 +50,15 @@ defmodule Alnasl.FairPlay.Access do
     do: Enum.any?(roles, fn {_hall_id, role} -> role == "owner" end)
 
   def any_hall?(_scope), do: false
+
+  @doc """
+  Has fair play a place in the scope's menu: it owns a hall (`any_hall?/1`),
+  or a report was shared with it and the grant is in force
+  (`Alnasl.FairPlay.Grants`, as the scope noted when it was made).
+  """
+  @spec menu?(%Scope{} | nil) :: boolean()
+  def menu?(%Scope{fair_play_shared?: true}), do: true
+  def menu?(scope), do: any_hall?(scope)
 
   @doc "The halls of the scope's own list that it owns, in that list's order."
   @spec halls(%Scope{} | nil) :: [struct()]

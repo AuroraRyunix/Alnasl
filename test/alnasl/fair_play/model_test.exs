@@ -76,6 +76,13 @@ defmodule Alnasl.FairPlay.ModelTest do
     [[1.0, mm_ev | _] | _] = model.correlation
     assert_in_delta mm_ev, 1.0, 1.0e-9
 
+    # The covariance the score divides by: plies drawn from the model
+    # itself are independent, so the MM z-score has a variance near one
+    # here - and the combined score is scaled by this, not by the identity.
+    assert [[mm_var | _] | _] = model.covariance
+    assert_in_delta mm_var, 1.0, 0.3
+    assert Model.dispersion(model) == model.covariance
+
     # And a normal player-event scores normally.
     numbers = Stats.player(hd(events), model)
     assert abs(numbers.mm_z) < 4
@@ -97,6 +104,7 @@ defmodule Alnasl.FairPlay.ModelTest do
     assert loaded.match == model.match
     assert loaded.loss == model.loss
     assert loaded.engine == "sf19"
+    assert loaded.covariance == model.covariance
     assert loaded.meta["attribution"] =~ "CC BY-SA 4.0"
   end
 

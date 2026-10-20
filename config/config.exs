@@ -15,6 +15,10 @@ config :alnasl,
 # the PGN of every game. Overridden per environment and by ALNASL_DATA.
 config :alnasl, data_dir: Path.expand("../data", __DIR__)
 
+# PGN is not in the MIME library's list, and a fair-play upload's file
+# chooser asks for it by name (`allow_upload(:pgn, accept: ~w(.pgn))`).
+config :mime, :types, %{"application/vnd.chess-pgn" => ["pgn"]}
+
 # Whether the box asks GitHub, on a timer, if a newer version is out. Off in
 # tests, which ask when they mean to.
 config :alnasl, updates_timer: true

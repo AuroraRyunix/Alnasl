@@ -15,8 +15,15 @@ defmodule Alnasl.FairPlay.Calibration do
        those games, and appends.
     2. **fit** - merge the shards' files, refuse to mix engines, bench
        numbers or node counts (a model belongs to exactly one), split off
-       the held-out games by hash, fit `Alnasl.FairPlay.Model`, and print
-       the held-out false-positive table and the per-band check.
+       the held-out **events** by hash, fit `Alnasl.FairPlay.Model`, and
+       print and store the held-out false-positive table
+       (`Alnasl.FairPlay.FalsePositives`) and the per-band check.
+
+  The split is by event, not by game. A player-event is the unit the
+  report scores and the false-positive table counts, and a split by game
+  cuts every event in five: the held-out "player-events" were then a
+  couple of games each, which is not what the report ever shows, and their
+  other games had been fitted on. Phase 1 split by game; that was wrong.
 
   `calibrate/2` is both on one machine.
 
@@ -51,11 +58,20 @@ defmodule Alnasl.FairPlay.Calibration do
   calibrate: everything above, plus `--labels FILE` (default `OUT.labels.jsonl`).
   """
 
-  alias Alnasl.FairPlay.{Analyzer, Engines, Installer, Model, Selection, Stats, Uci}
+  alias Alnasl.FairPlay.{
+    Analyzer,
+    Engines,
+    FalsePositives,
+    Installer,
+    Model,
+    Selection,
+    Stats,
+    Uci
+  }
 
-  @thresholds [2, 3, 4, 5]
   # The plan's gate: more than about 1 in 700 normal player-events over 3.
   @gate 1 / 700
+  @gate_threshold 3.0
 
   # --- the command line ----------------------------------------------------------
 
@@ -172,8 +188,9 @@ defmodule Alnasl.FairPlay.Calibration do
         )
 
         {:ok, file} = File.open(out, [:append, :binary])
+        started = System.monotonic_time(:millisecond)
 
-        new =
+        {new, positions} =
           try do
             paths
             |> games()
@@ -187,22 +204,41 @@ defmodule Alnasl.FairPlay.Calibration do
               ordered: false,
               timeout: :infinity
             )
-            |> Enum.reduce(0, fn {:ok, line}, count ->
+            |> Enum.reduce({0, 0}, fn {:ok, {line, searched}}, {count, positions} ->
               IO.binwrite(file, [line, ?\n])
               count = count + 1
-              if rem(count, 50) == 0, do: log.("fair_play label: #{count} new games")
-              count
+              positions = positions + searched
+
+              if rem(count, 50) == 0,
+                do: log.("fair_play label: " <> progress(count, positions, started, workers))
+
+              {count, positions}
             end)
           after
             File.close(file)
           end
 
-        log.("fair_play label: done, #{new} new games, #{MapSet.size(done) + new} in #{out}")
-        {:ok, %{done: MapSet.size(done), new: new}}
+        log.(
+          "fair_play label: done, #{new} new games, #{MapSet.size(done) + new} in #{out}; " <>
+            progress(new, positions, started, workers)
+        )
+
+        {:ok, %{done: MapSet.size(done), new: new, positions: positions}}
       after
         stop_pool(pool)
       end
     end
+  end
+
+  # "50 new games, 3210 positions, 412 s: 7.3 games/min, 1.03 s per
+  # position per engine" - what the run-time estimate is made of.
+  defp progress(games, positions, started, workers) do
+    seconds = max(System.monotonic_time(:millisecond) - started, 1) / 1000
+    per_position = if positions > 0, do: seconds * workers / positions, else: 0.0
+
+    "#{games} new games, #{positions} positions, #{round(seconds)} s: " <>
+      "#{:erlang.float_to_binary(games / seconds * 60, decimals: 1)} games/min, " <>
+      "#{:erlang.float_to_binary(per_position, decimals: 2)} s per position per engine"
   end
 
   @doc "`\"K/N\"` as `{k, n}`."
@@ -316,14 +352,20 @@ defmodule Alnasl.FairPlay.Calibration do
       "engine" => meta
     }
 
-    line =
+    {line, searched} =
       case with_engine(pool, &Analyzer.analyse(input, &1)) do
-        {:ok, records} -> Map.put(line, "plies", Enum.map(records, &encode_record/1))
-        {:error, {ply, message}} -> Map.put(line, "error", "ply #{ply}: #{message}")
-        {:error, message} -> Map.put(line, "error", to_string(message))
+        {:ok, records} ->
+          {Map.put(line, "plies", Enum.map(records, &encode_record/1)),
+           Enum.count(records, &(&1.best != nil))}
+
+        {:error, {ply, message}} ->
+          {Map.put(line, "error", "ply #{ply}: #{message}"), 0}
+
+        {:error, message} ->
+          {Map.put(line, "error", to_string(message)), 0}
       end
 
-    Jason.encode!(line)
+    {Jason.encode!(line), searched}
   end
 
   # A counted ply keeps what the fit needs; a skipped one only why.
@@ -488,14 +530,12 @@ defmodule Alnasl.FairPlay.Calibration do
               {[data], {file, ctx, false}}
 
             data when is_binary(data) ->
-              {:continue, out} = :zstd.stream(ctx, data)
-              {[IO.iodata_to_binary(out)], {file, ctx, false}}
+              {[IO.iodata_to_binary(zstd_feed(ctx, data, []))], {file, ctx, false}}
 
             _eof ->
               tail =
                 if ctx do
-                  {:done, out} = :zstd.finish(ctx, <<>>)
-                  IO.iodata_to_binary(out)
+                  IO.iodata_to_binary(zstd_finish(ctx, []))
                 else
                   ""
                 end
@@ -510,6 +550,33 @@ defmodule Alnasl.FairPlay.Calibration do
     )
   end
 
+  # `:zstd.stream/2` hands back what it could not take yet as well as what it
+  # made: `{:continue, rest, out}`. The rest goes straight back in. A test
+  # file of a few kilobytes never has a rest; a month of broadcasts does, on
+  # its first megabyte (2026-10-20, on the VM).
+  defp zstd_feed(ctx, data, acc) do
+    case :zstd.stream(ctx, data) do
+      {:continue, out} ->
+        [acc, out]
+
+      {:continue, rest, out} ->
+        if IO.iodata_length(rest) == 0,
+          do: [acc, out],
+          else: zstd_feed(ctx, rest, [acc, out])
+
+      {:done, out} ->
+        [acc, out]
+    end
+  end
+
+  defp zstd_finish(ctx, acc) do
+    case :zstd.finish(ctx, <<>>) do
+      {:done, out} -> [acc, out]
+      {:continue, out} -> zstd_finish(ctx, [acc, out])
+      {:continue, _rest, out} -> zstd_finish(ctx, [acc, out])
+    end
+  end
+
   # --- fit -----------------------------------------------------------------------
 
   @doc """
@@ -521,7 +588,7 @@ defmodule Alnasl.FairPlay.Calibration do
     log = Keyword.get(opts, :log, &IO.puts/1)
 
     with {:ok, games, meta} <- read_labels(paths) do
-      {held, train} = Enum.split_with(games, &held_out?(&1["id"], holdout))
+      {held, train} = Enum.split_with(games, &held_out?(holdout_key(&1), holdout))
 
       model =
         Model.fit(player_events(train),
@@ -532,12 +599,14 @@ defmodule Alnasl.FairPlay.Calibration do
             "engine_name" => meta["name"],
             "games" => length(train),
             "held_out_games" => length(held),
+            "held_out_by" => "event",
             "fitted_on" => Date.to_iso8601(Date.utc_today()),
             "sources" => Enum.map(paths, &Path.basename/1)
           }
         )
 
       report = report(player_events(held), model)
+      model = %{model | false_positives: report.table}
 
       if out = opts[:out], do: Model.save(model, out)
       Enum.each(format_report(report, length(train), length(held), opts[:out]), log)
@@ -570,10 +639,19 @@ defmodule Alnasl.FairPlay.Calibration do
     end
   end
 
-  @doc "Whether a game id is in the held-out share: by hash, so every run agrees."
-  def held_out?(id, fraction) do
+  @doc """
+  What decides whether a game is held out: its event, so a player-event
+  is held out whole or not at all (a game without an event stands alone).
+  """
+  def holdout_key(%{"event" => event}) when is_binary(event) and event != "",
+    do: "event:" <> event
+
+  def holdout_key(%{"id" => id}), do: "game:" <> id
+
+  @doc "Whether a key (`holdout_key/1`) is in the held-out share: by hash, so every run agrees."
+  def held_out?(key, fraction) do
     bucket =
-      :sha256 |> :crypto.hash("holdout:" <> id) |> binary_part(0, 4) |> :binary.decode_unsigned()
+      :sha256 |> :crypto.hash("holdout:" <> key) |> binary_part(0, 4) |> :binary.decode_unsigned()
 
     bucket / 4_294_967_296 < fraction
   end
@@ -611,10 +689,12 @@ defmodule Alnasl.FairPlay.Calibration do
   end
 
   @doc """
-  The held-out check: the share of player-events with at least 40 counted
-  moves scoring above 2, 3, 4 and 5, and per rating band the count, the
-  mean score and the share above 2. Normal players, all of them (as far as
-  anybody knows): every one of those shares is a false-positive rate.
+  The held-out check: the false-positive table of the player-events with
+  at least 40 counted moves (`Alnasl.FairPlay.FalsePositives.table/1`:
+  the share scoring 2.0, 2.5, ... 5.0 or more, with exact 95% intervals),
+  and per rating band the count, the mean score and the share at 2 or
+  more. Normal players, all of them (as far as anybody knows): every one
+  of those shares is a false-positive rate.
   """
   def report(events, model) do
     scored =
@@ -627,10 +707,7 @@ defmodule Alnasl.FairPlay.Calibration do
 
     %{
       events: total,
-      over:
-        Map.new(@thresholds, fn t ->
-          {t, if(total > 0, do: Enum.count(scored, fn {_, s} -> s > t end) / total, else: 0.0)}
-        end),
+      table: scored |> Enum.map(&elem(&1, 1)) |> FalsePositives.table(),
       bands:
         scored
         |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
@@ -642,7 +719,7 @@ defmodule Alnasl.FairPlay.Calibration do
             band: band,
             events: n,
             mean: Enum.sum(scores) / n,
-            over_2: Enum.count(scores, &(&1 > 2)) / n
+            over_2: Enum.count(scores, &(&1 >= 2)) / n
           }
         end)
     }
@@ -657,30 +734,74 @@ defmodule Alnasl.FairPlay.Calibration do
 
   defp format_report(report, train, held, out) do
     pct = fn x -> :erlang.float_to_binary(x * 100, decimals: 2) <> "%" end
-    over_3 = report.over[3]
 
-    gate =
-      cond do
-        report.events == 0 ->
-          "no held-out player-events with #{Stats.min_moves()} moves: no verdict"
-
-        over_3 > @gate ->
-          "GATE FAILED: #{pct.(over_3)} over 3 (limit about 1 in 700). The model does not ship."
-
-        true ->
-          "gate passed: #{pct.(over_3)} over 3 (limit about 1 in 700)"
-      end
+    rows =
+      Enum.map(report.table["rows"], fn r ->
+        "  >= #{r["threshold"]}: #{r["above"]} of #{r["events"]}" <>
+          if(r["events"] > 0,
+            do: ", #{pct.(r["rate"])} (95%: #{pct.(r["low"])} to #{pct.(r["high"])})",
+            else: ""
+          )
+      end)
 
     [
-      "fair_play fit: #{train} games fitted, #{held} held out" <>
+      "fair_play fit: #{train} games fitted, #{held} held out (by event)" <>
         if(out, do: ", model written to #{out}", else: ""),
       "held-out player-events with a score: #{report.events}",
-      "  score > " <> Enum.map_join(@thresholds, "   > ", &"#{&1}: #{pct.(report.over[&1])}"),
-      "per rating band (events, mean score, share > 2):"
+      "false positives (normal player-events scoring at least):"
     ] ++
+      rows ++
+      ["per rating band (events, mean score, share >= 2):"] ++
       Enum.map(report.bands, fn b ->
         "  #{b.band}: #{b.events}, #{:erlang.float_to_binary(b.mean / 1, decimals: 2)}, #{pct.(b.over_2)}"
-      end) ++ [gate]
+      end) ++ gate(report, pct)
+  end
+
+  @doc """
+  The plan's gate, read off the table: the share at 3 or more must not be
+  above about 1 in 700 (`:failed`). And whether the sample can tell: the
+  gate is only *shown* to hold (`:passed`) when the upper end of the 95%
+  interval is below 1 in 700 too, which takes about 2,600 held-out
+  player-events even when none of them scores 3. With fewer it is
+  `:passed_unproven`: a pass by default, and the fit says so.
+  """
+  def gate_verdict(table) do
+    case FalsePositives.row(table, @gate_threshold) do
+      nil -> :no_data
+      %{"events" => 0} -> :no_data
+      %{"rate" => rate} when rate > @gate -> :failed
+      %{"high" => high} when high <= @gate -> :passed
+      %{} -> :passed_unproven
+    end
+  end
+
+  @doc "Held-out player-events needed to show the gate holds when none scores 3 or more."
+  def gate_events_needed, do: ceil(-:math.log(0.025) / @gate)
+
+  defp gate(report, pct) do
+    row = FalsePositives.row(report.table, @gate_threshold)
+
+    case gate_verdict(report.table) do
+      :no_data ->
+        ["no held-out player-events with #{Stats.min_moves()} moves: no verdict"]
+
+      :failed ->
+        [
+          "GATE FAILED: #{pct.(row["rate"])} at 3 or more (limit about 1 in 700). " <>
+            "The model does not ship."
+        ]
+
+      :passed ->
+        ["gate passed: #{pct.(row["rate"])} at 3 or more, 95% upper bound #{pct.(row["high"])}"]
+
+      :passed_unproven ->
+        [
+          "gate passed by default: #{pct.(row["rate"])} at 3 or more, but the 95% upper bound " <>
+            "is #{pct.(row["high"])}, above 1 in 700. #{row["events"]} held-out player-events " <>
+            "cannot show a rate that small; about #{gate_events_needed()} can, if none of them " <>
+            "scores 3."
+        ]
+    end
   end
 
   # --- both ------------------------------------------------------------------------

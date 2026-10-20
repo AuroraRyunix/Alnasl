@@ -79,7 +79,15 @@ defmodule Alnasl.Accounts do
     admin? = admin?(user)
     roles = Halls.roles(user)
     halls = for hall <- Halls.list(), admin? or Map.has_key?(roles, hall.id), do: hall
-    %Scope{user: user, admin?: admin?, roles: roles, halls: halls, hall: pick(halls, hall_id)}
+
+    %Scope{
+      user: user,
+      admin?: admin?,
+      roles: roles,
+      halls: halls,
+      hall: pick(halls, hall_id),
+      fair_play_shared?: Alnasl.FairPlay.Grants.any_active?(user.id, roles)
+    }
   end
 
   defp pick(halls, id), do: Enum.find(halls, &(&1.id == id)) || List.first(halls)
