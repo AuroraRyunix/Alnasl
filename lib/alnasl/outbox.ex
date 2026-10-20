@@ -200,6 +200,7 @@ defmodule Alnasl.Outbox do
       __MODULE__
       |> Alnasl.Destination.Sender.status()
       |> Map.put(:pending, pending_count())
+      |> Map.put(:stuck, stuck_count())
 
     cond do
       not configured?() ->
@@ -221,7 +222,7 @@ defmodule Alnasl.Outbox do
   """
   def status(scope) do
     ids = if scope, do: Alnasl.Halls.tournament_ids(scope)
-    %{status() | pending: pending_count(ids)}
+    %{status() | pending: pending_count(ids), stuck: stuck_count(ids)}
   end
 
   @doc "Removes sent and superseded rows older than `days`; all of them when `days` is 0."
@@ -245,6 +246,100 @@ defmodule Alnasl.Outbox do
     |> select([e], {e.tournament_id, count(e.id)})
     |> Repo.all()
     |> Map.new()
+  end
+
+  @doc """
+  Why rows wait, one entry a tournament: `%{tournament_id, title, count,
+  why}`, biggest first. `why` is
+
+  - `:gone` - the tournament is not on the box any more; nothing will ever send these;
+  - `:no_page` - the tournament has no results page (or no relay key) yet;
+  - `{:blocked, reason}` / `{:offline, reason}` - it can send, and the sender
+    says what stops it;
+  - `:sending` - it can send and nothing is said against it.
+
+  `ids` keeps to the tournaments of one hall; every tournament when `nil`.
+  """
+  def waiting_report(ids \\ nil) do
+    sender = Alnasl.Destination.Sender.status(__MODULE__)
+    tournaments = Map.new(Tournaments.list(), &{&1.id, &1})
+
+    for {id, count} <- pending_by_tournament(), is_nil(ids) or id in ids do
+      tournament = Map.get(tournaments, id)
+
+      %{
+        tournament_id: id,
+        title: tournament && Tournaments.title(tournament),
+        count: count,
+        why: why_waiting(tournament, sender)
+      }
+    end
+    |> Enum.sort_by(&{-&1.count, &1.tournament_id})
+  end
+
+  defp why_waiting(nil, _sender), do: :gone
+
+  defp why_waiting(%Tournament{} = tournament, sender) do
+    cond do
+      not Tournaments.openresults_configured?(tournament) -> :no_page
+      state = refusal(sender, tournament) -> state
+      true -> :sending
+    end
+  end
+
+  # The sender says one thing for all tournaments; with several, the reason
+  # names whose it is, and it is only said of that one.
+  defp refusal(%{state: state, last_error: {:tournament, name, reason}}, tournament)
+       when state in [:blocked, :offline],
+       do: if(name == Tournaments.title(tournament), do: {state, reason})
+
+  defp refusal(%{state: state, last_error: reason}, _tournament)
+       when state in [:blocked, :offline] and reason != nil,
+       do: {state, reason}
+
+  defp refusal(_sender, _tournament), do: nil
+
+  @doc "How many pending rows can go nowhere: their tournament is gone or has no results page."
+  def stuck_count(ids \\ nil) do
+    ids
+    |> waiting_report()
+    |> Enum.filter(&(&1.why in [:gone, :no_page]))
+    |> Enum.map(& &1.count)
+    |> Enum.sum()
+  end
+
+  @doc """
+  The arbiter's "Discard these moves" for one tournament: its pending rows are
+  marked `discarded` (kept, never sent, no longer counted). Only for rows that
+  cannot go anywhere - a tournament that is gone or has no results page; one
+  that could still send is refused with `{:error, :has_page}`. Returns
+  `{:ok, how_many}`.
+  """
+  def discard(tournament_id) do
+    case Tournaments.get(tournament_id) do
+      %Tournament{} = tournament ->
+        if Tournaments.openresults_configured?(tournament),
+          do: {:error, :has_page},
+          else: do_discard(tournament_id)
+
+      nil ->
+        do_discard(tournament_id)
+    end
+  end
+
+  defp do_discard(tournament_id) do
+    {count, _} =
+      Repo.update_all(
+        from(e in Entry, where: e.state == "pending" and e.tournament_id == ^tournament_id),
+        set: [state: "discarded", error: "discarded_by_arbiter"]
+      )
+
+    if count > 0 do
+      Log.add(:info, "outbox.discarded", %{count: count, tournament_id: tournament_id})
+    end
+
+    Phoenix.PubSub.broadcast(Alnasl.PubSub, @topic, :outbox_changed)
+    {:ok, count}
   end
 
   # --- one step of delivery (pure of process state; the tests call it) ---------

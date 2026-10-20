@@ -170,6 +170,10 @@ defmodule AlnaslWeb.Status do
           :blocked ->
             {"bad", "out_of_sync", gettext("Results site: refused")}
 
+          _idle when link.pending > 0 and link.stuck == link.pending ->
+            {"warn", "warning",
+             gettext("Results site: %{count} cannot be sent", count: link.pending)}
+
           _idle when link.pending > 0 ->
             {nil, "waiting", gettext("Results site: %{count} waiting", count: link.pending)}
 

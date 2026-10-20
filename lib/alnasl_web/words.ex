@@ -191,6 +191,7 @@ defmodule AlnaslWeb.Words do
   def entry_error("older_than_stored"),
     do: gettext("The results site already had more moves than this.")
 
+  def entry_error("discarded_by_arbiter"), do: gettext("Discarded: it could not be sent.")
   def entry_error(nil), do: nil
   def entry_error(code), do: gettext("Refused: %{code}.", code: code)
 
@@ -744,6 +745,12 @@ defmodule AlnaslWeb.Words do
 
   defp log("outbox.conflict", _d),
     do: gettext("The results site held other moves for this game; it was sent again in full.")
+
+  defp log("outbox.discarded", d),
+    do:
+      gettext("%{n} moves that could not be sent were discarded.",
+        n: d["count"] || d[:count] || 0
+      )
 
   defp log("outbox.server_ahead", _d),
     do: gettext("The results site holds more moves for this game than Alnasl does.")
