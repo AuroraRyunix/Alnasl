@@ -81,6 +81,12 @@ defmodule Alnasl.FairPlay.Uci do
   @doc "What the engine said it is, and how often it had to be restarted."
   def info(server), do: GenServer.call(server, :info)
 
+  @doc "`start_link/1` without the link: a failed engine is an answer, not a crash."
+  def start(opts) do
+    {gen_opts, opts} = Keyword.split(opts, [:name])
+    GenServer.start(__MODULE__, opts, gen_opts)
+  end
+
   def stop(server), do: GenServer.stop(server)
 
   @doc """
