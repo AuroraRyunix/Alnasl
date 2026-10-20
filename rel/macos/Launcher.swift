@@ -691,7 +691,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         session.dataTask(with: request) { _, response, error in
             let code = (response as? HTTPURLResponse)?.statusCode ?? 0
             let answers = error == nil && code > 0 && code < 400
-            // allHeaderFields, not value(forHTTPHeaderField:): that one is
+            // allHeaderFields, not the response's header lookup: that one is
             // macOS 10.15, and the Intel build promises 10.13. Header names
             // arrive in whatever case Foundation fancies, so compare without.
             let headers = (response as? HTTPURLResponse)?.allHeaderFields ?? [:]
