@@ -26,4 +26,18 @@ defmodule Alnasl.LauncherStopTest do
     assert File.read!(@swift) =~
              "DispatchQueue.global().asyncAfter(deadline: .now() + 40) { exit(0) }"
   end
+
+  test "a different or unknown version on the port is asked about, not given way to" do
+    swift = File.read!(@swift)
+
+    assert swift =~ "x-alnasl-version"
+    assert swift =~ "running == bundleVersion"
+    # macOS 10.15 API; the Intel build promises 10.13.
+    refute swift =~ "value(forHTTPHeaderField:"
+    assert swift =~ "askAboutOtherServer(running: running)"
+    assert swift =~ "Stop it and start this one"
+    assert swift =~ "Stop hem en start deze"
+    # Only a listener whose command line is Alnasl's is ever signalled.
+    assert swift =~ ~s|contains("alnasl")|
+  end
 end

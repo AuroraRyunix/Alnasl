@@ -52,6 +52,10 @@ defmodule AlnaslWeb.Endpoint do
   # own polling into the log it shows. See the plug.
   plug AlnaslWeb.Plugs.LauncherStats
 
+  # The running version, to this machine only: the Mac app reads it when the
+  # port is already taken. See the plug.
+  plug AlnaslWeb.Plugs.VersionHeader
+
   plug Plug.RequestId
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
 
