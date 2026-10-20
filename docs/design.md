@@ -347,6 +347,72 @@ a moment ago can be read as "the move before was one square off". In the
 fault matrix that is 13 of 207 illegal-move games, marked orange. The
 board cannot tell the two apart; a misread is the likelier of them.
 
+### Ghosts, borrowed from the decoder
+
+The probabilistic decoder (branch `decoder`, `docs/plan-decoder.md`
+there) was measured against the tracker and lost nearly everywhere. The
+one idea worth keeping was its **ghost**: a reading on a square taken as
+possibly a piece that really stands next door, kept as an explanation
+instead of being argued away by inventing moves. The tracker already
+carried a ghost once a rewrite found one (`unseen` with `ghost`); what it
+lacked was the use of one afterwards. Two things now follow from it, and
+nothing else of the decoder came along - no beam, no sensor model, no
+probabilities.
+
+- **A ghost straightened onto a third square.** A bishop read on d3, put
+  right as c4 because a pawn then jumped over d3 (e2 would have done as
+  well, and lost on its name), carried as "read on d3, standing on c4".
+  Then somebody straightens it - onto e2. The rewrite used to refuse to
+  look at all while a piece was carried, so the game kept c4 and the board
+  went its own way. Now a carried ghost does not stop `rewrites/1`, and
+  the move it belongs to is asked about again around the square it was
+  *read* on (`shown_at/2`), not around the first guess. The reading is
+  the evidence; the guess was only a guess. It is still a rewrite, marked
+  like one, and `read` is still what the board first said.
+- **A straightening that reads as a move, and then a move that reads as
+  a takeback.** A rook read on h6 that stood on h5 is nudged home on its
+  own side's time: h6-h5 is legal, and is accepted as that side's move.
+  Then the player really plays Rh6, and the board is exactly what it was
+  before the "move" - a takeback, by rule 3, and a whole move lost. The
+  press tells them apart: a move taken back is never pressed for, and a
+  move made always is. So when the clock was pressed after the last move
+  was read, and that makes the presses as many as the moves, the takeback
+  is first offered to the rewrite: the earlier move to h5, the
+  straightening dropped (`straight/4`), and Rh6 as the new move
+  (`straightened/2`). A piece seen straightened since is not taken to be
+  crooked still. No clock, a clock not heard, or the debt of forgotten
+  presses standing in for the missing one: a takeback, as before.
+
+Measured with `mix alnasl.bench`, the same seeds before and after, all
+suites. Every suite not shown is identical to the game in every column
+(verdicts, marked plies, alarms, named alarms, searches that gave up).
+
+| suite | | exact | rec ok | rec WRONG | guess ok | guess WRONG | alarm | misread | silent | wrong marked plies | alarms |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| between, clock, 1 pass | before | 25 | 25 | 3 | 4 | 6 | 1 | 5 | 0 | 13/112 + 32/58 | 39 |
+| | after | 25 | 25 | 2 | 7 | 4 | 1 | 5 | 0 | 0/95 + 7/36 | 20 |
+| between, no clock, 1 pass | before | 25 | 0 | 0 | 29 | 9 | 1 | 5 | 0 | 11/18 + 37/155 | 42 |
+| | after | 25 | 0 | 0 | 30 | 8 | 1 | 5 | 0 | 11/18 + 32/150 | 42 |
+| between, clock, 3 passes | before | 77 | 80 | 5 | 18 | 9 | 2 | 16 | 0 | 24/288 + 35/92 | 48 |
+| | after | 77 | 80 | 4 | 21 | 8 | 2 | 15 | 0 | 11/271 + 10/72 | 29 |
+| between, no clock, 3 passes | before | 77 | 0 | 0 | 98 | 14 | 2 | 16 | 0 | 22/32 + 40/351 | 51 |
+| | after | 77 | 0 | 0 | 99 | 13 | 2 | 16 | 0 | 22/32 + 35/346 | 51 |
+
+What it does not touch: a piece that moves on legally from the square it
+was misread on (the `misread` column) - no reading tells that game from
+the one played, ghost or no ghost; and a tie between two neighbours that
+both make the next move legal, which is still settled by name and marked
+red. One game in the three-pass run moved from `misread` to `guess WRONG`
+at the same, undetectable, first difference: the straightening was found
+later on and the rest of the game came out right, where before the game
+ran two plies out of step from there, unmarked.
+
+A note on the decoder's own figures, for whoever reads them next: its
+bench has no "reconstructed" verdict, so a game it gets right through a
+rewrite is `exact`, where the tracker's is `rec ok` or `guess ok`. Its
+25 → 40 "exact" on this suite compares with the tracker's 54 games right,
+not 25.
+
 ### Which line, when there are several
 
 Across kinds first (`reconstruct/4`, `usable/3`):

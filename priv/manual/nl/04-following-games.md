@@ -56,7 +56,7 @@ Sommige meldingen noemen wat het bord toont:
 - "Er ontbreekt een zet hiervoor" brengt je naar waar je zetten typt, voor als het bord een zet miste.
 - "Klok niet in beginstand" of een klok die verkeerd om loopt: stop hem, zet hem goed, start hem opnieuw. De melding verdwijnt vanzelf. De zetten worden intussen gewoon gevolgd.
 - "Witte paard niet gezien op f3" is een waarschuwing, geen alarm: een stuk verliet zijn veld (naast het bord geparkeerd, of de sensor verloor het) en de partij ging door, dus Alnasl neemt aan dat het er nog staat. Het verdwijnt als het stuk er weer gezien wordt, zet, of geslagen wordt. Was het stuk wel degelijk geslagen, verbeter dan de zetten op de pagina van het bord.
-- "gelezen als d3" naast een zet betekent dat het bord die zet één veld ernaast las (een stuk neergezet tussen twee velden) en een latere zet toonde waar het echt heen ging. Alnasl heeft het rechtgezet en zegt het boven de zetten; "Kijk het na" heeft de zet zoals hij gelezen werd.
+- "gelezen als d3" naast een zet betekent dat het bord die zet één veld ernaast las (een stuk neergezet tussen twee velden) en een latere zet toonde waar het echt heen ging - of iemand zette het stuk recht, wat het bord als een zet op zich kan lezen; met een klok verraadt een druk die bij geen enkele zet hoort dat. Alnasl heeft het rechtgezet en zegt het boven de zetten; "Kijk het na" heeft de zet zoals hij gelezen werd.
 
 ## Een bord herstellen {#repairing}
 

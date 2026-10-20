@@ -205,6 +205,55 @@ defmodule Alnasl.MisreadMoveTest do
       assert alarms(out) == []
     end
 
+    test "a ghost straightened onto the other neighbour says the first guess was wrong" do
+      # The same bishop, really on e2: d4 makes sense with it on c4 or e2,
+      # and c4 is taken first. Then somebody straightens it - onto e2.
+      {tr, b, t} = after_moves(~w(e4 e5 Bd3 Nf6))
+      seen = move(b, "d2", "d4")
+      {tr, _out} = feed(tr, [{t, seen}], 3_000)
+      assert Tracker.sans(tr) == ~w(e4 e5 Bc4 Nf6 d4)
+      assert [%{ghost: d3}] = Tracker.unseen(tr)
+      assert d3 == sq("d3")
+
+      straightened = move(seen, "d3", "e2")
+      {tr, out} = feed(tr, [{t + 5_000, straightened}], 3_000)
+      assert Tracker.sans(tr) == ~w(e4 e5 Be2 Nf6 d4)
+      assert Tracker.unseen(tr) == []
+      assert alarms(out) == []
+      assert tr.status == :live and tr.raw == tr.pos.board
+      assert %{read: "Bd3"} = Enum.at(tr.plies, 2)
+      assert :rewritten in Enum.at(tr.plies, 2).flags
+    end
+
+    test "straightened on its own side's time and then moved back: the press says it was no move" do
+      # 1. e4 e5 2. Bc4, read on d3, Nf6. White nudges the bishop home -
+      # Bd3-c4 is legal, and is read as White's move - and then plays
+      # 3. Bd3 for real, and presses. The board is back where it was.
+      {tr, b, t} = after_moves(~w(e4 e5 Bd3 Nf6))
+      tr = Tracker.presses(tr, 4, t - 100)
+      {tr, _} = feed(tr, [{t, move(b, "d3", "c4")}], 1_000)
+      assert List.last(Tracker.sans(tr)) == "Bc4"
+
+      {tr, _} = feed(tr, [{t + 3_000, b}], 300)
+      tr = Tracker.presses(tr, 5, t + 3_400)
+      {tr, out} = feed(tr, [{t + 3_400, :press}], 3_000)
+
+      assert Tracker.sans(tr) == ~w(e4 e5 Bc4 Nf6 Bd3)
+      assert alarms(out) == []
+      assert %{read: "Bd3"} = Enum.at(tr.plies, 2)
+      refute Enum.any?(out, &match?({_, {:correction, _, _, :takeback}}, &1))
+    end
+
+    test "the same without a press is a takeback, as it always was" do
+      {tr, b, t} = after_moves(~w(e4 e5 Bd3 Nf6))
+      tr = Tracker.presses(tr, 4, t - 100)
+      {tr, _} = feed(tr, [{t, move(b, "d3", "c4")}], 1_000)
+      {tr, out} = feed(tr, [{t + 3_000, b}], 3_000)
+
+      assert Tracker.sans(tr) == ~w(e4 e5 Bd3 Nf6)
+      assert Enum.any?(out, &match?({_, {:correction, 4, [], :takeback}}, &1))
+    end
+
     test "that only needs waiting for must itself stand: a queen resting on her way is not proof" do
       {tr, b, t} = after_moves(~w(e4 e5 Bd3 Nf6))
       seen = move(b, "d2", "d4")
