@@ -52,7 +52,7 @@ msgstr ""
 msgid "%{a} and %{b} are swapped (%{sq_a}, %{sq_b})"
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:763
+#: lib/alnasl_web/components/layouts.ex:773
 #, elixir-autogen, elixir-format
 msgid "%{count} waiting"
 msgstr ""
@@ -216,7 +216,7 @@ msgid "Access from other machines"
 msgstr ""
 
 #: lib/alnasl_web/live/boards_live.ex:731
-#: lib/alnasl_web/live/fair_play_live.ex:563
+#: lib/alnasl_web/live/fair_play_live.ex:651
 #: lib/alnasl_web/live/halls_live.ex:423
 #: lib/alnasl_web/live/pgn_live.ex:423
 #: lib/alnasl_web/live/pgn_live.ex:531
@@ -321,7 +321,7 @@ msgstr ""
 msgid "Back to the defaults"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:381
+#: lib/alnasl_web/live/fair_play_live.ex:409
 #: lib/alnasl_web/live/game_live.ex:842
 #: lib/alnasl_web/live/game_live.ex:1248
 #: lib/alnasl_web/live/pgn_live.ex:618
@@ -331,7 +331,7 @@ msgstr ""
 msgid "Black"
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:720
+#: lib/alnasl_web/components/layouts.ex:730
 #: lib/alnasl_web/live/boards_live.ex:717
 #: lib/alnasl_web/live/outbox_live.ex:615
 #: lib/alnasl_web/live/pgn_live.ex:415
@@ -500,7 +500,7 @@ msgstr ""
 msgid "Connect the board first."
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:749
+#: lib/alnasl_web/components/layouts.ex:759
 #: lib/alnasl_web/destination_words.ex:32
 #: lib/alnasl_web/link_words.ex:94
 #, elixir-autogen, elixir-format
@@ -711,7 +711,7 @@ msgstr ""
 msgid "Kind"
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:583
+#: lib/alnasl_web/components/layouts.ex:593
 #, elixir-autogen, elixir-format
 msgid "Language"
 msgstr ""
@@ -753,7 +753,7 @@ msgstr ""
 
 #: lib/alnasl_web/components/core_components.ex:144
 #: lib/alnasl_web/components/layouts.ex:218
-#: lib/alnasl_web/components/layouts.ex:786
+#: lib/alnasl_web/components/layouts.ex:796
 #: lib/alnasl_web/live/game_live.ex:949
 #, elixir-autogen, elixir-format
 msgid "Live"
@@ -833,8 +833,8 @@ msgstr ""
 
 #: lib/alnasl_web/live/boards_live.ex:1131
 #: lib/alnasl_web/live/halls_live.ex:487
-#: lib/alnasl_web/live/halls_live.ex:539
-#: lib/alnasl_web/live/halls_live.ex:542
+#: lib/alnasl_web/live/halls_live.ex:532
+#: lib/alnasl_web/live/halls_live.ex:535
 #: lib/alnasl_web/live/setup_live.ex:2345
 #, elixir-autogen, elixir-format
 msgid "Name"
@@ -893,7 +893,7 @@ msgstr ""
 msgid "No connection to the results site. Moves are kept."
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:352
+#: lib/alnasl_web/components/layouts.ex:362
 #, elixir-autogen, elixir-format
 msgid "No connection to the results site. Nothing is lost: %{count} waiting."
 msgstr ""
@@ -956,7 +956,7 @@ msgstr ""
 msgid "Not sending"
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:757
+#: lib/alnasl_web/components/layouts.ex:767
 #: lib/alnasl_web/destination_words.ex:35
 #, elixir-autogen, elixir-format
 msgid "Not set up"
@@ -999,7 +999,7 @@ msgstr ""
 msgid "Nothing recorded yet"
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:765
+#: lib/alnasl_web/components/layouts.ex:775
 #: lib/alnasl_web/destination_words.ex:38
 #, elixir-autogen, elixir-format
 msgid "Nothing sent yet"
@@ -1015,7 +1015,7 @@ msgstr ""
 msgid "Offer mate and stalemate to the results site without waiting for me"
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:752
+#: lib/alnasl_web/components/layouts.ex:762
 #, elixir-autogen, elixir-format
 msgid "Offline, %{count} waiting"
 msgstr ""
@@ -1154,7 +1154,7 @@ msgstr ""
 msgid "Recordings"
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:755
+#: lib/alnasl_web/components/layouts.ex:765
 #: lib/alnasl_web/destination_words.ex:34
 #, elixir-autogen, elixir-format
 msgid "Refused"
@@ -1304,7 +1304,7 @@ msgstr ""
 msgid "Round %{n}"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:622
+#: lib/alnasl_web/live/fair_play_live.ex:710
 #: lib/alnasl_web/live/round_live.ex:156
 #: lib/alnasl_web/live/round_live.ex:1207
 #, elixir-autogen, elixir-format
@@ -1848,7 +1848,7 @@ msgstr ""
 msgid "The results site refuses what Alnasl sends. Check the relay key."
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:348
+#: lib/alnasl_web/components/layouts.ex:358
 #, elixir-autogen, elixir-format
 msgid "The results site refuses what Alnasl sends. Nothing is lost: %{count} waiting."
 msgstr ""
@@ -2035,7 +2035,7 @@ msgstr ""
 msgid "This box asks for a PIN"
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:836
+#: lib/alnasl_web/components/layouts.ex:846
 #, elixir-autogen, elixir-format
 msgid "This page lost its connection to Alnasl. Trying again..."
 msgstr ""
@@ -2063,7 +2063,7 @@ msgid "Times faster than life"
 msgstr ""
 
 #: lib/alnasl_web/live/boards_live.ex:505
-#: lib/alnasl_web/live/fair_play_live.ex:562
+#: lib/alnasl_web/live/fair_play_live.ex:650
 #: lib/alnasl_web/live/pgn_live.ex:331
 #: lib/alnasl_web/live/setup_live.ex:2071
 #: lib/alnasl_web/live/setup_live.ex:2168
@@ -2174,7 +2174,7 @@ msgstr ""
 msgid "What is certain"
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:357
+#: lib/alnasl_web/components/layouts.ex:367
 #, elixir-autogen, elixir-format
 msgid "What is waiting"
 msgstr ""
@@ -2199,7 +2199,7 @@ msgstr ""
 msgid "Which moves were played?"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:380
+#: lib/alnasl_web/live/fair_play_live.ex:408
 #: lib/alnasl_web/live/game_live.ex:897
 #: lib/alnasl_web/live/game_live.ex:1247
 #: lib/alnasl_web/live/pgn_live.ex:618
@@ -3131,7 +3131,7 @@ msgstr ""
 msgid "Switch on"
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:759
+#: lib/alnasl_web/components/layouts.ex:769
 #: lib/alnasl_web/destination_words.ex:36
 #, elixir-autogen, elixir-format
 msgid "Switched off"
@@ -3403,33 +3403,33 @@ msgstr ""
 msgid "Times are in milliseconds. The defaults suit classical and rapid play, time scrambles included; leave them unless a hall teaches you otherwise."
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:617
-#: lib/alnasl_web/components/layouts.ex:651
+#: lib/alnasl_web/components/layouts.ex:627
+#: lib/alnasl_web/components/layouts.ex:661
 #, elixir-autogen, elixir-format
 msgid "Colour theme"
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:722
+#: lib/alnasl_web/components/layouts.ex:732
 #, elixir-autogen, elixir-format
 msgid "High contrast"
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:717
+#: lib/alnasl_web/components/layouts.ex:727
 #, elixir-autogen, elixir-format
 msgid "Match device"
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:719
+#: lib/alnasl_web/components/layouts.ex:729
 #, elixir-autogen, elixir-format
 msgid "Night"
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:718
+#: lib/alnasl_web/components/layouts.ex:728
 #, elixir-autogen, elixir-format
 msgid "Paper"
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:721
+#: lib/alnasl_web/components/layouts.ex:731
 #, elixir-autogen, elixir-format
 msgid "Slate"
 msgstr ""
@@ -4771,7 +4771,7 @@ msgstr ""
 msgid "Alnasl %{version} is out."
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:367
+#: lib/alnasl_web/components/layouts.ex:377
 #, elixir-autogen, elixir-format
 msgid "Alnasl %{version} is out. This box runs %{current}."
 msgstr ""
@@ -4786,7 +4786,7 @@ msgstr ""
 msgid "Decided where the program is started (ALNASL_LISTEN), so there is no switch here."
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:402
+#: lib/alnasl_web/components/layouts.ex:412
 #, elixir-autogen, elixir-format
 msgid "Don't ask again"
 msgstr ""
@@ -4826,7 +4826,7 @@ msgstr ""
 msgid "Install now, while games are being played? Moves played while Alnasl restarts are not read and have to be put right by hand."
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:390
+#: lib/alnasl_web/components/layouts.ex:400
 #, elixir-autogen, elixir-format
 msgid "Later"
 msgstr ""
@@ -4891,7 +4891,7 @@ msgstr ""
 msgid "Start Alnasl when Windows starts"
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:399
+#: lib/alnasl_web/components/layouts.ex:409
 #, elixir-autogen, elixir-format
 msgid "Stop looking for new versions? You can switch it on again under Setup, Updates."
 msgstr ""
@@ -4901,7 +4901,7 @@ msgstr ""
 msgid "The box itself is always let in. A browser on another machine in the hall is let in freely, unless a PIN is set here. Other machines can only reach the box at all when that is switched on below."
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:376
+#: lib/alnasl_web/components/layouts.ex:386
 #: lib/alnasl_web/live/setup_live.ex:2761
 #, elixir-autogen, elixir-format
 msgid "The download is %{size}."
@@ -4968,7 +4968,7 @@ msgstr ""
 msgid "Update to %{version} started by the arbiter."
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:386
+#: lib/alnasl_web/components/layouts.ex:396
 #, elixir-autogen, elixir-format
 msgid "Update..."
 msgstr ""
@@ -4984,7 +4984,7 @@ msgstr ""
 msgid "Wait"
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:382
+#: lib/alnasl_web/components/layouts.ex:392
 #: lib/alnasl_web/live/setup_live.ex:2767
 #, elixir-autogen, elixir-format
 msgid "What is new"
@@ -5180,8 +5180,8 @@ msgstr ""
 msgid "Boards you connect later can be put in them on the Boards page."
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:788
-#: lib/alnasl_web/components/layouts.ex:792
+#: lib/alnasl_web/components/layouts.ex:798
+#: lib/alnasl_web/components/layouts.ex:802
 #, elixir-autogen, elixir-format
 msgid "Connecting..."
 msgstr ""
@@ -5314,7 +5314,7 @@ msgstr ""
 msgid "Put it there: these moves are board %{n} of round %{r}%{name}"
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:787
+#: lib/alnasl_web/components/layouts.ex:797
 #, elixir-autogen, elixir-format
 msgid "Reconnecting..."
 msgstr ""
@@ -5807,17 +5807,17 @@ msgstr ""
 msgid "The Mac app (Alnasl.app)"
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:372
+#: lib/alnasl_web/components/layouts.ex:382
 #, elixir-autogen, elixir-format
 msgid "There is no Mac build for Intel."
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:692
+#: lib/alnasl_web/components/layouts.ex:702
 #, elixir-autogen, elixir-format
 msgid "By %{author}"
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:709
+#: lib/alnasl_web/components/layouts.ex:719
 #, elixir-autogen, elixir-format
 msgid "refused: %{reason}"
 msgstr ""
@@ -5830,7 +5830,7 @@ msgstr ""
 
 #: lib/alnasl_web/live/halls_live.ex:87
 #: lib/alnasl_web/live/halls_live.ex:421
-#: lib/alnasl_web/live/halls_live.ex:757
+#: lib/alnasl_web/live/halls_live.ex:750
 #, elixir-autogen, elixir-format
 msgid "Bridges"
 msgstr ""
@@ -6025,7 +6025,7 @@ msgstr ""
 
 #: lib/alnasl_web/controllers/account_controller.ex:92
 #: lib/alnasl_web/controllers/session_html.ex:19
-#: lib/alnasl_web/live/halls_live.ex:634
+#: lib/alnasl_web/live/halls_live.ex:627
 #: lib/alnasl_web/live/setup_live.ex:2470
 #: lib/alnasl_web/live/setup_live.ex:2657
 #, elixir-autogen, elixir-format
@@ -6053,7 +6053,7 @@ msgstr ""
 msgid "Games, corrections, rounds, and the links to OpenPairings and the results site."
 msgstr ""
 
-#: lib/alnasl_web/live/halls_live.ex:599
+#: lib/alnasl_web/live/halls_live.ex:592
 #, elixir-autogen, elixir-format
 msgid "Give this account a temporary password? Its sessions end now."
 msgstr ""
@@ -6063,7 +6063,7 @@ msgstr ""
 msgid "Good once, until %{time} (UTC). Do not leave it on a screen others photograph."
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:450
+#: lib/alnasl_web/components/layouts.ex:460
 #: lib/alnasl_web/live/bridge_components.ex:207
 #: lib/alnasl_web/live/halls_live.ex:418
 #, elixir-autogen, elixir-format
@@ -6085,7 +6085,7 @@ msgstr ""
 msgid "Halls"
 msgstr ""
 
-#: lib/alnasl_web/live/halls_live.ex:628
+#: lib/alnasl_web/live/halls_live.ex:621
 #, elixir-autogen, elixir-format
 msgid "Invite"
 msgstr ""
@@ -6100,7 +6100,7 @@ msgstr ""
 msgid "Make a sign-in code"
 msgstr ""
 
-#: lib/alnasl_web/live/halls_live.ex:645
+#: lib/alnasl_web/live/halls_live.ex:638
 #, elixir-autogen, elixir-format
 msgid "Make an invitation"
 msgstr ""
@@ -6155,7 +6155,7 @@ msgid "Password changed. Other browsers signed in as you are signed out."
 msgstr ""
 
 #: lib/alnasl_web/live/halls_live.ex:85
-#: lib/alnasl_web/live/halls_live.ex:547
+#: lib/alnasl_web/live/halls_live.ex:540
 #, elixir-autogen, elixir-format
 msgid "People"
 msgstr ""
@@ -6165,7 +6165,7 @@ msgstr ""
 msgid "Point the phone's camera at the code: it signs the phone in as you."
 msgstr ""
 
-#: lib/alnasl_web/live/halls_live.ex:543
+#: lib/alnasl_web/live/halls_live.ex:536
 #, elixir-autogen, elixir-format
 msgid "Rename"
 msgstr ""
@@ -6175,17 +6175,17 @@ msgstr ""
 msgid "Renamed."
 msgstr ""
 
-#: lib/alnasl_web/live/halls_live.ex:641
+#: lib/alnasl_web/live/halls_live.ex:634
 #, elixir-autogen, elixir-format
 msgid "Role"
 msgstr ""
 
-#: lib/alnasl_web/live/halls_live.ex:651
+#: lib/alnasl_web/live/halls_live.ex:644
 #, elixir-autogen, elixir-format
 msgid "Send this link to %{email}. It works once, for a week:"
 msgstr ""
 
-#: lib/alnasl_web/live/halls_live.ex:611
+#: lib/alnasl_web/live/halls_live.ex:604
 #, elixir-autogen, elixir-format
 msgid "Shown once. The next sign-in asks for a password of their own."
 msgstr ""
@@ -6203,7 +6203,7 @@ msgstr ""
 msgid "Sign in with 02cloud"
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:622
+#: lib/alnasl_web/components/layouts.ex:632
 #: lib/alnasl_web/controllers/account_html.ex:62
 #: lib/alnasl_web/controllers/invitation_html.ex:34
 #, elixir-autogen, elixir-format
@@ -6225,22 +6225,22 @@ msgstr ""
 msgid "Someone was invited to %{hall} as %{role}."
 msgstr ""
 
-#: lib/alnasl_web/live/halls_live.ex:585
+#: lib/alnasl_web/live/halls_live.ex:578
 #, elixir-autogen, elixir-format
 msgid "Take out"
 msgstr ""
 
-#: lib/alnasl_web/live/halls_live.ex:583
+#: lib/alnasl_web/live/halls_live.ex:576
 #, elixir-autogen, elixir-format
 msgid "Take this account out of the hall?"
 msgstr ""
 
-#: lib/alnasl_web/live/halls_live.ex:602
+#: lib/alnasl_web/live/halls_live.ex:595
 #, elixir-autogen, elixir-format
 msgid "Temporary password"
 msgstr ""
 
-#: lib/alnasl_web/live/halls_live.ex:608
+#: lib/alnasl_web/live/halls_live.ex:601
 #, elixir-autogen, elixir-format
 msgid "Temporary password for %{email}:"
 msgstr ""
@@ -6338,7 +6338,7 @@ msgstr ""
 msgid "To its boards"
 msgstr ""
 
-#: lib/alnasl_web/live/halls_live.ex:679
+#: lib/alnasl_web/live/halls_live.ex:672
 #, elixir-autogen, elixir-format
 msgid "Withdraw"
 msgstr ""
@@ -6397,7 +6397,7 @@ msgstr ""
 msgid "read"
 msgstr ""
 
-#: lib/alnasl_web/live/halls_live.ex:669
+#: lib/alnasl_web/live/halls_live.ex:662
 #, elixir-autogen, elixir-format
 msgid "until %{date}"
 msgstr ""
@@ -6648,28 +6648,28 @@ msgid_plural "%{count} connections to OpenPairings"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/alnasl_web/live/halls_live.ex:748
+#: lib/alnasl_web/live/halls_live.ex:741
 #: lib/alnasl_web/live/wizard_components.ex:212
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr ""
 
-#: lib/alnasl_web/live/halls_live.ex:719
+#: lib/alnasl_web/live/halls_live.ex:712
 #, elixir-autogen, elixir-format
 msgid "Delete %{name}? This cannot be undone."
 msgstr ""
 
-#: lib/alnasl_web/live/halls_live.ex:745
+#: lib/alnasl_web/live/halls_live.ex:738
 #, elixir-autogen, elixir-format
 msgid "Delete for good"
 msgstr ""
 
-#: lib/alnasl_web/live/halls_live.ex:705
+#: lib/alnasl_web/live/halls_live.ex:698
 #, elixir-autogen, elixir-format
 msgid "Delete hall"
 msgstr ""
 
-#: lib/alnasl_web/live/halls_live.ex:689
+#: lib/alnasl_web/live/halls_live.ex:682
 #, elixir-autogen, elixir-format
 msgid "Delete this hall"
 msgstr ""
@@ -6679,7 +6679,7 @@ msgstr ""
 msgid "Hall %{name} is gone."
 msgstr ""
 
-#: lib/alnasl_web/live/halls_live.ex:693
+#: lib/alnasl_web/live/halls_live.ex:686
 #, elixir-autogen, elixir-format
 msgid "Only a hall with no bridges and no tournaments can be deleted. Its people, invitations and boards go with it."
 msgstr ""
@@ -6694,7 +6694,7 @@ msgstr ""
 msgid "This hall still has %{what} - remove them first."
 msgstr ""
 
-#: lib/alnasl_web/live/halls_live.ex:734
+#: lib/alnasl_web/live/halls_live.ex:727
 #, elixir-autogen, elixir-format
 msgid "Type the name of the hall to confirm: %{name}"
 msgstr ""
@@ -6867,7 +6867,7 @@ msgstr ""
 msgid "\"%{board}\" on table %{table} has a game under way in %{tournament}. Nothing was changed: let the game finish, or give this hall other tables."
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:513
+#: lib/alnasl_web/components/layouts.ex:523
 #, elixir-autogen, elixir-format
 msgid "%{count} live"
 msgid_plural "%{count} live"
@@ -6886,22 +6886,22 @@ msgstr[1] ""
 msgid "%{names} and %{count} more"
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:573
+#: lib/alnasl_web/components/layouts.ex:583
 #, elixir-autogen, elixir-format
 msgid "%{role} in this hall"
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:578
+#: lib/alnasl_web/components/layouts.ex:588
 #, elixir-autogen, elixir-format
 msgid "Account"
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:503
+#: lib/alnasl_web/components/layouts.ex:513
 #, elixir-autogen, elixir-format
 msgid "All halls"
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:456
+#: lib/alnasl_web/components/layouts.ex:466
 #, elixir-autogen, elixir-format
 msgid "Boards connected"
 msgstr ""
@@ -6916,8 +6916,8 @@ msgstr ""
 msgid "Default language"
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:469
-#: lib/alnasl_web/components/layouts.ex:470
+#: lib/alnasl_web/components/layouts.ex:479
+#: lib/alnasl_web/components/layouts.ex:480
 #, elixir-autogen, elixir-format
 msgid "Find a hall"
 msgstr ""
@@ -6927,12 +6927,12 @@ msgstr ""
 msgid "Games"
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:611
+#: lib/alnasl_web/components/layouts.ex:621
 #, elixir-autogen, elixir-format
 msgid "Kept in this browser."
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:609
+#: lib/alnasl_web/components/layouts.ex:619
 #, elixir-autogen, elixir-format
 msgid "Kept with your account."
 msgstr ""
@@ -6957,12 +6957,12 @@ msgstr ""
 msgid "Manage"
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:285
+#: lib/alnasl_web/components/layouts.ex:295
 #, elixir-autogen, elixir-format
 msgid "More"
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:258
+#: lib/alnasl_web/components/layouts.ex:268
 #, elixir-autogen, elixir-format
 msgid "Places on a phone"
 msgstr ""
@@ -6997,7 +6997,7 @@ msgstr ""
 msgid "The other %{count} in Setup"
 msgstr ""
 
-#: lib/alnasl_web/components/layouts.ex:563
+#: lib/alnasl_web/components/layouts.ex:573
 #, elixir-autogen, elixir-format
 msgid "This browser"
 msgstr ""
@@ -7162,7 +7162,7 @@ msgstr ""
 msgid "Pages"
 msgstr ""
 
-#: lib/alnasl_web/live/halls_live.ex:525
+#: lib/alnasl_web/live/halls_live.ex:518
 #, elixir-autogen, elixir-format
 msgid "Parts of this hall"
 msgstr ""
@@ -7177,6 +7177,7 @@ msgstr ""
 msgid "Search the recordings"
 msgstr ""
 
+#: lib/alnasl_web/live/fair_play_live.ex:497
 #: lib/alnasl_web/live/halls_live.ex:88
 #, elixir-autogen, elixir-format
 msgid "Settings"
@@ -7198,7 +7199,7 @@ msgstr ""
 msgid "search"
 msgstr ""
 
-#: lib/alnasl_web/live/halls_live.ex:550
+#: lib/alnasl_web/live/halls_live.ex:543
 #, elixir-autogen, elixir-format
 msgid "No accounts yet: everybody on the hall's network may do everything. The first account is made on Setup, Access, and becomes this hall's owner."
 msgstr ""
@@ -7304,7 +7305,7 @@ msgstr ""
 msgid "No connections yet"
 msgstr ""
 
-#: lib/alnasl_web/live/halls_live.ex:660
+#: lib/alnasl_web/live/halls_live.ex:653
 #, elixir-autogen, elixir-format
 msgid "No invitations waiting. One made above shows here until it is used, withdrawn or a week old."
 msgstr ""
@@ -7334,7 +7335,7 @@ msgstr ""
 msgid "No tournaments yet"
 msgstr ""
 
-#: lib/alnasl_web/live/halls_live.ex:556
+#: lib/alnasl_web/live/halls_live.ex:549
 #, elixir-autogen, elixir-format
 msgid "Nobody belongs to this hall yet. Invite someone on the Invitations tab; admins reach every hall without being in it."
 msgstr ""
@@ -7836,402 +7837,429 @@ msgstr ""
 msgid "It is being read as a loop: a row for each board appears in a moment. If none does, try it by hand."
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:455
+#: lib/alnasl_web/live/fair_play_live.ex:543
 #, elixir-autogen, elixir-format
 msgid "Alnasl can check the games its boards record against a strong chess engine, and show you, as the owner of this hall and nobody else, which players' moves matched it more often than their rating predicts. It is off until you switch it on."
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:466
+#: lib/alnasl_web/live/fair_play_live.ex:554
 #, elixir-autogen, elixir-format
 msgid "Analyses the moves of this hall's games as they are played."
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:287
+#: lib/alnasl_web/live/fair_play_live.ex:315
 #, elixir-autogen, elixir-format
 msgid "At most 365 days after the tournament's last round."
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:666
-#: lib/alnasl_web/live/fair_play_live.ex:793
+#: lib/alnasl_web/live/fair_play_live.ex:754
+#: lib/alnasl_web/live/fair_play_live.ex:881
 #, elixir-autogen, elixir-format
 msgid "Average loss"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:448
+#: lib/alnasl_web/live/fair_play_live.ex:536
 #, elixir-autogen, elixir-format
 msgid "Back to %{hall}"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:770
+#: lib/alnasl_web/live/fair_play_live.ex:858
 #, elixir-autogen, elixir-format
 msgid "Back to the report"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:488
+#: lib/alnasl_web/live/fair_play_live.ex:576
 #, elixir-autogen, elixir-format
 msgid "Checking the file. This takes a minute."
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:532
+#: lib/alnasl_web/live/fair_play_live.ex:620
 #, elixir-autogen, elixir-format
 msgid "Choose a file"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:252
+#: lib/alnasl_web/live/fair_play_live.ex:280
 #, elixir-autogen, elixir-format
 msgid "Choose the file first."
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:663
-#: lib/alnasl_web/live/fair_play_live.ex:787
+#: lib/alnasl_web/live/fair_play_live.ex:751
+#: lib/alnasl_web/live/fair_play_live.ex:875
 #, elixir-autogen, elixir-format
 msgid "Counted moves"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:729
+#: lib/alnasl_web/live/fair_play_live.ex:817
 #, elixir-autogen, elixir-format
 msgid "Days after the last round (at most 365)"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:717
+#: lib/alnasl_web/live/fair_play_live.ex:805
 #, elixir-autogen, elixir-format
 msgid "Deleted %{days} days after the tournament's last round, along with the list below of who opened this page."
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:512
+#: lib/alnasl_web/live/fair_play_live.ex:600
 #, elixir-autogen, elixir-format
 msgid "Download Stockfish 19"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:484
+#: lib/alnasl_web/live/fair_play_live.ex:572
 #, elixir-autogen, elixir-format
 msgid "Downloading"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:479
+#: lib/alnasl_web/live/fair_play_live.ex:567
 #, elixir-autogen, elixir-format
 msgid "Engine"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:665
-#: lib/alnasl_web/live/fair_play_live.ex:667
+#: lib/alnasl_web/live/fair_play_live.ex:753
+#: lib/alnasl_web/live/fair_play_live.ex:755
 #, elixir-autogen, elixir-format
 msgid "Expected"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:40
-#: lib/alnasl_web/live/fair_play_live.ex:81
-#: lib/alnasl_web/live/fair_play_live.ex:99
-#: lib/alnasl_web/live/fair_play_live.ex:121
-#: lib/alnasl_web/live/fair_play_live.ex:413
-#: lib/alnasl_web/live/fair_play_live.ex:452
-#: lib/alnasl_web/live/fair_play_live.ex:465
-#: lib/alnasl_web/live/halls_live.ex:520
+#: lib/alnasl_web/components/layouts.ex:243
+#: lib/alnasl_web/live/fair_play_live.ex:42
+#: lib/alnasl_web/live/fair_play_live.ex:91
+#: lib/alnasl_web/live/fair_play_live.ex:109
+#: lib/alnasl_web/live/fair_play_live.ex:127
+#: lib/alnasl_web/live/fair_play_live.ex:149
+#: lib/alnasl_web/live/fair_play_live.ex:441
+#: lib/alnasl_web/live/fair_play_live.ex:540
+#: lib/alnasl_web/live/fair_play_live.ex:553
 #, elixir-autogen, elixir-format
 msgid "Fair-play screening"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:609
+#: lib/alnasl_web/live/fair_play_live.ex:697
 #, elixir-autogen, elixir-format
 msgid "Fair-play settings"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:485
+#: lib/alnasl_web/live/fair_play_live.ex:573
 #, elixir-autogen, elixir-format
 msgid "Fetching Stockfish 19 and checking it. This takes a minute."
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:289
+#: lib/alnasl_web/live/fair_play_live.ex:317
 #, elixir-autogen, elixir-format
 msgid "Give a number of days."
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:708
+#: lib/alnasl_web/live/fair_play_live.ex:796
 #, elixir-autogen, elixir-format
 msgid "How long this is kept"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:490
+#: lib/alnasl_web/live/fair_play_live.ex:578
 #, elixir-autogen, elixir-format
 msgid "Installed"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:487
+#: lib/alnasl_web/live/fair_play_live.ex:575
 #, elixir-autogen, elixir-format
 msgid "Installing"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:474
+#: lib/alnasl_web/live/fair_play_live.ex:562
 #, elixir-autogen, elixir-format
 msgid "It is on, and does nothing until an engine is installed (below)."
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:737
+#: lib/alnasl_web/live/fair_play_live.ex:825
 #, elixir-autogen, elixir-format
 msgid "Keep it"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:267
+#: lib/alnasl_web/live/fair_play_live.ex:295
 #, elixir-autogen, elixir-format
 msgid "Kept for longer."
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:712
+#: lib/alnasl_web/live/fair_play_live.ex:800
 #, elixir-autogen, elixir-format
 msgid "Kept until %{date}. Reason: %{reason}"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:669
+#: lib/alnasl_web/live/fair_play_live.ex:757
 #, elixir-autogen, elixir-format
 msgid "Left out"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:751
-#: lib/alnasl_web/live/fair_play_live.ex:778
+#: lib/alnasl_web/live/fair_play_live.ex:839
+#: lib/alnasl_web/live/fair_play_live.ex:866
 #, elixir-autogen, elixir-format
 msgid "Loading."
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:664
-#: lib/alnasl_web/live/fair_play_live.ex:789
+#: lib/alnasl_web/live/fair_play_live.ex:752
+#: lib/alnasl_web/live/fair_play_live.ex:877
 #, elixir-autogen, elixir-format
 msgid "Matches the engine"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:814
+#: lib/alnasl_web/live/fair_play_live.ex:902
 #, elixir-autogen, elixir-format
 msgid "Moves this player made that were the engine's first choice, where that choice stood out most from the second. Look at them as a person would: a move like that is often the only sensible one."
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:525
+#: lib/alnasl_web/live/fair_play_live.ex:613
 #, elixir-autogen, elixir-format
 msgid "No internet in the hall? Download the file for this computer on another one and choose it here: stockfish-windows-x86-64-universal.zip, stockfish-macos-universal.tar.gz or stockfish-linux-x86-64-universal.tar.gz, from the Stockfish 19 release on GitHub. It must be the official file; Alnasl checks it."
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:496
+#: lib/alnasl_web/live/fair_play_live.ex:584
 #, elixir-autogen, elixir-format
 msgid "Not installed"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:781
+#: lib/alnasl_web/live/fair_play_live.ex:869
 #, elixir-autogen, elixir-format
 msgid "Nothing has been analysed for this player."
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:653
+#: lib/alnasl_web/live/fair_play_live.ex:741
 #, elixir-autogen, elixir-format
 msgid "Nothing has been analysed for this tournament. Is fair-play screening on in this hall, with an engine installed, and are the games recorded by the boards?"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:575
+#: lib/alnasl_web/live/fair_play_live.ex:663
 #, elixir-autogen, elixir-format
 msgid "Open report"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:843
+#: lib/alnasl_web/live/fair_play_live.ex:931
 #, elixir-autogen, elixir-format
 msgid "Played %{move}"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:662
+#: lib/alnasl_web/live/fair_play_live.ex:750
 #, elixir-autogen, elixir-format
 msgid "Player"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:812
+#: lib/alnasl_web/live/fair_play_live.ex:900
 #, elixir-autogen, elixir-format
 msgid "Positions to look at"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:435
+#: lib/alnasl_web/live/fair_play_live.ex:465
 #, elixir-autogen, elixir-format
 msgid "Read the manual section"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:552
+#: lib/alnasl_web/live/fair_play_live.ex:640
 #, elixir-autogen, elixir-format
 msgid "Reports"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:641
+#: lib/alnasl_web/live/fair_play_live.ex:729
 #, elixir-autogen, elixir-format
 msgid "Round %{round} only"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:836
+#: lib/alnasl_web/live/fair_play_live.ex:924
 #, elixir-autogen, elixir-format
 msgid "Round %{round}, board %{board}, move %{n}"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:639
+#: lib/alnasl_web/live/fair_play_live.ex:727
 #, elixir-autogen, elixir-format
 msgid "Rounds 1 to %{round}"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:284
+#: lib/alnasl_web/live/fair_play_live.ex:312
 #, elixir-autogen, elixir-format
 msgid "Say why: a reason is needed to keep the analysis longer."
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:668
-#: lib/alnasl_web/live/fair_play_live.ex:797
+#: lib/alnasl_web/live/fair_play_live.ex:756
+#: lib/alnasl_web/live/fair_play_live.ex:885
 #, elixir-autogen, elixir-format
 msgid "Score"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:430
+#: lib/alnasl_web/live/fair_play_live.ex:460
 #, elixir-autogen, elixir-format
 msgid "Screening, not evidence"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:491
+#: lib/alnasl_web/live/fair_play_live.ex:579
 #, elixir-autogen, elixir-format
 msgid "Stockfish %{version}, bench %{bench}"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:321
+#: lib/alnasl_web/live/fair_play_live.ex:349
 #, elixir-autogen, elixir-format
 msgid "The engine is installed."
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:334
+#: lib/alnasl_web/live/fair_play_live.ex:362
 #, elixir-autogen, elixir-format
 msgid "The installation stopped unexpectedly. Try again."
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:832
+#: lib/alnasl_web/live/fair_play_live.ex:920
 #, elixir-autogen, elixir-format
 msgid "The position before the move"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:819
+#: lib/alnasl_web/live/fair_play_live.ex:907
 #, elixir-autogen, elixir-format
 msgid "There are none yet."
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:647
+#: lib/alnasl_web/live/fair_play_live.ex:735
 #, elixir-autogen, elixir-format
 msgid "There is no score yet: this engine has not been calibrated, so there is nothing to compare a player's moves with. The counts below are real; do not read more into them than that."
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:64
-#: lib/alnasl_web/live/fair_play_live.ex:281
+#: lib/alnasl_web/live/fair_play_live.ex:67
+#: lib/alnasl_web/live/fair_play_live.ex:309
 #, elixir-autogen, elixir-format
 msgid "There is nothing at that address."
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:555
+#: lib/alnasl_web/live/fair_play_live.ex:514
+#: lib/alnasl_web/live/fair_play_live.ex:643
 #, elixir-autogen, elixir-format
 msgid "This hall has no tournaments yet."
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:431
+#: lib/alnasl_web/live/fair_play_live.ex:461
 #, elixir-autogen, elixir-format
 msgid "This is not the method FIDE has approved (FIDE Fair Play Regulations 2024, Art. 1.6): it is a reason to look closer, nothing more. What to do with a high number is in the manual."
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:292
+#: lib/alnasl_web/live/fair_play_live.ex:320
 #, elixir-autogen, elixir-format
 msgid "This tournament has no games yet, so there is no last round to count from."
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:378
+#: lib/alnasl_web/live/fair_play_live.ex:406
 #, elixir-autogen, elixir-format
 msgid "Tournament %{id}"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:545
+#: lib/alnasl_web/live/fair_play_live.ex:633
 #, elixir-autogen, elixir-format
 msgid "Uses Stockfish (GPL-3.0), stockfishchess.org, downloaded from the official release."
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:742
+#: lib/alnasl_web/live/fair_play_live.ex:830
 #, elixir-autogen, elixir-format
 msgid "Who opened this"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:734
+#: lib/alnasl_web/live/fair_play_live.ex:822
 #, elixir-autogen, elixir-format
 msgid "Why (needed)"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:347
+#: lib/alnasl_web/live/fair_play_live.ex:375
 #, elixir-autogen, elixir-format
 msgid "decided position"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:791
-#: lib/alnasl_web/live/fair_play_live.ex:795
+#: lib/alnasl_web/live/fair_play_live.ex:879
+#: lib/alnasl_web/live/fair_play_live.ex:883
 #, elixir-autogen, elixir-format
 msgid "expected"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:345
+#: lib/alnasl_web/live/fair_play_live.ex:373
 #, elixir-autogen, elixir-format
 msgid "forced move"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:341
+#: lib/alnasl_web/live/fair_play_live.ex:369
 #, elixir-autogen, elixir-format
 msgid "guessed by the tracker"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:340
+#: lib/alnasl_web/live/fair_play_live.ex:368
 #, elixir-autogen, elixir-format
 msgid "no rating"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:372
+#: lib/alnasl_web/live/fair_play_live.ex:400
 #, elixir-autogen, elixir-format
 msgid "no score until the engine is calibrated"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:348
+#: lib/alnasl_web/live/fair_play_live.ex:376
 #, elixir-autogen, elixir-format
 msgid "not analysed"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:343
+#: lib/alnasl_web/live/fair_play_live.ex:371
 #, elixir-autogen, elixir-format
 msgid "opening (moves 1 to 8)"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:344
+#: lib/alnasl_web/live/fair_play_live.ex:372
 #, elixir-autogen, elixir-format
 msgid "repeated position"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:342
+#: lib/alnasl_web/live/fair_play_live.ex:370
 #, elixir-autogen, elixir-format
 msgid "rewritten, result not yet confirmed"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:369
+#: lib/alnasl_web/live/fair_play_live.ex:397
 #, elixir-autogen, elixir-format
 msgid "statistically very unusual"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:745
+#: lib/alnasl_web/live/fair_play_live.ex:833
 #, elixir-autogen, elixir-format
 msgid "this computer"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:374
+#: lib/alnasl_web/live/fair_play_live.ex:402
 #, elixir-autogen, elixir-format
 msgid "too few moves"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:346
+#: lib/alnasl_web/live/fair_play_live.ex:374
 #, elixir-autogen, elixir-format
 msgid "under a minute on the clock"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:368
+#: lib/alnasl_web/live/fair_play_live.ex:396
 #, elixir-autogen, elixir-format
 msgid "worth a closer look"
 msgstr ""
 
-#: lib/alnasl_web/live/fair_play_live.ex:592
+#: lib/alnasl_web/live/fair_play_live.ex:680
 #, elixir-autogen, elixir-format
 msgid "Fair-play screening needs macOS 10.15 or newer; this Mac runs %{version}. Everything else in Alnasl works as before."
+msgstr ""
+
+#: lib/alnasl_web/live/fair_play_live.ex:508
+#, elixir-autogen, elixir-format
+msgid "Engine installed"
+msgstr ""
+
+#: lib/alnasl_web/live/fair_play_live.ex:510
+#, elixir-autogen, elixir-format
+msgid "Engine not installed"
+msgstr ""
+
+#: lib/alnasl_web/live/fair_play_live.ex:477
+#, elixir-autogen, elixir-format
+msgid "Fair-play screening is the owner's of a hall and nobody else's. These are the halls you own."
+msgstr ""
+
+#: lib/alnasl_web/live/fair_play_live.ex:505
+#, elixir-autogen, elixir-format
+msgid "Off"
+msgstr ""
+
+#: lib/alnasl_web/live/fair_play_live.ex:503
+#, elixir-autogen, elixir-format
+msgid "On"
 msgstr ""

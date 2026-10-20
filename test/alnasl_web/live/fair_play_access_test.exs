@@ -180,12 +180,14 @@ defmodule AlnaslWeb.FairPlayAccessTest do
 
     test "the menu offers fair play to the owner and to nobody else", %{conn: conn} = ctx do
       {:ok, owner, _} = reach(conn, ctx.owner, ctx.hall, ~p"/halls/#{ctx.hall.id}")
-      assert has_element?(owner, "#hall-fair-play")
+      assert has_element?(owner, "#nav-fair_play", "Fair-play screening")
+      refute has_element?(owner, "#hall-fair-play")
 
       for who <- [:arbiter, :viewer] do
         {:ok, page, html} =
           reach(build_conn(), Map.fetch!(ctx, who), ctx.hall, ~p"/halls/#{ctx.hall.id}")
 
+        refute has_element?(page, "#nav-fair_play")
         refute has_element?(page, "#hall-fair-play")
         refute html =~ "Fair-play"
       end
@@ -193,7 +195,46 @@ defmodule AlnaslWeb.FairPlayAccessTest do
       {:ok, admin, _} =
         reach(build_conn(), ctx.outsider_admin, ctx.hall, ~p"/halls/#{ctx.hall.id}")
 
-      refute has_element?(admin, "#hall-fair-play")
+      refute has_element?(admin, "#nav-fair_play")
+    end
+
+    test "an admin who owns a hall has the item; a box without accounts has it too",
+         %{conn: conn} = ctx do
+      {:ok, admin, _} = reach(conn, ctx.admin_owner, ctx.hall, ~p"/halls/#{ctx.hall.id}")
+      assert has_element?(admin, "#nav-fair_play")
+
+      Alnasl.Repo.delete_all(Alnasl.Accounts.User)
+      {:ok, open, _} = live(build_conn(), ~p"/halls")
+      assert has_element?(open, "#nav-fair_play")
+    end
+  end
+
+  describe "the halls page" do
+    test "lists the halls the person owns and no other", %{conn: conn} = ctx do
+      {:ok, view, _} = reach(conn, ctx.owner, ctx.hall, ~p"/fair-play")
+
+      assert has_element?(view, "#fair-play-index")
+      assert has_element?(view, "#fair-play-hall-#{ctx.hall.id}")
+      refute has_element?(view, "#fair-play-hall-#{ctx.other.id}")
+      assert has_element?(view, "#fair-play-hall-status-#{ctx.hall.id}", "Off")
+      assert has_element?(view, "#fair-play-hall-status-#{ctx.hall.id}", "Engine not installed")
+      assert has_element?(view, "#fair-play-settings-#{ctx.hall.id}")
+
+      assert has_element?(
+               view,
+               "#fair-play-hall-#{ctx.hall.id}-report-#{ctx.tournament.id}"
+             )
+
+      assert has_element?(view, "#nav-fair_play[aria-current=page]")
+    end
+
+    test "answers arbiter, viewer and an admin who owns no hall as a page not there",
+         %{conn: conn} = ctx do
+      for who <- [:arbiter, :viewer, :outsider_admin] do
+        refute reached?(reach(build_conn(), Map.fetch!(ctx, who), ctx.hall, ~p"/fair-play"))
+      end
+
+      _ = conn
     end
   end
 

@@ -33,4 +33,25 @@ defmodule Alnasl.FairPlay.Access do
     do: Map.get(roles, hall_id) == "owner"
 
   def owner?(_scope, _hall_id), do: false
+
+  @doc """
+  Does the scope own at least one hall, so that fair play has a place in its
+  menu? The same rule as `owner?/2`, asked of every hall at once: an open
+  box, or a real membership with the role "owner". An admin without one
+  owns nothing here.
+  """
+  @spec any_hall?(%Scope{} | nil) :: boolean()
+  def any_hall?(%Scope{open?: true}), do: true
+
+  def any_hall?(%Scope{roles: roles}) when is_map(roles),
+    do: Enum.any?(roles, fn {_hall_id, role} -> role == "owner" end)
+
+  def any_hall?(_scope), do: false
+
+  @doc "The halls of the scope's own list that it owns, in that list's order."
+  @spec halls(%Scope{} | nil) :: [struct()]
+  def halls(%Scope{halls: halls} = scope) when is_list(halls),
+    do: Enum.filter(halls, &owner?(scope, &1.id))
+
+  def halls(_scope), do: []
 end

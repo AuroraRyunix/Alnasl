@@ -416,10 +416,15 @@ defmodule AlnaslWeb.HallsLive do
               <thead>
                 <tr>
                   <th>{gettext("Hall")}</th>
+
                   <th>{gettext("Your role")}</th>
+
                   <th>{gettext("Live boards")}</th>
+
                   <th>{gettext("Bridges")}</th>
+
                   <th>{gettext("Attention")}</th>
+
                   <th><span class="sr-only">{gettext("Actions")}</span></th>
                 </tr>
               </thead>
@@ -511,13 +516,6 @@ defmodule AlnaslWeb.HallsLive do
       <:actions>
         <.button id="hall-enter" href={~p"/halls/#{@shown.id}/enter"} icon="boards">
           {gettext("To its boards")}
-        </.button>
-        <.button
-          :if={Alnasl.FairPlay.Access.owner?(@current_scope, @shown.id)}
-          id="hall-fair-play"
-          navigate={~p"/halls/#{@shown.id}/fair-play"}
-        >
-          {gettext("Fair-play screening")}
         </.button>
       </:actions>
 
@@ -718,6 +716,7 @@ defmodule AlnaslWeb.HallsLive do
                 <b id="hall-delete-title">
                   {gettext("Delete %{name}? This cannot be undone.", name: @shown.name)}
                 </b>
+
                 <.form
                   for={%{}}
                   as={:delete}
@@ -744,6 +743,7 @@ defmodule AlnaslWeb.HallsLive do
                     >
                       {gettext("Delete for good")}
                     </.button>
+
                     <.button id="hall-delete-cancel" type="button" phx-click="delete_cancel">
                       {gettext("Cancel")}
                     </.button>

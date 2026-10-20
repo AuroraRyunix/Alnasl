@@ -79,7 +79,7 @@ defmodule AlnaslWeb.Layouts do
         <.hall_picker scope={@scope} hall={@hall} path={@path} />
         <nav class="nav" id="nav" aria-label={gettext("Places")}>
           <div
-            :for={{group, label, items} <- groups(@alarms, @waiting)}
+            :for={{group, label, items} <- groups(@alarms, @waiting, @scope)}
             class="nav-group"
             id={"nav-group-#{group}"}
             role="group"
@@ -131,6 +131,7 @@ defmodule AlnaslWeb.Layouts do
                 {ngettext("%{count} more notice", "%{count} more notices", length(@notices) - 2)}
               </span>
             </button>
+
             <div id="more-notices" hidden>
               <.notice
                 :for={key <- Enum.drop(@notices, 2)}
@@ -171,8 +172,7 @@ defmodule AlnaslWeb.Layouts do
                 class="head-open"
                 title={gettext("Open the live boards on the results site")}
               >
-                <span class="head-open-text">{gettext("Live boards")}</span>
-                <.icon name="external" />
+                <span class="head-open-text">{gettext("Live boards")}</span> <.icon name="external" />
               </a>
             <% else %>
               <.link navigate={~p"/outbox"} class="head-link">
@@ -186,8 +186,7 @@ defmodule AlnaslWeb.Layouts do
           {render_slot(@inner_block)}
         </main>
       </div>
-
-      <.tab_bar nav={@nav} alarms={@alarms} waiting={@waiting} />
+      <.tab_bar nav={@nav} alarms={@alarms} waiting={@waiting} scope={@scope} />
     </div>
     <.flash_group flash={@flash} />
     """
@@ -211,7 +210,7 @@ defmodule AlnaslWeb.Layouts do
 
   # The places, in their groups: `{id, label, [item]}`. Help stands alone,
   # at the end, without a heading.
-  defp groups(alarms, waiting) do
+  defp groups(alarms, waiting, scope) do
     [
       {"play", gettext("Play"),
        [
@@ -225,7 +224,7 @@ defmodule AlnaslWeb.Layouts do
        [
          item(:halls, ~p"/halls", "hall", gettext("Halls")),
          item(:setup, ~p"/setup", "setup", gettext("Setup"))
-       ]},
+       ] ++ fair_play_item(scope)},
       {"back", gettext("Look back"),
        [
          item(:log, ~p"/log", "log", gettext("Log")),
@@ -233,6 +232,15 @@ defmodule AlnaslWeb.Layouts do
        ]},
       {"help", nil, [item(:help, ~p"/help", "help", gettext("Help"))]}
     ]
+  end
+
+  # Fair-play screening is the hall owner's and nobody else's, so it is in
+  # the menu of somebody who owns a hall (`Alnasl.FairPlay.Access`), and in
+  # nobody else's: not the arbiter's, not the viewer's, not the admin's.
+  defp fair_play_item(scope) do
+    if Alnasl.FairPlay.Access.any_hall?(scope),
+      do: [item(:fair_play, ~p"/fair-play", "search", gettext("Fair-play screening"))],
+      else: []
   end
 
   defp item(key, to, icon, label, count \\ 0),
@@ -244,9 +252,11 @@ defmodule AlnaslWeb.Layouts do
   attr :nav, :atom, required: true
   attr :alarms, :integer, default: 0
   attr :waiting, :integer, default: 0
+  attr :scope, :any, default: nil
 
   defp tab_bar(assigns) do
-    items = assigns.alarms |> groups(assigns.waiting) |> Enum.flat_map(&elem(&1, 2))
+    items =
+      assigns.alarms |> groups(assigns.waiting, assigns.scope) |> Enum.flat_map(&elem(&1, 2))
 
     assigns =
       assign(assigns,
@@ -266,6 +276,7 @@ defmodule AlnaslWeb.Layouts do
         <.icon name={tab.icon} /> <span>{tab.label}</span>
         <span :if={tab.count > 0} class="count">{tab.count}</span>
       </.link>
+
       <div
         id="tab-more"
         class="menu tab-more"
@@ -284,6 +295,7 @@ defmodule AlnaslWeb.Layouts do
         >
           <.icon name="more" /> <span>{gettext("More")}</span>
         </button>
+
         <div id="tab-more-menu" class="menu-panel more-sheet" hidden>
           <.link
             :for={item <- @rest}
@@ -450,6 +462,7 @@ defmodule AlnaslWeb.Layouts do
           <span class="hint">{gettext("Hall")}</span>
           <b id="hall-picker-current">{@scope.hall && @scope.hall.name}</b>
         </span>
+
         <span
           id="hall-picker-live"
           class="live-count"
@@ -483,6 +496,7 @@ defmodule AlnaslWeb.Layouts do
             }
           }
         </script>
+
         <ul id="hall-picker-list" class="menu-list">
           <li :for={hall <- @scope.halls} data-hall-name={String.downcase(hall.name)}>
             <a
@@ -499,6 +513,7 @@ defmodule AlnaslWeb.Layouts do
             </a>
           </li>
         </ul>
+
         <.link navigate={~p"/halls"} id="hall-picker-all" class="menu-item menu-foot">
           <.icon name="hall" /> <span>{gettext("All halls")}</span>
         </.link>
@@ -556,6 +571,7 @@ defmodule AlnaslWeb.Layouts do
             <.icon name="account" />
           <% end %>
         </span>
+
         <span class="menu-button-text account-name">
           <%= if @user do %>
             <span class="mono">{@user.email}</span>
@@ -582,6 +598,7 @@ defmodule AlnaslWeb.Layouts do
           <span class="menu-label" id="locale-label">
             <.icon name="language" /> {gettext("Language")}
           </span>
+
           <.form
             for={%{}}
             as={:locale_choice}
@@ -604,6 +621,7 @@ defmodule AlnaslWeb.Layouts do
               {name}
             </button>
           </.form>
+
           <p class="hint">
             <%= if @user do %>
               {gettext("Kept with your account.")}

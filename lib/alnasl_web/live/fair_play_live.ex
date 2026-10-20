@@ -2,6 +2,8 @@ defmodule AlnaslWeb.FairPlayLive do
   @moduledoc """
   Fair-play screening, the owner's pages (`docs/plan-fair-play.md`, section 7):
 
+    * `:index` (`/fair-play`, its own place in the menu) - the halls the
+      person owns, each with its switch, its engine and its reports;
     * `:settings` (`/halls/:id/fair-play`) - the switch, the engine (download
       or choose a file), the credit, and the hall's tournaments with a link
       to each report;
@@ -52,6 +54,7 @@ defmodule AlnaslWeb.FairPlayLive do
   @impl true
   def handle_params(params, _uri, socket) do
     case socket.assigns.live_action do
+      :index -> index(socket)
       :settings -> settings(params, socket)
       :report -> report(params, socket)
       :player -> player(params, socket)
@@ -63,6 +66,31 @@ defmodule AlnaslWeb.FairPlayLive do
      socket
      |> put_flash(:error, gettext("There is nothing at that address."))
      |> push_navigate(to: ~p"/")}
+  end
+
+  # The halls the scope owns. Somebody who owns none is told what anybody
+  # else is told: there is nothing here.
+  defp index(socket) do
+    scope = socket.assigns.current_scope
+
+    case Access.halls(scope) do
+      [] ->
+        nothing_here(socket)
+
+      halls ->
+        rows =
+          for hall <- halls do
+            {:ok, tournaments} = FairPlay.tournaments(scope, hall.id)
+            %{hall: hall, setting: FairPlay.settings(hall.id), tournaments: tournaments}
+          end
+
+        {:noreply,
+         assign(socket,
+           fp_rows: rows,
+           fp_problem: FairPlay.platform_problem(),
+           page_title: gettext("Fair-play screening")
+         )}
+    end
   end
 
   defp settings(params, socket) do
@@ -401,7 +429,7 @@ defmodule AlnaslWeb.FairPlayLive do
     ~H"""
     <Layouts.app
       flash={@flash}
-      nav={:halls}
+      nav={:fair_play}
       help={:fair_play}
       link={@link}
       hall={@hall}
@@ -413,6 +441,8 @@ defmodule AlnaslWeb.FairPlayLive do
       title={gettext("Fair-play screening")}
     >
       <%= case @live_action do %>
+        <% :index -> %>
+          <.index_page {assigns} />
         <% :settings -> %>
           <.settings_page {assigns} />
         <% :report -> %>
@@ -435,6 +465,64 @@ defmodule AlnaslWeb.FairPlayLive do
         {gettext("Read the manual section")}
       </a>
     </p>
+    """
+  end
+
+  # --- the halls ---------------------------------------------------------------
+
+  defp index_page(assigns) do
+    ~H"""
+    <div :if={assigns[:fp_rows]} class="stack" id="fair-play-index">
+      <p class="note">
+        {gettext(
+          "Fair-play screening is the owner's of a hall and nobody else's. These are the halls you own."
+        )}
+      </p>
+
+      <p :if={@fp_problem} id="fair-play-problem" class="error" role="alert">
+        {problem_text(@fp_problem)}
+      </p>
+
+      <.panel
+        :for={row <- @fp_rows}
+        id={"fair-play-hall-#{row.hall.id}"}
+        title={row.hall.name}
+      >
+        <:actions>
+          <.button
+            id={"fair-play-settings-#{row.hall.id}"}
+            small
+            navigate={~p"/halls/#{row.hall.id}/fair-play"}
+          >
+            {gettext("Settings")}
+          </.button>
+        </:actions>
+        <div class="stack">
+          <p id={"fair-play-hall-status-#{row.hall.id}"}>
+            <%= if row.setting.enabled do %>
+              <.badge tone="ok" icon="ok">{gettext("On")}</.badge>
+            <% else %>
+              <.badge tone="warn" icon="waiting">{gettext("Off")}</.badge>
+            <% end %>
+            <%= if installed?(row.setting) do %>
+              <.badge tone="ok" icon="ok">{gettext("Engine installed")}</.badge>
+            <% else %>
+              <.badge tone="warn" icon="warning">{gettext("Engine not installed")}</.badge>
+            <% end %>
+          </p>
+          <p :if={row.tournaments == []} class="note">
+            {gettext("This hall has no tournaments yet.")}
+          </p>
+          <ul :if={row.tournaments != []} class="tight-list">
+            <li :for={t <- row.tournaments} id={"fair-play-hall-#{row.hall.id}-report-#{t.id}"}>
+              <.link navigate={~p"/fair-play/#{t.id}"}>{tournament_title(t)}</.link>
+            </li>
+          </ul>
+        </div>
+      </.panel>
+
+      <.not_fide />
+    </div>
     """
   end
 
