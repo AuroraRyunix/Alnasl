@@ -1,0 +1,9 @@
+info depth 11 seldepth 2 multipv 1 score mate 1 nodes 15138 nps 1376181 hashfull 3 tbhits 0 time 11 pv d1d8
+info depth 11 seldepth 15 multipv 2 score cp 694 nodes 15138 nps 1376181 hashfull 3 tbhits 0 time 11 pv d1a1 f7f6 g2g3 g7g6 g1g2
+info depth 11 seldepth 12 multipv 3 score cp 692 nodes 15138 nps 1261500 hashfull 3 tbhits 0 time 12 pv d1d3 f7f6
+info depth 11 seldepth 13 multipv 4 score cp 685 nodes 15138 nps 1261500 hashfull 3 tbhits 0 time 12 pv f2f3 f7f6 g1f2
+info depth 12 seldepth 2 multipv 1 score mate 1 nodes 20023 nps 1334866 hashfull 7 tbhits 0 time 15 pv d1d8
+info depth 12 seldepth 14 multipv 2 score cp 683 nodes 20023 nps 1334866 hashfull 7 tbhits 0 time 15 pv f2f3 g7g6 g1f2 h7h6 d1a1 g8f8 g2g3 f8g7 h2h3
+info depth 12 seldepth 13 multipv 3 score cp 674 nodes 20023 nps 1334866 hashfull 7 tbhits 0 time 15 pv d1a1 g7g6 a1a8 g8g7 h2h3 h7h6 g2g3
+info depth 11 seldepth 12 multipv 4 score cp 692 nodes 20023 nps 1334866 hashfull 7 tbhits 0 time 15 pv d1d3 f7f6
+bestmove d1d8
