@@ -86,7 +86,7 @@ defmodule Alnasl.FairPlay.InstallerTest do
     refute File.exists?(Path.join(tmp, "engines"))
 
     assert Installer.message({:macos_too_old, "10.13.6"}) ==
-             "Fair-play screening needs macOS 10.15 or newer; this Mac runs 10.13.6. Everything else in Alnasl works as before."
+             "Fair play needs macOS 10.15 or newer; this Mac runs 10.13.6. Everything else in Alnasl works as before."
   end
 
   test "macOS 10.15 and later, and an unknown version, are not refused", %{tmp_dir: tmp} do

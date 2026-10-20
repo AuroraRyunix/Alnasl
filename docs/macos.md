@@ -50,8 +50,13 @@ The two halves:
 **Quitting stops the server.** *Stop Alnasl*, Cmd-Q and the Dock's *Quit*
 **ask first**, as on Windows: while Alnasl is stopped the boards are not
 read. Logging out and shutting down do not ask (a question would only hold
-up the logout) and stop it cleanly. A second start opens the browser at the
-running copy instead of a second server. If the server stops by itself, the
+up the logout) and stop it cleanly. A second start of the same version opens the browser at the
+running copy instead of a second server. If the port is held by another
+version (the old app still open, or its server left behind after a replace),
+the app says so and offers *Stop it and start this one* or *Open it anyway*;
+it only ever stops a process whose command line is Alnasl's. The running
+version is read from the `x-alnasl-version` header, which the server sends to
+this machine only. If the server stops by itself, the
 app says so and names the log.
 
 Until 2026-10-14 the launcher was the shell script alone, with an

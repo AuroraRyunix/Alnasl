@@ -125,6 +125,37 @@ func processTree(_ root: pid_t) -> [pid_t] {
     return found
 }
 
+// Output of a command, or "" when it cannot run.
+func commandOutput(_ path: String, _ arguments: [String]) -> String {
+    let task = Process()
+    task.executableURL = URL(fileURLWithPath: path)
+    task.arguments = arguments
+    task.standardInput = FileHandle.nullDevice
+    task.standardError = FileHandle.nullDevice
+    let pipe = Pipe()
+    task.standardOutput = pipe
+    do { try task.run() } catch { return "" }
+    let data = pipe.fileHandleForReading.readDataToEndOfFile()
+    task.waitUntilExit()
+    return String(data: data, encoding: .utf8) ?? ""
+}
+
+func listeningPids(onPort number: Int) -> [pid_t] {
+    let out = commandOutput("/usr/sbin/lsof", ["-nP", "-iTCP:\(number)", "-sTCP:LISTEN", "-t"])
+    var found: [pid_t] = []
+    for line in out.split(separator: "
+") {
+        if let pid = Int32(line.trimmingCharacters(in: .whitespaces)), !found.contains(pid) {
+            found.append(pid)
+        }
+    }
+    return found
+}
+
+func commandLine(of pid: pid_t) -> String {
+    return commandOutput("/bin/ps", ["-o", "command=", "-p", String(pid)])
+}
+
 func serverProcess() -> Process {
     let child = Process()
     child.executableURL = URL(fileURLWithPath: "/bin/sh")
@@ -490,15 +521,74 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             return
         }
 
-        // Already running (another copy of the app, or a terminal): show it,
-        // do not start a second server that cannot bind.
-        probe { [weak self] answers in
+        // Something already answers. The same version is a genuine second
+        // start: show it, do not start a second server that cannot bind.
+        // Another version (the old app still open, or its server orphaned
+        // after a replace) must not be taken for this one: say so.
+        probe { [weak self] answers, running in
             guard let self = self else { return }
-            if answers {
+            if !answers {
+                self.startServer()
+            } else if !version.isEmpty && running == version {
                 self.openBrowser()
                 NSApp.terminate(nil)
             } else {
-                self.startServer()
+                self.askAboutOtherServer(running: running)
+            }
+        }
+    }
+
+    // An Alnasl of another (or unknown) version holds the port.
+    func askAboutOtherServer(running: String?) {
+        let which = (running?.isEmpty == false)
+            ? tr("An older Alnasl (\(running!)) is still running.",
+                 "Een oudere Alnasl (\(running!)) draait nog.")
+            : tr("Another version of Alnasl is still running.",
+                 "Een andere versie van Alnasl draait nog.")
+        let alert = NSAlert()
+        alert.messageText = which
+        alert.informativeText = tr(
+            "This is \(title). Stopping the old one first lets this one take its place; the boards are not read in between.",
+            "Dit is \(title). Eerst de oude stoppen laat deze zijn plaats innemen; de borden worden even niet gelezen.")
+        alert.addButton(withTitle: tr("Stop it and start this one", "Stop hem en start deze"))
+        alert.addButton(withTitle: tr("Open it anyway", "Toch openen"))
+        NSApp.activate(ignoringOtherApps: true)
+        if alert.runModal() == .alertFirstButtonReturn {
+            replaceOtherServer()
+        } else {
+            openBrowser()
+            NSApp.terminate(nil)
+        }
+    }
+
+    // The old server need not be this process's child: find whoever listens
+    // on the port, and stop it only if its command line is Alnasl's.
+    func replaceOtherServer() {
+        DispatchQueue.global().async { [weak self] in
+            let pids = listeningPids(onPort: port)
+            let ours = pids.filter { commandLine(of: $0).lowercased().contains("alnasl") }
+            var other = false
+            if ours.isEmpty || ours.count != pids.count { other = true }
+            if !other {
+                for pid in ours { kill(pid, SIGTERM) }
+                let deadline = Date().addingTimeInterval(25)
+                while Date() < deadline && ours.contains(where: { kill($0, 0) == 0 }) {
+                    Thread.sleep(forTimeInterval: 0.25)
+                }
+                for pid in ours where kill(pid, 0) == 0 {
+                    for member in processTree(pid) { kill(member, SIGKILL) }
+                }
+                Thread.sleep(forTimeInterval: 0.5)
+            }
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                if other {
+                    self.failAndQuit(tr(
+                        "The port \(port) is taken by another program, not by Alnasl. Close that program and start \(appName) again.",
+                        "Poort \(port) wordt gebruikt door een ander programma, niet door Alnasl. Sluit dat programma en start \(appName) opnieuw."))
+                } else {
+                    self.startServer()
+                }
             }
         }
     }
@@ -582,7 +672,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                 "Nog bezig met starten. De allereerste start duurt langer.")
         }
         probing = true
-        probe { [weak self] answers in
+        probe { [weak self] answers, _ in
             guard let self = self else { return }
             self.probing = false
             if answers && self.state == .starting {
@@ -594,13 +684,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         }
     }
 
-    func probe(_ done: @escaping (Bool) -> Void) {
+    func probe(_ done: @escaping (Bool, String?) -> Void) {
         var request = URLRequest(url: probeURL)
         request.timeoutInterval = 2
         session.dataTask(with: request) { _, response, error in
             let code = (response as? HTTPURLResponse)?.statusCode ?? 0
             let answers = error == nil && code > 0 && code < 400
-            DispatchQueue.main.async { done(answers) }
+            let running = (response as? HTTPURLResponse)?.value(forHTTPHeaderField: "x-alnasl-version")
+            DispatchQueue.main.async { done(answers, running) }
         }.resume()
     }
 

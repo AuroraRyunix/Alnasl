@@ -1,4 +1,4 @@
-# Fair-playscreening
+# Fair play: eerlijk spel
 
 Alnasl kan de zetten in de partijen die de borden vastleggen naast een sterke schaakengine leggen en de eigenaar van de zaal laten zien welke spelers vaker dezelfde zetten speelden als de engine, en minder verloren, dan hun rating voorspelt. Het is een reden om een partij beter te bekijken. Het is geen bewijs, geen beschuldiging en voor niemand zichtbaar behalve de eigenaar.
 
@@ -24,13 +24,13 @@ Gegevens over fair play staan nooit op de uitslagenpagina's, in de PGN-bestanden
 
 ## Aanzetten, en de engine {#installing-the-engine}
 
-Kies **Fair-playscreening** in het menu links, onder Beheren, en dan **Instellingen** bij de zaal. Het staat er alleen als je een zaal bezit; wie dat niet doet, ziet het niet. Het staat **uit** tot je het aanzet, zaal per zaal.
+Kies **Fair play** in het menu links, onder Beheren, en dan **Instellingen** bij de zaal. Het staat er alleen als je een zaal bezit; wie dat niet doet, ziet het niet. Het staat **uit** tot je het aanzet, zaal per zaal.
 
 Alnasl heeft een engine nodig om het werk te doen: Stockfish 19, de officiële release. Alnasl wordt er niet mee geleverd. De pagina toont of hij geïnstalleerd is.
 
 1. Druk op **Stockfish 19 downloaden**. Alnasl haalt het officiële bestand op bij GitHub, controleert dat het precies het bestand is dat gepubliceerd werd, haalt het programma eruit en laat Stockfish zijn eigen test (`bench`) draaien om zeker te zijn dat het de build is waarvoor de getallen gekalibreerd zijn.
 2. Wacht een minuutje. De status zegt **Geïnstalleerd**, met de versie.
-3. Zet het fair-playscreening aan.
+3. Zet Fair play aan.
 
 **Geen internet in de zaal?** Download het bestand op een andere computer, van de releasepagina van Stockfish 19 op GitHub (`official-stockfish/Stockfish`, tag `sf_19`): `stockfish-windows-x86-64-universal.zip` voor Windows, `stockfish-macos-universal.tar.gz` voor een Mac, `stockfish-linux-x86-64-universal.tar.gz` voor Linux (de arm64-versies voor ARM-computers). Neem het mee op een USB-stick, druk op **Kies een bestand** en kies het. Dezelfde controles gebeuren. Een bestand dat niet het officiële is, wordt geweigerd met een zin die zegt waarom.
 

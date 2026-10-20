@@ -1,6 +1,6 @@
 defmodule AlnaslWeb.FairPlayLive do
   @moduledoc """
-  Fair-play screening, the owner's pages (`docs/plan-fair-play.md`, section 7):
+  Fair play, the owner's pages (`docs/plan-fair-play.md`, section 7):
 
     * `:index` (`/fair-play`, its own place in the menu) - the halls the
       person owns, each with its switch, its engine and its reports;
@@ -39,7 +39,7 @@ defmodule AlnaslWeb.FairPlayLive do
   def mount(_params, _session, socket) do
     {:ok,
      socket
-     |> assign(page_title: gettext("Fair-play screening"))
+     |> assign(page_title: gettext("Fair play"))
      |> assign(fp_hall: nil, fp_tournament: nil, fp_data: nil, fp_error: nil, fp_installing: nil)
      |> assign(extend_form: to_form(%{"days" => "90", "reason" => ""}, as: :keep))
      |> allow_upload(:archive,
@@ -88,7 +88,7 @@ defmodule AlnaslWeb.FairPlayLive do
          assign(socket,
            fp_rows: rows,
            fp_problem: FairPlay.platform_problem(),
-           page_title: gettext("Fair-play screening")
+           page_title: gettext("Fair play")
          )}
     end
   end
@@ -106,7 +106,7 @@ defmodule AlnaslWeb.FairPlayLive do
          fp_tournaments: tournaments,
          fp_error: nil,
          fp_problem: FairPlay.platform_problem(),
-         page_title: gettext("Fair-play screening")
+         page_title: gettext("Fair play")
        )}
     else
       _no -> nothing_here(socket)
@@ -124,7 +124,7 @@ defmodule AlnaslWeb.FairPlayLive do
           fp_round: int(params["round"]),
           fp_only?: params["only"] == "1",
           fp_data: nil,
-          page_title: gettext("Fair-play screening")
+          page_title: gettext("Fair play")
         )
 
       {:noreply, if(connected?(socket), do: load_report(socket), else: socket)}
@@ -146,7 +146,7 @@ defmodule AlnaslWeb.FairPlayLive do
           fp_only?: params["only"] == "1",
           fp_player_key: key,
           fp_data: nil,
-          page_title: gettext("Fair-play screening")
+          page_title: gettext("Fair play")
         )
 
       {:noreply, if(connected?(socket), do: load_player(socket), else: socket)}
@@ -438,7 +438,7 @@ defmodule AlnaslWeb.FairPlayLive do
       locale={@locale}
       scope={@current_scope}
       path={@current_path}
-      title={gettext("Fair-play screening")}
+      title={gettext("Fair play")}
     >
       <%= case @live_action do %>
         <% :index -> %>
@@ -474,9 +474,7 @@ defmodule AlnaslWeb.FairPlayLive do
     ~H"""
     <div :if={assigns[:fp_rows]} class="stack" id="fair-play-index">
       <p class="note">
-        {gettext(
-          "Fair-play screening is the owner's of a hall and nobody else's. These are the halls you own."
-        )}
+        {gettext("Fair play is the owner's of a hall and nobody else's. These are the halls you own.")}
       </p>
 
       <p :if={@fp_problem} id="fair-play-problem" class="error" role="alert">
@@ -537,7 +535,7 @@ defmodule AlnaslWeb.FairPlayLive do
         </.link>
       </p>
 
-      <.panel id="fair-play-switch-panel" title={gettext("Fair-play screening")}>
+      <.panel id="fair-play-switch-panel" title={gettext("Fair play")}>
         <div class="stack">
           <p>
             {gettext(
@@ -550,7 +548,7 @@ defmodule AlnaslWeb.FairPlayLive do
               id="fair-play-enabled"
               name="enabled"
               checked={@fp_setting.enabled}
-              label={gettext("Fair-play screening")}
+              label={gettext("Fair play")}
               hint={gettext("Analyses the moves of this hall's games as they are played.")}
             />
           </.form>
@@ -678,7 +676,7 @@ defmodule AlnaslWeb.FairPlayLive do
   defp problem_text({:macos, version}),
     do:
       gettext(
-        "Fair-play screening needs macOS 10.15 or newer; this Mac runs %{version}. Everything else in Alnasl works as before.",
+        "Fair play needs macOS 10.15 or newer; this Mac runs %{version}. Everything else in Alnasl works as before.",
         version: version
       )
 
@@ -739,7 +737,7 @@ defmodule AlnaslWeb.FairPlayLive do
 
           <p :if={@fp_data.players == []} id="fair-play-empty" class="note">
             {gettext(
-              "Nothing has been analysed for this tournament. Is fair-play screening on in this hall, with an engine installed, and are the games recorded by the boards?"
+              "Nothing has been analysed for this tournament. Is fair play on in this hall, with an engine installed, and are the games recorded by the boards?"
             )}
           </p>
 

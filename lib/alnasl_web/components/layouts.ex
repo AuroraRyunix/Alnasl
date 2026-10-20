@@ -234,12 +234,12 @@ defmodule AlnaslWeb.Layouts do
     ]
   end
 
-  # Fair-play screening is the hall owner's and nobody else's, so it is in
+  # Fair play is the hall owner's and nobody else's, so it is in
   # the menu of somebody who owns a hall (`Alnasl.FairPlay.Access`), and in
   # nobody else's: not the arbiter's, not the viewer's, not the admin's.
   defp fair_play_item(scope) do
     if Alnasl.FairPlay.Access.any_hall?(scope),
-      do: [item(:fair_play, ~p"/fair-play", "search", gettext("Fair-play screening"))],
+      do: [item(:fair_play, ~p"/fair-play", "search", gettext("Fair play"))],
       else: []
   end
 

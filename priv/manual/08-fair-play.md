@@ -1,4 +1,4 @@
-# Fair-play screening
+# Fair play: the numbers
 
 Alnasl can compare the moves in the games its boards record with a strong chess engine, and show the hall's owner which players' moves matched the engine more often, and lost less, than their rating predicts. It is a reason to look closer at a game. It is not evidence, not an accusation, and not visible to anybody but the owner.
 
@@ -24,13 +24,13 @@ Fair-play data is never in the results pages, the PGN files, what is sent to Ope
 
 ## Switching it on, and the engine {#installing-the-engine}
 
-Press **Fair-play screening** in the menu on the left, under Manage, and then **Settings** at the hall. The item is there only if you own a hall; anybody else does not see it. It is **off** until you switch it on, hall by hall.
+Press **Fair play** in the menu on the left, under Manage, and then **Settings** at the hall. The item is there only if you own a hall; anybody else does not see it. It is **off** until you switch it on, hall by hall.
 
 Alnasl needs the engine to do the work: Stockfish 19, the official release. Alnasl does not come with it. The page shows whether it is installed.
 
 1. Press **Download Stockfish 19**. Alnasl fetches the official file from GitHub, checks that it is exactly the file that was published, takes the program out of it and runs Stockfish's own test (`bench`) to make sure it is the build the numbers were calibrated for.
 2. Wait a minute or so. The status says **Installed**, with the version.
-3. Switch fair-play screening on.
+3. Switch fair play on.
 
 **No internet in the hall?** Download the file on another computer, from the Stockfish 19 release page on GitHub (`official-stockfish/Stockfish`, tag `sf_19`): `stockfish-windows-x86-64-universal.zip` for Windows, `stockfish-macos-universal.tar.gz` for a Mac, `stockfish-linux-x86-64-universal.tar.gz` for Linux (the arm64 versions for ARM computers). Carry it in on a USB stick, press **Choose a file** and pick it. The same checks are made. A file that is not the official one is refused with a sentence that says why.
 
