@@ -27,6 +27,7 @@ defmodule Alnasl.FairPlay.Installer do
 
   @type reason ::
           {:unsupported_platform, String.t()}
+          | {:macos_too_old, String.t()}
           | {:no_network, term()}
           | {:download_failed, term()}
           | {:not_found, String.t()}
@@ -65,6 +66,7 @@ defmodule Alnasl.FairPlay.Installer do
     bench = Keyword.get(opts, :bench, &bench/1)
 
     with {:ok, platform} <- platform(opts),
+         :ok <- check_macos(platform, opts),
          {:ok, asset} <- asset(engine, platform),
          dir = Keyword.get_lazy(opts, :dir, fn -> default_dir(engine) end),
          :ok <- File.mkdir_p(dir),
@@ -92,6 +94,18 @@ defmodule Alnasl.FairPlay.Installer do
       :error -> Engines.platform()
     end
   end
+
+  # Before anything is fetched: a Mac too old for the build.
+  defp check_macos(:macos, opts) do
+    version = Keyword.get(opts, :macos_version, &Engines.macos_version/0).()
+
+    case Engines.macos_problem(version) do
+      nil -> :ok
+      _sentence -> {:error, {:macos_too_old, version}}
+    end
+  end
+
+  defp check_macos(_platform, _opts), do: :ok
 
   defp asset(engine, platform) do
     case Engines.asset(engine, platform) do
@@ -315,6 +329,8 @@ defmodule Alnasl.FairPlay.Installer do
   @doc "What went wrong, for the owner."
   @spec message(reason()) :: String.t()
   def message({:unsupported_platform, what}), do: Engines.unsupported_message(what)
+
+  def message({:macos_too_old, version}), do: Engines.macos_message(version)
 
   def message({:no_network, _why}),
     do:

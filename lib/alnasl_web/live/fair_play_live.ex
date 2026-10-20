@@ -77,6 +77,7 @@ defmodule AlnaslWeb.FairPlayLive do
          fp_setting: FairPlay.settings(hall.id),
          fp_tournaments: tournaments,
          fp_error: nil,
+         fp_problem: FairPlay.platform_problem(),
          page_title: gettext("Fair-play screening")
        )}
     else
@@ -498,7 +499,11 @@ defmodule AlnaslWeb.FairPlayLive do
 
           <p :if={@fp_error} id="fair-play-error" class="error" role="alert">{@fp_error}</p>
 
-          <div class="row">
+          <p :if={@fp_problem} id="fair-play-problem" class="error" role="alert">
+            {problem_text(@fp_problem)}
+          </p>
+
+          <div :if={!@fp_problem} class="row">
             <.button
               id="fair-play-download"
               phx-click="download"
@@ -509,6 +514,7 @@ defmodule AlnaslWeb.FairPlayLive do
           </div>
 
           <.form
+            :if={!@fp_problem}
             for={%{}}
             id="fair-play-upload"
             phx-submit="install_file"
@@ -580,6 +586,13 @@ defmodule AlnaslWeb.FairPlayLive do
     </div>
     """
   end
+
+  defp problem_text({:macos, version}),
+    do:
+      gettext(
+        "Fair-play screening needs macOS 10.15 or newer; this Mac runs %{version}. Everything else in Alnasl works as before.",
+        version: version
+      )
 
   defp installed?(setting), do: Alnasl.FairPlay.Setting.installed?(setting)
 

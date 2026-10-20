@@ -142,6 +142,21 @@ defmodule Alnasl.FairPlay do
     })
   end
 
+  @doc """
+  Why this machine cannot run the engine at all, or `nil`: `{:macos, version}`.
+  Today that is a Mac older than macOS 10.15. `config :alnasl,
+  :fair_play_macos_version` (a function) stands in for the system in tests.
+  """
+  def platform_problem do
+    version =
+      case Application.get_env(:alnasl, :fair_play_macos_version) do
+        fun when is_function(fun, 0) -> fun.()
+        _system -> Engines.macos_version()
+      end
+
+    if Engines.macos_problem(version), do: {:macos, version}
+  end
+
   @doc "The options `install/4` passes to the installer: the application's own, for tests."
   def install_options, do: Application.get_env(:alnasl, :fair_play_install_opts, [])
 

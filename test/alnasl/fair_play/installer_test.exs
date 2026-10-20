@@ -70,6 +70,38 @@ defmodule Alnasl.FairPlay.InstallerTest do
 
   defp good_bench(engine), do: fn _path -> {:ok, engine.bench} end
 
+  test "a Mac older than 10.15 is refused before anything is fetched", %{tmp_dir: tmp} do
+    test = self()
+
+    opts = [
+      platform: :macos,
+      dir: Path.join(tmp, "engines"),
+      macos_version: fn -> "10.13.6" end,
+      downloader: fn _url, _dest -> send(test, :downloaded) end
+    ]
+
+    assert {:error, {:macos_too_old, "10.13.6"}} = Installer.install(:download, opts)
+    assert {:error, {:macos_too_old, _}} = Installer.install({:file, "x.tar.gz"}, opts)
+    refute_received :downloaded
+    refute File.exists?(Path.join(tmp, "engines"))
+
+    assert Installer.message({:macos_too_old, "10.13.6"}) ==
+             "Fair-play screening needs macOS 10.15 or newer; this Mac runs 10.13.6. Everything else in Alnasl works as before."
+  end
+
+  test "macOS 10.15 and later, and an unknown version, are not refused", %{tmp_dir: tmp} do
+    for version <- ["10.15", "10.15.7", "11.0", "14.5", "26.0", nil, "garbage"] do
+      assert Engines.macos_problem(version) == nil, inspect(version)
+    end
+
+    for version <- ["10.13", "10.14.6", "10.9.5"] do
+      assert Engines.macos_problem(version) =~ "macOS 10.15 or newer"
+    end
+
+    opts = [platform: :macos, dir: tmp, macos_version: fn -> "10.15.7" end]
+    assert {:error, {:not_found, _}} = Installer.install({:file, "/nope.tar.gz"}, opts)
+  end
+
   test "installs from a chosen zip: checksum, the binary and nothing else, bench", %{tmp_dir: tmp} do
     archive = zip(tmp)
     engine = engine_for(windows_x86_64: archive)

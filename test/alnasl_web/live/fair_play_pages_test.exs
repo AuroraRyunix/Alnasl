@@ -91,6 +91,28 @@ defmodule AlnaslWeb.FairPlayPagesTest do
       assert has_element?(view, "#fair-play-engine-status", "Not installed")
     end
 
+    test "on a Mac too old for the engine the page says so instead of offering it", %{conn: conn} do
+      Application.put_env(:alnasl, :fair_play_macos_version, fn -> "10.13.6" end)
+      on_exit(fn -> Application.delete_env(:alnasl, :fair_play_macos_version) end)
+
+      {:ok, view, _} = live(conn, ~p"/halls/#{Halls.own_id()}/fair-play")
+
+      assert has_element?(
+               view,
+               "#fair-play-problem",
+               "macOS 10.15 or newer; this Mac runs 10.13.6"
+             )
+
+      assert has_element?(
+               view,
+               "#fair-play-problem",
+               "Everything else in Alnasl works as before."
+             )
+
+      refute has_element?(view, "#fair-play-download")
+      refute has_element?(view, "#fair-play-install-file")
+    end
+
     test "lists the hall's tournaments, each with its report", %{conn: conn, tournament: t} do
       {:ok, view, _} = live(conn, ~p"/halls/#{Halls.own_id()}/fair-play")
       assert has_element?(view, "#fair-play-tournament-#{t.id}")

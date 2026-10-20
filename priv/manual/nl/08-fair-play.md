@@ -34,8 +34,8 @@ Alnasl heeft een engine nodig om het werk te doen: Stockfish 19, de officiële r
 
 **Geen internet in de zaal?** Download het bestand op een andere computer, van de releasepagina van Stockfish 19 op GitHub (`official-stockfish/Stockfish`, tag `sf_19`): `stockfish-windows-x86-64-universal.zip` voor Windows, `stockfish-macos-universal.tar.gz` voor een Mac, `stockfish-linux-x86-64-universal.tar.gz` voor Linux (de arm64-versies voor ARM-computers). Neem het mee op een USB-stick, druk op **Kies een bestand** en kies het. Dezelfde controles gebeuren. Een bestand dat niet het officiële is, wordt geweigerd met een zin die zegt waarom.
 
-> [!NOTE] Oudere Intel-Macs
-> De Mac-build draait misschien niet op de oudste macOS-versies. Als de test mislukt, zegt de pagina dat en wordt er niets geïnstalleerd.
+> [!NOTE] Oudere Macs
+> De Mac-build van Stockfish 19 heeft macOS 10.15 of nieuwer nodig. Op een Mac met macOS 10.13 of 10.14 zegt de instellingenpagina dat, met de versie die ze vond, en biedt ze noch de download noch het bestand aan; er wordt niets gedownload. Al het andere in Alnasl werkt als voorheen.
 
 Vanaf dan analyseert Alnasl elke zet zodra de tracker er zeker van is, op de achtergrond en met de laagste prioriteit die de computer biedt, met een paar engines tegelijk (het aantal kernen min één; één op de Alnasl-server). Niets daarvan vertraagt de borden: als de wachtrij vol is, wacht een partij, en de volgende zet van die partij zet hem opnieuw in de rij.
 

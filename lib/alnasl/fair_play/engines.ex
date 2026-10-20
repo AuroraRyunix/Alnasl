@@ -151,6 +151,47 @@ defmodule Alnasl.FairPlay.Engines do
 
   defp detect_arch(_unix), do: to_string(:erlang.system_info(:system_architecture))
 
+  # Stockfish 19's macOS build is compiled with -mmacosx-version-min=10.15
+  # (src/Makefile at tag sf_19); Alnasl's Intel Mac build goes back to 10.13.
+  @macos_minimum {10, 15}
+
+  @doc "The macOS version, as text (`\"10.13.6\"`), or `nil` when this is not a Mac."
+  def macos_version do
+    with {:unix, :darwin} <- :os.type(),
+         cmd when is_binary(cmd) <- System.find_executable("sw_vers"),
+         {out, 0} <- System.cmd(cmd, ["-productVersion"]) do
+      String.trim(out)
+    else
+      _no -> nil
+    end
+  end
+
+  @doc """
+  Why this Mac cannot run the engine, as a sentence, or `nil` when it can
+  (or when the version is unknown, or this is no Mac). `version` is text
+  like `"10.13.6"`.
+  """
+  @spec macos_problem(String.t() | nil) :: String.t() | nil
+  def macos_problem(nil), do: nil
+
+  def macos_problem(version) do
+    parts = version |> String.split(".") |> Enum.map(&Integer.parse/1)
+
+    case parts do
+      [{major, _}, {minor, _} | _] when {major, minor} < @macos_minimum ->
+        macos_message(version)
+
+      _fine_or_unreadable ->
+        nil
+    end
+  end
+
+  @doc false
+  def macos_message(version),
+    do:
+      "Fair-play screening needs macOS 10.15 or newer; this Mac runs #{version}. " <>
+        "Everything else in Alnasl works as before."
+
   @doc "A sentence for the owner who asked for an engine on a machine with none."
   @spec unsupported_message(String.t()) :: String.t()
   def unsupported_message(what) do

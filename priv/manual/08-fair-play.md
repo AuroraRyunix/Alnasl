@@ -34,8 +34,8 @@ Alnasl needs the engine to do the work: Stockfish 19, the official release. Alna
 
 **No internet in the hall?** Download the file on another computer, from the Stockfish 19 release page on GitHub (`official-stockfish/Stockfish`, tag `sf_19`): `stockfish-windows-x86-64-universal.zip` for Windows, `stockfish-macos-universal.tar.gz` for a Mac, `stockfish-linux-x86-64-universal.tar.gz` for Linux (the arm64 versions for ARM computers). Carry it in on a USB stick, press **Choose a file** and pick it. The same checks are made. A file that is not the official one is refused with a sentence that says why.
 
-> [!NOTE] Older Intel Macs
-> The Mac build may not run on the oldest macOS versions. If the test fails, the page says so and nothing is installed.
+> [!NOTE] Older Macs
+> Stockfish 19's Mac build needs macOS 10.15 or newer. On a Mac with macOS 10.13 or 10.14 the settings page says so, with the version it found, and offers neither the download nor the file; nothing is downloaded. Everything else in Alnasl works as before.
 
 From then on Alnasl analyses each move as soon as the tracker is sure of it, in the background and at the lowest priority the computer offers, with a few engines at once (the number of cores less one; one on the Alnasl server). Nothing about it slows the boards down: when the queue is full, a game waits, and the next move of that game queues it again.
 
