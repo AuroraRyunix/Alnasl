@@ -76,8 +76,10 @@ let probeURL = URL(string: "http://127.0.0.1:\(port)\(probePath)")!
 // The Details window asks the server about itself here, with this start's secret.
 let launcherTokenEnv = "ALNASL_LAUNCHER_TOKEN"
 let statsURL = URL(string: "http://127.0.0.1:\(port)/_launcher/stats?lang=\(dutch ? "nl" : "en")")!
-let version = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? ""
-let title = version.isEmpty ? appName : "\(appName) \(version)"
+// Not `version`: inside AppDelegate that name is NSObject's own `version()`,
+// which is an Int, and swiftc takes the class's word over the file's.
+let bundleVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? ""
+let title = bundleVersion.isEmpty ? appName : "\(appName) \(bundleVersion)"
 
 func dataFolder() -> String {
     if let set = environment[dataEnv], !set.isEmpty { return set }
@@ -143,8 +145,7 @@ func commandOutput(_ path: String, _ arguments: [String]) -> String {
 func listeningPids(onPort number: Int) -> [pid_t] {
     let out = commandOutput("/usr/sbin/lsof", ["-nP", "-iTCP:\(number)", "-sTCP:LISTEN", "-t"])
     var found: [pid_t] = []
-    for line in out.split(separator: "
-") {
+    for line in out.split(separator: "\n") {
         if let pid = Int32(line.trimmingCharacters(in: .whitespaces)), !found.contains(pid) {
             found.append(pid)
         }
@@ -529,7 +530,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             guard let self = self else { return }
             if !answers {
                 self.startServer()
-            } else if !version.isEmpty && running == version {
+            } else if !bundleVersion.isEmpty && running == bundleVersion {
                 self.openBrowser()
                 NSApp.terminate(nil)
             } else {
@@ -541,8 +542,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     // An Alnasl of another (or unknown) version holds the port.
     func askAboutOtherServer(running: String?) {
         let which = (running?.isEmpty == false)
-            ? tr("An older Alnasl (\(running!)) is still running.",
-                 "Een oudere Alnasl (\(running!)) draait nog.")
+            ? tr("Alnasl \(running!) is still running.",
+                 "Alnasl \(running!) draait nog.")
             : tr("Another version of Alnasl is still running.",
                  "Een andere versie van Alnasl draait nog.")
         let alert = NSAlert()
@@ -690,7 +691,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         session.dataTask(with: request) { _, response, error in
             let code = (response as? HTTPURLResponse)?.statusCode ?? 0
             let answers = error == nil && code > 0 && code < 400
-            let running = (response as? HTTPURLResponse)?.value(forHTTPHeaderField: "x-alnasl-version")
+            // allHeaderFields, not value(forHTTPHeaderField:): that one is
+            // macOS 10.15, and the Intel build promises 10.13. Header names
+            // arrive in whatever case Foundation fancies, so compare without.
+            let headers = (response as? HTTPURLResponse)?.allHeaderFields ?? [:]
+            let running = headers.first { ($0.key as? String)?.lowercased() == "x-alnasl-version" }?.value as? String
             DispatchQueue.main.async { done(answers, running) }
         }.resume()
     }

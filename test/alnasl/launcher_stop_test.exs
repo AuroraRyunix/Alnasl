@@ -31,7 +31,9 @@ defmodule Alnasl.LauncherStopTest do
     swift = File.read!(@swift)
 
     assert swift =~ "x-alnasl-version"
-    assert swift =~ "running == version"
+    assert swift =~ "running == bundleVersion"
+    # macOS 10.15 API; the Intel build promises 10.13.
+    refute swift =~ "value(forHTTPHeaderField:"
     assert swift =~ "askAboutOtherServer(running: running)"
     assert swift =~ "Stop it and start this one"
     assert swift =~ "Stop hem en start deze"
