@@ -530,14 +530,12 @@ defmodule Alnasl.FairPlay.Calibration do
               {[data], {file, ctx, false}}
 
             data when is_binary(data) ->
-              {:continue, out} = :zstd.stream(ctx, data)
-              {[IO.iodata_to_binary(out)], {file, ctx, false}}
+              {[IO.iodata_to_binary(zstd_feed(ctx, data, []))], {file, ctx, false}}
 
             _eof ->
               tail =
                 if ctx do
-                  {:done, out} = :zstd.finish(ctx, <<>>)
-                  IO.iodata_to_binary(out)
+                  IO.iodata_to_binary(zstd_finish(ctx, []))
                 else
                   ""
                 end
@@ -550,6 +548,33 @@ defmodule Alnasl.FairPlay.Calibration do
         if ctx, do: :zstd.close(ctx)
       end
     )
+  end
+
+  # `:zstd.stream/2` hands back what it could not take yet as well as what it
+  # made: `{:continue, rest, out}`. The rest goes straight back in. A test
+  # file of a few kilobytes never has a rest; a month of broadcasts does, on
+  # its first megabyte (2026-10-20, on the VM).
+  defp zstd_feed(ctx, data, acc) do
+    case :zstd.stream(ctx, data) do
+      {:continue, out} ->
+        [acc, out]
+
+      {:continue, rest, out} ->
+        if IO.iodata_length(rest) == 0,
+          do: [acc, out],
+          else: zstd_feed(ctx, rest, [acc, out])
+
+      {:done, out} ->
+        [acc, out]
+    end
+  end
+
+  defp zstd_finish(ctx, acc) do
+    case :zstd.finish(ctx, <<>>) do
+      {:done, out} -> [acc, out]
+      {:continue, out} -> zstd_finish(ctx, [acc, out])
+      {:continue, _rest, out} -> zstd_finish(ctx, [acc, out])
+    end
   end
 
   # --- fit -----------------------------------------------------------------------

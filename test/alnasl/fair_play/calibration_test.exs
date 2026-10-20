@@ -107,6 +107,19 @@ defmodule Alnasl.FairPlay.CalibrationTest do
     path |> File.read!() |> String.split("\n", trim: true) |> Enum.map(&Jason.decode!(&1)["id"])
   end
 
+  test "a .zst too big to decompress in one go is read whole", %{tmp_dir: dir} do
+    # A month of broadcasts compresses so well that one megabyte read
+    # unpacks to more than zstd hands back in one call; the rest must go
+    # back in, or the run dies on its first read (2026-10-20, on the VM).
+    one = pgn_game(1, [])
+    path = Path.join(dir, "big.pgn.zst")
+    File.write!(path, :zstd.compress(Enum.join(List.duplicate(one, 6_000), "
+")))
+
+    assert File.stat!(path).size < 1_048_576
+    assert Enum.count(Calibration.games([path])) == 6_000
+  end
+
   test "the shards are disjoint and together they are everything", %{tmp_dir: dir} do
     pgn = corpus(dir)
 
