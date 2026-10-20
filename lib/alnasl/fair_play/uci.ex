@@ -59,6 +59,9 @@ defmodule Alnasl.FairPlay.Uci do
     * `:options` - `[{name, value}]` sent as `setoption` (default Threads 1,
       Hash 64, MultiPV 4)
     * `:timeout` - how long one search may take, ms (default 120 000)
+    * `:low_priority` - ask the operating system to give the engine's
+      process the lowest priority, so the machine's own work (the tracker,
+      the page) wins when cores are scarce; best effort, never an error
     * `:name` - a GenServer name
   """
   def start_link(opts) do
@@ -106,6 +109,7 @@ defmodule Alnasl.FairPlay.Uci do
       args: Keyword.get(opts, :args, []),
       options: Keyword.get(opts, :options, @default_options),
       timeout: Keyword.get(opts, :timeout, 120_000),
+      low_priority: Keyword.get(opts, :low_priority, false),
       port: nil,
       id: %{},
       restarts: 0,
@@ -172,6 +176,7 @@ defmodule Alnasl.FairPlay.Uci do
       ])
 
     state = %{state | port: port, buffer: "", id: %{}}
+    if state.low_priority, do: lower_priority(port)
     send_line(state, "uci")
 
     with {:ok, lines, state} <- until(state, "uciok", @handshake_timeout) do
@@ -194,6 +199,37 @@ defmodule Alnasl.FairPlay.Uci do
     end
   rescue
     e in ErlangError -> {:error, {:cannot_start, e.original}, %{state | port: nil}}
+  end
+
+  # Nice 19 on Unix, "below normal" on Windows: the engine is a guest.
+  # Asked of the system from a task of its own, so a slow `powershell` never
+  # delays the handshake, and any failure is nobody's business.
+  defp lower_priority(port) do
+    with {:os_pid, os_pid} <- Port.info(port, :os_pid) do
+      Task.start(fn ->
+        try do
+          case :os.type() do
+            {:win32, _} ->
+              System.cmd(
+                "powershell",
+                [
+                  "-NoProfile",
+                  "-Command",
+                  "(Get-Process -Id #{os_pid}).PriorityClass = 'BelowNormal'"
+                ],
+                stderr_to_stdout: true
+              )
+
+            _unix ->
+              System.cmd("renice", ["-n", "19", "-p", "#{os_pid}"], stderr_to_stdout: true)
+          end
+        rescue
+          _error -> :ok
+        end
+      end)
+    end
+
+    :ok
   end
 
   defp attempt(%{port: nil} = state, _position, _opts), do: {:error, :not_running, state}

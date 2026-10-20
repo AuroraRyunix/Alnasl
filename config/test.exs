@@ -26,6 +26,9 @@ config :alnasl,
   # tests count the packs they installed, and the shipped Toon is not one.
   bundled_themes_dir: Path.expand("../tmp/test/no_bundled_themes", __DIR__),
   autostart: false,
+  # The fair-play queue, pool and retention job: tests that need them
+  # start their own, with the database allowed to them.
+  fair_play_live: false,
   # No launcher secret, no token file, no telemetry handler; the tests that
   # need them start their own `Alnasl.LauncherDetails`.
   launcher_details: false,

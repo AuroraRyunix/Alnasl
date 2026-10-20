@@ -53,6 +53,7 @@ defmodule Alnasl.Application do
       Alnasl.Recorder,
       Alnasl.DoorGuard
     ] ++
+      if(Alnasl.FairPlay.Live.enabled?(), do: [Alnasl.FairPlay.Live], else: []) ++
       if(local?,
         do: [
           {Alnasl.Updates.Checker, timer: Application.get_env(:alnasl, :updates_timer, true)},
