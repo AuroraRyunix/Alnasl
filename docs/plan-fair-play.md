@@ -228,8 +228,10 @@ a deleted report.
      event (section 5);
    - still to come: the bigger calibration itself (run sheet written),
      rapid and blitz models.
-3. **Phase 3:** Maia (the Lc0 network trained per rating) as the human
-   expectation beside Stockfish.
+3. **Phase 3 (branch fairplay-maia):** a human-move model as the human
+   expectation beside Stockfish: Maia-2 fine-tuned on over-the-board
+   classical broadcast games. Licences, design, pilot numbers and the
+   open decisions are in `docs/plan-fair-play-maia.md`.
 
 Deliberately never: profiles of a player across events, any public signal,
 any automatic report.
