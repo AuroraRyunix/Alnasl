@@ -76,7 +76,7 @@ defmodule AlnaslWeb.Layouts do
             <b>Alnasl</b> <span id="brand-edition">{edition_name(@box)}</span>
           </div>
         </.link>
-         <.hall_picker scope={@scope} hall={@hall} path={@path} />
+        <.hall_picker scope={@scope} hall={@hall} path={@path} />
         <nav class="nav" id="nav" aria-label={gettext("Places")}>
           <div
             :for={{group, label, items} <- groups(@alarms, @waiting, @scope)}
@@ -98,12 +98,12 @@ defmodule AlnaslWeb.Layouts do
             </.nav_item>
           </div>
         </nav>
-        
+
         <div class="rail-foot">
           <.account_menu scope={@scope} locale={@locale} path={@path} />
         </div>
       </aside>
-      
+
       <div class="main">
         <div :if={@notices != []} id="notices" class="notices">
           <.notice
@@ -131,7 +131,7 @@ defmodule AlnaslWeb.Layouts do
                 {ngettext("%{count} more notice", "%{count} more notices", length(@notices) - 2)}
               </span>
             </button>
-            
+
             <div id="more-notices" hidden>
               <.notice
                 :for={key <- Enum.drop(@notices, 2)}
@@ -144,13 +144,13 @@ defmodule AlnaslWeb.Layouts do
             </div>
           <% end %>
         </div>
-        
+
         <header class="bar">
           <h1>
             {@title}<span :if={@subtitle} class="sub">{@subtitle}</span>
             <AlnaslWeb.Components.ManualLink.manual_link :if={@help} topic={@help} />
           </h1>
-           {render_slot(@actions)} <.live_pill />
+          {render_slot(@actions)} <.live_pill />
           <span id="link-state" class="heads">
             <%= if @hall && is_list(@hall.heads) do %>
               <.link
@@ -161,7 +161,7 @@ defmodule AlnaslWeb.Layouts do
               >
                 <.badge tone={head.tone} icon={head.icon}>{head.text}</.badge>
               </.link>
-              
+
               <a
                 :for={head <- @hall.heads}
                 :if={head[:open]}
@@ -181,14 +181,14 @@ defmodule AlnaslWeb.Layouts do
             <% end %>
           </span>
         </header>
-        
+
         <main id="main" class="page">
           {render_slot(@inner_block)}
         </main>
       </div>
-       <.tab_bar nav={@nav} alarms={@alarms} waiting={@waiting} scope={@scope} />
+      <.tab_bar nav={@nav} alarms={@alarms} waiting={@waiting} scope={@scope} />
     </div>
-     <.flash_group flash={@flash} />
+    <.flash_group flash={@flash} />
     """
   end
 
@@ -277,7 +277,7 @@ defmodule AlnaslWeb.Layouts do
         <.icon name={tab.icon} /> <span>{tab.label}</span>
         <span :if={tab.count > 0} class="count">{tab.count}</span>
       </.link>
-      
+
       <div
         id="tab-more"
         class="menu tab-more"
@@ -296,7 +296,7 @@ defmodule AlnaslWeb.Layouts do
         >
           <.icon name="more" /> <span>{gettext("More")}</span>
         </button>
-        
+
         <div id="tab-more-menu" class="menu-panel more-sheet" hidden>
           <.link
             :for={item <- @rest}
@@ -367,7 +367,7 @@ defmodule AlnaslWeb.Layouts do
           )}
         <% end %>
       </span>
-       <.link navigate={~p"/outbox"}>{gettext("What is waiting")}</.link>
+      <.link navigate={~p"/outbox"}>{gettext("What is waiting")}</.link>
     </div>
     """
   end
@@ -384,25 +384,25 @@ defmodule AlnaslWeb.Layouts do
         <span :if={Map.get(@update, :no_build)} id="update-banner-no-build">
           {gettext("There is no Mac build for Intel.")}
         </span>
-        
+
         <span :if={@update.size} id="update-banner-size">
           {gettext("The download is %{size}.", size: AlnaslWeb.Words.megabytes(@update.size))}
         </span>
       </span>
-      
+
       <span class="banner-actions">
         <a id="update-banner-notes" href={@update.url} target="_blank" rel="noopener">
           {gettext("What is new")}
         </a>
-        
+
         <.link id="update-banner-setup" navigate={~p"/setup/updates"}>
           {gettext("Update...")}
         </.link>
-        
+
         <button id="update-banner-later" type="button" class="linkish" phx-click="update_later">
           {gettext("Later")}
         </button>
-        
+
         <button
           id="update-banner-never"
           type="button"
@@ -463,7 +463,7 @@ defmodule AlnaslWeb.Layouts do
           <span class="hint">{gettext("Hall")}</span>
           <b id="hall-picker-current">{@scope.hall && @scope.hall.name}</b>
         </span>
-        
+
         <span
           id="hall-picker-live"
           class="live-count"
@@ -471,9 +471,9 @@ defmodule AlnaslWeb.Layouts do
         >
           {live_words(@scope.hall && Map.get(@live, @scope.hall.id, 0))}
         </span>
-         <.icon name="chevron" />
+        <.icon name="chevron" />
       </button>
-      
+
       <div id="hall-picker-menu" class="menu-panel" hidden>
         <input
           :if={length(@scope.halls) >= 7}
@@ -497,7 +497,7 @@ defmodule AlnaslWeb.Layouts do
             }
           }
         </script>
-        
+
         <ul id="hall-picker-list" class="menu-list">
           <li :for={hall <- @scope.halls} data-hall-name={String.downcase(hall.name)}>
             <a
@@ -510,11 +510,11 @@ defmodule AlnaslWeb.Layouts do
                 <b>{hall.name}</b>
                 <span class="hint">{AlnaslWeb.Words.role(Scope.role(@scope, hall.id))}</span>
               </span>
-               <span class="live-count">{live_words(Map.get(@live, hall.id, 0))}</span>
+              <span class="live-count">{live_words(Map.get(@live, hall.id, 0))}</span>
             </a>
           </li>
         </ul>
-        
+
         <.link navigate={~p"/halls"} id="hall-picker-all" class="menu-item menu-foot">
           <.icon name="hall" /> <span>{gettext("All halls")}</span>
         </.link>
@@ -572,7 +572,7 @@ defmodule AlnaslWeb.Layouts do
             <.icon name="account" />
           <% end %>
         </span>
-        
+
         <span class="menu-button-text account-name">
           <%= if @user do %>
             <span class="mono">{@user.email}</span>
@@ -580,9 +580,9 @@ defmodule AlnaslWeb.Layouts do
             {gettext("This browser")}
           <% end %>
         </span>
-         <.icon name="chevron" />
+        <.icon name="chevron" />
       </button>
-      
+
       <div id="account-menu" class="menu-panel account-panel" hidden>
         <div :if={@user} class="menu-head">
           <b id="account-email" class="mono">{@user.email}</b>
@@ -590,16 +590,16 @@ defmodule AlnaslWeb.Layouts do
             {gettext("%{role} in this hall", role: AlnaslWeb.Words.role(@role))}
           </span>
         </div>
-        
+
         <.link :if={@user} id="account-link" href={~p"/account"} class="menu-item">
           <.icon name="account" /> <span>{gettext("Account")}</span>
         </.link>
-        
+
         <div class="menu-section">
           <span class="menu-label" id="locale-label">
             <.icon name="language" /> {gettext("Language")}
           </span>
-          
+
           <.form
             for={%{}}
             as={:locale_choice}
@@ -622,7 +622,7 @@ defmodule AlnaslWeb.Layouts do
               {name}
             </button>
           </.form>
-          
+
           <p class="hint">
             <%= if @user do %>
               {gettext("Kept with your account.")}
@@ -631,12 +631,12 @@ defmodule AlnaslWeb.Layouts do
             <% end %>
           </p>
         </div>
-        
+
         <div class="menu-section">
           <span class="menu-label"><.icon name="theme" /> {gettext("Colour theme")}</span>
           <.theme_picker id="theme-picker" />
         </div>
-        
+
         <.link :if={@user} id="log-out" href={~p"/log-out"} method="delete" class="menu-item">
           <.icon name="signout" /> <span>{gettext("Sign out")}</span>
         </.link>
@@ -713,7 +713,7 @@ defmodule AlnaslWeb.Layouts do
       <span class="theme-pack-swatch" aria-hidden="true">
         <i :for={colour <- @pack.swatch} style={"background: #{colour}"}></i>
       </span>
-       {@label}
+      {@label}
     </button>
     """
   end
@@ -826,12 +826,12 @@ defmodule AlnaslWeb.Layouts do
     ~H"""
     <main class="door">
       <p class="door-brand"><.logo /> <b>Alnasl</b></p>
-      
+
       <.panel id={@id} title={@title}>
         {render_slot(@inner_block)}
       </.panel>
     </main>
-     <.flash_group flash={@flash} />
+    <.flash_group flash={@flash} />
     """
   end
 
