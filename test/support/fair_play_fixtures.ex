@@ -104,6 +104,58 @@ defmodule Alnasl.FairPlayFixtures do
     end
   end
 
+  @doc """
+  `count` counted rows for one player of a tournament, as the analysis would
+  have stored them, without running one. For tests of who may see them, not
+  of what they say.
+  """
+  def insert_moves(tournament, count \\ 50, key \\ "id:1", name \\ "Some Player") do
+    now = DateTime.utc_now(:second)
+
+    best =
+      Jason.encode!([
+        %{"move" => "e2e4", "cp" => 30},
+        %{"move" => "d2d4", "cp" => 20},
+        %{"move" => "g1f3", "cp" => 10},
+        %{"move" => "c2c4", "cp" => 0}
+      ])
+
+    rows =
+      for ply <- 1..count do
+        %{
+          tournament_id: tournament.id,
+          game_id: tournament.id * 1_000 + div(ply, 60),
+          round: 1,
+          board_no: 1,
+          ply: ply,
+          colour: "white",
+          move_number: 10 + ply,
+          player_key: key,
+          player_name: name,
+          san: "e4",
+          played_uci: "e2e4",
+          fen: Alnasl.Chess.start_fen(),
+          prefix_hash: "h#{ply}",
+          best: best,
+          played_cp: 30,
+          rank: 1,
+          gap: 10,
+          near_count: 3,
+          material: 70,
+          rating: 2000,
+          engine_id: "sf19",
+          engine_version: "19",
+          bench: 2_497_913,
+          nodes: 1_000_000,
+          inserted_at: now,
+          updated_at: now
+        }
+      end
+
+    Repo.insert_all(Alnasl.FairPlay.Move, rows)
+    rows
+  end
+
   def setting(attrs \\ %{}) do
     struct!(
       %Setting{

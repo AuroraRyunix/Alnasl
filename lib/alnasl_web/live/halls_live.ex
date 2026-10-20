@@ -512,6 +512,13 @@ defmodule AlnaslWeb.HallsLive do
         <.button id="hall-enter" href={~p"/halls/#{@shown.id}/enter"} icon="boards">
           {gettext("To its boards")}
         </.button>
+        <.button
+          :if={Alnasl.FairPlay.Access.owner?(@current_scope, @shown.id)}
+          id="hall-fair-play"
+          navigate={~p"/halls/#{@shown.id}/fair-play"}
+        >
+          {gettext("Fair-play screening")}
+        </.button>
       </:actions>
 
       <div class="stack">

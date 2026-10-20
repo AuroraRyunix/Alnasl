@@ -113,6 +113,11 @@ defmodule AlnaslWeb.Permit do
   # one hall and the owner of the next, on the same page.
   def needed(AlnaslWeb.HallsLive, _event), do: :viewer
 
+  # Fair play is the hall owner's alone (`Alnasl.FairPlay.Access`), which is
+  # not a level of the ladder: the page and `Alnasl.FairPlay` ask it themselves,
+  # for every event, so the ladder is not asked for more than a seat.
+  def needed(AlnaslWeb.FairPlayLive, _event), do: :viewer
+
   def needed(view, event) do
     Map.get(@everywhere, event) ||
       Map.get(@frame, event) ||

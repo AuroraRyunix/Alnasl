@@ -133,7 +133,14 @@ defmodule AlnaslWeb.Router do
       live "/setup/:section", SetupLive, :section
       live "/halls", HallsLive, :index
       live "/halls/:id", HallsLive, :show
+      # Fair-play screening: the hall owner's and nobody else's, which the
+      # page itself decides (`Alnasl.FairPlay.Access`), not the role the hall
+      # gives an admin. Before the generic tab below, which would take it.
+      live "/halls/:id/fair-play", FairPlayLive, :settings
       live "/halls/:id/:tab", HallsLive, :show
+      live "/fair-play/:tid", FairPlayLive, :report
+      live "/fair-play/:tid/round/:round", FairPlayLive, :report
+      live "/fair-play/:tid/player", FairPlayLive, :player
       live "/help", HelpLive, :index
       live "/help/:chapter", HelpLive, :chapter
     end
