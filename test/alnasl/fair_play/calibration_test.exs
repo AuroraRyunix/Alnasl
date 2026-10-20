@@ -209,14 +209,52 @@ defmodule Alnasl.FairPlay.CalibrationTest do
     assert model.bench == 2_497_913
     assert model.nodes == 1000
     assert model.meta["games"] + model.meta["held_out_games"] == 24
-    assert Map.keys(report.over) == [2, 3, 4, 5]
+    assert model.meta["held_out_by"] == "event"
+
+    assert Enum.map(report.table["rows"], & &1["threshold"]) ==
+             [2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]
+
+    # The table travels with the model, for the report to read.
+    assert loaded.false_positives == report.table
 
     assert_received {:line, "fair_play fit: " <> _}
-    assert_received {:line, "  score > 2: " <> _}
+    assert_received {:line, "  >= 2.0: " <> _}
+
+    # Held out by event: an event's games are all held out or none is, so
+    # a held-out player-event is a whole one.
+    games =
+      shards
+      |> Enum.flat_map(&(&1 |> File.read!() |> String.split("\n", trim: true)))
+      |> Enum.map(&Jason.decode!/1)
+
+    for {_event, in_event} <- Enum.group_by(games, & &1["event"]) do
+      verdicts = Enum.map(in_event, &Calibration.held_out?(Calibration.holdout_key(&1), 0.25))
+      assert Enum.uniq(verdicts) |> length() == 1
+    end
+
+    assert Calibration.holdout_key(%{"event" => "Open A", "id" => "x"}) == "event:Open A"
+    assert Calibration.holdout_key(%{"event" => "", "id" => "x"}) == "game:x"
 
     # The same split every time.
     held = Enum.filter(ids(hd(shards)), &Calibration.held_out?(&1, 0.25))
     assert held == Enum.filter(ids(hd(shards)), &Calibration.held_out?(&1, 0.25))
+  end
+
+  test "the gate reads the table, and says when the sample is too small to show anything" do
+    small = Alnasl.FairPlay.FalsePositives.table(List.duplicate(0.0, 500))
+    assert Calibration.gate_verdict(small) == :passed_unproven
+
+    big = Alnasl.FairPlay.FalsePositives.table(List.duplicate(0.0, 3000))
+    assert Calibration.gate_verdict(big) == :passed
+
+    bad =
+      Alnasl.FairPlay.FalsePositives.table(List.duplicate(0.0, 990) ++ List.duplicate(3.5, 10))
+
+    assert Calibration.gate_verdict(bad) == :failed
+
+    assert Calibration.gate_verdict(Alnasl.FairPlay.FalsePositives.table([])) == :no_data
+    # -ln(0.025) × 700, rounded up: the rule of three, at 97.5% one-sided.
+    assert Calibration.gate_events_needed() == 2583
   end
 
   test "calibrate runs both steps with a fake engine over UCI, as the command line does", %{

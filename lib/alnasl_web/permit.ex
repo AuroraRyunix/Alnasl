@@ -282,7 +282,12 @@ defmodule AlnaslWeb.Permit do
   The rows an event acts on: tournaments, boards, bridges and codes named
   in its parameters, and the tournament the page itself is about.
   Unknown ids name nothing (the page says "not found" by itself).
+
+  Fair play names none: its ids are grants, uploads and rounds, not
+  tournaments, and the page asks the owner (or the grant) itself.
   """
+  def refs(AlnaslWeb.FairPlayLive, _event, _params, _assigns), do: []
+
   def refs(view, event, params, assigns) do
     named =
       for {key, value} <- flatten(params),

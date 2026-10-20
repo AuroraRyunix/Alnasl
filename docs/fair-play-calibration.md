@@ -3,6 +3,9 @@
 How `priv/fair_play/model-sf19.json` is made. The why is in
 `docs/plan-fair-play.md` (§5); the code is `Alnasl.FairPlay.Calibration`.
 
+For one big machine (the 80-core VM) the step-by-step run sheet is
+`docs/fair-play-calibration-run.md`; this page is the general recipe.
+
 Four Linux machines (x86-64), each on its own, with no cluster software
 and no Elixir: each runs Alnasl's Linux release tarball, which carries its
 own Erlang. One machine (or a checkout anywhere) fits at the end.
@@ -77,13 +80,19 @@ mix fair_play.fit --holdout 0.2 --out priv/fair_play/model-sf19.json labels-*.js
 ```
 
 - Files from different engines, benches or node counts are refused.
-- 20% of the games are held out, chosen by a hash of their id, so the same
-  files always give the same split.
-- It prints the held-out false-positive table (share of player-events with
-  at least 40 counted moves scoring above 2, 3, 4 and 5) and, per 200-point
-  rating band, the number of events, the mean score and the share above 2.
-- The gate (plan §5): more than about 1 in 700 held-out player-events
-  above 3 and the model does not ship. The task says so on its last line.
+- A share of the **events** is held out (all of an event's games, never
+  some of them), chosen by a hash of the event's name, so the same files
+  always give the same split. `--holdout 0.2` is too little for the gate:
+  see `docs/fair-play-calibration-run.md`, which uses about two thirds.
+- It prints the held-out false-positive table - for 2.0, 2.5, 3.0, 3.5,
+  4.0, 4.5 and 5.0, the share of player-events with at least 40 counted
+  moves scoring that much or more, with the exact 95% interval - and, per
+  200-point rating band, the number of events, the mean score and the share
+  at 2 or more. The table goes into the model file and onto the report.
+- The gate (plan §5): more than about 1 in 700 held-out player-events at 3
+  or more and the model does not ship; "passed" needs the upper end of the
+  interval under 1 in 700. The task says which, and how many held-out
+  player-events it would have needed.
 
 On one machine, both steps at once: `mix fair_play.calibrate --engine ...
 --games 7000 --holdout 0.2 --out priv/fair_play/model-sf19.json files...`

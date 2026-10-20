@@ -139,6 +139,10 @@ defmodule AlnaslWeb.Router do
       live "/halls/:id/fair-play", FairPlayLive, :settings
       live "/halls/:id/:tab", HallsLive, :show
       live "/fair-play", FairPlayLive, :index
+      # Shared reports are reached by owner or grantee alike; the page checks.
+      live "/fair-play/pgn/:uid", FairPlayLive, :report
+      live "/fair-play/pgn/:uid/round/:round", FairPlayLive, :report
+      live "/fair-play/pgn/:uid/player", FairPlayLive, :player
       live "/fair-play/:tid", FairPlayLive, :report
       live "/fair-play/:tid/round/:round", FairPlayLive, :report
       live "/fair-play/:tid/player", FairPlayLive, :player

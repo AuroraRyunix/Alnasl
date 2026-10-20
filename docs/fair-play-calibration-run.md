@@ -1,0 +1,217 @@
+# Fair-play calibration: the run sheet for the 80-core VM
+
+One Linux machine, 80 cores, 251 GB of memory, about 180 GB free, reached
+as `root@172.16.63.81`. Everything lives under `/root`; nothing is
+installed system-wide. The general recipe and what the output means are in
+`docs/fair-play-calibration.md`; the statistics in `docs/plan-fair-play.md`
+(§5).
+
+The run has two steps. **Label** (hours, all cores): replay each game,
+ask Stockfish about every position that counts, write one JSON line per
+game. **Fit** (minutes, one core): turn the lines into
+`priv/fair_play/model-sf19.json`. Labelling is the expensive half and can
+run from either the release tarball or a checkout; fitting must use code
+from the `fairplay-2` branch or later, because that is where the holdout by
+event, the covariance and the false-positive table are.
+
+Downloads below (Erlang, Elixir, Stockfish, the games) are fetched by the
+VM from their publishers. Nothing in this sheet downloads anything on the
+person's own computer.
+
+## 0. What it costs, roughly
+
+Not yet measured on this machine: the number to trust is the one the label
+task prints itself (section 4). The estimate:
+
+| | |
+| --- | --- |
+| games to label | ~15,000 standard-time games with both players rated |
+| positions asked per game | ~65 (the rest are opening, forced, decided, repeated) |
+| seconds per position per engine | 0.8 to 1.0 at 1,000,000 nodes, one thread (the plan's figure) |
+| engines | 78 (two cores left for the BEAM and the shell) |
+| wall time | 975,000 positions × 0.8-1.0 s / 78 ≈ **3 to 3.5 hours**; up to **7 hours** if the 80 "cores" are 40 cores with hyper-threading |
+| memory | 78 × 64 MB of hash ≈ 5 GB, plus about 2 GB for the BEAM |
+| disk | the games ~1-3 GB compressed, the labels ~1 GB |
+
+The figure to replace the estimate with is printed on the label task's last
+line (and every 50 games): `s per position per engine`. Multiply by the
+positions still to go and divide by the engines.
+
+## 1. The code, onto the VM
+
+`git clone` over https may not work there. From a checkout on your own
+computer, on the branch to run:
+
+```sh
+git archive --format=tar.gz --prefix=alnasl/ -o alnasl-src.tar.gz HEAD
+scp -i ~/.ssh/photon_openpair alnasl-src.tar.gz root@172.16.63.81:/root/w-fairplay-2/
+```
+
+On the VM:
+
+```sh
+mkdir -p /root/w-fairplay-2 && cd /root/w-fairplay-2
+tar -xzf alnasl-src.tar.gz          # -> /root/w-fairplay-2/alnasl
+```
+
+`git archive` takes what is committed, with LF line endings and the
+execute bits as the repository has them; a copy of the working tree from
+Windows would not.
+
+## 2. Erlang and Elixir, under /root
+
+Erlang/OTP **29** and Elixir **1.20** (what CI uses). OTP 28 or later is a
+must: the games are read as `.pgn.zst`, through OTP's `:zstd`.
+
+Prebuilt, no compiler needed, nothing outside `/root`:
+
+```sh
+cd /root/w-fairplay-2
+. /etc/os-release && echo "$ID $VERSION_ID"     # e.g. ubuntu 24.04
+
+# Erlang/OTP 29, built by Hex for this distribution (pick the one that matches)
+curl -fLO https://builds.hex.pm/builds/otp/ubuntu-24.04/OTP-29.0.tar.gz
+mkdir -p otp && tar -xzf OTP-29.0.tar.gz -C otp --strip-components=1
+(cd otp && ./Install -minimal "$PWD")
+
+# Elixir 1.20, precompiled for OTP 29
+curl -fLO https://github.com/elixir-lang/elixir/releases/download/v1.20.3/elixir-otp-29.zip
+mkdir -p elixir && (cd elixir && unzip -q ../elixir-otp-29.zip)
+
+cat > env.sh <<'EOF'
+export PATH=/root/w-fairplay-2/otp/bin:/root/w-fairplay-2/elixir/bin:$PATH
+export MIX_HOME=/root/w-fairplay-2/.mix HEX_HOME=/root/w-fairplay-2/.hex
+export MIX_ENV=prod ERL_AFLAGS="+S 80:80"
+# prod insists on a writable data directory, even for a task that stores nothing there
+export ALNASL_DATA=/root/w-fairplay-2/data
+EOF
+mkdir -p /root/w-fairplay-2/data
+. ./env.sh
+erl -noshell -eval 'io:format("~s~n",[erlang:system_info(otp_release)]), halt().'   # 29
+elixir --version                                                                     # 1.20.x
+```
+
+If Hex has no build for the distribution, either take the Alnasl Linux
+release tarball for **labelling** (it carries its own Erlang; see
+`docs/fair-play-calibration.md` §1 - its labels are the same format and fit
+fine with this branch), or ask for the toolchain to be installed another
+way. Do not install Erlang system-wide for this.
+
+Then the project:
+
+```sh
+cd /root/w-fairplay-2/alnasl
+mix local.hex --force && mix local.rebar --force
+mix deps.get --only prod
+mix compile
+```
+
+## 3. Stockfish 19 and the games
+
+Stockfish, through the same installer the halls use: it checks the
+archive's SHA256
+(`9defc0d4e55d49c65a6d042f3e571a39fcea499ade6dbe741b53b8c65e03611f` for
+`stockfish-linux-x86-64-universal.tar.gz`), unpacks it and runs `bench`,
+which must say **2497913**:
+
+```sh
+cd /root/w-fairplay-2
+curl -fLO https://github.com/official-stockfish/Stockfish/releases/download/sf_19/stockfish-linux-x86-64-universal.tar.gz
+sha256sum stockfish-linux-x86-64-universal.tar.gz      # compare by eye too
+(cd alnasl && mix run --no-start -e '
+  IO.inspect(Alnasl.FairPlay.Installer.install(
+    {:file, "/root/w-fairplay-2/stockfish-linux-x86-64-universal.tar.gz"},
+    platform: :linux_x86_64, dir: "/root/w-fairplay-2/sf19"))')
+# => {:ok, %{path: "/root/w-fairplay-2/sf19/stockfish-linux-x86-64-universal", bench: 2497913, ...}}
+```
+
+The games: Lichess broadcast months, 2024-2025, from
+<https://database.lichess.org/#broadcasts> (CC BY-SA 4.0). Look at the
+sizes listed on that page before fetching; months are tens of MB each,
+compressed, and grow towards 2025. Keep them compressed; the task reads
+`.zst` as a stream.
+
+```sh
+mkdir -p /root/w-fairplay-2/games && cd /root/w-fairplay-2/games
+for y in 2024 2025; do for m in 01 02 03 04 05 06 07 08 09 10 11 12; do
+  curl -fLO https://database.lichess.org/broadcast/lichess_db_broadcast_$y-$m.pgn.zst || echo "missing $y-$m"
+done; done
+ls -la && du -sh .
+```
+
+## 4. Label, detached
+
+A quick measurement first, a few games, so the hours below are a number
+and not a guess:
+
+```sh
+cd /root/w-fairplay-2/alnasl && . ../env.sh
+mix fair_play.label --engine /root/w-fairplay-2/sf19/stockfish-linux-x86-64-universal \
+  --engines 78 --games 100 --out /root/w-fairplay-2/try.jsonl \
+  /root/w-fairplay-2/games/*.pgn.zst
+# last line: N games, M positions, ... s per position per engine
+```
+
+Then the real run, in the background, with its log:
+
+```sh
+cd /root/w-fairplay-2/alnasl && . ../env.sh
+nohup mix fair_play.label \
+  --engine /root/w-fairplay-2/sf19/stockfish-linux-x86-64-universal \
+  --engines 78 --shard 1/1 --games 15000 \
+  --out /root/w-fairplay-2/labels-1.jsonl \
+  /root/w-fairplay-2/games/*.pgn.zst \
+  > /root/w-fairplay-2/label-1.log 2>&1 &
+echo $! > /root/w-fairplay-2/label.pid
+```
+
+- `--engines 78`: one engine per core (`Threads 1`, `Hash 64`), two cores
+  left over. More engines than cores only makes each slower.
+- `--nodes` stays at its default, 1,000,000: the model belongs to that
+  node count, and the halls analyse at the same.
+- `+S 80:80` (in `env.sh`) gives the BEAM one scheduler per core; the
+  engines are separate processes and do not need schedulers of their own.
+- Progress: `tail -f /root/w-fairplay-2/label-1.log` (a line every 50
+  games, with games per minute and seconds per position per engine).
+- Is it alive: `kill -0 $(cat /root/w-fairplay-2/label.pid) && echo running`;
+  `ps -o pid,etime,cmd -p $(cat /root/w-fairplay-2/label.pid)`.
+
+**Resumable.** The labels file is the progress: after a crash, a reboot or
+a `kill`, run the same command again. It reads `labels-1.jsonl`, skips
+every game already in it, drops a last line a crash left half-written, and
+appends the rest. `--games 15000` counts what is in the file, so a second
+run stops at the same total. To split the work into pieces that can be
+stopped and started separately, run `--shard 1/4` ... `--shard 4/4` one
+after another (each with its own `--out` and `--engines 78`); the shards
+never share a game.
+
+## 5. Fit, and fetch the model
+
+On the VM (one core, a few minutes):
+
+```sh
+cd /root/w-fairplay-2/alnasl && . ../env.sh
+mix fair_play.fit --holdout 0.67 \
+  --out /root/w-fairplay-2/model-sf19.json \
+  /root/w-fairplay-2/labels-*.jsonl | tee /root/w-fairplay-2/fit.log
+```
+
+- `--holdout 0.67`: two thirds of the **events** are held out, about
+  10,000 games, about 2,500 to 3,000 player-events with 40 counted moves.
+  That is the size the gate needs: showing "under 1 in 700 at 3 or more"
+  takes at least 2,583 held-out player-events with none that high. The fit
+  keeps about 5,000 games, the same as phase 1 planned.
+- The log ends with the false-positive table and the gate's verdict:
+  *passed*, *passed, not proven* (the point estimate is fine but there are
+  too few player-events to prove it - label more games), or *failed*
+  (the model does not ship).
+
+Back on your own computer, into the checkout:
+
+```sh
+scp -i ~/.ssh/photon_openpair root@172.16.63.81:/root/w-fairplay-2/model-sf19.json priv/fair_play/model-sf19.json
+scp -i ~/.ssh/photon_openpair root@172.16.63.81:/root/w-fairplay-2/fit.log .
+```
+
+Keep the labels on the VM until the model is merged: a fit with other
+settings needs only them, not another day of Stockfish.

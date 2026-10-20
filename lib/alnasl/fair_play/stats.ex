@@ -13,17 +13,23 @@ defmodule Alnasl.FairPlay.Stats do
     * **EV**: the same, a match being any move within 0.01 of the best;
     * **ASD**: `(Σ E[d] − Σ d) / sqrt(Σ Var[d])`: positive when the player
       lost less than their rating predicts;
-    * **combined**: `w·z / sqrt(wᵀ R w)`, with `R` the three tests'
-      correlation measured in calibration. They are far from independent
-      (a player who matches the engine also loses little), so adding them
-      up as if they were would shout about every good day.
+    * **combined**: `w·z / sqrt(wᵀ Σ w)`, with `Σ` the three tests'
+      covariance measured in calibration (`Model.dispersion/1`). They are
+      far from independent (a player who matches the engine also loses
+      little), so adding them up as if they were would shout about every
+      good day; and none of them has the variance of one its formula
+      promises, so dividing by their correlation alone would shout a
+      little about every day.
 
   Below 40 counted moves there is no score (`:too_few_moves`); without a
   model there is no score either (`:uncalibrated`), and the raw counts are
-  still there to look at. The interval is `score ± 1.96`: under the model a
-  z-score has unit variance whatever its mean, so that is the 95% interval
-  of the player's true standing - which is to say, a score of 2.4 from 40
-  moves is not very different from a score of 0.5.
+  still there to look at. The interval is `score ± 1.96`: the combined
+  score is scaled to unit variance over normal player-events, so that is
+  roughly the 95% interval of the player's true standing - which is to
+  say, a score of 2.4 from 40 moves is not very different from a score of
+  0.5. What a score means in false positives is not read off a normal
+  table but measured, on games held out of the fit
+  (`Alnasl.FairPlay.Model`, `false_positives`).
 
   Nothing here knows about players' names, tournaments or the database: it
   is arithmetic over records.
@@ -81,7 +87,7 @@ defmodule Alnasl.FairPlay.Stats do
     mm_z = binomial_z(raw.matches, p)
     ev_z = binomial_z(raw.ev_matches, q)
     asd_z = asd_z(losses, moments)
-    score = combined([mm_z, ev_z, asd_z], model.weights, model.correlation)
+    score = combined([mm_z, ev_z, asd_z], model.weights, Model.dispersion(model))
 
     numbers = %{
       raw
@@ -138,8 +144,9 @@ defmodule Alnasl.FairPlay.Stats do
   end
 
   @doc """
-  `w·z / sqrt(wᵀ R w)`: the weighted sum of the z-scores over its own
-  standard deviation. Nil when any of them is.
+  `w·z / sqrt(wᵀ Σ w)`: the weighted sum of the z-scores over its own
+  standard deviation, `Σ` being their covariance (or, failing that, their
+  correlation). Nil when any of them is.
   """
   @spec combined([float() | nil], [number()], [[number()]]) :: float() | nil
   def combined(zs, weights, correlation) do

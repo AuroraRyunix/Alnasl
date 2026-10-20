@@ -25,6 +25,20 @@ defmodule Alnasl.FairPlay.Retention do
   Reports are computed from the rows, so deleting the rows deletes the
   reports. The job runs once a day (the first time a minute after start);
   `purge/2` does the work and takes the time as an argument.
+
+  ## Uploads, grants and the hall's audit
+
+    * An uploaded PGN attached to a tournament (`Alnasl.FairPlay.Upload`)
+      goes with the tournament: its games, their analysis, its audit and
+      the grants of its report.
+    * One on its own counts from the moment it was uploaded, as if that
+      were its last round, and can be kept longer in the same way (up to
+      365 days, with a reason).
+    * The grants of a report go with the report. Grants of a whole hall,
+      and the audit lines about the hall rather than a report (a grant of
+      the hall, an upload deleted), are about the owner's choices, not
+      about players: they stay `Alnasl.FairPlay.max_keep_days/0` days
+      after the grant ended or the line was written, and then they go too.
   """
 
   use GenServer
@@ -32,7 +46,7 @@ defmodule Alnasl.FairPlay.Retention do
   import Ecto.Query
 
   alias Alnasl.Repo
-  alias Alnasl.FairPlay.{Keep, Move, View}
+  alias Alnasl.FairPlay.{Grant, Keep, Move, Upload, UploadMove, Uploads, View}
   alias Alnasl.Games.Game
 
   require Logger
@@ -61,11 +75,12 @@ defmodule Alnasl.FairPlay.Retention do
 
   @doc """
   Deletes what has outlived its time, as of `now`. Returns
-  `%{tournaments: n, moves: n, views: n}`: how many tournaments were
-  cleared and how many rows went.
+  `%{tournaments: n, uploads: n, moves: n, views: n}`: how many
+  tournaments and uploads were cleared and how many rows went.
   """
   @spec purge(DateTime.t(), pos_integer()) :: %{
           tournaments: integer(),
+          uploads: integer(),
           moves: integer(),
           views: integer()
         }
@@ -76,27 +91,76 @@ defmodule Alnasl.FairPlay.Retention do
         from m in Move, where: m.game_id not in subquery(from g in Game, select: g.id)
       )
 
-    ids =
-      [Move, View, Keep]
-      |> Enum.flat_map(&Repo.all(from r in &1, distinct: true, select: r.tournament_id))
-      |> Enum.uniq()
+    {upload_orphans, _} =
+      Repo.delete_all(
+        from m in UploadMove, where: m.upload_id not in subquery(from u in Upload, select: u.id)
+      )
 
-    Enum.reduce(ids, %{tournaments: 0, moves: orphans, views: 0}, fn id, acc ->
-      if expired?(id, now, days) do
-        {moves, _} = Repo.delete_all(from m in Move, where: m.tournament_id == ^id)
-        {views, _} = Repo.delete_all(from v in View, where: v.tournament_id == ^id)
-        Repo.delete_all(from k in Keep, where: k.tournament_id == ^id)
+    start = %{tournaments: 0, uploads: 0, moves: orphans + upload_orphans, views: 0}
 
-        %{
+    acc =
+      Enum.reduce(tournament_ids(), start, fn id, acc ->
+        if expired?(id, now, days), do: add(acc, purge_tournament(id)), else: acc
+      end)
+
+    acc =
+      from(u in Upload, where: is_nil(u.tournament_id))
+      |> Repo.all()
+      |> Enum.reduce(acc, fn upload, acc ->
+        if upload_expired?(upload, now, days) do
+          gone = Uploads.purge(upload.id)
+
+          %{
+            acc
+            | uploads: acc.uploads + 1,
+              moves: acc.moves + gone.moves,
+              views: acc.views + gone.views
+          }
+        else
           acc
-          | tournaments: acc.tournaments + 1,
-            moves: acc.moves + moves,
-            views: acc.views + views
-        }
-      else
-        acc
-      end
-    end)
+        end
+      end)
+
+    hall_level(acc, now)
+  end
+
+  defp add(acc, gone) do
+    %{
+      acc
+      | tournaments: acc.tournaments + 1,
+        uploads: acc.uploads + gone.uploads,
+        moves: acc.moves + gone.moves,
+        views: acc.views + gone.views
+    }
+  end
+
+  defp tournament_ids do
+    [Move, View, Keep, Grant, UploadMove, Upload]
+    |> Enum.flat_map(
+      &Repo.all(
+        from r in &1, where: not is_nil(r.tournament_id), distinct: true, select: r.tournament_id
+      )
+    )
+    |> Enum.uniq()
+  end
+
+  defp purge_tournament(id) do
+    {moves, _} = Repo.delete_all(from m in Move, where: m.tournament_id == ^id)
+    {views, _} = Repo.delete_all(from v in View, where: v.tournament_id == ^id)
+    Repo.delete_all(from k in Keep, where: k.tournament_id == ^id)
+    Repo.delete_all(from g in Grant, where: g.tournament_id == ^id)
+
+    uploads = Repo.all(from u in Upload, where: u.tournament_id == ^id, select: u.id)
+    gone = Enum.map(uploads, &Uploads.purge/1)
+
+    # Rows of an upload that was attached and is no more.
+    {stray, _} = Repo.delete_all(from m in UploadMove, where: m.tournament_id == ^id)
+
+    %{
+      uploads: length(uploads),
+      moves: moves + stray + Enum.sum(Enum.map(gone, & &1.moves)),
+      views: views + Enum.sum(Enum.map(gone, & &1.views))
+    }
   end
 
   defp expired?(tournament_id, now, days) do
@@ -114,6 +178,33 @@ defmodule Alnasl.FairPlay.Retention do
     end
   end
 
+  defp upload_expired?(%Upload{} = upload, now, days) do
+    cond do
+      upload.keep_until && DateTime.compare(upload.keep_until, now) == :gt -> false
+      true -> DateTime.diff(now, upload.inserted_at, :second) > days * 86_400
+    end
+  end
+
+  # The hall's own audit lines and its ended grants of the whole hall, a
+  # year after.
+  defp hall_level(acc, now) do
+    cutoff = DateTime.add(now, -Alnasl.FairPlay.max_keep_days() * 86_400, :second)
+
+    {views, _} =
+      Repo.delete_all(
+        from v in View,
+          where: is_nil(v.tournament_id) and is_nil(v.upload_id) and v.at < ^cutoff
+      )
+
+    Repo.delete_all(
+      from g in Grant,
+        where: is_nil(g.tournament_id) and is_nil(g.upload_id),
+        where: g.expires_at < ^cutoff or g.revoked_at < ^cutoff
+    )
+
+    %{acc | views: acc.views + views}
+  end
+
   # --- the daily job -----------------------------------------------------------
 
   @impl true
@@ -126,10 +217,10 @@ defmodule Alnasl.FairPlay.Retention do
   def handle_info(:purge, state) do
     summary = purge()
 
-    if summary.moves + summary.views > 0 do
+    if summary.moves + summary.views + summary.uploads > 0 do
       Logger.info(
-        "fair play: retention ended for #{summary.tournaments} tournaments " <>
-          "(#{summary.moves} analysed moves, #{summary.views} audit rows)"
+        "fair play: retention ended for #{summary.tournaments} tournaments and " <>
+          "#{summary.uploads} uploads (#{summary.moves} analysed moves, #{summary.views} audit rows)"
       )
     end
 

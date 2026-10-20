@@ -11,11 +11,21 @@ defmodule Alnasl.Accounts.Scope do
   * `roles` - `%{hall_id => "owner" | "arbiter" | "viewer"}`.
   * `halls` - the halls the account may see; `hall` the one the pages are
     about now (the switcher at the top).
+  * `fair_play_shared?` - somebody shared a fair-play report with the
+    account, and the grant is in force (`Alnasl.FairPlay.Grants`): what
+    puts fair play in the menu of an account that owns no hall. Worked out
+    once when the scope is made, not on every page drawn.
   """
 
   alias Alnasl.Halls.Hall
 
-  defstruct user: nil, admin?: false, open?: false, roles: %{}, halls: [], hall: nil
+  defstruct user: nil,
+            admin?: false,
+            open?: false,
+            roles: %{},
+            halls: [],
+            hall: nil,
+            fair_play_shared?: false
 
   @rank %{"viewer" => 1, "arbiter" => 2, "owner" => 3}
 

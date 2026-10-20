@@ -25,28 +25,45 @@ defmodule Alnasl.FairPlay.Queue do
   the job when it starts, not when the game is queued: a switch turned
   on or off takes effect from the next job.
 
-  The job can be replaced with `:job` (a `fn game_id -> any end`), which is
-  how the tests watch the queue without an engine.
+  ## Two lanes
+
+  What the owner asks for in bulk - a round analysed on demand
+  (`{:game, id}`, `Alnasl.FairPlay.analyse_round/3`) and the games of an
+  uploaded PGN (`{:upload_game, id}`, `Alnasl.FairPlay.Uploads`) - waits
+  in a lane of its own (`:bulk_max`, 5,000 by default) and only gets an
+  engine when no live game is waiting. A round of a hundred games or an
+  upload of a thousand never keeps the live games of this round from
+  their analysis. A board game is the same game in either lane: one
+  queued live while it waits in bulk is not queued twice, and never runs
+  twice at once.
+
+  The job can be replaced with `:job` (a `fn item -> any end`, the item
+  being a live game's id or one of the tuples above), which is how the
+  tests watch the queue without an engine.
   """
 
   use GenServer
 
   require Logger
 
-  alias Alnasl.FairPlay.{Analysis, Pool, Setting}
+  alias Alnasl.FairPlay.{Analysis, Pool, Setting, Uploads}
   alias Alnasl.{Games.Game, Halls, Repo, Tournaments}
 
   @max 500
+  @bulk_max 5_000
 
   # --- API ---------------------------------------------------------------------
 
   def start_link(opts),
     do: GenServer.start_link(__MODULE__, opts, name: Keyword.get(opts, :name, __MODULE__))
 
-  @doc "Queues a game. Never waits, never fails."
-  @spec enqueue(integer(), GenServer.server()) :: :ok
-  def enqueue(game_id, server \\ __MODULE__) do
-    if GenServer.whereis(server), do: GenServer.cast(server, {:game, game_id})
+  @doc """
+  Queues a live game (its id), or bulk work: `{:game, id}` (a board game,
+  on demand) or `{:upload_game, id}`. Never waits, never fails.
+  """
+  @spec enqueue(integer() | {:game | :upload_game, integer()}, GenServer.server()) :: :ok
+  def enqueue(item, server \\ __MODULE__) do
+    if GenServer.whereis(server), do: GenServer.cast(server, {:item, item})
     :ok
   end
 
@@ -63,9 +80,12 @@ defmodule Alnasl.FairPlay.Queue do
     {:ok,
      %{
        max: Keyword.get(opts, :max, @max),
+       bulk_max: Keyword.get(opts, :bulk_max, @bulk_max),
        slots: Keyword.get(opts, :slots, Alnasl.FairPlay.engine_count()),
        job: Keyword.get(opts, :job, &__MODULE__.job/1),
        line: :queue.new(),
+       bulk: :queue.new(),
+       bulk_waiting: 0,
        waiting: MapSet.new(),
        running: %{},
        again: MapSet.new(),
@@ -75,34 +95,58 @@ defmodule Alnasl.FairPlay.Queue do
   end
 
   @impl true
-  def handle_cast({:game, id}, state) do
+  def handle_cast({:item, item}, state) do
+    id = identity(item)
+    lane = lane(item)
+
     state =
       cond do
         MapSet.member?(state.waiting, id) ->
           state
 
-        id in Map.values(state.running) ->
+        id in Enum.map(Map.values(state.running), &identity/1) ->
           %{state | again: MapSet.put(state.again, id)}
 
-        MapSet.size(state.waiting) >= state.max ->
+        lane == :live and MapSet.size(state.waiting) - state.bulk_waiting >= state.max ->
           Logger.warning(
-            "fair play: the queue is full, game #{id} dropped until it changes again"
+            "fair play: the queue is full, game #{inspect(item)} dropped until it changes again"
           )
 
           %{state | dropped: state.dropped + 1}
 
+        lane == :bulk and state.bulk_waiting >= state.bulk_max ->
+          Logger.warning("fair play: the bulk queue is full, #{inspect(item)} dropped")
+          %{state | dropped: state.dropped + 1}
+
+        lane == :live ->
+          %{state | line: :queue.in(item, state.line), waiting: MapSet.put(state.waiting, id)}
+
         true ->
-          %{state | line: :queue.in(id, state.line), waiting: MapSet.put(state.waiting, id)}
+          %{
+            state
+            | bulk: :queue.in(item, state.bulk),
+              bulk_waiting: state.bulk_waiting + 1,
+              waiting: MapSet.put(state.waiting, id)
+          }
       end
 
     {:noreply, state |> dispatch() |> reply_drainers()}
   end
+
+  # The same board game is the same work in either lane.
+  defp identity({:game, id}), do: {:game, id}
+  defp identity({:upload_game, id}), do: {:upload_game, id}
+  defp identity(id) when is_integer(id), do: {:game, id}
+
+  defp lane(id) when is_integer(id), do: :live
+  defp lane(_bulk), do: :bulk
 
   @impl true
   def handle_call(:info, _from, state) do
     {:reply,
      %{
        waiting: MapSet.size(state.waiting),
+       bulk: state.bulk_waiting,
        running: map_size(state.running),
        dropped: state.dropped
      }, state}
@@ -128,14 +172,15 @@ defmodule Alnasl.FairPlay.Queue do
   def handle_info(_other, state), do: {:noreply, state}
 
   defp finished(state, ref) do
-    {id, running} = Map.pop(state.running, ref)
+    {running_item, running} = Map.pop(state.running, ref)
+    id = running_item && identity(running_item)
 
     if id != nil and MapSet.member?(state.again, id) do
       %{
         state
         | running: running,
           again: MapSet.delete(state.again, id),
-          line: :queue.in(id, state.line),
+          line: :queue.in(running_item, state.line),
           waiting: MapSet.put(state.waiting, id)
       }
     else
@@ -143,25 +188,43 @@ defmodule Alnasl.FairPlay.Queue do
     end
   end
 
+  # Live games first; bulk work only when none waits.
   defp dispatch(state) do
     if map_size(state.running) < state.slots do
-      case :queue.out(state.line) do
-        {{:value, id}, line} ->
+      case next(state) do
+        {item, state} ->
           task =
-            Task.Supervisor.async_nolink(Alnasl.FairPlay.TaskSupervisor, fn -> state.job.(id) end)
+            Task.Supervisor.async_nolink(Alnasl.FairPlay.TaskSupervisor, fn ->
+              state.job.(item)
+            end)
 
           dispatch(%{
             state
-            | line: line,
-              waiting: MapSet.delete(state.waiting, id),
-              running: Map.put(state.running, task.ref, id)
+            | waiting: MapSet.delete(state.waiting, identity(item)),
+              running: Map.put(state.running, task.ref, item)
           })
 
-        {:empty, _line} ->
+        nil ->
           state
       end
     else
       state
+    end
+  end
+
+  defp next(state) do
+    case :queue.out(state.line) do
+      {{:value, item}, line} ->
+        {item, %{state | line: line}}
+
+      {:empty, _line} ->
+        case :queue.out(state.bulk) do
+          {{:value, item}, bulk} ->
+            {item, %{state | bulk: bulk, bulk_waiting: state.bulk_waiting - 1}}
+
+          {:empty, _bulk} ->
+            nil
+        end
     end
   end
 
@@ -179,8 +242,12 @@ defmodule Alnasl.FairPlay.Queue do
   # --- the job -----------------------------------------------------------------
 
   @doc false
-  # What a job does: find the game's hall, and unless fair play is off or has
-  # no engine there, bring the stored analysis up to date.
+  # What a job does: for a board game, live or on demand, find the game's
+  # hall, and unless fair play is off or has no engine there, bring the
+  # stored analysis up to date; an uploaded game is `Uploads.job/1`'s.
+  def job({:upload_game, id}), do: Uploads.job(id)
+  def job({:game, id}), do: job(id)
+
   def job(game_id) do
     with %Game{} = game <- Repo.get(Game, game_id),
          %{} = tournament <- Tournaments.get(game.tournament_id),
