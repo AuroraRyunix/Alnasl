@@ -536,7 +536,8 @@ defmodule Alnasl.Tracker do
             from = state.(start),
             from.unseen == [],
             move <- nearby(from.pos, ply),
-            between = straight(ply, move, Enum.slice(tr.plies, start..(first - 2)//1)),
+            {between, _dropped} =
+              straight(ply, move, Enum.slice(tr.plies, start..(first - 2)//1)),
             line <- rewritten(tr, from, move, between, target, ply),
             line[:ghost] == nil,
             do: {start, Enum.map(line.steps, &elem(&1, 0))}
@@ -923,9 +924,16 @@ defmodule Alnasl.Tracker do
             set_status(tr, :settling, :moving)
 
           (k = takeback(tr)) != nil and not replayable?(tr, k) ->
-            if stable >= o.takeback_settle_ms,
-              do: correct(tr, t, length(tr.plies) - k, [], :takeback),
-              else: set_status(tr, :settling, :takeback)
+            cond do
+              stable < o.takeback_settle_ms ->
+                set_status(tr, :settling, :takeback)
+
+              (lines = straightened(tr, k)) != [] ->
+                rewrite(tr, t, lines)
+
+              true ->
+                correct(tr, t, length(tr.plies) - k, [], :takeback)
+            end
 
           (fix = promotion_fix(tr)) != nil ->
             {keep, steps} = fix
@@ -1160,9 +1168,43 @@ defmodule Alnasl.Tracker do
   # `steps`, the last `new` of which are new. Fewest edits first (one for
   # the rewrite, one a new move), then the most recent move, then by name.
   defp rewrites(%{opts: %{misread: false}}), do: []
-  defp rewrites(%{unseen: [_ | _]}), do: []
 
-  defp rewrites(tr) do
+  # A piece out of sight leaves the game too uncertain to second-guess.
+  # A ghost does not: it is a piece whose square is known to within one,
+  # and its own move may be asked about again (`shown_at/2`).
+  defp rewrites(%{unseen: unseen} = tr) do
+    if Enum.all?(unseen, &(&1[:ghost] != nil)), do: misreads(tr), else: []
+  end
+
+  # The board is back to what it was before the last move: a takeback, by
+  # every rule above - unless the clock was pressed for that move. Then
+  # the "move" was a piece set down between two squares being straightened
+  # (the rook read on h6 that stood on h5 all along, nudged home), and
+  # what came back is the player's next move, taking it to h6 for real.
+  # The board cannot tell those apart; the press can. A move taken back
+  # was never pressed for, and a move made always is.
+  #
+  # Only the one line `rewrites/1` already allows, in which the last ply
+  # is the one that is not a move. Without a clock, or with one the box
+  # did not hear, it stays a takeback. And a press is only this move's when
+  # it came after the move was read and makes the presses as many as the
+  # moves: the debt (`fits?/2`) forgives the clock, it does not count for it.
+  defp straightened(tr, 1) do
+    count = length(tr.plies)
+    last = List.last(tr.plies)
+
+    pressed? =
+      not tr.deaf? and is_integer(tr.presses) and tr.presses >= count and
+        tr.pressed_at != nil and tr.pressed_at >= last.at
+
+    if pressed?,
+      do: Enum.filter(rewrites(tr), &(&1.straightened == count - 1)),
+      else: []
+  end
+
+  defp straightened(_tr, _k), do: []
+
+  defp misreads(tr) do
     count = length(tr.plies)
 
     for back <- 1..min(@misread_back, count)//1,
@@ -1172,10 +1214,19 @@ defmodule Alnasl.Tracker do
         before = Enum.at(tr.history, back - 1),
         before.unseen == [],
         later = Enum.drop(tr.plies, keep + 1),
-        move <- nearby(before.pos, ply),
-        line <- rewritten(tr, before, move, straight(ply, move, later), tr.raw, ply),
+        shown = shown_at(tr, ply),
+        move <- nearby(before.pos, ply, shown),
+        {kept, dropped} = straight(ply, move, later, shown),
+        line <- rewritten(tr, before, move, kept, tr.raw, ply, shown, dropped != nil),
         fits?(tr, keep + length(line.steps)) do
-      Map.merge(line, %{keep: keep, read: ply.san, edits: 1 + line.new, back: back})
+      Map.merge(line, %{
+        keep: keep,
+        # A move rewritten twice was still read only once.
+        read: ply[:read] || ply.san,
+        edits: 1 + line.new,
+        back: back,
+        straightened: dropped && keep + 1 + dropped
+      })
     end
     |> Enum.sort_by(&{&1.edits, &1.back, sans_of(Enum.at(tr.history, &1.back - 1).pos, &1.steps)})
   end
@@ -1189,24 +1240,44 @@ defmodule Alnasl.Tracker do
   # The moves read after a misread one, without the "move" that was only
   # somebody straightening the piece: from the square it was read on to the
   # square it had been on all along.
-  defp straight(ply, move, later) do
-    case Enum.split_while(later, &(not (&1.from == ply.to and &1.to == move.to))) do
-      {before, [_straightened | rest]} -> before ++ rest
-      {all, []} -> all
+  #
+  # Returns `{moves, index}`: the moves kept, and where among `later` the
+  # straightening was (`nil` when there was none).
+  defp straight(ply, move, later, shown \\ nil) do
+    shown = shown || ply.to
+
+    case Enum.split_while(later, &(not (&1.from == shown and &1.to == move.to))) do
+      {before, [_straightened | rest]} -> {before ++ rest, length(before)}
+      {all, []} -> {all, nil}
     end
+  end
+
+  # Where the piece of `ply` was last read: its own square, unless it is a
+  # ghost - a move already rewritten once, its piece carried as standing
+  # beside the square it reads on. Then the reading is the evidence, and
+  # the square it was taken to stand on only the first guess. A ghost that
+  # is straightened onto a third square says the guess was the wrong
+  # neighbour, and the move is asked about again around the reading.
+  defp shown_at(tr, ply) do
+    Enum.find_value(tr.unseen, ply.to, fn entry ->
+      if entry[:ghost] != nil and entry.square == ply.to and :rewritten in ply.flags,
+        do: entry.ghost
+    end)
   end
 
   # The other legal moves of the piece that made `ply`, to a square next to
   # the one it was read on.
-  defp nearby(pos, ply) do
+  defp nearby(pos, ply, shown \\ nil) do
+    shown = shown || ply.to
+
     # Not a castle: nobody sets a king down between g1 and f1, and a king
     # and rook swapped back by mistake read just like it.
     castle? = String.starts_with?(ply.san, "O-O")
 
     for move <- if(castle?, do: [], else: Chess.legal_moves(pos)),
-        move.from == ply.from and move.to != ply.to and move.promo == ply.promo,
+        move.from == ply.from and move.to not in [ply.to, shown] and move.promo == ply.promo,
         move.kind not in [:castle_k, :castle_q],
-        abs(rem(move.to, 8) - rem(ply.to, 8)) <= 1 and abs(div(move.to, 8) - div(ply.to, 8)) <= 1,
+        abs(rem(move.to, 8) - rem(shown, 8)) <= 1 and abs(div(move.to, 8) - div(shown, 8)) <= 1,
         do: move
   end
 
@@ -1220,7 +1291,8 @@ defmodule Alnasl.Tracker do
   # board is the rewritten game's but for that one piece, which is then
   # carried as "read on d3, standing on d4" until it is read where it
   # stands, moves, or is taken.
-  defp rewritten(tr, before, move, later, target, ply) do
+  defp rewritten(tr, before, move, later, target, ply, shown \\ nil, straightened? \\ false) do
+    shown = shown || ply.to
     [{board, _} | _] = Search.outcomes(before.phys, move, before.pos.turn, nil)
     pos = Chess.apply_move(before.pos, move)
     specs = Enum.map(later, &{&1.from, &1.to, &1.promo, &1.flags})
@@ -1241,13 +1313,16 @@ defmodule Alnasl.Tracker do
 
         piece = moved(before.pos, ply)
 
+        # Not when it was seen straightened since: a piece read on its own
+        # square is not crooked any more, and is back on the square beside
+        # by a move.
         crooked? =
-          elem(target, ply.to) == piece and elem(target, move.to) == nil and
-            elem(phys, move.to) == piece and elem(phys, ply.to) == nil
+          not straightened? and elem(target, shown) == piece and elem(target, move.to) == nil and
+            elem(phys, move.to) == piece and elem(phys, shown) == nil
 
         if crooked? do
-          entry = %{square: move.to, piece: piece, ghost: ply.to}
-          read = phys |> put_elem(move.to, nil) |> put_elem(ply.to, piece)
+          entry = %{square: move.to, piece: piece, ghost: shown}
+          read = phys |> put_elem(move.to, nil) |> put_elem(shown, piece)
 
           # A new move there must be, or nothing was wrong with the reading.
           for [_ | _] = new <- complete(tr, pos, read, target, 1, [entry]),

@@ -56,7 +56,7 @@ Some alarms name what the board shows:
 - "A move is missing before this" takes you to where moves are typed, for when the board missed a move.
 - "Clock not in starting position" or a clock running the wrong way: stop it, put it right, start it again. The alarm goes away by itself. The moves are still followed.
 - "White knight not seen on f3" is a warning, not an alarm: a piece left its square (parked beside the board, or the sensor lost it) and the game went on, so Alnasl takes it to be standing there still. It goes away when the piece is seen there again, moves, or is taken. If the piece was in fact captured, correct the moves on the board's page.
-- "read as d3" beside a move means the board read that move one square off (a piece set down between two squares) and a later move showed where it really went. Alnasl has put it right and says so above the moves; "Check it" has the move as it was read.
+- "read as d3" beside a move means the board read that move one square off (a piece set down between two squares) and a later move showed where it really went - or somebody straightened the piece, which the board can read as a move of its own; with a clock, a press that belongs to no move gives that away. Alnasl has put it right and says so above the moves; "Check it" has the move as it was read.
 
 ## Repairing a board {#repairing}
 
