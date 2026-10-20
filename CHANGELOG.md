@@ -19,6 +19,8 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-10-20
+
 - [Change] **Fair-play screening has its own place in the menu.** It used to hide behind a button on a hall's page, which is where one looks for a hall and not for a suspicion. It is now an item under Manage, for owners of at least one hall and nobody else (an admin who owns no hall still sees nothing, as before), and opens on a list of the halls you own: on or off, engine or no engine, and a link to each tournament's report. The button on the hall page is gone; nothing points at the new place from the old one, because the menu does that.
 
 ## [0.5.0] - 2026-10-20
