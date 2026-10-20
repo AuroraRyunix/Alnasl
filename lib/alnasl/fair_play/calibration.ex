@@ -303,17 +303,48 @@ defmodule Alnasl.FairPlay.Calibration do
   end
 
   # Standard time control (the first period's base at least `min_base`
-  # seconds: "5400+30", "40/5400+30:1800+30"), standard chess, both rated.
-  defp standard?(%{headers: h}, min_base) do
+  # seconds), standard chess, both rated. Broadcasts write the tag however
+  # they like: seconds ("5400+30", "40/5400+30:1800+30"), words ("90 min +
+  # 30 sec per move"), or nothing usable at all - and only then do the
+  # clocks decide, the first reading after each player's first move being
+  # the base give or take a few seconds. A tag that can be read wins over
+  # the clocks: a file's clocks are the likelier thing to be wrong.
+  @doc false
+  def standard?(%{headers: h} = game, min_base) do
     base =
-      case Regex.run(~r/^(?:\d+\/)?(\d+)/, h["TimeControl"] || "") do
-        [_, seconds] -> String.to_integer(seconds)
-        nil -> 0
+      case max(tag_seconds(h["TimeControl"]), tag_minutes(h["TimeControl"])) do
+        0 -> clock_base(game)
+        seconds -> seconds
       end
 
     base >= min_base and h["Variant"] in [nil, "Standard"] and rated(h["WhiteElo"]) != nil and
       rated(h["BlackElo"]) != nil
   end
+
+  defp tag_seconds(tc) do
+    case Regex.run(~r/^(?:\d+\/)?(\d+)/, tc || "") do
+      [_, seconds] -> String.to_integer(seconds)
+      nil -> 0
+    end
+  end
+
+  defp tag_minutes(tc) do
+    case Regex.run(~r/(\d+)\s*(?:min|')/i, tc || "") do
+      [_, minutes] -> String.to_integer(minutes) * 60
+      nil -> 0
+    end
+  end
+
+  # The first two clock readings, one per player; 5% slack for the seconds
+  # a first move costs, and never more than the clock showed.
+  defp clock_base(%{clocks: [_ | _] = clocks}) do
+    case clocks |> Enum.take(2) |> Enum.reject(&is_nil/1) do
+      [] -> 0
+      ms -> div(Enum.max(ms), 950)
+    end
+  end
+
+  defp clock_base(_), do: 0
 
   defp rated(text) when is_binary(text) do
     case Integer.parse(text) do
@@ -341,6 +372,7 @@ defmodule Alnasl.FairPlay.Calibration do
     line = %{
       "id" => game.id,
       "event" => h["Event"],
+      "broadcast" => h["BroadcastName"],
       "round" => h["Round"],
       "date" => h["Date"],
       "white" => h["White"],
@@ -642,11 +674,23 @@ defmodule Alnasl.FairPlay.Calibration do
   @doc """
   What decides whether a game is held out: its event, so a player-event
   is held out whole or not at all (a game without an event stands alone).
-  """
-  def holdout_key(%{"event" => event}) when is_binary(event) and event != "",
-    do: "event:" <> event
 
-  def holdout_key(%{"id" => id}), do: "game:" <> id
+  The event is the broadcast's name when the file has one. Lichess
+  broadcasts since 2024 put "Round 11: White - Black" in `Event`, one value
+  per game, and grouping on that held out games, not events - the very
+  leak this function exists to stop.
+  """
+  def holdout_key(game) do
+    case event_of(game) do
+      nil -> "game:" <> game["id"]
+      event -> "event:" <> event
+    end
+  end
+
+  @doc false
+  def event_of(game) do
+    Enum.find([game["broadcast"], game["event"]], &(is_binary(&1) and &1 != ""))
+  end
 
   @doc "Whether a key (`holdout_key/1`) is in the held-out share: by hash, so every run agrees."
   def held_out?(key, fraction) do
@@ -662,7 +706,7 @@ defmodule Alnasl.FairPlay.Calibration do
     |> Enum.flat_map(fn g ->
       Enum.map(g["plies"] || [], fn ply ->
         name = if ply["colour"] == "white", do: g["white"], else: g["black"]
-        {{g["event"], name}, decode_record(ply)}
+        {{event_of(g), name}, decode_record(ply)}
       end)
     end)
     |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
