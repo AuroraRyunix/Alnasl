@@ -1,6 +1,24 @@
 import Config
 
-File.mkdir_p!(Path.expand("../tmp/test/data", __DIR__))
+# Every `mix test` gets a directory of its own. SQLite has one writer per
+# file and the sandbox holds its write lock until the test is over, so two
+# runs on one checkout (a second terminal, an agent, a watcher) used to
+# queue up behind each other's tests until `Database busy`, and wiped each
+# other's capture files besides. The run's pid names it; leftovers of runs
+# that did not clean up are removed after a day.
+tmp_test = Path.expand("../tmp/test", __DIR__)
+run_dir = Path.join(tmp_test, "run-#{System.pid()}")
+
+day_ago = :os.system_time(:second) - 86_400
+
+for stale <- Path.wildcard(Path.join(tmp_test, "run-*")),
+    stale != run_dir,
+    {:ok, %{mtime: mtime}} <- [File.stat(stale, time: :posix)],
+    mtime < day_ago do
+  File.rm_rf(stale)
+end
+
+File.mkdir_p!(Path.join(run_dir, "data"))
 
 # Configure your database
 #
@@ -8,7 +26,7 @@ File.mkdir_p!(Path.expand("../tmp/test/data", __DIR__))
 # to provide built-in test partitioning in CI environment.
 # Run `mix help test` for more information.
 config :alnasl, Alnasl.Repo,
-  database: Path.expand("../tmp/test/alnasl_test.db", __DIR__),
+  database: Path.join(run_dir, "alnasl_test.db"),
   pool_size: 5,
   pool: Ecto.Adapters.SQL.Sandbox
 
@@ -21,10 +39,10 @@ config :alnasl, AlnaslWeb.Endpoint,
 
 # Print only warnings and errors during test
 config :alnasl,
-  data_dir: Path.expand("../tmp/test/data", __DIR__),
+  data_dir: Path.join(run_dir, "data"),
   # No bundled packs unless a test asks for them: the ordinary theme-pack
   # tests count the packs they installed, and the shipped Toon is not one.
-  bundled_themes_dir: Path.expand("../tmp/test/no_bundled_themes", __DIR__),
+  bundled_themes_dir: Path.join(run_dir, "no_bundled_themes"),
   autostart: false,
   # The fair-play queue, pool and retention job: tests that need them
   # start their own, with the database allowed to them.
