@@ -35,7 +35,7 @@ Only boards that exist here get a tile: a board of this hall seated on that boar
 
 The position large, the move list, and the tools. The Left and Right arrow keys, the buttons under the board, or a tap on a move step back through the game; Home is the start, End or "Live" is the game as it is played. Moves that arrive while you look back are added to the list and do not move the board.
 
-When board and game have parted ways, the page shows what the board reads beside what is certain.
+When board and game have parted ways, the page shows what the board reads beside what is certain. One case is named: the board stands in the starting position while the game already has moves. That is nearly always a new game set up on a board still linked to the old one; start a new game with "New game", or put the position back if the pieces were knocked over.
 
 ## Moves Alnasl worked out {#reconstructed}
 

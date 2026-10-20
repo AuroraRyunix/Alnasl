@@ -4,7 +4,7 @@ Alles om de borden herkend te krijgen: aansluiten, meerdere borden op één kabe
 
 ## Wat de pagina Borden toont {#the-boards-page}
 
-Eén rij per bord: zijn live plaatje, het signaal, zijn serienummer en firmware, de controle van de beginstelling, zijn tafelnummer en zijn bord van de ronde. Bovenaan: "Klaar voor ronde N?", het adres en de QR-code voor een telefoon, en een vel etiketten om af te drukken. Een bord dat niet aangesloten is, houdt zijn rij en zegt "Geen signaal" en waarom.
+Eén rij per bord: zijn live plaatje, het signaal, zijn serienummer en firmware, de klok ernaast (beide tijden, de lopende donker; "Geen klok gemeld" als er nog geen klok iets gezegd heeft), de controle van de beginstelling, zijn tafelnummer en zijn bord van de ronde. Bovenaan: "Klaar voor ronde N?", het adres en de QR-code voor een telefoon, en een vel etiketten om af te drukken. Een bord dat niet aangesloten is, houdt zijn rij en zegt "Geen signaal" en waarom.
 
 ## Een bord toevoegen {#adding-a-board}
 

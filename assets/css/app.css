@@ -1039,7 +1039,14 @@ code,
   font-weight: 600;
 }
 
-.row-clock .clock {
+.b-clock {
+  display: flex;
+  gap: 0.3rem;
+  margin-top: 0.3rem;
+}
+
+.row-clock .clock,
+.b-clock .clock {
   display: block;
   font-family: var(--mono);
   font-size: 0.8125rem;
@@ -1047,7 +1054,8 @@ code,
   border-radius: 3px;
 }
 
-.row-clock .clock.running {
+.row-clock .clock.running,
+.b-clock .clock.running {
   background: var(--ink);
   color: var(--panel);
   font-weight: 700;

@@ -26,6 +26,10 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 - [Fix] **The calibration held out games, not events.** A player's games from one event landed on both sides of the split, so the model was tested on players it had already met. The held-out set is now whole events; the model file says so.
 - [Fix] **The combined score divided by the wrong thing.** The three measures were combined using their correlation, as if each player's numbers had exactly the spread the model predicts. Real players are lumpier than that, so the score ran high and the "worth a closer look" crowd was larger than advertised. It now uses the covariance measured on real player-events. A model made before this change has no covariance and falls back to the old behaviour until it is made again.
 - [Change] **The calibration tasks say how far they got and how fast.** Progress every 50 games, the seconds per position per engine at the end, and a verdict on whether the held-out set is large enough to say "1 in 700" at all. `docs/fair-play-calibration-run.md` is the run sheet for a big Linux machine.
+## [0.5.3] - 2026-10-20
+
+- [Feature] **The Boards page shows the clock beside each board**, linked to a game or not: both times, the running one dark, or "No clock heard" when the board is talking and its clock is not. Checking that a clock is plugged in used to require starting a game, which is a strange way to test a cable.
+- [Fix] **A board set up for a new game while still linked to the old one now says so.** The board read the starting position, the game had nineteen moves from yesterday, and the box reported "Out of sync" with the explanatory power of a shrug. It is still out of sync, because it is, but the page now says the board is set up for a new game and that "New game" is the button you want.
 
 ## [0.5.2] - 2026-10-20
 
