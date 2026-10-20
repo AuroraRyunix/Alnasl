@@ -606,6 +606,15 @@ defmodule Alnasl.Games do
     |> Ecto.Changeset.change(changes)
     |> Repo.update!()
     |> tap(&write_pgn/1)
+    |> tap(&fair_play(&1, changes))
+  end
+
+  # Fair-play screening is told that the moves or the result changed. A
+  # cast to a queue that decides on its own whether the hall wants it:
+  # nothing here waits, and nothing of it comes back.
+  defp fair_play(game, changes) do
+    if Enum.any?([:plies, :status, :result], &Map.has_key?(changes, &1)),
+      do: Alnasl.FairPlay.game_changed(game)
   end
 
   @doc "Replaces the whole game by moves read from a PGN: a game that was not captured."

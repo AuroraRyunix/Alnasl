@@ -50,6 +50,22 @@ if System.get_env("ALNASL_NO_LOCAL_BOARDS") in ~w(1 true yes) do
   config :alnasl, local_boards: false
 end
 
+# Fair-play screening (`Alnasl.FairPlay`): how many engines may run at once
+# (unset: the cores less one on a box, one on the hosted server) and how many
+# days after a tournament's last round its analysis is kept (unset: 30).
+positive_int = fn name ->
+  with text when is_binary(text) <- System.get_env(name),
+       {n, ""} when n > 0 <- Integer.parse(String.trim(text)) do
+    n
+  else
+    _unset -> nil
+  end
+end
+
+config :alnasl,
+  fair_play_engines: positive_int.("ALNASL_FAIR_PLAY_ENGINES"),
+  fair_play_retention_days: positive_int.("ALNASL_FAIR_PLAY_RETENTION_DAYS")
+
 # Who is an admin of this installation - everything, every hall - without
 # a row saying so: the addresses here, comma-separated. On the server they
 # are the people who may invite others, and who may sign in with 02cloud

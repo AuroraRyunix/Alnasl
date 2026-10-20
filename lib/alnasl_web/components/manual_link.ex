@@ -28,6 +28,7 @@ defmodule AlnaslWeb.Components.ManualLink do
     bridges: {"bridges", "joining"},
     setup: {"openpairings-and-openresults", "linking-to-openpairings"},
     lichess: {"openpairings-and-openresults", "lichess"},
+    fair_play: {"fair-play", "what-the-numbers-mean"},
     accounts: {"accounts-and-halls", "open-until-the-first-account"},
     wizard: {"getting-started", "setup-wizard"}
   }

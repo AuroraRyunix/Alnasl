@@ -1,0 +1,4 @@
+info depth 243 seldepth 3 multipv 1 score mate -1 nodes 487 nps 162333 hashfull 0 tbhits 0 time 3 pv a8b8 h1h8
+info depth 244 seldepth 3 multipv 1 score mate -1 nodes 489 nps 163000 hashfull 0 tbhits 0 time 3 pv a8b8 h1h8
+info depth 245 seldepth 3 multipv 1 score mate -1 nodes 491 nps 163666 hashfull 0 tbhits 0 time 3 pv a8b8 h1h8
+bestmove a8b8 ponder h1h8

@@ -4344,3 +4344,9 @@ h1 .manual-help-link, h2 .manual-help-link { transform: translateY(-2px); }
   flex-direction: column;
   gap: 0.3rem;
 }
+
+/* Fair-play screening: a position to look at is a board and a few lines. */
+.fp-position .board {
+  width: 100%;
+  max-width: 16rem;
+}

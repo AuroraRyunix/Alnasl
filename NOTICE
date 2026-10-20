@@ -52,7 +52,17 @@ It includes the following, which keep their own notices:
      msvcp140.dll), which Erlang's Windows build needs, redistributed
      unchanged beside it as Microsoft's terms for those files allow.
 
-5. Test games
+5. Stockfish, for fair-play screening
+
+   https://stockfishchess.org, the Stockfish developers, GPL-3.0. Alnasl
+   does not contain it and does not distribute it: the owner of a hall has
+   Alnasl download the official release (or carries the same archive in on
+   a USB stick), after which Alnasl runs it as a separate program over the
+   UCI protocol. The fair-play model parameters, once there are any, are
+   derived from Lichess broadcast games (database.lichess.org, CC BY-SA
+   4.0) and carry that licence.
+
+6. Test games
 
    priv/games/classics.pgn and the three single games beside it are the
    moves of chess games played between 1620 and 1928. The moves of a chess
