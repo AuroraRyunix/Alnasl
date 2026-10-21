@@ -188,6 +188,7 @@ defmodule AlnaslWeb.Layouts do
       </div>
       <.tab_bar nav={@nav} alarms={@alarms} waiting={@waiting} scope={@scope} />
     </div>
+    <AlnaslWeb.Components.Tour.tour scope={@scope} />
     <.flash_group flash={@flash} />
     """
   end
@@ -636,6 +637,16 @@ defmodule AlnaslWeb.Layouts do
           <span class="menu-label"><.icon name="theme" /> {gettext("Colour theme")}</span>
           <.theme_picker id="theme-picker" />
         </div>
+
+        <button
+          :if={@scope && @scope.tour}
+          id="tour-start"
+          type="button"
+          class="menu-item"
+          phx-click={close_menu("account") |> JS.push("tour_start")}
+        >
+          <.icon name="help" /> <span>{gettext("Take the tour")}</span>
+        </button>
 
         <.link :if={@user} id="log-out" href={~p"/log-out"} method="delete" class="menu-item">
           <.icon name="signout" /> <span>{gettext("Sign out")}</span>

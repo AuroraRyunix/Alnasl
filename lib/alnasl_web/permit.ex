@@ -52,6 +52,11 @@ defmodule AlnaslWeb.Permit do
     "page" => :viewer
   }
 
+  # About the person, not the hall: the guided tour (`AlnaslWeb.Tour`) - what
+  # they have seen. Whoever has the page may answer it, whatever the page is
+  # about; nothing of a hall, a tournament or a board is named or changed.
+  @personal ~w(tour_start tour_dismiss tour_finish)
+
   @levels %{
     RoundLive => %{
       "set_view" => :viewer,
@@ -161,6 +166,7 @@ defmodule AlnaslWeb.Permit do
   @doc false
   def allowed?(%Scope{open?: true}, _view, _event, _params, _assigns), do: true
   def allowed?(nil, _view, _event, _params, _assigns), do: false
+  def allowed?(%Scope{}, _view, event, _params, _assigns) when event in @personal, do: true
 
   def allowed?(%Scope{} = scope, view, event, params, assigns) do
     case needed(view, event) do
