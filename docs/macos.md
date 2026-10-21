@@ -15,7 +15,7 @@ with a Mac (and ideally an electronic board) still has to confirm.
 | Runtime | Erlang/OTP 29.0.5 compiled on the runner by `rel/macos/build_otp.sh`, for macOS 11, with OpenSSL 3.5 compiled the same way and linked into `crypto` statically; Elixir 1.20 from its own precompiled zip. Cached, so only the first run with a given set of versions pays. Linux and Windows use `erlef/setup-beam`; on macOS that would be `erlef/otp_builds`, which is built for macOS 15 and made the app refuse to open on 14 (see [Why the runtime is built here](#why-the-runtime-is-built-here)) |
 | Serial library | `circuits_uart`, compiled on the runner (`ALNASL_UART=1`, on by default on any Unix); the build stops if it is missing |
 | Oldest macOS | Apple Silicon: 11 (Big Sur); Intel: 10.13 (High Sierra), see [Intel Macs](#intel-macs). Everything compiled on the runner is built for it (`MACOSX_DEPLOYMENT_TARGET` is the target's `macos_min` in the workflow: 11.0, or 10.13 for Intel; the SQLite NIF from source with `EXQLITE_FORCE_BUILD`), and `build_app.sh` fails the build, naming the files, if any binary asks for newer; what they accept goes into `Info.plist` |
-| Signed | ad-hoc only, for now - see [Unsigned, for now](#unsigned-for-now) |
+| Signed | Developer ID, hardened runtime, notarised and stapled - see [Signing](#signing) |
 
 ## What the app is
 
@@ -113,10 +113,9 @@ used, for now:
   blind.
 - Velopack's Mac installer is a `.pkg` installing into `/Applications` as
   root, so an update in place needs an administrator.
-- Unsigned, the `.pkg` meets the same Gatekeeper refusal as the app, and
-  nobody has tried an update over an ad-hoc signed bundle.
+- Nobody has tried an update over a signed bundle.
 
-Worth another look once the app is signed and can be tested on a Mac. The
+Worth another look now that the app is signed and can be tested on a Mac. The
 feed would be `releases.osx.json` beside `releases.win.json`.
 
 ## Intel Macs
@@ -163,25 +162,25 @@ proves that nothing in the bundle asks for more than 10.13 and that the app
 starts and answers on a current macOS; whether 10.13 runs it is for the test
 list below, on a Mac that old.
 
-## Unsigned, for now
+## Signing
 
-There is no Apple Developer account yet. Every binary in the app carries
-an ad-hoc signature (Apple Silicon runs nothing without one), but
-Gatekeeper does not know who made it.
+Every Mach-O file in the app (the Erlang runtime, `beam.smp`, the NIF
+libraries, the serial program) is signed with the Developer ID Application
+certificate, the hardened runtime and a timestamp, from the inside out, then
+the bundle. The BEAM's JIT needs entitlements the hardened runtime otherwise
+forbids (`rel/macos/entitlements.plist` says which). The bundle is then sent
+to Apple's notary service, and the ticket is stapled to it, so a Mac with no
+network at the venue opens it without a question. The workflow asks
+Gatekeeper itself (`spctl -a -vvv -t exec`) and fails unless the answer is
+"Notarized Developer ID".
 
-**Opening it the first time** (once per download):
+So the first start is a double-click. Only a build from a fork, which has no
+signing secrets, is ad-hoc signed; macOS then refuses it once and
+*System Settings > Privacy & Security > Open Anyway* is the way in.
 
-- **macOS 15 Sequoia and newer**: double-click; macOS says it could not
-  verify the app. Click *Done*. *System Settings > Privacy & Security*,
-  scroll down to "Alnasl was blocked...", **Open Anyway**, confirm with your
-  password or Touch ID, *Open*. (Right-click > Open no longer does it on
-  Sequoia.)
-- **macOS 14 and older**: right-click the app, **Open**, then *Open*.
-- **"Alnasl is damaged and can't be opened"**: it is not. In Terminal:
-
-  ```sh
-  xattr -dr com.apple.quarantine /Applications/Alnasl.app
-  ```
+To try the signing without a release: run the workflow by hand on any
+branch with **mac_only** ticked. It builds, signs, notarises and checks both
+Mac apps and publishes nothing.
 
 **What can still ask, signed or not:**
 
@@ -199,12 +198,7 @@ Gatekeeper does not know who made it.
   the adapter and the macOS version. A board plugged in with no `cu.` port
   appearing (Terminal: `ls /dev/cu.*`) is that.
 
-**Signing, when the account exists**, is five repository secrets -
-`APPLE_CERTIFICATE_P12_BASE64`, `APPLE_CERTIFICATE_PASSWORD`,
-`APPLE_TEAM_ID`, `APPLE_ID`, `APPLE_APP_PASSWORD` - see
-[releasing.md, "Signing the Mac app"](releasing.md#signing-the-mac-app). The
-step is in the workflow already and skips itself while they are missing.
-Then the first start is a double-click.
+**Signing** is described in [releasing.md, "Signing the Mac app"](releasing.md#signing-the-mac-app).
 
 ## Serial ports on a Mac
 
@@ -250,7 +244,7 @@ In the macOS jobs of `.github/workflows/release.yml`:
    binary links only to the system - `/usr/lib` (the Swift runtime in
    `/usr/lib/swift` included) and `/System`; none asks for a macOS newer
    than 11.0 (the build fails and names the files), and the oldest macOS
-   they accept goes into `Info.plist`; the ad-hoc signature verifies.
+   they accept goes into `Info.plist`; the signature verifies.
 2. The zip is unpacked as an arbiter would, the bundle made read-only, the
    serial library loads from inside it (`Uart.available?()` is `true`).
    `Info.plist` has no `LSUIElement`, and `CFBundleExecutable` is a Mach-O
@@ -287,8 +281,8 @@ minutes, plus the board.
 
 **First start**
 
-5. Double-click it. Expect macOS to refuse; follow
-   [Opening it the first time](#unsigned-for-now). Note the message you saw.
+5. Double-click it. Expect it to open with no refusal, since it is notarised. If macOS refuses,
+   note the message you saw.
 6. Expect within about ten seconds: an Alnasl icon in the **Dock** with a
    running dot (the white tile with the squares, sized like its
    neighbours), a small window **"Alnasl is running at

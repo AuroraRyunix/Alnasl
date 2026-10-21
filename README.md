@@ -208,15 +208,10 @@ for a Mac with an Apple chip (M1 and later), or
 for an Intel Mac (macOS 10.13 or newer), open it, and drag **Alnasl** into
 *Applications*.
 
-**macOS will refuse it, once.** Alnasl is not signed by Apple yet (that
-needs a paid developer account, which is coming). The first time:
-
-- macOS 15 and newer: double-click, click *Done* on "could not verify",
-  then *System Settings > Privacy & Security*, **Open Anyway** beside the
-  message about Alnasl, and confirm.
-- macOS 14 and older: right-click the app, **Open**, *Open*.
-- "Alnasl is damaged and can't be opened": it is not. In Terminal:
-  `xattr -dr com.apple.quarantine /Applications/Alnasl.app`, then open it.
+**It opens with a double-click.** The app is signed with a Developer ID and
+notarised by Apple, and the notarisation ticket is stapled to it, so macOS
+opens it without a question, even with no network. (A build from a fork,
+which has no signing secrets, is signed ad-hoc and does ask: docs/macos.md.)
 
 What starts is an Alnasl icon in the Dock, a small window that says
 "Alnasl is running", and your browser on `http://localhost:4040`. It is an
@@ -1122,10 +1117,9 @@ and names on every page in both languages.
   warns on first run, and some antivirus may want convincing. The Linux
   download is checked against a checksum from the same place it came from,
   which catches a broken download and not a forged one.
-- **No Pi image, no 32-bit build, and the Mac app is unsigned and
-  untried.** A Raspberry Pi needs the 64-bit system. The Mac app is built
+- **No Pi image, no 32-bit build, and the Mac app is untried.** A Raspberry Pi needs the 64-bit system. The Mac app is built
   and started by CI on every push, has not yet been opened by a person on a
-  Mac, and asks for "Open Anyway" until it is signed (docs/macos.md).
+  Mac. It is signed and notarised (docs/macos.md).
 - **An update that changes the database cannot be undone by going back.**
   On Linux the old program is put back when the new one does not answer,
   and the database from before is kept beside the data - but it is not put
