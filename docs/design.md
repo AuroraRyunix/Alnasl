@@ -213,9 +213,26 @@ the rest of the game.
 The simulator has the fault (`dead_square: {ply, :off | :stuck}`, a square
 the game uses at least twice from then on), and the bench three suites
 for it. Three passes, 69 games each pass, before (the detection switched
-off, `dead_squares: false`) and after; every other suite is identical:
+off, `dead_squares: false`) and after. The three "piece not seen" suites
+are identical (207 exact each), which is the check that matters: they are
+the ones a suspicious tracker would ruin.
 
-DEAD_TABLE
+| suite | | exact | rec ok | rec WRONG | guess ok | guess WRONG | flagged | alarm | silent | rec plies | guess plies | alarms |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| dead square, reads empty | before | 3 | 21 | 6 | 4 | 103 | 0 | 68 | 2 | 216/503 | 456/696 | 1832 |
+| | after | 55 | 14 | 4 | 3 | 81 | 0 | 48 | 2 | 172/405 | 350/529 | 1474 |
+| stuck square | before | 9 | 0 | 4 | 0 | 17 | 4 | 173 | 0 | 40/73 | 139/169 | 2792 |
+| | after | 195 | 0 | 0 | 0 | 1 | 2 | 9 | 0 | 0/0 | 13/16 | 117 |
+| stuck + benign 5% | before | 9 | 0 | 2 | 0 | 21 | 2 | 173 | 0 | 21/38 | 129/154 | 2766 |
+| | after | 159 | 0 | 0 | 21 | 14 | 2 | 11 | 0 | 1/2 | 28/57 | 210 |
+
+The stuck square is solved but for nine games, nearly all two knights that
+could both have made the move. The square that reads empty is halved, not
+solved: most of what is left is a square that broke while empty, and a
+piece arriving on it, which nothing here can tell from a pocket. The two
+silent games are the repetition above, before and after alike. In the
+benign mix the clock misses presses, so moves onto the dead square stand
+on the hold and come out red - 21 of them right, 14 not.
 
 ### After the arbiter changes the game
 
