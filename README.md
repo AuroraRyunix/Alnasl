@@ -121,6 +121,17 @@ Lichess round.
 Four ways. All four run the same program, keep their data in the same
 kind of place, and need nothing installed first - the runtime is inside.
 
+### Checking a download
+
+From the next release on, every file in a release, `SHA256SUMS` included, carries signed build provenance: a GitHub artifact attestation, signed keylessly through Sigstore, so there is no key of ours to lose. With the [GitHub CLI](https://cli.github.com/):
+
+```sh
+gh attestation verify <file> --repo teapot-chess/Alnasl
+sha256sum --check --ignore-missing SHA256SUMS
+```
+
+The first line says this exact file was built by this repository's release workflow. `SHA256SUMS` is attested too, so the second line is as trustworthy as the first.
+
 ### Windows
 
 Download **[Alnasl-Setup.exe](https://github.com/teapot-chess/Alnasl/releases/latest/download/Alnasl-Setup.exe)**
