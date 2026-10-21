@@ -1,0 +1,171 @@
+{
+  "2026-10-11-illegal-moves-session": {
+    "capture": "2026-10-11-illegal-moves-session.jsonl",
+    "note": "Board 06310 with a clock, illegal and out-of-turn moves made on purpose; the game was not written down.",
+    "pinned": {
+      "alarms": 2,
+      "marks": [
+        "3. Nc3: recovered",
+        "4. Nc6: recovered"
+      ],
+      "moves": [
+        "d4",
+        "d5",
+        "Nc3",
+        "Nc6",
+        "Nf3",
+        "Nf6",
+        "e4",
+        "dxe4",
+        "Nxe4",
+        "Nxe4",
+        "Bg5",
+        "Bf5"
+      ],
+      "status": "out_of_sync"
+    },
+    "played": null,
+    "source": null
+  },
+  "2026-10-11-unseen-knight": {
+    "capture": "2026-10-11-unseen-knight.jsonl",
+    "note": "Board 06310 with a clock. After 3. Nf3 the knight was taken off f3 and parked beside the board for five plies, then brought down on e5.",
+    "pinned": {
+      "alarms": 0,
+      "marks": [
+        "6. Nc6: unseen",
+        "7. Be3: unseen",
+        "8. e6: unseen",
+        "9. Qc1: unseen",
+        "10. Bb4: unseen"
+      ],
+      "moves": [
+        "d4",
+        "d5",
+        "Nc3",
+        "Nf6",
+        "Nf3",
+        "Nc6",
+        "Be3",
+        "e6",
+        "Qc1",
+        "Bb4",
+        "Ne5",
+        "Bd7",
+        "Qd2"
+      ],
+      "status": "live"
+    },
+    "played": [
+      "d4",
+      "d5",
+      "Nc3",
+      "Nf6",
+      "Nf3",
+      "Nc6",
+      "Be3",
+      "e6",
+      "Qc1",
+      "Bb4",
+      "Ne5",
+      "Bd7",
+      "Qd2"
+    ],
+    "source": "README, the tracker's game on board 06310"
+  },
+  "2026-10-12-five-plies": {
+    "capture": "2026-10-12-five-plies.jsonl",
+    "note": "Board 06310: five plies played quickly; not written down.",
+    "pinned": {
+      "alarms": 0,
+      "marks": [
+        "3. Nc3: recovered",
+        "4. Nc6: recovered",
+        "5. Na4: recovered"
+      ],
+      "moves": [
+        "d4",
+        "d5",
+        "Nc3",
+        "Nc6",
+        "Na4"
+      ],
+      "status": "live"
+    },
+    "played": null,
+    "source": null
+  },
+  "2026-10-12-misread-pawn": {
+    "capture": "2026-10-12-misread-pawn.jsonl",
+    "note": "Board 06310 with a clock. 3. d4 set down so close to d3 that the board read d3, then 3...e5 4. dxe5.",
+    "pinned": {
+      "alarms": 0,
+      "marks": [
+        "5. d4: rewritten,recovered",
+        "7. dxe5: recovered"
+      ],
+      "moves": [
+        "e4",
+        "Nc6",
+        "Nc3",
+        "Nf6",
+        "d4",
+        "e5",
+        "dxe5"
+      ],
+      "status": "live"
+    },
+    "played": [
+      "e4",
+      "Nc6",
+      "Nc3",
+      "Nf6",
+      "d4",
+      "e5",
+      "dxe5"
+    ],
+    "source": "test/alnasl/misread_move_test.exs"
+  },
+  "2026-10-12-out-of-turn-session": {
+    "capture": "2026-10-12-out-of-turn-session.jsonl",
+    "note": "Board 06310 with a clock: 1. e4, a long think, 1...e5, then a black knight to c6 out of turn and a bishop through its own pawn, both taken back; the rest of the 90 minutes is test handling whose game nobody wrote down.",
+    "pinned": {
+      "alarms": 5,
+      "marks": [
+        "1. Nc3: guessed",
+        "2. e6: guessed",
+        "3. e4: guessed",
+        "4. e5: guessed"
+      ],
+      "moves": [
+        "Nc3",
+        "e6",
+        "e4",
+        "e5"
+      ],
+      "status": "live"
+    },
+    "played": null,
+    "source": null
+  },
+  "2026-10-12-short-opening": {
+    "capture": "2026-10-12-short-opening.jsonl",
+    "note": "Board 06310: a short opening, then an illegal knight move; not written down.",
+    "pinned": {
+      "alarms": 2,
+      "marks": [
+        "3. Nf3: recovered",
+        "4. Nf6: recovered"
+      ],
+      "moves": [
+        "d4",
+        "d5",
+        "Nf3",
+        "Nf6"
+      ],
+      "status": "settling"
+    },
+    "played": null,
+    "source": null
+  }
+}

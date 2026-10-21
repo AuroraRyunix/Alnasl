@@ -19,6 +19,8 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+- [Feature] **Recordings of real boards are now regression tests.** `mix alnasl.hall pin <capture> --name ... --played "..."` copies a board's recording into `test/fixtures/hall/`, decoded and a fraction of its size, and pins what the tracker made of it; the tests replay every one and fail on any change, better or worse, and `mix alnasl.hall check` (and the last line of `mix alnasl.bench`) says which changed and which pinned games are not the game really played. The six recordings with moves in them from the first real board are in. Two of their games are known and come out right; the other four were sessions of deliberate abuse that nobody wrote down, so they are held to today's answer, which is the most anyone can say about them.
+
 ## [0.5.5] - 2026-10-21
 
 - [Fix] **Serial ports that cannot be listed now leave a reason in the log.** When the list of ports failed, Alnasl showed no boards and said nothing, which sent a hall on macOS 10.14 off to reinstall drivers that were fine. The list is still empty; the log now has the error. This comes with Arkab 0.3.8.

@@ -48,6 +48,13 @@ defmodule Mix.Tasks.AlnaslTasksTest do
     refute Enum.any?(lines, &(&1 =~ "OUT OF SYNC"))
   end
 
+  test "mix alnasl.hall check replays the real boards' recordings and says how each came out" do
+    Mix.Tasks.Alnasl.Hall.run(["check"])
+    lines = collect()
+    assert Enum.any?(lines, &(&1 =~ ~r/2026-10-12-misread-pawn .* as pinned, the game played/))
+    assert Enum.any?(lines, &(&1 =~ ~r/^\s*\d+ recordings, 0 changed, 0 not the game played$/))
+  end
+
   test "mix alnasl.replay --timeline shows every reading, and says so when a file cannot be read" do
     Mix.Tasks.Alnasl.Replay.run([@fixture, "--timeline"])
     assert Enum.count(collect(), &(&1 =~ ~r{^  \d+:\d\d\.\d  [rnbqkpRNBQKP1-8/]+$})) > 100
