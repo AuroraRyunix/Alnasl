@@ -33,6 +33,11 @@ on:
     branches: ["main"]
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      mac_only:
+        description: "Build, sign and notarise only the Mac apps; publish nothing (for testing the signing)"
+        type: boolean
+        default: false
 
 concurrency:
   group: release-${{ github.ref }}
@@ -122,6 +127,7 @@ jobs:
         env:
           PUBLISH: ${{ steps.ver.outputs.publish }}
           EVENT: ${{ github.event_name }}
+          MAC_ONLY: ${{ inputs.mac_only }}
         run: |
           set -euo pipefail
           base='[
@@ -134,6 +140,10 @@ jobs:
             matrix=$(echo "$base" | jq -c '. + [{"runner":"macos-15-intel","target":"macos-x86_64","macos_min":"10.13"}]')
           else
             matrix=$(echo "$base" | jq -c .)
+          fi
+          # A hand-started run that only wants the Mac apps signed.
+          if [ "${MAC_ONLY:-false}" = true ]; then
+            matrix=$(echo "$matrix" | jq -c '[.[] | select(.macos_min)]')
           fi
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
           echo "$matrix" | jq .
@@ -519,35 +529,60 @@ jobs:
         if: runner.os == 'macOS'
         run: sh rel/macos/build_app.sh _build/prod/rel/alnasl _build/prod/rel
 
-      # Developer ID signing and notarisation: written, switched off until the
-      # Apple Developer account exists, and skipped while the certificate
-      # secret is empty. The secrets are named in rel/macos/sign_and_notarize.sh
-      # and docs/releasing.md. Asked in a step of its own rather than through
-      # the job's `env:`: job env reaches every step, the third-party actions
-      # above included, and only the two steps here should see a signing key.
+      # Developer ID signing and notarisation, with the teapot-chess
+      # organisation's secrets. A fork has none of them and gets the ad-hoc
+      # signed app (docs/macos.md) and a warning, not a red build.
+      #
+      # Asked in a step of its own, rather than with the secrets in the job's
+      # `env:` so that a step `if:` could read them: job env reaches every
+      # step, including the third-party actions above, and a signing key is
+      # the last thing to hand them. Only the steps below see a secret.
       - name: Is Apple signing set up? (macOS)
         id: apple
         if: runner.os == 'macOS'
         env:
-          APPLE_CERTIFICATE_P12_BASE64: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
+          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
         run: |
-          if [ -n "$APPLE_CERTIFICATE_P12_BASE64" ]; then
+          if [ -n "$MACOS_CERT_P12" ] && [ -n "$ASC_KEY_P8" ]; then
             echo "sign=true" >> "$GITHUB_OUTPUT"
             echo "Apple signing secrets present - signing and notarising."
           else
             echo "sign=false" >> "$GITHUB_OUTPUT"
-            echo "No APPLE_CERTIFICATE_P12_BASE64 secret - the app ships ad-hoc signed (docs/macos.md)."
+            echo "::warning::No Apple signing secrets (a fork?) - the app ships ad-hoc signed (docs/macos.md)."
           fi
 
-      - name: Sign and notarise Alnasl.app (macOS, only with Apple secrets)
+      - name: Sign and notarise (macOS, only with Apple secrets)
         if: runner.os == 'macOS' && steps.apple.outputs.sign == 'true'
         env:
-          APPLE_CERTIFICATE_P12_BASE64: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
         run: sh rel/macos/sign_and_notarize.sh _build/prod/rel/Alnasl.app
+
+      # The script deletes its keychain when it ends; this is for when it did
+      # not get to (a cancelled job, a runner that is about to be thrown away
+      # anyway, and the principle of the thing).
+      - name: Delete the temporary keychain (macOS)
+        if: always() && runner.os == 'macOS'
+        run: security delete-keychain "$RUNNER_TEMP/signing.keychain-db" 2>/dev/null || true
+
+      # Gatekeeper's own verdict on the stapled bundle, which must be a
+      # notarised Developer ID one - not merely "accepted", which an ad-hoc
+      # signed app on a runner with the check off would also say.
+      - name: Gatekeeper accepts the stapled app (macOS)
+        if: runner.os == 'macOS' && steps.apple.outputs.sign == 'true'
+        run: |
+          out=$(spctl -a -vvv -t exec _build/prod/rel/Alnasl.app 2>&1) || { echo "$out"; exit 1; }
+          echo "$out"
+          echo "$out" | grep -q "source=Notarized Developer ID" || {
+            echo "::error::Gatekeeper did not say 'source=Notarized Developer ID'"
+            exit 1
+          }
+          for i in 1 2 3 4 5; do xcrun stapler validate _build/prod/rel/Alnasl.app && break; [ "$i" -lt 5 ] || echo "::warning::stapler could not confirm the ticket online; Gatekeeper decides below"; sleep 20; done
 
       # `ditto`, which keeps the bundle's modes and signature; a name without
       # a version, like every other download.
@@ -693,10 +728,13 @@ jobs:
   release:
     name: Publish the release
     needs: [plan, build]
-    if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
+    if: (startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main') && !inputs.mac_only
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+      # Keyless attestation: the OIDC token and the right to store the result.
+      id-token: write
+      attestations: write
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -743,6 +781,17 @@ jobs:
           mv ../SHA256SUMS .
           cat SHA256SUMS
           ls -lh
+
+      # Signed build provenance, keyless: GitHub's own OIDC token, recorded in
+      # the Sigstore transparency log, so there is no maintainer-held key to
+      # lose or leak. Covers every file attached below and SHA256SUMS itself.
+      # Check with: gh attestation verify <file> --repo teapot-chess/Alnasl
+      - name: Attest the build provenance
+        if: needs.plan.outputs.publish == 'true'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            dist/*
 
       - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         if: needs.plan.outputs.publish == 'true'

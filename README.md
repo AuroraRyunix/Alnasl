@@ -121,6 +121,17 @@ Lichess round.
 Four ways. All four run the same program, keep their data in the same
 kind of place, and need nothing installed first - the runtime is inside.
 
+### Checking a download
+
+From the next release on, every file in a release, `SHA256SUMS` included, carries signed build provenance: a GitHub artifact attestation, signed keylessly through Sigstore, so there is no key of ours to lose. With the [GitHub CLI](https://cli.github.com/):
+
+```sh
+gh attestation verify <file> --repo teapot-chess/Alnasl
+sha256sum --check --ignore-missing SHA256SUMS
+```
+
+The first line says this exact file was built by this repository's release workflow. `SHA256SUMS` is attested too, so the second line is as trustworthy as the first.
+
 ### Windows
 
 Download **[Alnasl-Setup.exe](https://github.com/teapot-chess/Alnasl/releases/latest/download/Alnasl-Setup.exe)**
@@ -197,15 +208,10 @@ for a Mac with an Apple chip (M1 and later), or
 for an Intel Mac (macOS 10.13 or newer), open it, and drag **Alnasl** into
 *Applications*.
 
-**macOS will refuse it, once.** Alnasl is not signed by Apple yet (that
-needs a paid developer account, which is coming). The first time:
-
-- macOS 15 and newer: double-click, click *Done* on "could not verify",
-  then *System Settings > Privacy & Security*, **Open Anyway** beside the
-  message about Alnasl, and confirm.
-- macOS 14 and older: right-click the app, **Open**, *Open*.
-- "Alnasl is damaged and can't be opened": it is not. In Terminal:
-  `xattr -dr com.apple.quarantine /Applications/Alnasl.app`, then open it.
+**It opens with a double-click.** The app is signed with a Developer ID and
+notarised by Apple, and the notarisation ticket is stapled to it, so macOS
+opens it without a question, even with no network. (A build from a fork,
+which has no signing secrets, is signed ad-hoc and does ask: docs/macos.md.)
 
 What starts is an Alnasl icon in the Dock, a small window that says
 "Alnasl is running", and your browser on `http://localhost:4040`. It is an
@@ -1111,10 +1117,9 @@ and names on every page in both languages.
   warns on first run, and some antivirus may want convincing. The Linux
   download is checked against a checksum from the same place it came from,
   which catches a broken download and not a forged one.
-- **No Pi image, no 32-bit build, and the Mac app is unsigned and
-  untried.** A Raspberry Pi needs the 64-bit system. The Mac app is built
+- **No Pi image, no 32-bit build, and the Mac app is untried.** A Raspberry Pi needs the 64-bit system. The Mac app is built
   and started by CI on every push, has not yet been opened by a person on a
-  Mac, and asks for "Open Anyway" until it is signed (docs/macos.md).
+  Mac. It is signed and notarised (docs/macos.md).
 - **An update that changes the database cannot be undone by going back.**
   On Linux the old program is put back when the new one does not answer,
   and the database from before is kept beside the data - but it is not put

@@ -107,8 +107,9 @@ defmodule Alnasl.ReleaseFilesTest do
       assert workflow =~ "needs.plan.outputs.publish == 'true'"
       refute workflow =~ "steps.ver.outputs.publish == 'true'"
 
+      # ...and a mac_only run, which exists to test signing, publishes nothing.
       assert workflow =~
-               "if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'"
+               "if: (startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main') && !inputs.mac_only"
     end
   end
 
