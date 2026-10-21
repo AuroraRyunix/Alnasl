@@ -117,6 +117,11 @@ defmodule Alnasl.Accounts do
     user |> User.locale_changeset(%{locale: locale}) |> Repo.update()
   end
 
+  @doc "Notes what became of the guided tour for this account (`AlnaslWeb.Tour`)."
+  def set_tour(%User{} = user, state) when state in ~w(started dismissed finished) do
+    user |> User.tour_changeset(%{tour: state}) |> Repo.update()
+  end
+
   def change_user_password(%User{} = user, attrs \\ %{}),
     do: User.password_changeset(user, attrs)
 

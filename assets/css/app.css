@@ -4389,3 +4389,240 @@ h1 .manual-help-link, h2 .manual-help-link { transform: translateY(-2px); }
 @media (prefers-reduced-motion: reduce) {
   .switch-track, .switch-knob { transition: none; }
 }
+
+/* --- the guided tour (AlnaslWeb.Components.Tour) ---------------------------
+   The offer in a corner, the ring around what a step is about, and the
+   popover beside it - docked above the tab bar on a phone. Tokens only, so
+   every theme and theme pack wears it. */
+
+button.menu-item {
+  width: 100%;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tour-offer {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 60;
+  width: min(23rem, calc(100vw - 2rem));
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.5rem 0.75rem;
+  padding: 0.9rem 1rem;
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  animation: tour-in 180ms ease-out;
+}
+
+.tour-offer-icon svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--accent);
+}
+
+.tour-offer-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.875rem;
+  color: var(--quiet);
+}
+
+.tour-offer-text b {
+  color: var(--ink);
+  font-size: 0.9375rem;
+}
+
+.tour-offer-actions {
+  grid-column: 2;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tour-ring {
+  position: fixed;
+  z-index: 69;
+  pointer-events: none;
+  border: 2px solid var(--accent);
+  border-radius: calc(var(--radius) + 2px);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent);
+  transition: top 160ms ease, left 160ms ease, width 160ms ease, height 160ms ease;
+}
+
+.tour-pop {
+  position: fixed;
+  z-index: 70;
+  width: min(22rem, calc(100vw - 1.5rem));
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.85rem 1rem 0.9rem;
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--rule);
+  border-top: 3px solid var(--accent);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow), 0 12px 32px rgba(0, 0, 0, 0.16);
+  animation: tour-in 160ms ease-out;
+  transition: top 160ms ease, left 160ms ease;
+}
+
+.tour-pop:focus {
+  outline: none;
+}
+
+.tour-pop:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* No element to point at: in the middle, near the top of the page. */
+.tour-pop.floating {
+  top: 6rem;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.tour-pop.docked {
+  top: auto !important;
+  left: 0.75rem !important;
+  right: 0.75rem;
+  bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+  width: auto;
+  transform: none;
+}
+
+.tour-pop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.tour-pop-count {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--quiet);
+}
+
+.tour-pop-x {
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--quiet);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.tour-pop-x:hover,
+.tour-pop-x:focus-visible {
+  background: var(--sunken);
+  color: var(--ink);
+}
+
+.tour-pop h2 {
+  font-size: 1.0625rem;
+}
+
+.tour-pop p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.tour-pop-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.tour-pop-empty {
+  padding: 0.45rem 0.6rem;
+  background: var(--sunken);
+  border-radius: var(--radius);
+  color: var(--quiet);
+}
+
+.tour-pop-manual {
+  font-size: 0.8125rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.tour-pop-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.tour-pop-nav {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.tour-pop-skip {
+  background: none;
+  border: 0;
+  padding: 0.3rem 0;
+  font: inherit;
+  font-size: 0.8125rem;
+  color: var(--quiet);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.tour-pop-skip:hover,
+.tour-pop-skip:focus-visible {
+  color: var(--ink);
+}
+
+@keyframes tour-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+.tour-pop.floating {
+  animation-name: none;
+}
+
+@media (max-width: 860px) {
+  .tour-offer {
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+    width: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tour-offer,
+  .tour-pop {
+    animation: none;
+  }
+
+  .tour-ring,
+  .tour-pop,
+  .tour-pop-x {
+    transition: none;
+  }
+}

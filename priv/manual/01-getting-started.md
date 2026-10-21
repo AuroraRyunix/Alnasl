@@ -117,6 +117,14 @@ The colours come in the same themes as OpenResults: Paper, Night, Board, Slate a
 
 More themes can be added as theme packs: one folder per theme, in the folder `themes` inside the data folder. On the next page load they are offered after the built-in ones. A pack Alnasl will not load is listed in grey, with the reason.
 
+## The tour {#the-tour}
+
+The first time you open the site (with accounts: the first time you sign in), a small card in the corner offers a tour. It walks through the pages in the order a hall is set up and played: the places, the setup wizard, bridges, connecting OpenPairings, tournaments and their tables, the boards and their numbers, the check before the round, Live, Results, and fair play. Each step points at the thing it is about, says what it is for in a sentence or two, and links to the section of this manual that says the rest. A step on another page takes you there.
+
+You only see the steps for what your role lets you use: a viewer is not shown the setup wizard or the bridges, and fair play is shown to the hall's owner only. Where a page has nothing to point at yet (no boards, no tournaments), the step says what will appear there.
+
+Use **Next** and **Back** (or the arrow keys), or **Skip the tour**; Escape closes it too. Press **Not now** on the card and it is not offered again. To take it later, open the account menu (the button at the foot of the rail, top right on a phone) and choose **Take the tour**. With accounts, whether you took it is kept with your account; on a box without accounts it is kept for the box.
+
 ## Words used here {#words}
 
 The screens and this manual use one word for each thing:
