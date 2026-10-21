@@ -11,6 +11,26 @@ defmodule Alnasl.Clock do
   compared with the count of moves, because a press without a move is the
   earliest sign that the board missed one.
 
+  ## Presses the running side hides
+
+  Two presses between two readings leave the same side running, and a
+  count of side changes misses both. The times do not: a side that is not
+  running holds its time to the millisecond, so when the running side reads
+  the same as before and the OTHER side's time has changed, that side ran
+  in between - which takes a press to start and another to stop. Two are
+  counted (`hidden_presses/2`). It is a floor: four look the same.
+
+  The same goes for a side that comes back running with more time than it
+  had when it stopped: only an increment pays a side for a press, so it
+  pressed in between, and a single change of side was three presses.
+
+  A clock that read standing still in between breaks the chain (the
+  arbiter's time corrections are made with the clock stopped). An
+  hourglass clock, on which the waiting side's time grows by what the
+  running side's shrinks, is recognised the first time it does so, and
+  from then on its times say nothing about presses. In 15,000 readings of
+  the real board's clock (2026-10-11/12) the stopped side never moved.
+
   A board without a clock never sends a reading; `read/2` is then `nil` and
   nothing about clocks is reported. A clock that is switched off or
   unplugged (`off/2`) is a board without a clock again, until it reports.
@@ -32,6 +52,7 @@ defmodule Alnasl.Clock do
             started: nil,
             at: nil,
             presses: 0,
+            hourglass?: false,
             off?: false
 
   @type t :: %__MODULE__{}
@@ -57,6 +78,9 @@ defmodule Alnasl.Clock do
       clock.running in [:white, :black] and running in [:white, :black] and
         running != clock.running
 
+    hourglass? = clock.hourglass? or hourglass?(clock, reading)
+    hidden = if clock.off? or hourglass?, do: 0, else: hidden_presses(clock, reading)
+
     {%{
        clock
        | white_ms: Map.get(reading, :white_ms, clock.white_ms),
@@ -71,9 +95,65 @@ defmodule Alnasl.Clock do
            end,
          at: t,
          off?: false,
-         presses: clock.presses + if(pressed?, do: 1, else: 0)
+         hourglass?: hourglass?,
+         presses: clock.presses + hidden + if(pressed?, do: 1, else: 0)
      }, pressed?}
   end
+
+  @doc """
+  How many presses went by unseen between the clock as it stood and
+  `reading`, as a floor: two when the same side runs in both and the other
+  side's time has changed, two when the running side changed and the side
+  now running has MORE time than when it last stood (it pressed in
+  between, which only an increment repays), else none. See "Presses the
+  running side hides".
+  """
+  @spec hidden_presses(t(), map()) :: 0 | 2
+  def hidden_presses(%__MODULE__{running: side, hourglass?: false} = clock, reading)
+      when side in [:white, :black] do
+    now_running = Map.get(reading, :running)
+    key = fn side -> if side == :white, do: :white_ms, else: :black_ms end
+    changed = fn side -> {Map.get(clock, key.(side)), Map.get(reading, key.(side))} end
+
+    case now_running do
+      ^side ->
+        case changed.(other(side)) do
+          {was, now} when is_integer(was) and is_integer(now) and was != now -> 2
+          _same -> 0
+        end
+
+      running when running in [:white, :black] ->
+        case changed.(running) do
+          {was, now} when is_integer(was) and is_integer(now) and now > was -> 2
+          _less -> 0
+        end
+
+      _stopped ->
+        0
+    end
+  end
+
+  def hidden_presses(_clock, _reading), do: 0
+
+  # The waiting side gained about what the running side lost: an hourglass,
+  # on which a waiting side's time moving says nothing about presses.
+  defp hourglass?(%__MODULE__{running: side} = clock, reading) when side in [:white, :black] do
+    {mine, theirs} = if side == :white, do: {:white_ms, :black_ms}, else: {:black_ms, :white_ms}
+
+    with ^side <- Map.get(reading, :running),
+         was when is_integer(was) <- Map.get(clock, theirs),
+         now when is_integer(now) and now > was <- Map.get(reading, theirs),
+         lost when is_integer(lost) <- Map.get(clock, mine) do
+      abs(now - was - (lost - Map.get(reading, mine, lost))) <= 1_000
+    else
+      _no -> false
+    end
+  end
+
+  defp hourglass?(_clock, _reading), do: false
+
+  defp other(:white), do: :black
+  defp other(:black), do: :white
 
   @doc """
   The clock was switched off or unplugged at `t`. Nothing runs and nothing
@@ -93,6 +173,7 @@ defmodule Alnasl.Clock do
         armed: nil,
         started: nil,
         at: t,
+        hourglass?: false,
         off?: true
     }
   end

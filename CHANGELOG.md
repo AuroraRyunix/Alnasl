@@ -19,6 +19,7 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+- [Change] **The clock's times count presses the lever does not show.** Two presses between two readings leave the same side running, and the press count used to take that as no press at all - so after a few missed moves the box decided it was making them up and raised the alarm instead. A waiting side's time does not move unless it ran, and a side does not gain time unless it pressed, so those are now counted. In the simulator's worst "missed moves" suite 99 of 109 stopped games keep up (31 of them right, the rest marked), and the alarms drop from 1,845 to 310; an hourglass clock is recognised and left out of it. The press times were also asked to put unseen moves in order, and declined: a press arrives late, so it says that a move was made, never which one.
 - [Change] **Fair play is switched on and off with a switch.** It was a checkbox that acted the moment it was ticked, which is what a switch does and a checkbox promises not to. It now looks like one, says On or Off in words, and switching it off asks first: the moves played while it is off are not analysed unless somebody remembers to ask for that round later, and nobody remembers.
 
 ## [0.5.5] - 2026-10-21
