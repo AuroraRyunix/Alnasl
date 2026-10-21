@@ -441,7 +441,8 @@ Then, among lines of one kind, `rank/3`, in this order:
    Longer lines are then looked for and go first. A press tells late, never
    early, so fewer presses than moves prove nothing - which is why only the
    count is used and not "whose clock runs": at the moment a move has just
-   landed, the clock still shows the side that made it.
+   landed, the clock still shows the side that made it. The count itself
+   reads the times as well as the lever (see "Presses the clock hides").
 2. **The order of the readings.** Each move of a line is first shown by
    some reading (both its squares as the move leaves them); a move first
    shown before the move the line plays ahead of it is out of order. Moves
@@ -453,6 +454,65 @@ Then, among lines of one kind, `rank/3`, in this order:
 3. The line that assumes least about a promotion; a queen before any
    other piece nobody saw.
 4. The moves' names, so the same board always gives the same game.
+
+### Presses the clock hides
+
+The clock is counted by the side that runs: a press is the running side
+changing. Two presses between two readings leave the same side running,
+and that count misses both - which is exactly what a stretch of missed
+plies does to it. Three plies by nobody seen (White, Black, White) count
+as one press; four, as none. The tracker then held the line it found
+against a clock that "said" one or no move had been made, decided the box
+was making moves up (`fits?/2`), and raised the alarm.
+
+The times say what the lever does not (`Alnasl.Clock.hidden_presses/2`).
+A side whose clock is not running holds its time to the millisecond, so
+when the same side runs in two readings and the other side's time has
+moved, the other side ran in between: two presses. And a side that comes
+back running with more time than it had when it stopped was paid an
+increment, which only a press earns: one change of side was then three.
+Both are floors - four presses look like two - which is all the count
+needs, since it only ever asks whether a line has too many moves. A clock
+that stood still in between breaks the chain (time corrections are made
+with the clock stopped), and an hourglass clock, on which the waiting side
+gains what the running side loses, is recognised at its first such reading
+and its times are not used for presses after it. In the 15,000 readings of
+the real board's clock from 2026-10-11/12 the waiting side's time never
+moved, so nothing in those games changes.
+
+Measured with `mix alnasl.bench --passes 3`, the same seeds before and
+after. Every suite not shown is identical in every column; "missed" is the
+one where the clock goes quiet with the board.
+
+| suite | | exact | rec ok | rec WRONG | guess ok | guess WRONG | flagged | alarm | wrong marked plies | alarms |
+|---|---|---|---|---|---|---|---|---|---|---|
+| missed 25%, up to 3 plies in a row | before | 0 | 37 | 2 | 41 | 18 | 0 | 109 | 31/2827 + 51/552 | 1845 |
+| | after | 0 | 43 | 7 | 66 | 80 | 1 | 10 | 153/4367 + 323/1324 | 310 |
+
+What it buys: 99 of the 109 games that stopped now keep up, 31 of them
+right, and the stream of alarms drops from 1845 to 310. What it costs is
+the other 68: they go on as a game that was not played, marked. Three or
+more unseen plies are where reading positions stops being enough (see
+"What the search cannot see") - the order of two moves of one side around
+a move of the other, a king that went b1-c2 or b2-c2 - and the box used to
+refuse to guess there only because the clock had been misread as saying
+nothing happened. The orange ones are the price that is not marked
+honestly: 5 more games end on a reconstructed move that is wrong (the
+shortest explanation again, now allowed past the clock), 153 orange plies
+wrong in 4,367 against 31 in 2,827. That is the next thing to look at.
+
+**What the press times cannot do: order moves nobody saw.** The hope was
+that the moment of each press would say which of `1.d4 Nf6 2.c4` and
+`1.c4 Nf6 2.d4` happened. It cannot. A press reports late, never early, so
+all it proves is that by the time it arrived *some* move of that side was
+on the board - never which. Where readings were made between the moves,
+the readings themselves already order them (rule 2 above), more sharply
+than a press a second late could; where no reading was made, no press
+says anything about which piece moved first. The only thing the clock
+adds is how many moves were made, and that is what this section is about.
+A check of every line's moves against the arrival time of its presses
+was considered and not built, for want of a single case it would decide
+that the order of the readings does not.
 
 ### What it does not believe
 
