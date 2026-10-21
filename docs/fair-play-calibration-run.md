@@ -215,3 +215,33 @@ scp -i ~/.ssh/photon_openpair root@172.16.63.81:/root/w-fairplay-2/fit.log .
 
 Keep the labels on the VM until the model is merged: a fit with other
 settings needs only them, not another day of Stockfish.
+
+## 6. The first run, 2026-10-21
+
+What came out, so the next run has something to beat.
+
+- **Labelled:** 15,000 games (`--engines 78`), 997,614 positions, 52,625 s
+  (14.6 hours): 17.1 games a minute, **4.1 s per position per engine**,
+  four to five times the estimate in section 0. The 80 "cores" do not
+  behave like 80 cores. Budget an hour per 1,000 games.
+- **Which games:** the task takes games in file order, so `--games 15000`
+  took January, February and half of March 2024 and nothing else. The
+  24 months hold about 250,000 games the classical filter keeps (the old
+  filter, before it read minutes and clocks, kept about 12,600 of them).
+  A wider spread needs the months passed in a different order, or shards
+  per month.
+- **Fit** (`--holdout 0.67`, 28 s): 5,481 games fitted, 9,479 held out by
+  broadcast, 3,203 held-out player-events with 40 counted moves.
+- **False positives** (held out): 2.0 or more 54 (1.69%, 95% 1.27-2.19%);
+  2.5 or more 13 (0.41%); 3.0 or more 2 (0.06%, 95% 0.01-0.23%); 3.5 or
+  more 1; 4.0 or more none (95% upper bound 0.12%).
+- **Gate:** passed on the point estimate (about 1 in 1,600 at 3), not
+  proven: the upper bound, 0.23%, is above 1 in 700. With two events at 3
+  it takes about 5,000 held-out player-events, roughly 15,000 held-out
+  games, to prove it.
+- **Covariance:** the three z's have variances 1.63, 1.82 and 1.84 on the
+  fitting player-events, not 1: the overdispersion section 5 of the plan
+  warned about, now divided out.
+- **Per band:** 1400-1799 players reach 2 more often (3.3-3.7%) than the
+  rest (0.5-1.8%); the 1000 band has 17 player-events, three of them at 2
+  or more, too few to say anything.
