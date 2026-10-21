@@ -71,3 +71,36 @@ Short runs are fine: several small logs beat one long one. Put the logs in
 `captures/` (one subfolder per session), together with a line on what
 hardware it was (board serial numbers, RS232 or USB-C, the clock model, the
 LiveChess version).
+
+## Keeping a recording as a test
+
+Every board Alnasl reads is recorded anyway (`<data>/captures/board-<id>/`,
+one file per session; the Recordings page lists them). A real game worth
+keeping - one the tracker got wrong, or right in an interesting way - goes
+into the hall of recordings the tracker is held to:
+
+```
+mix alnasl.hall pin <data>/captures/board-4/20261012-112810.jsonl --name 2026-10-12-misread-pawn   --played "e4 Nc6 Nc3 Nf6 d4 e5 dxe5" --source scoresheet --note "3. d4 read as d3"
+mix alnasl.hall check
+```
+
+`pin` copies the recording to `test/fixtures/hall/<name>.jsonl` - decoded,
+without the raw bytes, so a two-hour game is a few hundred kilobytes - and
+writes what the tracker makes of it now to `test/fixtures/hall/pinned.json`:
+the moves, the marks on each, how it ended and how many alarms. `--played`
+is the game as it was really played, from the scoresheet or the notes typed
+during it; leave it out when nobody knows. `--address N` picks one board
+out of a loop. Commit both files.
+
+From then on `test/alnasl/hall_replays_test.exs` replays every recording
+and fails when the tracker makes anything else of it, better or worse; `mix
+alnasl.hall check` (and the last line of `mix alnasl.bench`) says which
+changed, and which pinned games are not the game that was played - the
+known misses. A change that improves one is pinned again on purpose, by
+running `pin` once more with the same name.
+
+What is in it so far is everything with moves in it from the first real
+board, 2026-10-11 and -12. Two of those six games are known; the other
+four were sessions of deliberate abuse - illegal moves, moves out of turn,
+a clock set the wrong way - whose games nobody wrote down, held to what the
+tracker makes of them today.

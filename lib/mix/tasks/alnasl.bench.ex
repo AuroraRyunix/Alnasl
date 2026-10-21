@@ -23,6 +23,9 @@ defmodule Mix.Tasks.Alnasl.Bench do
   The last rows are fast play: `Alnasl.Simulator.Script.profile(:bullet)`,
   with the tracker's defaults and with the "Bullet / fast play" preset of
   the Setup page.
+
+  Then the recordings of real boards (`Alnasl.HallReplays`, `mix alnasl.hall`):
+  how many still come out as pinned, and how many as the game played.
   """
 
   use Mix.Task
@@ -76,5 +79,22 @@ defmodule Mix.Tasks.Alnasl.Bench do
 
       for bad <- m.bad, do: Mix.shell().info("    SILENT: #{inspect(bad, limit: 12)}")
     end
+
+    hall(Alnasl.HallReplays.check())
+  end
+
+  defp hall([]), do: :ok
+
+  defp hall(results) do
+    known = Enum.reject(results, &(&1.played? == nil))
+
+    Mix.shell().info(
+      "
+real boards: #{length(results)} recordings, #{Enum.count(results, & &1.same?)} as pinned, " <>
+        "#{Enum.count(known, & &1.played?)} of #{length(known)} known games as played, " <>
+        "#{results |> Enum.map(& &1.now["alarms"]) |> Enum.sum()} alarms"
+    )
+
+    for r <- results, not r.same?, do: Mix.shell().info("    CHANGED: #{r.name}")
   end
 end
