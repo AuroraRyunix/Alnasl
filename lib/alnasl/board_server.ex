@@ -577,6 +577,10 @@ defmodule Alnasl.BoardServer do
             log_unseen(state, pieces)
             {state, queue}
 
+          {:dead, squares} ->
+            log_dead(state, squares)
+            {state, queue}
+
           {:warning, :move_missing, presses, plies} ->
             Log.add(:warn, "clock.move_missing", %{presses: presses, plies: plies}, ref(state))
             {%{state | warning: :move_missing}, queue}
@@ -623,6 +627,11 @@ defmodule Alnasl.BoardServer do
       true ->
         :ok
     end
+  end
+
+  # A square's sensor was found dead: the newest one, said once.
+  defp log_dead(state, squares) do
+    Log.add(:warn, "square.dead", %{square: Position.square_name(List.last(squares))}, ref(state))
   end
 
   # A piece went out of sight and the game went on, or it is accounted for
@@ -994,6 +1003,10 @@ defmodule Alnasl.BoardServer do
           log_unseen(state, pieces)
           state
 
+        {:dead, squares} ->
+          log_dead(state, squares)
+          state
+
         _other ->
           state
       end
@@ -1069,6 +1082,7 @@ defmodule Alnasl.BoardServer do
             %{square: sq, piece: piece} = entry <- Tracker.unseen(tracker),
             do: if(entry[:ghost], do: {sq, piece, entry.ghost}, else: {sq, piece})
           ),
+        dead: Tracker.dead(tracker),
         clock: Clock.read(state.session.clock, t),
         clock_check: Session.clock_check(state.session),
         clock_alarm: state.session.clock_alarm,
@@ -1094,6 +1108,7 @@ defmodule Alnasl.BoardServer do
         detail: nil,
         plies: [],
         unseen: [],
+        dead: [],
         clock: nil,
         clock_check: Clock.start_check(state.clock),
         clock_alarm: nil,

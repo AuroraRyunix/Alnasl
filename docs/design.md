@@ -157,6 +157,57 @@ Not covered: a takeback of the very move that began it, while the piece
 is still away (the board then matches nothing the tracker remembers, and
 is the alarm after `transient_ms`).
 
+### A square that is not read
+
+A sensor dies. The square reads empty whatever stands on it (`off`), or
+goes on reading the piece that stood there when it broke (`stuck`). Either
+way the first move to or from that square leaves a board that no move
+explains, and before this every game on such a board stopped there for
+good: no hand ever puts a broken sensor right, so rule 7 waited, the alarm
+came, and every board after it was the alarm again. One dead square cost
+the rest of the game.
+
+- **Found out, stuck.** A piece appears on a square it can reach in one
+  legal move from square S, while S still reads it: two of a piece where
+  the game has one, and nothing lifted. A hand cannot do that; a spare
+  piece on the table could, which is why it must stand `unseen_hold_ms`,
+  or be pressed on the clock, like a piece out of sight. Exactly one such
+  move, or nothing: two knights that can both reach d7 leave the box no
+  wiser about which sensor died, and that stays the alarm.
+- **Found out, off.** Harder, because a piece going onto a square that
+  reads empty looks exactly like a hand holding it. A square is first
+  only suspected: a piece taken to stand on it unseen ("A piece not seen")
+  moved off it, and it went on reading nothing - which a pocket does too.
+  It is found out when, later, a piece vanishes in the one way that is a
+  legal move onto the suspected square and stays vanished for
+  `unseen_hold_ms`. A square that breaks while empty and is first used by
+  a piece arriving is not caught: that piece becomes a piece out of sight
+  where it stood, and what follows is what the box makes of that.
+- **Then.** The square goes on the tracker's `dead` list for the rest of
+  the game (and survives "set position", which is the same board). What it
+  reads is replaced by what the game has there (`sensed/2`) before anything
+  else looks at the board, so it no longer differs from anything. A move
+  may start or end on it: the one-move comparison leaves dead squares out,
+  and the move generator is asked for moves from them. A move onto it
+  shows only as a piece gone, so it must stand `unseen_hold_ms` or be
+  pressed. A pawn promoting on it promotes to the usual piece, marked
+  assumed: what it became reads as nothing at all.
+- **Said once.** `{:dead, squares}` when the list grows; the site puts
+  "Square b8 seems dead" beside the game's state and on the Round tile,
+  and the log says what that means. Not an alarm per move: the warning
+  stays, the game goes on, and the board is looked at after the game.
+- **Not covered.** A square that reads a piece where the game never had
+  one (a phantom, rather than a piece that stayed) is an unexplained board
+  until somebody looks. The reconstruction (rule 5) does not search
+  through dead squares: several moves at once across one is the alarm.
+
+The simulator has the fault (`dead_square: {ply, :off | :stuck}`, a square
+the game uses at least twice from then on), and the bench three suites
+for it. Three passes, 69 games each pass, before (the detection switched
+off, `dead_squares: false`) and after; every other suite is identical:
+
+DEAD_TABLE
+
 ### After the arbiter changes the game
 
 Undo and "change a move" make the game disagree with the board on purpose.

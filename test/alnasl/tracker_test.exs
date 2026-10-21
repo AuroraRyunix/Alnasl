@@ -645,6 +645,59 @@ defmodule Alnasl.TrackerTest do
     assert moves(out) == [] and alarms(out) == []
   end
 
+  # --- a square that is not read ----------------------------------------------
+
+  test "a square that goes on reading a piece after it has left is found out, and not read again" do
+    {tr, b, t} = after_moves(~w(e4 e5))
+    knight = elem(b, sq("g1"))
+    # g1's sensor has died with the knight on it: 2. Nf3 reads as a second
+    # knight on f3, the first still on g1.
+    stuck = fn board -> put(board, "g1", knight) end
+    b = move(b, "g1", "f3")
+    b2 = move(b, "b8", "c6")
+    b3 = move(b2, "f3", "g1")
+
+    {tr, out} =
+      feed(tr, [{t, stuck.(b)}, {t + 5_000, stuck.(b2)}, {t + 10_000, stuck.(b3)}], 5_000)
+
+    assert Tracker.sans(tr) == ~w(e4 e5 Nf3 Nc6 Ng1)
+    assert alarms(out) == []
+    # Said once, and the square named.
+    assert [{_t, {:dead, [g1]}}] = for({_t, {:dead, _}} = e <- out, do: e)
+    assert g1 == sq("g1") and Tracker.dead(tr) == [g1]
+    assert tr.status == :live
+  end
+
+  test "a piece held in the air is not a dead square" do
+    {tr, b, t} = after_moves(~w(e4 e5))
+    {tr, out} = feed(tr, [{t, lift(b, "g1")}, {t + 6_000, move(b, "g1", "f3")}], 3_000)
+    assert Tracker.sans(tr) == ~w(e4 e5 Nf3)
+    assert Tracker.dead(tr) == []
+    refute Enum.any?(out, &match?({_t, {:dead, _}}, &1))
+  end
+
+  test "a square that reads empty is suspected when a piece moves off it, and found out when one goes onto it" do
+    {tr, b, t} = after_moves(~w(e4 e5 Nf3 Nc6))
+    # f3 stops reading, with the knight on it: a piece out of sight.
+    off = fn board -> lift(board, "f3") end
+    b0 = b
+    b = move(b0, "f1", "c4")
+    b2 = move(b, "g8", "f6")
+    b3 = move(b2, "f3", "g5")
+    b4 = move(b3, "d7", "d5")
+    b5 = move(b4, "g5", "f3")
+
+    timed =
+      [b, b2, b3, b4, b5]
+      |> Enum.with_index(1)
+      |> Enum.map(fn {x, i} -> {t + i * 5_000, off.(x)} end)
+
+    {tr, out} = feed(tr, [{t, off.(b0)} | timed], 5_000)
+    assert Tracker.sans(tr) == ~w(e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5 d5 Nf3)
+    assert Tracker.dead(tr) == [sq("f3")]
+    assert alarms(out) == []
+  end
+
   # --- results -----------------------------------------------------------------
 
   test "mate, stalemate and the kings in the centre are suggestions" do

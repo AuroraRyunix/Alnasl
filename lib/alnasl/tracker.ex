@@ -55,6 +55,9 @@ defmodule Alnasl.Tracker do
     `{:out_of_turn, move}` and `{:illegal, move}` (`named/1`);
   - `{:unseen, [%{square, piece}]}` - the pieces taken to stand where the
     board does not show them, whenever that list changes;
+  - `{:dead, [square]}` - the squares whose sensor has been found dead and
+    is no longer read, whenever one more is (see "A square that is not
+    read" in the code, and `docs/design.md`);
   - `{:result_suggestion, result, why}` - mate, stalemate, bare kings, or the
     kings set in the centre. A suggestion: the arbiter decides.
 
@@ -108,6 +111,9 @@ defmodule Alnasl.Tracker do
     # that would make it so must stand this long, or be pressed on the clock.
     unseen_piece: true,
     unseen_hold_ms: 2_000,
+    # A square whose sensor has died is found out and no longer read (see
+    # "A square that is not read").
+    dead_squares: true,
     # A board plugged in a move or two into its game is caught up from the
     # starting position. Not a game begun on a board that still shows the
     # last one ("New game on this board"): that one waits for the pieces
@@ -154,6 +160,8 @@ defmodule Alnasl.Tracker do
             held: nil,
             unseen: [],
             absent: nil,
+            dead: [],
+            suspects: [],
             stats: %{searches: 0, max_nodes: 0, max_us: 0, budget_hits: 0}
 
   @type t :: %__MODULE__{}
@@ -230,6 +238,12 @@ defmodule Alnasl.Tracker do
   def unseen(%__MODULE__{unseen: unseen}), do: unseen
 
   @doc """
+  The squares whose sensor the tracker has stopped believing, in the order
+  they were found out (see "A square that is not read").
+  """
+  def dead(%__MODULE__{dead: dead}), do: dead
+
+  @doc """
   The next time at which `tick/2` could change anything, or `nil` when the
   tracker is waiting for the board.
   """
@@ -262,6 +276,7 @@ defmodule Alnasl.Tracker do
   @spec observe(t(), integer(), tuple()) :: {t(), [event()]}
   def observe(%__MODULE__{} = tr, t, board) when is_tuple(board) do
     was = tr
+    board = sensed(tr, board)
 
     tr =
       if board == tr.raw,
@@ -353,7 +368,15 @@ defmodule Alnasl.Tracker do
     case Chess.parse_fen(fen) do
       {:ok, pos} ->
         fen = Chess.to_fen(pos)
-        fresh = %{new(Map.put(tr.opts, :start_fen, fen)) | raw: tr.raw, raw_since: tr.raw_since}
+
+        fresh = %{
+          new(Map.put(tr.opts, :start_fen, fen))
+          | raw: tr.raw,
+            raw_since: tr.raw_since,
+            # The board is the same board: what is broken stays broken.
+            dead: tr.dead
+        }
+
         {:ok, {fresh, [{:restart, fen}]} |> and_then(&evaluate(&1, t, false)) |> noting(tr)}
 
       {:error, message} ->
@@ -715,7 +738,7 @@ defmodule Alnasl.Tracker do
        do: {%{tr | at: t}, []}
 
   defp evaluate(%__MODULE__{} = tr, t, force) do
-    tr = %{tr | at: t, held: nil}
+    tr = %{tr | at: t, held: nil, raw: sensed(tr, tr.raw)}
     stable = t - tr.raw_since
 
     # A clock pressed over a board that stood in the starting position, has
@@ -922,6 +945,13 @@ defmodule Alnasl.Tracker do
 
           stable < o.settle_ms ->
             set_status(tr, :settling, :moving)
+
+          (found = stuck(tr) || onto_suspect(tr)) != nil ->
+            {square, move} = found
+
+            if force or stable >= o.unseen_hold_ms,
+              do: tr |> dies(square) |> accept(t, [{move, []}], []),
+              else: set_status(tr, :settling, :move)
 
           (k = takeback(tr)) != nil and not replayable?(tr, k) ->
             cond do
@@ -1825,25 +1855,119 @@ defmodule Alnasl.Tracker do
   # --- the pieces of the decision ----------------------------------------------
 
   defp one_ply(tr),
-    do: one_ply(tr.pos, tr.phys, tr.raw, tr.opts.promotion_default, tr.unseen)
+    do: one_ply(tr.pos, tr.phys, tr.raw, tr.opts.promotion_default, tr.unseen, tr.dead)
 
   # `unseen`: a piece the board does not show can still move, and its
-  # square will not be among those that changed.
-  defp one_ply(pos, phys, raw, default, unseen) do
+  # square will not be among those that changed. `dead`: squares that are
+  # not read at all - a move may start or end on one, and what the board
+  # says is there is not compared.
+  defp one_ply(pos, phys, raw, default, unseen, dead \\ []) do
     squares = Position.diff(phys, raw)
 
     if length(squares) > 4 do
       []
     else
       from = squares ++ for(%{square: sq} <- unseen, elem(phys, sq) == nil, do: sq)
+      from = from ++ dead
+      raw = blind(raw, dead)
 
-      for move <- Chess.moves_from(pos, Enum.uniq(from)),
-          {board, flags} <- Search.outcomes(phys, move, pos.turn, default),
-          shown(board, move, unseen) == raw,
-          Chess.legal?(pos, move),
-          do: {move, flags}
+      for(
+        move <- Chess.moves_from(pos, Enum.uniq(from)),
+        {board, flags} <- Search.outcomes(phys, move, pos.turn, default),
+        blind(shown(board, move, unseen), dead) == raw,
+        Chess.legal?(pos, move),
+        do: {move, flags}
+      )
+      |> unread_promotion(dead, default)
     end
   end
+
+  # A pawn that promotes on a square that is not read: every piece it could
+  # become reads the same, which is nothing. The usual piece is taken and
+  # marked assumed, as when a pawn is left standing for its queen.
+  defp unread_promotion([_, _ | _] = found, [_ | _] = dead, default) do
+    case Enum.uniq_by(found, fn {move, _flags} -> {move.from, move.to} end) do
+      [{%{to: to, promo: promo}, _flags}] when promo != nil ->
+        if to in dead,
+          do: for({%{promo: ^default} = move, _} <- found, uniq: true, do: {move, [:assumed]}),
+          else: found
+
+      _other ->
+        found
+    end
+  end
+
+  defp unread_promotion(found, _dead, _default), do: found
+
+  # --- a square that is not read -------------------------------------------------
+  #
+  # A sensor that dies reads its square empty, or goes on reading the piece
+  # that stood there, whatever happens on it afterwards. Either way every
+  # move to or from that square leaves a board that no move explains, and
+  # the game stops there for good: no hand will ever put it right.
+  #
+  # Found out by the one thing a hand cannot do: a piece appears on a square
+  # it could have reached from the dead square in one move, and the dead
+  # square still reads it - two of a piece where the game has one, and
+  # nothing lifted. It must stand like a piece out of sight
+  # (`unseen_hold_ms`), or be pressed on the clock. The move is taken, and
+  # from then on the square is not read: what it holds is what the game
+  # puts there (`sensed/2`), and a move onto it - which shows only as a
+  # piece gone from where it stood, exactly like a hand holding it - stands
+  # as long as a piece out of sight before it is believed.
+
+  # The board as it is taken to read: on a dead square, what should be
+  # there.
+  defp sensed(%{dead: []}, board), do: board
+  defp sensed(tr, board), do: Enum.reduce(tr.dead, board, &put_elem(&2, &1, elem(tr.phys, &1)))
+
+  defp blind(board, []), do: board
+  defp blind(board, dead), do: Enum.reduce(dead, board, &put_elem(&2, &1, nil))
+
+  # The piece that is on `square` and on a square it can go to.
+  defp stuck(%{opts: %{dead_squares: false}}), do: nil
+
+  defp stuck(tr) do
+    found =
+      for move <- Chess.legal_moves(tr.pos),
+          move.from not in tr.dead,
+          elem(tr.raw, move.from) == elem(tr.phys, move.from),
+          {board, []} <- Search.outcomes(tr.phys, move, tr.pos.turn, tr.opts.promotion_default),
+          blind(board, [move.from | tr.dead]) == blind(tr.raw, [move.from | tr.dead]),
+          do: {move.from, move}
+
+    case found do
+      [one] -> one
+      _none_or_several -> nil
+    end
+  end
+
+  # A square that reads empty dies more quietly: a piece that goes onto it
+  # is a piece gone, which is what a hand is too, and a piece standing on
+  # it is a piece out of sight (see "A piece not seen"), which a pocket is
+  # too. So it is only suspected - a piece out of sight there moved off
+  # it, and it went on reading empty - until a piece vanishes in the one
+  # way that is a legal move onto it, and stays vanished.
+  defp onto_suspect(%{opts: %{dead_squares: false}}), do: nil
+  defp onto_suspect(%{suspects: []}), do: nil
+
+  defp onto_suspect(tr) do
+    suspects = tr.suspects -- tr.dead
+    o = tr.opts
+
+    found =
+      for {move, []} <- one_ply(tr.pos, tr.phys, tr.raw, o.promotion_default, [], suspects),
+          move.to in suspects,
+          do: {move.to, move}
+
+    case found do
+      [one] -> one
+      _none_or_several -> nil
+    end
+  end
+
+  defp dies(tr, square),
+    do: %{tr | dead: tr.dead ++ [square], suspects: tr.suspects -- [square]}
 
   # A piece that is read on the square beside its own (`ghost`) is read
   # there no longer once it moves, or is taken where it really stands.
@@ -1901,6 +2025,9 @@ defmodule Alnasl.Tracker do
     cond do
       :assumed in flags -> o.promotion_hold_ms
       half_castle?(tr.pos, move) -> o.castle_hold_ms
+      # Onto a square that is not read: all the board shows is a piece
+      # gone, and so does a hand.
+      move.to in tr.dead and move.from not in tr.dead -> max(o.settle_ms, o.unseen_hold_ms)
       true -> o.settle_ms
     end
   end
@@ -2172,6 +2299,14 @@ defmodule Alnasl.Tracker do
 
         board = shown(board, move, tr.unseen)
 
+        # A piece that was not seen where it stood, and has now moved
+        # off that square, leaves the square suspect: still reading empty,
+        # as it does, but it never read the piece either.
+        suspects =
+          if Enum.any?(tr.unseen, &(&1.square == move.from and &1[:ghost] == nil)),
+            do: Enum.uniq(tr.suspects ++ [move.from]),
+            else: tr.suspects
+
         # Still unseen after this move: not the piece that moved, not
         # taken where it stood.
         unseen =
@@ -2196,20 +2331,26 @@ defmodule Alnasl.Tracker do
              pos: next,
              phys: board,
              unseen: unseen,
+             suspects: suspects,
              plies: tr.plies ++ [ply]
          }}
       end)
 
     tr = if final && steps != [], do: %{tr | phys: final}, else: tr
+    # What a dead square should read is what the game has there, not what
+    # it read.
+    tr = %{tr | phys: Enum.reduce(tr.dead, tr.phys, &put_elem(&2, &1, elem(tr.pos.board, &1)))}
     {tr, plies}
   end
 
   # Says so when the pieces taken to be unseen are not the ones they were:
   # `{:unseen, [%{square, piece}]}`, the whole list as it is now.
-  defp noting({%__MODULE__{unseen: now} = tr, events}, %__MODULE__{unseen: was}) do
-    if Enum.sort(now) == Enum.sort(was),
-      do: {tr, events},
-      else: {tr, events ++ [{:unseen, now}]}
+  # And when a square is found out to be dead: `{:dead, [square]}`, all of
+  # them, once.
+  defp noting({%__MODULE__{unseen: now} = tr, events}, %__MODULE__{unseen: was} = before) do
+    events = if Enum.sort(now) == Enum.sort(was), do: events, else: events ++ [{:unseen, now}]
+    events = if tr.dead == before.dead, do: events, else: events ++ [{:dead, tr.dead}]
+    {tr, events}
   end
 
   defp suggestion(%{plies: []}), do: []
