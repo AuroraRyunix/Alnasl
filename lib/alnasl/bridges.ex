@@ -269,6 +269,38 @@ defmodule Alnasl.Bridges do
   end
 
   @doc """
+  Tells the bridge a row came from to stop reporting that board
+  (`forget_board`), so that removing the row here sticks: a bridge keeps
+  naming its boards, and each report would make the row again.
+
+  `:local` for a row that is not a bridge's, `:sent` when the bridge was
+  told, `:offline` when it is not connected - it will report the board
+  again when it is.
+  """
+  def forget_board(%Boards.Board{driver: "remote", port: "bridge-" <> rest}) do
+    with [id, name] <- String.split(rest, ":", parts: 2),
+         {id, ""} <- Integer.parse(id),
+         {:ok, _command} <- command(id, "forget_board", %{"board" => name}) do
+      # Events the bridge queued before it heard are dropped, not made into
+      # a row again: the socket says when it has taken that in.
+      ref = make_ref()
+      if pid = link(id), do: send(pid, {:forget_board, name, self(), ref})
+
+      receive do
+        {^ref, :ok} -> :ok
+      after
+        2_000 -> :ok
+      end
+
+      :sent
+    else
+      _offline -> :offline
+    end
+  end
+
+  def forget_board(_row), do: :local
+
+  @doc """
   The row that reads the board the bridge calls `name`: the one connected
   on its port, else one switched off there (the arbiter switched it off,
   and that is respected), else a new one - connected, and named after

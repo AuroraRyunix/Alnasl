@@ -113,11 +113,24 @@ defmodule AlnaslWeb.RecordingsLive do
   def handle_event("delete", %{"board" => board, "name" => name}, socket) do
     case find(board, name, socket.assigns.current_scope) do
       %{path: path} ->
-        File.rm(path)
-        {:noreply, socket |> put_flash(:info, gettext("The capture was deleted.")) |> load()}
+        case File.rm(path) do
+          :ok ->
+            {:noreply, socket |> put_flash(:info, gettext("The capture was deleted.")) |> load()}
+
+          {:error, _reason} ->
+            {:noreply,
+             put_flash(
+               socket,
+               :error,
+               gettext("The capture could not be deleted. Is it open somewhere?")
+             )}
+        end
 
       nil ->
-        {:noreply, socket}
+        {:noreply,
+         socket
+         |> put_flash(:error, gettext("That capture is already gone."))
+         |> load()}
     end
   end
 
