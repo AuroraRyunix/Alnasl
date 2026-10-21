@@ -30,7 +30,14 @@ If a port was added while one board was on it, and several are on it now, the ro
 > [!NOTE] What has been checked on real boards
 > Finding the boards, who they are, and what stands on each, with two boards on one cable. Not yet seen on a real loop: a move as it is played, a clock, and more than two boards. The box reads the whole board every few seconds as well, so on a loop a move can be late but not wrong.
 
+## Renaming and removing a board {#removing-a-board}
+
+"Rename" under a board's name changes what the pages call it; nothing else about it changes. "Remove" at the end of its row takes the board off the list and stops reading it. Its games stay, as do its recordings (they are listed on the Recordings page as "removed board N", and only someone who sees every hall can open them). If a game is being played on the board, Remove asks first and says so.
+
+A board that comes from a bridge is also told to the bridge, which stops reporting it; without that it would be back a moment later. If the bridge is not connected, the board is removed here but the bridge will report it again when it is: forget the board on the bridge's own page to stop that. Putting the board back is adding the port again, on the bridge or here.
+
 ## Which board is which {#which-board-is-which}
+
 
 Twelve boards look alike, and so do twelve cables. The box keeps three things apart.
 

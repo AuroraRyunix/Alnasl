@@ -81,6 +81,9 @@ defmodule AlnaslWeb.InvitationHTML do
           "This invitation is used, withdrawn or has run out (a week). Ask whoever sent it for a new one."
         )}
       </p>
+      <p>
+        <.button id="invitation-gone-log-in" href={~p"/log-in"}>{gettext("Sign in")}</.button>
+      </p>
     </Layouts.door>
     """
   end
