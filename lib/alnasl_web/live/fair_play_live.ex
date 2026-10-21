@@ -1039,16 +1039,40 @@ defmodule AlnaslWeb.FairPlayLive do
               "Alnasl can check the games its boards record against a strong chess engine, and show you, as the owner of this hall and nobody else, which players' moves matched it more often than their rating predicts. It is off until you switch it on."
             )}
           </p>
-          <.form for={%{}} id="fair-play-switch" phx-change="toggle">
-            <.input
-              type="checkbox"
+          <%!-- A switch, not a checkbox: it does something the moment it is
+               touched. Turning it off asks first, because the moves played
+               while it is off are not analysed unless somebody remembers to
+               ask for the round later. --%>
+          <div class="switch-row" id="fair-play-switch">
+            <button
+              type="button"
               id="fair-play-enabled"
-              name="enabled"
-              checked={@fp_setting.enabled}
-              label={gettext("Fair play")}
-              hint={gettext("Analyses the moves of this hall's games as they are played.")}
-            />
-          </.form>
+              class={["switch", @fp_setting.enabled && "is-on"]}
+              role="switch"
+              aria-checked={to_string(@fp_setting.enabled)}
+              aria-labelledby="fair-play-switch-label"
+              aria-describedby="fair-play-switch-hint"
+              phx-click="toggle"
+              phx-value-enabled={to_string(not @fp_setting.enabled)}
+              data-confirm={
+                @fp_setting.enabled &&
+                  gettext(
+                    "Switch fair play off? From now on this hall's moves are not analysed. The reports made so far stay, and a round played while it was off can still be analysed later, on demand."
+                  )
+              }
+            >
+              <span class="switch-track" aria-hidden="true"><span class="switch-knob"></span></span>
+              <span class="switch-state">
+                {if @fp_setting.enabled, do: gettext("On"), else: gettext("Off")}
+              </span>
+            </button>
+            <div>
+              <span id="fair-play-switch-label" class="switch-label">{gettext("Fair play")}</span>
+              <span id="fair-play-switch-hint" class="hint own-line">
+                {gettext("Analyses the moves of this hall's games as they are played.")}
+              </span>
+            </div>
+          </div>
           <p
             :if={@fp_setting.enabled and not installed?(@fp_setting)}
             id="fair-play-needs-engine"

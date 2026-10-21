@@ -19,6 +19,8 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+- [Change] **Fair play is switched on and off with a switch.** It was a checkbox that acted the moment it was ticked, which is what a switch does and a checkbox promises not to. It now looks like one, says On or Off in words, and switching it off asks first: the moves played while it is off are not analysed unless somebody remembers to ask for that round later, and nobody remembers.
+
 ## [0.5.5] - 2026-10-21
 
 - [Fix] **Serial ports that cannot be listed now leave a reason in the log.** When the list of ports failed, Alnasl showed no boards and said nothing, which sent a hall on macOS 10.14 off to reinstall drivers that were fine. The list is still empty; the log now has the error. This comes with Arkab 0.3.8.
