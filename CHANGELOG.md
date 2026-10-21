@@ -19,6 +19,8 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+- [Fix] **Serial ports that cannot be listed now leave a reason in the log.** When the list of ports failed, Alnasl showed no boards and said nothing, which sent a hall on macOS 10.14 off to reinstall drivers that were fine. The list is still empty; the log now has the error. This comes with Arkab 0.3.8.
+
 ## [0.5.4] - 2026-10-21
 
 - [Change] **The Mac app is signed with a Developer ID and notarised by Apple.** Until now it was signed with nothing but good intentions, and every Mac that downloaded it asked the arbiter to override Gatekeeper by hand, which is a strange way to greet someone who just installed your software. The release workflow now signs every binary inside Alnasl.app, hardened runtime and BEAM entitlements included, sends the bundle to Apple, staples the ticket and checks the verdict with `spctl` before the zip exists. A fork without the secrets still builds, with a warning, ad-hoc signed. The workflow can also be started by hand with *mac_only* to test all this without publishing anything.
