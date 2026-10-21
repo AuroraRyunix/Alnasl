@@ -155,7 +155,7 @@ defmodule AlnaslWeb.Hall do
         socket =
           socket
           |> assign(
-            current_scope: scope,
+            current_scope: AlnaslWeb.Tour.mount(scope),
             link: Outbox.status(scope),
             box: Settings.get("box_name") || "Alnasl",
             locale: locale,
@@ -172,6 +172,8 @@ defmodule AlnaslWeb.Hall do
           |> attach_hook(:hall_update, :handle_event, &update_event/3)
           |> attach_hook(:hall_seating, :handle_event, &seating_event/3)
           |> attach_hook(:hall_phone, :handle_event, &phone_event/3)
+          # The guided tour's start, skip and finish (`AlnaslWeb.Tour`).
+          |> attach_hook(:tour, :handle_event, &AlnaslWeb.Tour.event/3)
 
         {:cont, socket}
 

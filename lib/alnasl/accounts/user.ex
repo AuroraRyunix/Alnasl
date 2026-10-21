@@ -25,6 +25,8 @@ defmodule Alnasl.Accounts.User do
     field :must_change_password, :boolean, default: false
     # The language this person reads the site in; `nil` is the box's default.
     field :locale, :string
+    # The guided tour (`AlnaslWeb.Tour`): nil until offered and answered.
+    field :tour, :string
     timestamps(type: :utc_datetime)
   end
 
@@ -51,6 +53,13 @@ defmodule Alnasl.Accounts.User do
     user
     |> cast(attrs, [:locale])
     |> validate_inclusion(:locale, ~w(en nl))
+  end
+
+  @doc "What became of the guided tour: started, dismissed or finished."
+  def tour_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:tour])
+    |> validate_inclusion(:tour, ~w(started dismissed finished))
   end
 
   @doc "A new password, chosen by the account's holder."

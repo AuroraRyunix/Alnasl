@@ -15,6 +15,9 @@ defmodule Alnasl.Accounts.Scope do
     account, and the grant is in force (`Alnasl.FairPlay.Grants`): what
     puts fair play in the menu of an account that owns no hall. Worked out
     once when the scope is made, not on every page drawn.
+  * `tour` - the guided tour on this page, `%{state, run}`, put here by
+    `AlnaslWeb.Hall` (`AlnaslWeb.Tour`): what became of it, and how often
+    it was started on this page. `nil` outside the site's pages.
   """
 
   alias Alnasl.Halls.Hall
@@ -25,7 +28,8 @@ defmodule Alnasl.Accounts.Scope do
             roles: %{},
             halls: [],
             hall: nil,
-            fair_play_shared?: false
+            fair_play_shared?: false,
+            tour: nil
 
   @rank %{"viewer" => 1, "arbiter" => 2, "owner" => 3}
 
