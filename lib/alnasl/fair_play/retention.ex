@@ -26,6 +26,10 @@ defmodule Alnasl.FairPlay.Retention do
   reports. The job runs once a day (the first time a minute after start);
   `purge/2` does the work and takes the time as an argument.
 
+  The frozen copy a deleted analysis leaves (`Alnasl.FairPlay.Snapshot`)
+  goes at the same moment the report would have: deleting it early would
+  defeat it.
+
   ## Uploads, grants and the hall's audit
 
     * An uploaded PGN attached to a tournament (`Alnasl.FairPlay.Upload`)
@@ -46,7 +50,7 @@ defmodule Alnasl.FairPlay.Retention do
   import Ecto.Query
 
   alias Alnasl.Repo
-  alias Alnasl.FairPlay.{Grant, Keep, Move, Upload, UploadMove, Uploads, View}
+  alias Alnasl.FairPlay.{Grant, Keep, Move, Snapshot, Upload, UploadMove, Uploads, View}
   alias Alnasl.Games.Game
 
   require Logger
@@ -135,7 +139,7 @@ defmodule Alnasl.FairPlay.Retention do
   end
 
   defp tournament_ids do
-    [Move, View, Keep, Grant, UploadMove, Upload]
+    [Move, View, Keep, Grant, UploadMove, Upload, Snapshot]
     |> Enum.flat_map(
       &Repo.all(
         from r in &1, where: not is_nil(r.tournament_id), distinct: true, select: r.tournament_id
@@ -148,6 +152,7 @@ defmodule Alnasl.FairPlay.Retention do
     {moves, _} = Repo.delete_all(from m in Move, where: m.tournament_id == ^id)
     {views, _} = Repo.delete_all(from v in View, where: v.tournament_id == ^id)
     Repo.delete_all(from k in Keep, where: k.tournament_id == ^id)
+    Repo.delete_all(from s in Snapshot, where: s.tournament_id == ^id)
     Repo.delete_all(from g in Grant, where: g.tournament_id == ^id)
 
     uploads = Repo.all(from u in Upload, where: u.tournament_id == ^id, select: u.id)

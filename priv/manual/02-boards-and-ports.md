@@ -32,7 +32,7 @@ If a port was added while one board was on it, and several are on it now, the ro
 
 ## Renaming and removing a board {#removing-a-board}
 
-"Rename" under a board's name changes what the pages call it; nothing else about it changes. "Remove" at the end of its row takes the board off the list and stops reading it. Its games stay, as do its recordings (they are listed on the Recordings page as "removed board N", and only someone who sees every hall can open them). If a game is being played on the board, Remove asks first and says so.
+"Rename" under a board's name changes what the pages call it; nothing else about it changes. "Remove" at the end of its row takes the board off the list and stops reading it. Its games stay, as do its recordings (they are listed on the Recordings page as "removed board N", and only the owner of the hall the board was in, or an admin, can open them). If a game is being played on the board, Remove asks first and says so.
 
 A board that comes from a bridge is also told to the bridge, which stops reporting it; without that it would be back a moment later. If the bridge is not connected, the board is removed here but the bridge will report it again when it is: forget the board on the bridge's own page to stop that. Putting the board back is adding the port again, on the bridge or here.
 

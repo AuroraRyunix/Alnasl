@@ -36,8 +36,9 @@ defmodule AlnaslWeb.Status do
     %{
       heads: heads(link, scope),
       live: live_by_hall(scope),
+      # Putting a board in a tournament is an arbiter's: a viewer is not offered it.
       seating:
-        if own_hall?(scope) do
+        if own_hall?(scope) and may_seat?(scope) do
           %{outside: Seating.outside(), ask: Seating.ask(), auto: Seating.auto()}
         else
           %{outside: [], ask: [], auto: nil}
@@ -59,6 +60,9 @@ defmodule AlnaslWeb.Status do
   # shown on the box's own hall, and on a box without accounts.
   defp own_hall?(%Scope{open?: false} = scope), do: Scope.hall_id(scope) == Halls.own_id()
   defp own_hall?(_open), do: true
+
+  defp may_seat?(%Scope{} = scope), do: Scope.can?(scope, :arbiter)
+  defp may_seat?(_none), do: true
 
   @doc "The badges of the bar, or `:results_only` for a box with no linked tournament."
   def heads(link, scope \\ nil) do

@@ -637,7 +637,7 @@ defmodule AlnaslWeb.BoardsLive do
           {gettext("Which board is this?")}
         </.button>
 
-        <.button id="number-by-touch" small navigate={~p"/boards/number"}>
+        <.button :if={@may_arbiter} id="number-by-touch" small navigate={~p"/boards/number"}>
           {gettext("Number by touching")}
         </.button>
         <.button id="print-labels" small href={~p"/files/labels"}>{gettext("Labels")}</.button>
@@ -714,7 +714,7 @@ defmodule AlnaslWeb.BoardsLive do
         </ul>
 
         <.form
-          :if={length(@snapshots) > 1}
+          :if={@may_arbiter and length(@snapshots) > 1}
           for={@swap_form}
           id="swap-form"
           phx-submit="swap"
@@ -734,7 +734,7 @@ defmodule AlnaslWeb.BoardsLive do
           </select>
           <.button id="swap-submit" small type="submit">{gettext("Swap")}</.button>
           <.button
-            :if={Enum.any?(@snapshots, &Tables.remapped?/1)}
+            :if={@may_arbiter and Enum.any?(@snapshots, &Tables.remapped?/1)}
             id="clear-remaps"
             small
             type="button"
@@ -747,7 +747,13 @@ defmodule AlnaslWeb.BoardsLive do
 
       <.panel id="board-list" title={gettext("Connected and known boards")} flush>
         <:actions>
-          <.form for={@order_form} id="link-in-order-form" phx-submit="link_in_order" class="row">
+          <.form
+            :if={@may_arbiter}
+            for={@order_form}
+            id="link-in-order-form"
+            phx-submit="link_in_order"
+            class="row"
+          >
             <label for="order-first" class="note">{gettext(
               "Number all in connection order, starting at"
             )}</label>
@@ -808,7 +814,12 @@ defmodule AlnaslWeb.BoardsLive do
               do: gettext("Add a bridge"),
               else: gettext("Open the Bridges tab")}
           </.link>
-          <.link id="boards-empty-wizard" navigate={~p"/setup/wizard"} class="btn ghost">
+          <.link
+            :if={@may_owner}
+            id="boards-empty-wizard"
+            navigate={~p"/setup/wizard"}
+            class="btn ghost"
+          >
             {gettext("Setup wizard")}
           </.link>
         </div>
@@ -852,7 +863,7 @@ defmodule AlnaslWeb.BoardsLive do
               >
                 <td class="b-name">
                   <b>{s.name}</b>
-                  <details id={"rename-#{s.id}"} class="rename">
+                  <details :if={@may_arbiter} id={"rename-#{s.id}"} class="rename">
                     <summary class="note">{gettext("Rename")}</summary>
                     <form id={"rename-form-#{s.id}"} phx-submit="rename" class="row">
                       <input type="hidden" name="board_id" value={s.id} />
@@ -974,6 +985,7 @@ defmodule AlnaslWeb.BoardsLive do
                     </div>
 
                     <.button
+                      :if={@may_arbiter}
                       id={"read-as-loop-#{s.id}"}
                       phx-click="read_as_loop"
                       phx-value-id={s.id}
@@ -1073,7 +1085,12 @@ defmodule AlnaslWeb.BoardsLive do
                 </td>
 
                 <td class="b-table">
-                  <form id={"table-form-#{s.id}"} phx-change="table" phx-submit="table">
+                  <form
+                    :if={@may_arbiter}
+                    id={"table-form-#{s.id}"}
+                    phx-change="table"
+                    phx-submit="table"
+                  >
                     <input type="hidden" name="board_id" value={s.id} />
                     <label class="sr-only" for={"table-#{s.id}"}>{gettext("Table number of %{name}",
                       name: s.name
@@ -1091,9 +1108,10 @@ defmodule AlnaslWeb.BoardsLive do
                       phx-debounce="blur"
                     />
                   </form>
+                  <span :if={not @may_arbiter} id={"table-text-#{s.id}"}>{s.table_no}</span>
 
                   <form
-                    :if={length(@tournaments) > 1}
+                    :if={@may_arbiter and length(@tournaments) > 1}
                     id={"tournament-form-#{s.id}"}
                     phx-change="tournament"
                   >
@@ -1142,7 +1160,7 @@ defmodule AlnaslWeb.BoardsLive do
                   class="b-link"
                   data-label={gettext("Board of round %{n}", n: @round)}
                 >
-                  <form id={"link-form-#{s.id}"} phx-change="link">
+                  <form :if={@may_arbiter} id={"link-form-#{s.id}"} phx-change="link">
                     <input type="hidden" name="board_id" value={s.id} />
                     <label class="sr-only" for={"link-#{s.id}"}>{gettext("Board number for %{name}",
                       name: s.name
@@ -1166,6 +1184,12 @@ defmodule AlnaslWeb.BoardsLive do
                       </option>
                     </select>
                   </form>
+                  <span
+                    :if={not @may_arbiter and s.round == @round and s.board_no}
+                    id={"link-text-#{s.id}"}
+                  >
+                    {gettext("board %{n}", n: s.board_no)}
+                  </span>
 
                   <div :if={s.round == @round and Tables.remapped?(s)} class="note">
                     <span id={"remapped-#{s.id}"} class="flag plain">
@@ -1173,6 +1197,7 @@ defmodule AlnaslWeb.BoardsLive do
                     </span>
 
                     <.button
+                      :if={@may_arbiter}
                       id={"back-to-table-#{s.id}"}
                       small
                       variant="ghost"
@@ -1199,11 +1224,18 @@ defmodule AlnaslWeb.BoardsLive do
                     {gettext("Show me")}
                   </.button>
 
-                  <.button id={"toggle-#{s.id}"} small phx-click="toggle" phx-value-id={s.id}>
+                  <.button
+                    :if={@may_arbiter}
+                    id={"toggle-#{s.id}"}
+                    small
+                    phx-click="toggle"
+                    phx-value-id={s.id}
+                  >
                     {if s.running?, do: gettext("Disconnect"), else: gettext("Connect")}
                   </.button>
 
                   <.button
+                    :if={@may_arbiter}
                     id={"flip-#{s.id}"}
                     small
                     icon="flip"
@@ -1216,6 +1248,7 @@ defmodule AlnaslWeb.BoardsLive do
                   </.button>
 
                   <.button
+                    :if={@may_arbiter}
                     id={"delete-#{s.id}"}
                     small
                     variant="danger"
@@ -1254,7 +1287,7 @@ defmodule AlnaslWeb.BoardsLive do
           />
         </.panel>
 
-        <.panel :if={not @server?} id="add-board" title={gettext("Add a board")}>
+        <.panel :if={not @server? and @may_arbiter} id="add-board" title={gettext("Add a board")}>
           <.form
             for={@add_form}
             id="add-board-form"

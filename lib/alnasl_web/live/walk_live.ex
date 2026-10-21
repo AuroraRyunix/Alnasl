@@ -234,6 +234,7 @@ defmodule AlnaslWeb.WalkLive do
             start_form={@start_form}
             board_count={@board_count}
             numbered={@numbered}
+            may_arbiter={@may_arbiter}
           />
         <% else %>
           <.find_page recent={@recent} fresh={@fresh} />
@@ -356,6 +357,7 @@ defmodule AlnaslWeb.WalkLive do
   attr :start_form, :any, required: true
   attr :board_count, :integer, required: true
   attr :numbered, :integer, required: true
+  attr :may_arbiter, :boolean, default: false
 
   defp number_page(assigns) do
     ~H"""
@@ -382,6 +384,7 @@ defmodule AlnaslWeb.WalkLive do
 
       <div id="walk-keys" class="walk-keys">
         <.button
+          :if={@may_arbiter}
           id="walk-undo"
           phx-click="undo"
           disabled={@wizard.done == [] and @wizard.skipped == []}
@@ -389,10 +392,10 @@ defmodule AlnaslWeb.WalkLive do
           {gettext("Undo")}
         </.button>
 
-        <.button id="walk-skip" phx-click="skip">
+        <.button :if={@may_arbiter} id="walk-skip" phx-click="skip">
           {gettext("Skip %{n}", n: @wizard.next)}
         </.button>
-        <.button id="walk-stop" variant="primary" phx-click="stop">{gettext("Stop")}</.button>
+        <.button :if={@may_arbiter} id="walk-stop" variant="primary" phx-click="stop">{gettext("Stop")}</.button>
       </div>
     <% else %>
       <section id="walk-start" class="walk-stage">
@@ -412,7 +415,13 @@ defmodule AlnaslWeb.WalkLive do
           )}
         </p>
 
-        <.form for={@start_form} id="walk-start-form" phx-submit="start" class="walk-start-form">
+        <.form
+          :if={@may_arbiter}
+          for={@start_form}
+          id="walk-start-form"
+          phx-submit="start"
+          class="walk-start-form"
+        >
           <label for="walk-first">{gettext("First table number")}</label>
           <input
             id="walk-first"

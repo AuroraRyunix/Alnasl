@@ -156,6 +156,11 @@ defmodule AlnaslWeb.Hall do
           socket
           |> assign(
             current_scope: scope,
+            # What this role may do in this hall, for pages to hide the rest
+            # (the server refuses it anyway: `AlnaslWeb.Permit`).
+            may_arbiter: Scope.can?(scope, :arbiter),
+            may_owner: Scope.can?(scope, :owner),
+            may_admin: Scope.can?(scope, :admin),
             link: Outbox.status(scope),
             box: Settings.get("box_name") || "Alnasl",
             locale: locale,

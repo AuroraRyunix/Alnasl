@@ -850,6 +850,9 @@ defmodule AlnaslWeb.Words do
   defp log("bridge.joined", d),
     do: gettext("The bridge \"%{name}\" joined.", name: d["name"])
 
+  defp log("bridge.renamed", d),
+    do: gettext("A bridge was renamed \"%{name}\".", name: d["name"])
+
   defp log("bridge.removed", d),
     do: gettext("The bridge \"%{name}\" was removed; its boards with it.", name: d["name"])
 
@@ -1058,6 +1061,15 @@ defmodule AlnaslWeb.Words do
 
   defp log("pairing.adopted", _d),
     do: gettext("Arbiter in Alnasl: the game is the new pairing's. The moves stand.")
+
+  defp log("game.deleted", d),
+    do:
+      gettext("A game was deleted: %{white} - %{black}, %{moves} moves, result %{result}.",
+        white: d["white"] || "?",
+        black: d["black"] || "?",
+        moves: d["moves"] || 0,
+        result: d["result"] || "*"
+      )
 
   defp log("pairing.set_aside", _d),
     do:

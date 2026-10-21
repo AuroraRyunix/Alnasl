@@ -70,7 +70,7 @@ Zet het weer aan. Partijen, wachtrij en instellingen staan op schijf; de borden 
 
 ### "Je rol in deze zaal laat je de partijen volgen, niet wijzigen" {#role-refused}
 
-Je bent daar kijker. Vraag een eigenaar van de zaal om de rol van arbiter (zie [Accounts, zalen en rollen](06-accounts-and-halls.md)).
+Je bent daar kijker, of er kwam een verzoek bij de server dat de pagina je niet zou hebben aangeboden. Vraag een eigenaar van de zaal om de rol van arbiter (zie [Accounts, zalen en rollen](06-accounts-and-halls.md)).
 
 > [!TIP] Nog altijd vast
 > Open het Logboek en de pagina Opnames voor je iets drastisch doet. Ze zeggen wat de borden zeiden, en dat is meestal het hele verhaal.

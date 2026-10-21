@@ -70,7 +70,7 @@ Switch it on. Games, queue and settings are on disk; boards reconnect and carry 
 
 ### "Your role in this hall lets you follow the games, not change them" {#role-refused}
 
-You are a viewer there. Ask an owner of the hall for the arbiter role (see [Accounts, halls and roles](06-accounts-and-halls.md)).
+You are a viewer there, or a request reached the server that the page would not have offered. Ask an owner of the hall for the arbiter role (see [Accounts, halls and roles](06-accounts-and-halls.md)).
 
 > [!TIP] Still stuck
 > Open the Log and the Recordings page before you do anything drastic. They say what the boards said, and that is usually the whole story.

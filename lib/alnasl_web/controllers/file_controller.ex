@@ -44,9 +44,7 @@ defmodule AlnaslWeb.FileController do
     account = conn.assigns.current_scope
 
     with {board, ""} <- Integer.parse(board),
-         true <-
-           Alnasl.Accounts.Scope.everything?(account) or
-             Alnasl.Halls.sees?(account, Alnasl.Boards.get(board)),
+         true <- capture_visible?(account, board),
          %{path: path} <- Recorder.find(board, name) do
       Recorder.flush()
 
@@ -56,6 +54,13 @@ defmodule AlnaslWeb.FileController do
       |> send_file(200, path)
     else
       _missing -> send_resp(conn, 404, "no such capture")
+    end
+  end
+
+  defp capture_visible?(account, board) do
+    case Alnasl.Boards.get(board) do
+      nil -> Recorder.removed_visible?(account, board)
+      row -> Alnasl.Accounts.Scope.everything?(account) or Alnasl.Halls.sees?(account, row)
     end
   end
 

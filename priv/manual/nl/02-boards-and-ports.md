@@ -32,7 +32,7 @@ Als een poort toegevoegd is toen er één bord op zat, en er nu meer op zitten, 
 
 ## Een bord hernoemen en verwijderen {#removing-a-board}
 
-"Hernoemen" onder de naam van een bord verandert hoe de pagina's het noemen; verder verandert er niets. "Verwijderen" aan het eind van zijn rij haalt het bord van de lijst en stopt met lezen. Zijn partijen blijven, en zijn opnames ook (ze staan op de pagina Opnames als "verwijderd bord N", en alleen wie alle zalen ziet kan ze openen). Wordt er op het bord een partij gespeeld, dan vraagt Verwijderen eerst en zegt dat erbij.
+"Hernoemen" onder de naam van een bord verandert hoe de pagina's het noemen; verder verandert er niets. "Verwijderen" aan het eind van zijn rij haalt het bord van de lijst en stopt met lezen. Zijn partijen blijven, en zijn opnames ook (ze staan op de pagina Opnames als "verwijderd bord N", en alleen de eigenaar van de zaal waarin het bord stond, of een beheerder, kan ze openen). Wordt er op het bord een partij gespeeld, dan vraagt Verwijderen eerst en zegt dat erbij.
 
 Een bord dat van een brug komt, wordt ook aan de brug doorgegeven, die het niet meer meldt; zonder dat was het een ogenblik later terug. Is de brug niet verbonden, dan is het bord hier weg maar meldt de brug het opnieuw zodra ze dat wel is: laat de brug het bord vergeten op haar eigen pagina om dat te stoppen. Het bord terugzetten is de poort opnieuw toevoegen, op de brug of hier.
 

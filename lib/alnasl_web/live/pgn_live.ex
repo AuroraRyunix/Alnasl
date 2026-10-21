@@ -496,7 +496,9 @@ defmodule AlnaslWeb.PgnLive do
           </p>
 
           <div class="row mt-3">
-            <.button id="attach-yes" variant="primary" phx-click="attach">{gettext("Yes, attach it")}</.button>
+            <.button :if={@may_arbiter} id="attach-yes" variant="primary" phx-click="attach">{gettext(
+              "Yes, attach it"
+            )}</.button>
             <.button id="attach-no" phx-click="cancel_attach">{gettext("No")}</.button>
           </div>
         </div>
@@ -509,9 +511,13 @@ defmodule AlnaslWeb.PgnLive do
         flush
       >
         <:actions>
-          <.button :if={not @server?} id="simulate-all" small phx-click="simulate_all">{gettext(
-            "Play them all on simulator boards"
-          )}</.button> <.button id="clear-games" small phx-click="clear">{gettext("Clear")}</.button>
+          <.button
+            :if={@may_arbiter and not @server?}
+            id="simulate-all"
+            small
+            phx-click="simulate_all"
+          >{gettext("Play them all on simulator boards")}</.button>
+          <.button id="clear-games" small phx-click="clear">{gettext("Clear")}</.button>
         </:actions>
 
         <div class="table-wrap">
@@ -568,7 +574,7 @@ defmodule AlnaslWeb.PgnLive do
 
                 <td class="act">
                   <.button
-                    :if={not @server?}
+                    :if={@may_arbiter and not @server?}
                     id={"simulate-#{i}"}
                     small
                     phx-click="simulate"
@@ -577,9 +583,13 @@ defmodule AlnaslWeb.PgnLive do
                   <.button id={"compare-#{i}"} small phx-click="compare" phx-value-index={i}>{gettext(
                     "Compare"
                   )}</.button>
-                  <.button id={"attach-#{i}"} small phx-click="ask_attach" phx-value-index={i}>{gettext(
-                    "Attach"
-                  )}</.button>
+                  <.button
+                    :if={@may_arbiter}
+                    id={"attach-#{i}"}
+                    small
+                    phx-click="ask_attach"
+                    phx-value-index={i}
+                  >{gettext("Attach")}</.button>
                 </td>
               </tr>
             </tbody>
