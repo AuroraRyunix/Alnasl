@@ -12,7 +12,9 @@ defmodule Alnasl.FairPlay.View do
       expiry);
     * `"upload"`, `"delete_upload"` - a PGN was uploaded or deleted
       (`detail`: the file's name);
-    * `"analyse_round"` - the owner had a round analysed again (`round`).
+    * `"analyse_round"` - the owner had a round analysed again (`round`);
+    * `"delete_analysis"` - the owner deleted a tournament's analysis; a
+      frozen copy of the report is kept (`Alnasl.FairPlay.Snapshot`).
 
   The subject is a tournament (`tournament_id`), an upload (`upload_id`),
   or neither: the hall's fair play as a whole (`hall_id`). `user_id` and
@@ -20,7 +22,7 @@ defmodule Alnasl.FairPlay.View do
   """
   use Ecto.Schema
 
-  @actions ~w(view grant revoke upload delete_upload analyse_round)
+  @actions ~w(view grant revoke upload delete_upload analyse_round delete_analysis)
 
   @doc "The actions an audit line can record."
   def actions, do: @actions

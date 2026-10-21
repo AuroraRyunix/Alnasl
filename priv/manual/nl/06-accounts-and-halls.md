@@ -67,7 +67,7 @@ Voor een toernooi dat in meer dan één zaal gespeeld wordt, telt de hoogste rol
 
 "Speel het ook in deze zaal" vraagt alleen de rol van arbiter in de zaal waarvan de eigen code het toernooi bereikt: de code hebben is de toestemming.
 
-Een kijker die op een knop drukt die iets verandert, krijgt te horen dat zijn rol hem de partijen laat volgen, niet wijzigen.
+Een pagina toont iedereen alleen de knoppen die zijn rol kan gebruiken: een kijker ziet de partijen en de lijsten, een arbiter ook de knoppen voor borden, partijen en rondes, een eigenaar ook de mensen en bruggen, en de instellingen van het kastje zelf zijn voor een beheerder. De server controleert ook: wordt een knop toch ingedrukt, dan is het antwoord dat de rol je de partijen laat volgen, niet wijzigen.
 
 ## Mensen uitnodigen {#inviting}
 

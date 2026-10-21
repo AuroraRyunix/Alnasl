@@ -157,3 +157,7 @@ A case that is going to the FIDE Fair Play Commission may need the data longer. 
 An uploaded PGN attached to a tournament is kept as long as the tournament. One on its own counts its 30 days from the moment it was uploaded, and can be kept longer in the same way. A share of one report goes with the report. Shares of the whole hall, and the lines about them in the hall's own record, are deleted a year after they ended.
 
 Switching fair play off stops the analysis of new moves. It does not delete what is there; the retention does that.
+
+### Deleting an analysis on request {#delete-analysis}
+
+The owner can delete a tournament's analysis before the retention does: "Delete this analysis" on its report, with a reason if one wants to be written down. What is deleted is every analysed move. What is kept is a frozen copy of the report as it was (each player, the moves counted and the score), who deleted it, when and why. The copy is shown to the owner under the report, lives exactly as long as the report would have, and goes with it. The deletion is a line in the report's record of who did what. Games analysed again later, or a round asked for, make a new analysis.

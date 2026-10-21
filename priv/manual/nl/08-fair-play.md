@@ -157,3 +157,7 @@ Een zaak die naar de FIDE Fair Play Commission gaat, heeft de gegevens misschien
 Een geüploade PGN die bij een toernooi hoort, blijft even lang bewaard als het toernooi. Eén op zichzelf telt zijn 30 dagen vanaf het uploaden, en kan op dezelfde manier langer bewaard worden. Een gedeeld rapport verdwijnt met het rapport. Wat met de hele zaal gedeeld werd, en wat daarover in het eigen overzicht van de zaal staat, wordt een jaar na het einde verwijderd.
 
 Fair play uitzetten stopt de analyse van nieuwe zetten. Wat er al is, wordt niet verwijderd; dat doet de bewaartermijn.
+
+### Een analyse op verzoek verwijderen {#delete-analysis}
+
+De eigenaar kan de analyse van een toernooi verwijderen voor de bewaartermijn dat doet: "Deze analyse verwijderen" op het rapport, met een reden als je die genoteerd wilt hebben. Verwijderd worden alle geanalyseerde zetten. Bewaard blijft een bevroren kopie van het rapport zoals het was (elke speler, de getelde zetten en de score), met wie het verwijderde, wanneer en waarom. De kopie staat voor de eigenaar onder het rapport, leeft precies zo lang als het rapport zou hebben geleefd, en gaat ermee weg. De verwijdering is een regel in het overzicht van wie wat deed bij het rapport. Partijen die later opnieuw geanalyseerd worden, of een ronde waarom gevraagd wordt, maken een nieuwe analyse.

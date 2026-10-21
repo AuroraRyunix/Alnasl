@@ -67,7 +67,7 @@ For a tournament played in more than one hall, the highest role you have in any 
 
 "Also play it in this hall" needs only an arbiter's role in the hall whose own code reaches the tournament: having the code is the permission.
 
-A viewer who presses a button that changes something is told that their role lets them follow the games, not change them.
+A page shows each person only the buttons their role can use: a viewer sees the games and the lists, an arbiter also the buttons for boards, games and rounds, an owner also the people and bridges, and the box's own settings are an admin's. The server checks as well: if a button is somehow pressed anyway, the answer is that the role lets them follow the games, not change them.
 
 ## Inviting people {#inviting}
 

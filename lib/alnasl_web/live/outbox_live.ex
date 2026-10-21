@@ -283,6 +283,7 @@ defmodule AlnaslWeb.OutboxLive do
     >
       <:actions>
         <.button
+          :if={@may_arbiter}
           id="send-now"
           icon="send"
           variant="primary"
@@ -413,7 +414,7 @@ defmodule AlnaslWeb.OutboxLive do
                   why: DestinationWords.waiting_why(w.why)
                 )}
                 <.button
-                  :if={w.why in [:gone, :no_page]}
+                  :if={@may_arbiter and w.why in [:gone, :no_page]}
                   id={"discard-#{w.tournament_id}"}
                   small
                   phx-click="discard"
@@ -553,6 +554,7 @@ defmodule AlnaslWeb.OutboxLive do
 
             <div class="row">
               <.button
+                :if={@may_arbiter}
                 id={"dest-send-#{d.id}"}
                 small
                 icon="send"
@@ -571,14 +573,21 @@ defmodule AlnaslWeb.OutboxLive do
                 {DestinationWords.quiet(elem(@plans[d.id], 1))}
               </span>
 
-              <.button id={"dest-toggle-#{d.id}"} small phx-click="dest_toggle" phx-value-id={d.id}>
+              <.button
+                :if={@may_admin}
+                id={"dest-toggle-#{d.id}"}
+                small
+                phx-click="dest_toggle"
+                phx-value-id={d.id}
+              >
                 {if d.enabled?, do: gettext("Switch off"), else: gettext("Switch on")}
               </.button>
 
               <.button
                 :if={
-                  d.id == "openpairings" and
-                    Enum.any?(@pairing_refused, fn {_game, message} -> message == "stale" end)
+                  @may_arbiter and
+                    (d.id == "openpairings" and
+                       Enum.any?(@pairing_refused, fn {_game, message} -> message == "stale" end))
                 }
                 id="force-pairing"
                 small
@@ -639,7 +648,9 @@ defmodule AlnaslWeb.OutboxLive do
 
       <.panel id="sent" title={gettext("Sent lately")} flush>
         <:actions>
-          <.button :if={@sent != []} id="prune" small phx-click="prune">{gettext("Clear the list")}</.button>
+          <.button :if={@may_admin and @sent != []} id="prune" small phx-click="prune">{gettext(
+            "Clear the list"
+          )}</.button>
         </:actions>
 
         <div :if={@sent == []} id="sent-empty" class="empty">

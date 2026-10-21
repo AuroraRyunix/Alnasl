@@ -64,6 +64,11 @@ A bridge that is switched off by accident is the same: switch it on, and it carr
 
 A bridge that was removed can join again with a new link. It comes back as the same bridge, with a new key. Losing a bridge is one Remove on the server. A bridge that is still in a hall is not taken by the link of another hall: the server refuses it, and the bridge's page says it is not a server it can join. Remove it from its hall first, or let an admin move it (below).
 
+## Renaming a bridge {#renaming}
+
+The name a bridge brings when it joins is only where it starts. The hall's owner can change it on the Bridges tab ("Rename" beside the bridge); the new name is used on the server from then on and the bridge is not asked about it again. Boards the bridge already has keep the names they have: rename those on the Boards page.
+
 ## Moving a bridge to another hall {#moving}
+
 
 An admin can move a bridge to another hall. Its boards follow, into that hall's own tournament, without table numbers: they have to be numbered again.

@@ -145,6 +145,7 @@ defmodule AlnaslWeb.RoundLive do
       snapshots: snapshots,
       hall_id: hall_id,
       every?: match?([_one], active),
+      arbiter?: Alnasl.Accounts.Scope.can?(socket.assigns.current_scope, :arbiter),
       placed: Map.merge(placed(Enum.reject(shown_now, &is_map_key(placed, &1.id))), placed)
     }
 
@@ -299,6 +300,7 @@ defmodule AlnaslWeb.RoundLive do
         round: round,
         title: title,
         site?: site.page != nil,
+        arbiter?: ctx.arbiter?,
         # Names of the linked tournaments a board of the box's own plays outside of.
         outside:
           if(tournament.kind == "local",
@@ -812,7 +814,11 @@ defmodule AlnaslWeb.RoundLive do
             {Tournaments.title(t) || gettext("The hall's own tournament")}
           </.link>
         </div>
-        <.section_actions :if={match?([_one], @sections)} section={hd(@sections)} />
+        <.section_actions
+          :if={match?([_one], @sections)}
+          section={hd(@sections)}
+          may_arbiter={@may_arbiter}
+        />
         <div
           :if={@tile_count > 0}
           id="live-view"
@@ -878,7 +884,7 @@ defmodule AlnaslWeb.RoundLive do
             <span class="note">{gettext("Round %{n}", n: section.round)}</span>
           </h2>
 
-          <div class="row"><.section_actions section={section} /></div>
+          <div class="row"><.section_actions section={section} may_arbiter={@may_arbiter} /></div>
         </header>
 
         <p
@@ -902,7 +908,13 @@ defmodule AlnaslWeb.RoundLive do
             n: section.remote_round,
             here: section.round
           )}
-          <.button id={sid("follow", section.tid)} small phx-click="follow" phx-value-t={section.tid}>
+          <.button
+            :if={@may_arbiter}
+            id={sid("follow", section.tid)}
+            small
+            phx-click="follow"
+            phx-value-t={section.tid}
+          >
             {gettext("Follow round %{n}", n: section.remote_round)}
           </.button>
         </p>
@@ -1201,6 +1213,7 @@ defmodule AlnaslWeb.RoundLive do
   # the next round": at the top of the page when it shows one tournament,
   # in each tournament's own heading when it shows several.
   attr :section, :map, required: true
+  attr :may_arbiter, :boolean, default: false
 
   defp section_actions(assigns) do
     ~H"""
@@ -1216,13 +1229,14 @@ defmodule AlnaslWeb.RoundLive do
     </div>
 
     <.button
-      :if={@section.linked? and not @section.gone?}
+      :if={@may_arbiter and (@section.linked? and not @section.gone?)}
       id={sid("refresh-pairings", @section.tid)}
       small
       phx-click="refresh"
       phx-value-t={@section.tid}
     >{gettext("Ask OpenPairings now")}</.button>
     <.button
+      :if={@may_arbiter}
       id={sid("next-round", @section.tid)}
       small
       phx-click="next_round"
@@ -1486,7 +1500,7 @@ defmodule AlnaslWeb.RoundLive do
         <div class="row">
           <.button
             :for={result <- ["1-0", "1/2-1/2", "0-1"]}
-            :if={!@tile.finished?}
+            :if={@ctx.arbiter? and !@tile.finished?}
             id={"tile-result-#{@tile.dom}-#{String.replace(result, "/", "")}"}
             small
             phx-click="result"
@@ -1495,7 +1509,7 @@ defmodule AlnaslWeb.RoundLive do
             phx-value-result={result}
           >{result}</.button>
           <.button
-            :if={!@tile.finished?}
+            :if={@ctx.arbiter? and !@tile.finished?}
             id={"tile-result-#{@tile.dom}-none"}
             small
             phx-click="result"
@@ -1505,6 +1519,7 @@ defmodule AlnaslWeb.RoundLive do
             data-confirm={gettext("Close this game without a result?")}
           >{gettext("No result")}</.button>
           <.button
+            :if={@ctx.arbiter?}
             id={"tile-new-game-#{@tile.dom}"}
             small
             variant={if @tile.finished? and @tile.new_kind == :replace, do: "primary"}
@@ -1520,7 +1535,7 @@ defmodule AlnaslWeb.RoundLive do
           </.button>
 
           <.button
-            :if={@tile.new_kind == :extra and @tile.paired?}
+            :if={@ctx.arbiter? and (@tile.new_kind == :extra and @tile.paired?)}
             id={"tile-new-game-replace-#{@tile.dom}"}
             small
             phx-click="new_game"
@@ -1550,6 +1565,7 @@ defmodule AlnaslWeb.RoundLive do
         </span>
 
         <.button
+          :if={@ctx.arbiter?}
           id={"tile-send-this-#{@tile.dom}"}
           small
           phx-click="send_this"

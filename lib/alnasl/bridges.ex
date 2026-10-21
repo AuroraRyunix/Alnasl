@@ -166,7 +166,27 @@ defmodule Alnasl.Bridges do
 
   # --- the list ----------------------------------------------------------------
 
+  @doc """
+  Gives a bridge another name here. The name is the server's own: the
+  bridge's name for itself is only where it started, and is not asked again.
+  Rows already made for its boards keep the names they have.
+  """
+  def rename(%Bridge{} = bridge, name) when is_binary(name) do
+    name = String.trim(name)
+
+    if name == "" or String.length(name) > 80 do
+      {:error, :name}
+    else
+      with {:ok, bridge} <- bridge |> Ecto.Changeset.change(name: name) |> Repo.update() do
+        Log.add(:info, "bridge.renamed", %{name: name}, %{})
+        notify()
+        {:ok, bridge}
+      end
+    end
+  end
+
   @doc "The bridges let in and not removed, oldest first."
+
   def list do
     Repo.all(from b in Bridge, where: is_nil(b.revoked_at), order_by: b.id)
   end

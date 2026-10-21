@@ -453,6 +453,28 @@ defmodule Alnasl.Games do
   end
 
   @doc """
+  Deletes a game: its moves, its row, its PGN file, and what waited to be
+  sent of it. The pairing's slot on that board is empty again. What was
+  already sent (to the results site, the pairing program) is not taken back
+  from them. The line in the log stays, with who played and how far it got.
+  """
+  def delete(%Game{} = game) do
+    Alnasl.Outbox.drop_pending(game)
+    File.rm(pgn_path(game))
+    Repo.delete!(game)
+
+    Log.add(
+      :warn,
+      "game.deleted",
+      %{white: game.white, black: game.black, moves: length(plies(game)), result: game.result},
+      %{round: game.round, board_no: game.board_no}
+    )
+
+    Tournaments.notify(game.tournament_id)
+    :ok
+  end
+
+  @doc """
   The game is played on another tournament's board now: a board was given to
   a tournament while the game was under way. It takes the next game number
   of its new place, its PGN follows, and what was waiting to be sent for the

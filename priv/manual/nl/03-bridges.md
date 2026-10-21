@@ -64,6 +64,11 @@ Een brug die per ongeluk uitgezet werd, werkt hetzelfde: zet ze aan en ze gaat v
 
 Een brug die verwijderd werd, kan met een nieuwe link opnieuw aansluiten. Ze komt terug als dezelfde brug, met een nieuwe sleutel. Een brug kwijt zijn is één keer Verwijderen op de server. Een brug die nog in een zaal zit, wordt niet meegenomen met de link van een andere zaal: de server weigert, en de pagina van de brug zegt dat dit geen server is waarbij ze kan aansluiten. Verwijder haar eerst uit haar zaal, of laat een beheerder haar verplaatsen (hieronder).
 
+## Een brug hernoemen {#renaming}
+
+De naam die een brug meebrengt als ze aansluit, is alleen het begin. De eigenaar van de zaal kan hem veranderen op het tabblad Bruggen ("Hernoemen" naast de brug); de nieuwe naam geldt vanaf dan op de server en de brug wordt er niet meer naar gevraagd. Borden die de brug al heeft, houden hun naam: hernoem die op de pagina Borden.
+
 ## Een brug naar een andere zaal verplaatsen {#moving}
+
 
 Een beheerder kan een brug naar een andere zaal verplaatsen. Haar borden gaan mee, naar het eigen toernooi van die zaal, zonder tafelnummers: ze moeten opnieuw genummerd worden.

@@ -39,8 +39,10 @@ defmodule Alnasl.FairPlay do
     Move,
     Pool,
     Queue,
+    Report,
     Retention,
     Setting,
+    Snapshot,
     Upload,
     UploadMove,
     View
@@ -486,6 +488,78 @@ defmodule Alnasl.FairPlay do
         keep_until(scope, subject, days, String.trim(to_string(reason)))
     end
   end
+
+  @doc """
+  Deletes a tournament's analysis on request, and keeps a frozen copy of
+  what the report said first: the players and their numbers, who deleted it,
+  when, and why if a reason was given (`Alnasl.FairPlay.Snapshot`). The copy
+  is the owner's alone and lives as long as the report would have; the audit
+  says it was deleted. Games analysed again afterwards (a changed move, a
+  round asked for) make a new analysis. Owner only.
+
+  `{:ok, snapshot}`, `{:error, :forbidden}`, or `{:error, :nothing}` when
+  there is no analysis to delete.
+  """
+  def delete_analysis(scope, %Tournament{} = tournament, reason \\ nil) do
+    owning(scope, tournament, fn ->
+      {:ok, rows} = moves(scope, tournament)
+
+      if rows == [] do
+        {:error, :nothing}
+      else
+        model = Report.model(settings_for_tournament(tournament))
+        user = scope.user
+        hall_id = Halls.of(tournament)
+        reason = reason |> to_string() |> String.trim() |> String.slice(0, 1000)
+
+        snapshot =
+          Repo.insert!(%Snapshot{
+            hall_id: hall_id,
+            tournament_id: tournament.id,
+            title: Tournaments.title(tournament),
+            deleted_by: user && user.email,
+            deleted_by_id: user && user.id,
+            deleted_at: DateTime.utc_now(:second),
+            reason: reason,
+            moves: length(rows),
+            report: rows |> Report.build(model) |> Enum.map(&frozen/1) |> Jason.encode!()
+          })
+
+        id = tournament.id
+        Repo.delete_all(from m in Move, where: m.tournament_id == ^id)
+        Repo.delete_all(from m in UploadMove, where: m.tournament_id == ^id)
+
+        audit(scope, ids(tournament), "delete_analysis",
+          detail: "#{length(rows)} moves" <> if(reason != "", do: ": #{reason}", else: "")
+        )
+
+        {:ok, snapshot}
+      end
+    end)
+  end
+
+  @doc "The frozen copies of a tournament's deleted analyses, newest first. Owner only."
+  def snapshots(scope, %Tournament{id: id} = tournament) do
+    owning(scope, tournament, fn ->
+      {:ok, Repo.all(from s in Snapshot, where: s.tournament_id == ^id, order_by: [desc: s.id])}
+    end)
+  end
+
+  # A report line as plain JSON: atoms as words, the interval as a list.
+  defp frozen(player) do
+    Map.new(player, fn {key, value} -> {to_string(key), jsonable(value)} end)
+  end
+
+  defp jsonable(value) when is_boolean(value) or is_nil(value), do: value
+  defp jsonable(value) when is_atom(value), do: Atom.to_string(value)
+  defp jsonable(value) when is_tuple(value), do: value |> Tuple.to_list() |> Enum.map(&jsonable/1)
+  defp jsonable(value) when is_list(value), do: Enum.map(value, &jsonable/1)
+
+  defp jsonable(%{} = value) when not is_struct(value),
+    do: Map.new(value, fn {k, v} -> {to_string(k), jsonable(v)} end)
+
+  defp jsonable(value) when is_number(value) or is_binary(value), do: value
+  defp jsonable(value), do: inspect(value)
 
   defp keep_until(scope, %Tournament{} = tournament, days, reason) do
     case Retention.last_round_end(tournament.id) do
