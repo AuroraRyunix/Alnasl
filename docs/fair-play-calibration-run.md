@@ -226,8 +226,8 @@ What came out, so the next run has something to beat.
   behave like 80 cores. Budget an hour per 1,000 games.
 - **Which games:** the task takes games in file order, so `--games 15000`
   took January, February and half of March 2024 and nothing else. The
-  24 months hold about 250,000 games the classical filter keeps (the old
-  filter, before it read minutes and clocks, kept about 12,600 of them).
+  24 months hold 233,002 games the classical filter keeps (the old
+  filter, before it read minutes and clocks, kept 12,700 of them).
   A wider spread needs the months passed in a different order, or shards
   per month.
 - **Fit** (`--holdout 0.67`, 28 s): 5,481 games fitted, 9,479 held out by
