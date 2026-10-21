@@ -71,11 +71,16 @@ defmodule Alnasl.RealBoardTest do
 
   # What the driver writes before it listens: the bus-mode byte, a ping to
   # everybody twice, "end bus mode" - and then the handshake, which is what
-  # is returned.
+  # is returned. Arkab 0.3.6 and later follow it with a question about the
+  # clock, so whatever comes after the five handshake bytes is not our business.
   defp handshake(port) do
     case Fake.written(port) do
-      <<0x4A, 0x87, 0, 0, 0x07, 0x87, 0, 0, 0x07, 0x88, 0, 0, 0x08, said::binary-size(5)>> -> said
-      _not_yet -> handshake(port)
+      <<0x4A, 0x87, 0, 0, 0x07, 0x87, 0, 0, 0x07, 0x88, 0, 0, 0x08, said::binary-size(5),
+        _asks::binary>> ->
+        said
+
+      _not_yet ->
+        handshake(port)
     end
   end
 
