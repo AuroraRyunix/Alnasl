@@ -5,6 +5,8 @@
 #   * Traversal.* - paths are built by the app (its data dir, temp files, a
 #     bundled catalogue) or looked up by id in the app's own listing before they
 #     are touched; no request string is ever joined into a path.
+#     (`Alnasl.HallReplays` writes where a developer's own `mix alnasl.hall pin`
+#     tells it to, which is the point.)
 #   * XSS.* - bodies are fixed SVG/PDF/ndjson/escaped-HTML builders or the app's own
 #     bundled manual; content types are literals.
 #   * DOS.StringToAtom - atoms come from the app's own literals, bundled data or a
