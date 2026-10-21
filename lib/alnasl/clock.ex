@@ -11,6 +11,21 @@ defmodule Alnasl.Clock do
   compared with the count of moves, because a press without a move is the
   earliest sign that the board missed one.
 
+  ## Presses the running side hides
+
+  Two presses between two readings leave the same side running, and a
+  count of side changes misses both. The times do not: a side that is not
+  running holds its time to the millisecond, so when the running side reads
+  the same as before and the OTHER side's time has changed, that side ran
+  in between - which takes a press to start and another to stop. Two are
+  counted (`hidden_presses/2`). It is a floor: four look the same.
+
+  A clock that read standing still in between breaks the chain (the
+  arbiter's time corrections are made with the clock stopped), and an
+  hourglass clock, on which the waiting side's time grows by what the
+  running side's shrinks, is not taken for presses. In 15,000 readings of
+  the real board's clock (2026-10-11/12) the stopped side never moved.
+
   A board without a clock never sends a reading; `read/2` is then `nil` and
   nothing about clocks is reported. A clock that is switched off or
   unplugged (`off/2`) is a board without a clock again, until it reports.
@@ -57,6 +72,8 @@ defmodule Alnasl.Clock do
       clock.running in [:white, :black] and running in [:white, :black] and
         running != clock.running
 
+    hidden = if clock.off?, do: 0, else: hidden_presses(clock, reading)
+
     {%{
        clock
        | white_ms: Map.get(reading, :white_ms, clock.white_ms),
@@ -71,9 +88,40 @@ defmodule Alnasl.Clock do
            end,
          at: t,
          off?: false,
-         presses: clock.presses + if(pressed?, do: 1, else: 0)
+         presses: clock.presses + hidden + if(pressed?, do: 1, else: 0)
      }, pressed?}
   end
+
+  @doc """
+  How many presses went by unseen between the clock as it stood and
+  `reading`: two when the same side runs in both and the other side's time
+  has changed, else none. See "Presses the running side hides".
+  """
+  @spec hidden_presses(t(), map()) :: 0 | 2
+  def hidden_presses(%__MODULE__{running: side} = clock, reading)
+      when side in [:white, :black] do
+    {other, mine} = if side == :white, do: {:black_ms, :white_ms}, else: {:white_ms, :black_ms}
+    was = Map.get(clock, other)
+    now = Map.get(reading, other)
+
+    cond do
+      Map.get(reading, :running) != side ->
+        0
+
+      not is_integer(was) or not is_integer(now) or was == now ->
+        0
+
+      # The waiting side gained what the running side lost: an hourglass.
+      now > was and
+          abs(now - was + (Map.get(reading, mine, 0) - Map.get(clock, mine, 0))) <= 1_000 ->
+        0
+
+      true ->
+        2
+    end
+  end
+
+  def hidden_presses(_clock, _reading), do: 0
 
   @doc """
   The clock was switched off or unplugged at `t`. Nothing runs and nothing
