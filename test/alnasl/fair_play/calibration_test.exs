@@ -33,7 +33,9 @@ defmodule Alnasl.FairPlay.CalibrationTest do
       |> Enum.with_index()
       |> Enum.map_join(" ", fn {san, k} ->
         number = if rem(k, 2) == 0, do: "#{div(k, 2) + 1}. ", else: ""
-        clock = "{ [%clk 1:#{String.pad_leading("#{rem(59 - k, 60)}", 2, "0")}:00] }"
+        minutes = max(Keyword.get(opts, :minutes, 59) - k, 0)
+        hours = Keyword.get(opts, :hours, 1)
+        clock = "{ [%clk #{hours}:#{String.pad_leading("#{minutes}", 2, "0")}:00] }"
         number <> san <> " " <> clock
       end)
 
@@ -59,7 +61,7 @@ defmodule Alnasl.FairPlay.CalibrationTest do
       Enum.map(1..24, &pgn_game(&1, [])) ++
         [
           pgn_game(100, tc: "180+2"),
-          pgn_game(101, tc: "-"),
+          pgn_game(101, tc: "-", hours: 0, minutes: 5),
           pgn_game(102, white_elo: "0"),
           pgn_game(103, white_elo: "?")
         ]
@@ -248,6 +250,13 @@ defmodule Alnasl.FairPlay.CalibrationTest do
     assert Calibration.holdout_key(%{"event" => "Open A", "id" => "x"}) == "event:Open A"
     assert Calibration.holdout_key(%{"event" => "", "id" => "x"}) == "game:x"
 
+    # A broadcast's name beats its per-game Event tag.
+    assert Calibration.holdout_key(%{
+             "broadcast" => "Belgian Championship 2025",
+             "event" => "Round 3: A - B",
+             "id" => "x"
+           }) == "event:Belgian Championship 2025"
+
     # The same split every time.
     held = Enum.filter(ids(hd(shards)), &Calibration.held_out?(&1, 0.25))
     assert held == Enum.filter(ids(hd(shards)), &Calibration.held_out?(&1, 0.25))
@@ -309,5 +318,22 @@ defmodule Alnasl.FairPlay.CalibrationTest do
     assert ExUnit.CaptureIO.capture_io(:stderr, fn ->
              assert {:error, :usage} = Calibration.main(["dance"], halt: false)
            end) =~ "usage"
+  end
+
+  test "classical is recognised however the broadcast wrote it" do
+    game = fn tc, clocks ->
+      %{
+        headers: %{"TimeControl" => tc, "WhiteElo" => "2100", "BlackElo" => "2000"},
+        clocks: clocks
+      }
+    end
+
+    assert Calibration.standard?(game.("5400+30", []), 3600)
+    assert Calibration.standard?(game.("90 min + 30 sec per move", []), 3600)
+    assert Calibration.standard?(game.("90' + 30\"", []), 3600)
+    # No tag at all: the clocks after the first moves say 90 minutes.
+    assert Calibration.standard?(game.(nil, [5_420_000, 5_418_000, 5_300_000]), 3600)
+    refute Calibration.standard?(game.("180+2", [182_000, 181_000]), 3600)
+    refute Calibration.standard?(game.(nil, [nil, nil]), 3600)
   end
 end

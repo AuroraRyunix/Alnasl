@@ -20,6 +20,8 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 ## [Unreleased]
 
 - [Fix] **Serial ports that cannot be listed now leave a reason in the log.** When the list of ports failed, Alnasl showed no boards and said nothing, which sent a hall on macOS 10.14 off to reinstall drivers that were fine. The list is still empty; the log now has the error. This comes with Arkab 0.3.8.
+- [Feature] **Stockfish 19 is calibrated.** `priv/fair_play/model-sf19.json` ships, so the report now gives a score and its rarity instead of "not calibrated". Fitted on 5,481 classical games from Lichess broadcasts (January to March 2024), checked on 9,479 others from different broadcasts: of 3,203 held-out player-events, 54 scored 2 or more (1.7%), 2 scored 3 or more (about 1 in 1,600), none scored 4. The gate passes on the point estimate; its 95% upper bound (0.23%) is still above 1 in 700, which takes more held-out events to prove than this corpus has. The three tests turned out to spread about 1.3 times wider than the model says they should, which is exactly what the covariance fix was for.
+- [Fix] **The calibration held out single games again, on the files it is actually fed.** Lichess broadcasts since 2024 write "Round 11: White - Black" in the Event tag, one value per game, so "whole events" quietly meant single games once more. The split now goes by the broadcast's name. The same files write their time control as prose ("90 min + 30 sec per move") or not at all, and the classical filter read the first as ninety seconds and the second as nothing, throwing away a good share of the classical games it was looking for; it reads minutes now, and asks the clocks when the tag has nothing to say.
 
 ## [0.5.4] - 2026-10-21
 
