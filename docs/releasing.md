@@ -77,27 +77,32 @@ find them stays on its version for ever without saying why.
 
 ## Signing the Mac app
 
-Not done yet: there is no Apple Developer account. The macOS jobs build
-`Alnasl.app` **ad-hoc signed** (Apple Silicon requires a signature on every
-binary; Gatekeeper still asks the arbiter once, see `docs/macos.md`).
+The macOS jobs sign `Alnasl.app` with the Developer ID Application
+certificate and the hardened runtime, notarise it with Apple, staple the
+ticket and check it with `spctl` before the zip is made. A build without the
+secrets (a fork) skips all of that with a warning and ships ad-hoc signed.
 
-The signing step is already in `release.yml`, and skips itself while the
-secret `APPLE_CERTIFICATE_P12_BASE64` is empty. Once the account exists,
-add these repository secrets and nothing else changes:
+Signing is done with six secrets of the `teapot-chess` organisation, so
+every repository in it has them and a fork has none:
 
 | Secret | What |
 |---|---|
-| `APPLE_CERTIFICATE_P12_BASE64` | the *Developer ID Application* certificate with its private key, exported as `.p12`, then base64 |
-| `APPLE_CERTIFICATE_PASSWORD` | the `.p12`'s password |
+| `MACOS_CERT_P12` | the *Developer ID Application* certificate with its private key and the intermediate, exported as `.p12`, then base64 |
+| `MACOS_CERT_PASSWORD` | the `.p12`'s password |
 | `APPLE_TEAM_ID` | the ten-character team id |
-| `APPLE_ID` | the Apple ID that notarises |
-| `APPLE_APP_PASSWORD` | an app-specific password for that Apple ID |
+| `ASC_KEY_ID` | the App Store Connect API key's id |
+| `ASC_ISSUER_ID` | the API key's issuer id |
+| `ASC_KEY_P8` | the API key's `.p8` file, base64 |
 
-`rel/macos/sign_and_notarize.sh` then signs every binary with the hardened
-runtime and the BEAM's entitlements (JIT, `dlopen` of the SQLite library),
-notarises, staples, and asks Gatekeeper before the zip is made. The same
-five secrets, under the same names, sign OpenPairings.app. The first signed
-build needs a Mac test of its own.
+`rel/macos/sign_and_notarize.sh` signs every binary with the hardened
+runtime and the BEAM's entitlements (JIT, `dlopen` of the NIF libraries),
+notarises with the API key, staples, and asks Gatekeeper. The same secrets,
+under the same names, sign every Mac app of the family. The temporary
+keychain is deleted at the end of the job, whatever happened.
+
+To test the signing without releasing anything, start the workflow by hand
+on a branch with **mac_only**: it builds and notarises the Mac apps and
+publishes nothing.
 
 ## Building one by hand
 

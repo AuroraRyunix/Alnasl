@@ -96,9 +96,7 @@ change; take them from the API (`assets[].size`) or say nothing.
 
 1. Download the zip for your Mac (Apple Silicon, M1 and later, or Intel), open it, and drag
    Alnasl into Applications.
-2. The first time, macOS refuses it, because Apple has not signed it yet:
-   System Settings, Privacy & Security, "Open Anyway" (macOS 14 or older:
-   right-click the app, Open).
+2. It is signed and notarised, so it opens with a double-click.
 3. A small window and the browser, as on Windows. Leave the window open -
    Stop Alnasl stops it.
 
@@ -116,7 +114,7 @@ GitHub.
   needed once, to install. **There is no build for 32-bit Raspberry Pi
   OS**; say so, because that is what many Pis run.
 - **macOS**: macOS 11 or newer on Apple Silicon (M1 and later); macOS 10.13 or newer on Intel.
-  **Not signed by Apple yet**, and **not yet tried on a real Mac** (it is
+  **Signed and notarised**, but **not yet tried on a real Mac** (it is
   built and started on GitHub's): until `docs/macos.md`'s test list has
   been worked through, show the Mac downloads as "preview", or not at all.
   The links above answer from the first release that carries them.
