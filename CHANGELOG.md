@@ -19,6 +19,8 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+- [Change] **The clock's times count presses the lever does not show.** Two presses between two readings leave the same side running, and the press count used to take that as no press at all - so after a few missed moves the box decided it was making them up and raised the alarm instead. A waiting side's time does not move unless it ran, and a side does not gain time unless it pressed, so those are now counted. In the simulator's worst "missed moves" suite 99 of 109 stopped games keep up (31 of them right, the rest marked), and the alarms drop from 1,845 to 310; an hourglass clock is recognised and left out of it. The press times were also asked to put unseen moves in order, and declined: a press arrives late, so it says that a move was made, never which one.
+
 ## [0.5.5] - 2026-10-21
 
 - [Fix] **Serial ports that cannot be listed now leave a reason in the log.** When the list of ports failed, Alnasl showed no boards and said nothing, which sent a hall on macOS 10.14 off to reinstall drivers that were fine. The list is still empty; the log now has the error. This comes with Arkab 0.3.8.
