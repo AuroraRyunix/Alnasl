@@ -302,11 +302,16 @@ defmodule AlnaslWeb.FairPlayAccessTest do
     test "the owner switches it on and off; nobody else can", %{conn: conn} = ctx do
       {:ok, view, _} = reach(conn, ctx.owner, ctx.hall, ~p"/halls/#{ctx.hall.id}/fair-play")
 
-      view |> form("#fair-play-switch", %{"enabled" => "true"}) |> render_change()
+      refute has_element?(view, "#fair-play-enabled[data-confirm]")
+      view |> element("#fair-play-enabled") |> render_click()
       assert FairPlay.settings(ctx.hall.id).enabled
+      assert has_element?(view, "#fair-play-enabled[aria-checked=true]")
 
-      view |> form("#fair-play-switch", %{"enabled" => "false"}) |> render_change()
+      # Off is the one that asks first: the moves played meanwhile go unanalysed.
+      assert has_element?(view, "#fair-play-enabled[data-confirm]")
+      view |> element("#fair-play-enabled") |> render_click()
       refute FairPlay.settings(ctx.hall.id).enabled
+      assert has_element?(view, "#fair-play-enabled[aria-checked=false]")
 
       for who <- [:arbiter, :viewer, :outsider_admin, :other_owner] do
         assert {:error, :forbidden} =

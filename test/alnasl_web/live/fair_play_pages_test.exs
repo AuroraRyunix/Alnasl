@@ -68,9 +68,9 @@ defmodule AlnaslWeb.FairPlayPagesTest do
 
     test "says it is on but does nothing without an engine", %{conn: conn} do
       {:ok, view, _} = live(conn, ~p"/halls/#{Halls.own_id()}/fair-play")
-      view |> form("#fair-play-switch", %{"enabled" => "true"}) |> render_change()
+      view |> element("#fair-play-enabled") |> render_click()
 
-      assert has_element?(view, "#fair-play-enabled[checked]")
+      assert has_element?(view, "#fair-play-enabled[aria-checked=true]")
       assert has_element?(view, "#fair-play-needs-engine")
     end
 

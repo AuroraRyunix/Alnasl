@@ -20,6 +20,7 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 ## [Unreleased]
 
 - [Feature] **Recordings of real boards are now regression tests.** `mix alnasl.hall pin <capture> --name ... --played "..."` copies a board's recording into `test/fixtures/hall/`, decoded and a fraction of its size, and pins what the tracker made of it; the tests replay every one and fail on any change, better or worse, and `mix alnasl.hall check` (and the last line of `mix alnasl.bench`) says which changed and which pinned games are not the game really played. The six recordings with moves in them from the first real board are in. Two of their games are known and come out right; the other four were sessions of deliberate abuse that nobody wrote down, so they are held to today's answer, which is the most anyone can say about them.
+- [Change] **Fair play is switched on and off with a switch.** It was a checkbox that acted the moment it was ticked, which is what a switch does and a checkbox promises not to. It now looks like one, says On or Off in words, and switching it off asks first: the moves played while it is off are not analysed unless somebody remembers to ask for that round later, and nobody remembers.
 
 ## [0.5.5] - 2026-10-21
 
