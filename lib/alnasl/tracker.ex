@@ -922,6 +922,14 @@ defmodule Alnasl.Tracker do
 
     case one_ply(tr) do
       [{move, flags}] ->
+        # A piece gone onto a square that is not read, and no press to say
+        # it was a move: believed after the hold, but red - a hand that
+        # holds a piece that long reads exactly the same.
+        flags =
+          if not force and move.to in tr.dead and move.from not in tr.dead,
+            do: Enum.uniq(flags ++ [:guessed]),
+            else: flags
+
         if force or stable >= hold(tr, move, flags),
           do: accept(tr, t, [{move, flags}], []),
           else: set_status(tr, :settling, :move)
@@ -946,7 +954,10 @@ defmodule Alnasl.Tracker do
           stable < o.settle_ms ->
             set_status(tr, :settling, :moving)
 
-          (found = stuck(tr) || onto_suspect(tr)) != nil ->
+          # A square suspected of reading empty is believed dead only on
+          # the press that ends the move onto it: a piece parked beside
+          # the board vanishes too, but nobody presses the clock for it.
+          (found = stuck(tr) || (force && onto_suspect(tr)) || nil) != nil ->
             {square, move} = found
 
             if force or stable >= o.unseen_hold_ms,
@@ -1956,7 +1967,7 @@ defmodule Alnasl.Tracker do
     o = tr.opts
 
     found =
-      for {move, []} <- one_ply(tr.pos, tr.phys, tr.raw, o.promotion_default, [], suspects),
+      for {move, _flags} <- one_ply(tr.pos, tr.phys, tr.raw, o.promotion_default, [], suspects),
           move.to in suspects,
           do: {move.to, move}
 

@@ -179,8 +179,10 @@ the rest of the game.
   only suspected: a piece taken to stand on it unseen ("A piece not seen")
   moved off it, and it went on reading nothing - which a pocket does too.
   It is found out when, later, a piece vanishes in the one way that is a
-  legal move onto the suspected square and stays vanished for
-  `unseen_hold_ms`. A square that breaks while empty and is first used by
+  legal move onto the suspected square, and the clock is pressed for it.
+  On time alone it is not: a piece parked beside the board vanishes too,
+  and an earlier version that believed the hold declared live squares
+  dead in the bench's "piece not seen" suites. A square that breaks while empty and is first used by
   a piece arriving is not caught: that piece becomes a piece out of sight
   where it stood, and what follows is what the box makes of that.
 - **Then.** The square goes on the tracker's `dead` list for the rest of
@@ -190,7 +192,9 @@ the rest of the game.
   may start or end on it: the one-move comparison leaves dead squares out,
   and the move generator is asked for moves from them. A move onto it
   shows only as a piece gone, so it must stand `unseen_hold_ms` or be
-  pressed. A pawn promoting on it promotes to the usual piece, marked
+  pressed - and when it was the hold and not a press, the move is marked
+  guessed (red), because a hand that holds a piece two seconds over a
+  square it could go to reads exactly the same. A pawn promoting on it promotes to the usual piece, marked
   assumed: what it became reads as nothing at all.
 - **Said once.** `{:dead, squares}` when the list grows; the site puts
   "Square b8 seems dead" beside the game's state and on the Round tile,
@@ -200,6 +204,11 @@ the rest of the game.
   one (a phantom, rather than a piece that stayed) is an unexplained board
   until somebody looks. The reconstruction (rule 5) does not search
   through dead squares: several moves at once across one is the alarm.
+  And a repetition across a square that reads empty can read as the
+  earlier position it repeats: in one bench game (a perpetual check with
+  the king going to and fro over the dead square b5) the last moves were
+  read as a revision and the game ended four plies short with nothing
+  marked. It happens with the detection off just the same.
 
 The simulator has the fault (`dead_square: {ply, :off | :stuck}`, a square
 the game uses at least twice from then on), and the bench three suites

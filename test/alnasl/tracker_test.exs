@@ -692,7 +692,13 @@ defmodule Alnasl.TrackerTest do
       |> Enum.with_index(1)
       |> Enum.map(fn {x, i} -> {t + i * 5_000, off.(x)} end)
 
-    {tr, out} = feed(tr, [{t, off.(b0)} | timed], 5_000)
+    # Until the knight goes back: a piece gone, which a hand is too, and
+    # the press that ends the move is what says otherwise.
+    {held, _out} = feed(tr, [{t, off.(b0)} | timed], 5_000)
+    assert Tracker.sans(held) == ~w(e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5 d5)
+    assert Tracker.dead(held) == []
+
+    {tr, out} = feed(tr, [{t, off.(b0)} | timed] ++ [{t + 26_000, :press}], 5_000)
     assert Tracker.sans(tr) == ~w(e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5 d5 Nf3)
     assert Tracker.dead(tr) == [sq("f3")]
     assert alarms(out) == []
