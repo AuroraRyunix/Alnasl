@@ -177,6 +177,10 @@ defmodule Alnasl.FairPlay.Cluster do
   """
   @spec fit([map()]) :: params()
   def fit(accs) do
+    # A player-event without a counted ply adds nothing, and its empty sums
+    # do not know how many tests there are: leave it out before it guesses.
+    accs = Enum.filter(accs, &(&1.games > 0))
+
     k =
       case accs do
         [%{t: t} | _] -> length(t)
