@@ -53,7 +53,12 @@ defmodule Alnasl.FairPlay.Calibration do
   record N as the bench instead of running it (for a test engine that has
   none; a real run should let it be measured).
 
-  fit: `--holdout FRACTION` (0.2), `--out FILE`, `--engine-id sf19`.
+  fit: `--holdout FRACTION` (0.2), `--out FILE`, `--engine-id sf19`, and
+  `--band-thresholds FRACTION` for the per-band variant
+  (`Alnasl.FairPlay.BandScale`): that share of the *training* events is
+  kept out of the fit and used only to set each band's threshold, and the
+  held-out events are then judged both ways. Off by default, and the
+  report never uses it.
 
   hits: `--model FILE` (a fitted model), `--holdout FRACTION` (the same as
   the fit's, or the list is of the wrong games), `--threshold SCORE` (3.0).
@@ -68,6 +73,7 @@ defmodule Alnasl.FairPlay.Calibration do
 
   alias Alnasl.FairPlay.{
     Analyzer,
+    BandScale,
     Engines,
     FalsePositives,
     Installer,
@@ -97,7 +103,8 @@ defmodule Alnasl.FairPlay.Calibration do
     holdout: :float,
     bench: :integer,
     model: :string,
-    threshold: :float
+    threshold: :float,
+    band_thresholds: :float
   ]
 
   @doc """
@@ -630,10 +637,18 @@ defmodule Alnasl.FairPlay.Calibration do
   """
   def fit(paths, opts) do
     holdout = Keyword.get(opts, :holdout, 0.2)
+    band_share = opts[:band_thresholds]
     log = Keyword.get(opts, :log, &IO.puts/1)
 
     with {:ok, games, meta} <- read_labels(paths) do
       {held, train} = Enum.split_with(games, &held_out?(holdout_key(&1), holdout))
+
+      # The variant's third set: out of the training events, never out of
+      # the held-out ones, by a hash of its own.
+      {setting, train} =
+        if band_share,
+          do: Enum.split_with(train, &in_share?("bands:", holdout_key(&1), band_share)),
+          else: {[], train}
 
       model =
         Model.fit(keyed_events(train),
@@ -650,13 +665,41 @@ defmodule Alnasl.FairPlay.Calibration do
           }
         )
 
-      report = report(player_events(held), model)
+      held_events = player_events(held)
+      report = report(held_events, model)
       model = %{model | false_positives: report.table}
+
+      {model, variant} =
+        if band_share do
+          scale = band_scale(player_events(setting), model)
+
+          variant = %{
+            report: report(held_events, model, scale),
+            scale: scale,
+            games: length(setting)
+          }
+
+          {%{model | meta: Map.put(model.meta, "band_scale_variant", BandScale.to_json(scale))},
+           variant}
+        else
+          {model, nil}
+        end
 
       if out = opts[:out], do: Model.save(model, out)
       Enum.each(format_report(report, length(train), length(held), opts[:out]), log)
-      {:ok, %{model: model, report: report}}
+      if variant, do: Enum.each(format_variant(variant), log)
+      {:ok, %{model: model, report: report, band_variant: variant}}
     end
+  end
+
+  # The location and scale of each band's scores, on the threshold share.
+  defp band_scale(events, model) do
+    for records <- events,
+        numbers = Stats.player(records, model),
+        numbers.score != nil do
+      {BandScale.band_of(records), numbers.score}
+    end
+    |> BandScale.fit()
   end
 
   @doc """
@@ -706,9 +749,12 @@ defmodule Alnasl.FairPlay.Calibration do
   end
 
   @doc "Whether a key (`holdout_key/1`) is in the held-out share: by hash, so every run agrees."
-  def held_out?(key, fraction) do
+  def held_out?(key, fraction), do: in_share?("holdout:", key, fraction)
+
+  @doc false
+  def in_share?(salt, key, fraction) do
     bucket =
-      :sha256 |> :crypto.hash("holdout:" <> key) |> binary_part(0, 4) |> :binary.decode_unsigned()
+      :sha256 |> :crypto.hash(salt <> key) |> binary_part(0, 4) |> :binary.decode_unsigned()
 
     bucket / 4_294_967_296 < fraction
   end
@@ -782,12 +828,15 @@ defmodule Alnasl.FairPlay.Calibration do
   more. Normal players, all of them (as far as anybody knows): every one
   of those shares is a false-positive rate.
   """
-  def report(events, model) do
+  def report(events, model, scale \\ nil) do
     scored =
       for records <- events,
           numbers = Stats.player(records, model),
           numbers.score != nil,
-          do: {band(records), numbers.score}
+          band = band(records),
+          do:
+            {band,
+             if(scale, do: BandScale.adjust(scale, band, numbers.score), else: numbers.score)}
 
     total = length(scored)
 
@@ -816,6 +865,34 @@ defmodule Alnasl.FairPlay.Calibration do
       %{rating: r} -> Model.band(r)
       nil -> nil
     end
+  end
+
+  defp format_variant(%{report: report, scale: scale, games: games}) do
+    pct = fn x -> :erlang.float_to_binary(x * 100, decimals: 2) <> "%" end
+    two = fn x -> :erlang.float_to_binary(x / 1, decimals: 2) end
+
+    [
+      "",
+      "VARIANT, per-band thresholds (not what the report uses): #{games} training games " <>
+        "kept out of the fit to set them, so the model above was fitted on fewer games",
+      "band thresholds (mean + 3 sd of the band's scores, shrunk with k = #{BandScale.k()}):"
+    ] ++
+      Enum.map(Enum.sort(scale.bands), fn {band, {m, sd, n}} ->
+        "  #{band}: #{two.(BandScale.threshold(scale, band, 3.0))} (#{n} events, mean #{two.(m)}, sd #{two.(sd)})"
+      end) ++
+      ["held-out player-events at or over their band's threshold:"] ++
+      Enum.map(report.table["rows"], fn r ->
+        "  >= #{r["threshold"]} sd: #{r["above"]} of #{r["events"]}" <>
+          if(r["events"] > 0,
+            do: ", #{pct.(r["rate"])} (95%: #{pct.(r["low"])} to #{pct.(r["high"])})",
+            else: ""
+          )
+      end) ++
+      ["per rating band (events, mean adjusted score, share >= 2):"] ++
+      Enum.map(report.bands, fn b ->
+        "  #{b.band}: #{b.events}, #{two.(b.mean)}, #{pct.(b.over_2)}"
+      end) ++
+      ["variant gate: " <> Atom.to_string(gate_verdict(report.table))]
   end
 
   defp format_report(report, train, held, out) do

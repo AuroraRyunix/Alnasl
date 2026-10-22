@@ -310,6 +310,44 @@ defmodule Alnasl.FairPlay.CalibrationTest do
            end) =~ "--model"
   end
 
+  test "the per-band variant takes its thresholds from training events, never from the test", %{
+    tmp_dir: dir
+  } do
+    labels = Path.join(dir, "labels.jsonl")
+    {:ok, _} = label([corpus(dir)], out: labels)
+    me = self()
+
+    {:ok, plain} = Calibration.fit([labels], holdout: 0.3, log: fn _ -> :ok end)
+
+    {:ok, %{model: model, report: report, band_variant: variant}} =
+      Calibration.fit([labels], holdout: 0.3, band_thresholds: 0.4, log: &send(me, {:line, &1}))
+
+    # The same held-out events, judged both ways.
+    assert report.events == plain.report.events
+    assert variant.report.events == report.events
+    assert plain.band_variant == nil
+
+    # The threshold share came out of the training games, not the test's.
+    assert model.meta["held_out_games"] == plain.model.meta["held_out_games"]
+    assert model.meta["games"] + variant.games == plain.model.meta["games"]
+    assert variant.games > 0
+
+    # And it is exactly the training games in the share, by their own hash.
+    {:ok, games, _} = Calibration.read_labels([labels])
+
+    setting =
+      Enum.count(games, fn g ->
+        key = Calibration.holdout_key(g)
+        not Calibration.held_out?(key, 0.3) and Calibration.in_share?("bands:", key, 0.4)
+      end)
+
+    assert setting == variant.games
+
+    assert model.meta["band_scale_variant"]["k"] == 50
+    assert_received {:line, "VARIANT, per-band thresholds" <> _}
+    assert_received {:line, "variant gate: " <> _}
+  end
+
   test "the gate reads the table, and says when the sample is too small to show anything" do
     small = Alnasl.FairPlay.FalsePositives.table(List.duplicate(0.0, 500))
     assert Calibration.gate_verdict(small) == :passed_unproven
