@@ -448,6 +448,27 @@ defmodule AlnaslWeb.Words do
         square: Position.square_name(square)
       )
 
+  @doc """
+  A piece the board reads as another piece of its colour, the game keeping
+  the one it has (`{square, piece, read}`): said for as long as it lasts,
+  so that whoever looks knows the board, not the game, has it wrong.
+  """
+  def confused({square, {:w, kind}, {_white, read}}),
+    do:
+      gettext("White %{piece} on %{square} reads as a %{read}",
+        piece: kind(kind),
+        read: kind(read),
+        square: Position.square_name(square)
+      )
+
+  def confused({square, {_black, kind}, {_, read}}),
+    do:
+      gettext("Black %{piece} on %{square} reads as a %{read}",
+        piece: kind(kind),
+        read: kind(read),
+        square: Position.square_name(square)
+      )
+
   def piece({:w, kind}), do: gettext("white %{piece}", piece: kind(kind))
   def piece({:b, kind}), do: gettext("black %{piece}", piece: kind(kind))
 

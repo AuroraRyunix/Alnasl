@@ -107,6 +107,17 @@ defmodule Alnasl.TrackerMatrixTest do
           assert m.alarms == 0
           assert m.guessed == 0
 
+        # Crosstalk: a piece read as nothing, or as its neighbour in the
+        # frequency table, for a moment or for as long as it stands there.
+        # A wrong kind on the right colour is the board mishearing, never
+        # the game; a piece not heard is a piece standing unseen. Nothing
+        # silent, the games whole bar the odd promotion assumed, and the
+        # alarm left for the rare board nothing explains.
+        :crosstalk ->
+          assert m.faults > 100
+          assert right + v.(:assumed) >= m.games * 0.9
+          assert m.alarms <= m.games * 0.1
+
         # A piece out of sight for a few plies (`:unseen`): the game is
         # followed through it, whole, and nobody is called. (With the
         # benign faults: a pawn left for its piece, as above.)

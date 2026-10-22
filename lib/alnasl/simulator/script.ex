@@ -32,6 +32,8 @@ defmodule Alnasl.Simulator.Script do
   | `:slam` | the move in one reading: the piece was never seen in the air, and a capture never in two steps. A hand faster than the board scans |
   | `:topple` | the move knocks a neighbour over: it is off its square when the clock is pressed and set back on the opponent's time |
   | `:between` | a piece set down between two squares: the board reads it on the square NEXT to the one it went to (a legal move too), until it moves on, is taken, or somebody straightens it a few plies later. Nothing looks wrong until a later move makes no sense |
+  | `:mask` | crosstalk: a piece beside another reads empty - for a moment, or for the rest of this ply. See "Crosstalk" |
+  | `:mistype` | crosstalk: a piece beside another reads as another piece of its colour - for a moment, or until it is touched or nothing stands beside it any more |
   | `:unseen` | a piece (never a king) stops being seen where it stands, for `:unseen_plies` plies or until it moves or is taken: parked beside the board, or standing where the sensor loses it. The game goes on |
 
   Besides those: `:promotion_capture` (`:pawn_left | :quick`) rewrites the
@@ -50,6 +52,23 @@ defmodule Alnasl.Simulator.Script do
   player makes a move that is not legal, after which the game is played on as
   if nothing happened), `:gesture` (the kings set in the centre for the
   result once the game is over) and `:dead_square`.
+
+  ## Crosstalk
+
+  A DGT board finds a piece by the resonance of the coil in its base: each
+  kind of piece rings at its own frequency, and the board reports the
+  piece code (0x01-0x0C: pawn, rook, knight, bishop, king, queen, White's
+  first) whose band it heard. Two pieces close together disturb each
+  other's reading. `:mask` is a piece that is not heard at all - for 100-
+  700 ms, or (half the time) from now until the next ply begins. `:mistype`
+  is a piece heard in the neighbouring band: reported as the piece whose
+  code is next to its own (a pawn as a rook, a rook as a pawn or a knight,
+  a knight as a rook or a bishop, a bishop as a knight or a king, a king
+  as a bishop or a queen, a queen as a king), same colour - for a moment,
+  or (half the time) until the piece is lifted or nothing stands beside it.
+  ASSUMED: that neighbouring codes are neighbouring bands. Either fault
+  picks a piece that has another on a square next to it; `:log` has
+  `{ply, :mask}` and `{ply, :mistype}`.
 
   ## A sensor that has died
 
@@ -175,6 +194,9 @@ defmodule Alnasl.Simulator.Script do
       clock_at: 0,
       hidden: nil,
       crooked: nil,
+      # Crosstalk that lasts: `[%{square, piece, as, until}]` - the square
+      # reads `as` while `piece` stands on it (see "Crosstalk").
+      crosstalk: [],
       dead: nil,
       # The promotion that the `:promotion_capture` game has taken at once.
       taken_at: taken_at,
@@ -195,8 +217,9 @@ defmodule Alnasl.Simulator.Script do
       end)
 
     st = if st.unplug_left > 0, do: plug(st), else: st
-    # Whoever tidies the board after the game straightens the piece.
-    st = %{st | crooked: nil}
+    # Whoever tidies the board after the game straightens the piece, and a
+    # piece not heard through the last move is heard again after it.
+    st = %{st | crooked: nil, crosstalk: Enum.filter(st.crosstalk, &(&1.until == nil))}
     # A board is still read when nobody moves: whatever was missed at the
     # end is on the next reading.
     st = st |> wait(1_500) |> emit({:position, st.b})
@@ -331,7 +354,13 @@ defmodule Alnasl.Simulator.Script do
         if left == 0, do: st |> wait(700) |> plug(), else: st
 
       true ->
-        st = st |> see_again(number) |> maybe_hide(number) |> straighten(move, number)
+        st =
+          st
+          |> see_again(number)
+          |> maybe_hide(number)
+          |> straighten(move, number)
+          |> crosstalk(number)
+
         {missed?, st} = chance(st, :missed)
 
         if missed? and st.streak < o.missed_streak do
@@ -440,6 +469,99 @@ defmodule Alnasl.Simulator.Script do
       number >= hidden.until -> %{st | hidden: nil} |> emit({:position, st.b}) |> pause()
       true -> st
     end
+  end
+
+  # --- crosstalk -----------------------------------------------------------------
+
+  # What is heard instead of a piece in the band beside its own.
+  @mistyped %{
+    p: [:r],
+    r: [:p, :n],
+    n: [:r, :b],
+    b: [:n, :k],
+    k: [:b, :q],
+    q: [:k]
+  }
+
+  defp crosstalk(st, number) do
+    st = fade(st, number)
+    {mask?, st} = chance(st, :mask)
+    {mistype?, st} = chance(st, :mistype)
+    st = if mask?, do: cross(st, number, :mask), else: st
+    if mistype?, do: cross(st, number, :mistype), else: st
+  end
+
+  # Lasting crosstalk ends with the ply it was for, when its piece has been
+  # lifted, or when nothing stands beside it any more.
+  defp fade(%{crosstalk: []} = st, _number), do: st
+
+  defp fade(st, number) do
+    {gone, kept} =
+      Enum.split_with(st.crosstalk, fn entry ->
+        elem(st.b, entry.square) != entry.piece or neighbours(st.b, entry.square) == [] or
+          (entry.until != nil and number > entry.until)
+      end)
+
+    if gone == [], do: st, else: %{st | crosstalk: kept} |> emit({:position, st.b}) |> pause()
+  end
+
+  defp cross(st, number, fault) do
+    taken = Enum.map(st.crosstalk, & &1.square)
+    squares = for sq <- occupied(st.b), sq not in taken, neighbours(st.b, sq) != [], do: sq
+
+    if squares == [] do
+      st
+    else
+      {square, st} = pick(st, squares)
+      {colour, kind} = piece = elem(st.b, square)
+
+      {as, st} =
+        if fault == :mask do
+          {nil, st}
+        else
+          {other, st} = pick(st, Map.fetch!(@mistyped, kind))
+          {{colour, other}, st}
+        end
+
+      {lasting, st} = pick(st, [false, true])
+      entry = %{square: square, piece: piece, as: as, until: nil}
+      st = note(st, number, fault)
+
+      cond do
+        lasting and fault == :mask ->
+          # Until the next ply begins: through this ply's move.
+          %{st | crosstalk: [%{entry | until: number} | st.crosstalk]}
+          |> emit({:position, st.b})
+          |> pause()
+
+        lasting ->
+          %{st | crosstalk: [entry | st.crosstalk]} |> emit({:position, st.b}) |> pause()
+
+        true ->
+          {dt, st} = between(st, {100, 700})
+          was = st.crosstalk
+
+          %{st | crosstalk: [entry | was]}
+          |> emit({:position, st.b})
+          |> wait(dt)
+          |> Map.put(:crosstalk, was)
+          |> emit({:position, st.b})
+          |> pause()
+      end
+    end
+  end
+
+  defp neighbours(board, square) do
+    {file, rank} = {rem(square, 8), div(square, 8)}
+
+    for df <- -1..1,
+        dr <- -1..1,
+        {df, dr} != {0, 0},
+        f = file + df,
+        r = rank + dr,
+        f in 0..7 and r in 0..7,
+        elem(board, r * 8 + f) != nil,
+        do: r * 8 + f
   end
 
   # The `:dead_square` fault: from this ply the square reads what `emit/2`
@@ -898,6 +1020,23 @@ defmodule Alnasl.Simulator.Script do
 
   defp emit(%{mute: true} = st, {:position, _board}), do: st
   defp emit(%{mute: true} = st, {:clock, _reading}), do: st
+
+  # Crosstalk is in the reading of whatever else is wrong with it: the
+  # board as the rest makes it read, then the pieces heard otherwise -
+  # for as long as each still stands there and has a neighbour.
+  defp emit(%{crosstalk: [_ | _] = talk} = st, {:position, board}) do
+    %{ev: [{t, {:position, read}} | rest]} = st = emit(%{st | crosstalk: []}, {:position, board})
+
+    read =
+      Enum.reduce(talk, read, fn %{square: square, piece: piece, as: as}, read ->
+        if elem(board, square) == piece and elem(read, square) == piece and
+             neighbours(board, square) != [],
+           do: put_elem(read, square, as),
+           else: read
+      end)
+
+    %{st | crosstalk: talk, ev: [{t, {:position, read}} | rest]}
+  end
 
   defp emit(%{dead: %{square: square, reading: reading} = dead} = st, {:position, board}) do
     st = emit(%{st | dead: nil}, {:position, put_elem(board, square, reading)})

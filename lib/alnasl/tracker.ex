@@ -58,6 +58,9 @@ defmodule Alnasl.Tracker do
   - `{:dead, [square]}` - the squares whose sensor has been found dead and
     is no longer read, whenever one more is (see "A square that is not
     read" in the code, and `docs/design.md`);
+  - `{:confused, [%{square, piece, read}]}` - the pieces the board has
+    read as another piece of their colour for `unseen_hold_ms` and more,
+    whenever that list changes (see "A piece heard as another");
   - `{:result_suggestion, result, why}` - mate, stalemate, bare kings, or the
     kings set in the centre. A suggestion: the arbiter decides.
 
@@ -114,6 +117,10 @@ defmodule Alnasl.Tracker do
     # A square whose sensor has died is found out and no longer read (see
     # "A square that is not read").
     dead_squares: true,
+    # A piece the board reads as another piece of its colour, where the
+    # game has one, is the board mishearing it (see "A piece heard as
+    # another"): it is not a reason to stop.
+    crosstalk: true,
     # A board plugged in a move or two into its game is caught up from the
     # starting position. Not a game begun on a board that still shows the
     # last one ("New game on this board"): that one waits for the pieces
@@ -167,6 +174,7 @@ defmodule Alnasl.Tracker do
             absent: nil,
             dead: [],
             suspects: [],
+            confused: [],
             stats: %{searches: 0, max_nodes: 0, max_us: 0, budget_hits: 0}
 
   @type t :: %__MODULE__{}
@@ -247,6 +255,12 @@ defmodule Alnasl.Tracker do
   they were found out (see "A square that is not read").
   """
   def dead(%__MODULE__{dead: dead}), do: dead
+
+  @doc """
+  The pieces the board reads as another piece of their colour:
+  `[%{square, piece, read}]` (see "A piece heard as another").
+  """
+  def confused(%__MODULE__{confused: confused}), do: confused
 
   @doc """
   The next time at which `tick/2` could change anything, or `nil` when the
@@ -756,7 +770,7 @@ defmodule Alnasl.Tracker do
          do: %{tr | begun?: true},
          else: tr
 
-    tr = tr |> seen_again() |> absent()
+    tr = tr |> seen_again() |> absent() |> heard(stable)
 
     cond do
       # A move was rewritten to make the next one legal - and the board is
@@ -808,8 +822,12 @@ defmodule Alnasl.Tracker do
   defp absent(tr) do
     gone? = fn square -> elem(tr.raw, square) == nil and elem(tr.phys, square) != nil end
 
+    # A piece heard as another beside it is not a second thing missing.
+    misheard =
+      if tr.opts.crosstalk, do: Enum.map(retyped(tr.phys, tr.raw, tr.pos), & &1.square), else: []
+
     square =
-      case Position.diff(tr.phys, tr.raw) do
+      case Position.diff(tr.phys, tr.raw) -- misheard do
         [square] -> if gone?.(square), do: square
         _other -> if tr.absent && gone?.(tr.absent), do: tr.absent
       end
@@ -820,14 +838,19 @@ defmodule Alnasl.Tracker do
   # The tracker as it would be if the absent piece were taken to stand on
   # its square unseen - or `nil` when that may not be supposed: the rule is
   # off, a piece is unseen already, or it is a king (nobody parks a king
-  # beside the board; a king in the air is castling).
-  defp supposing(%{opts: %{unseen_piece: false}}), do: nil
-  defp supposing(%{absent: nil}), do: nil
-  defp supposing(%{unseen: unseen}) when length(unseen) >= @unseen_max, do: nil
+  # beside the board; a king in the air is castling). Unless `kings?`: the
+  # clock has been pressed over a move by another piece, or the board has
+  # stood like that for as long as the alarm waits - and a king the board
+  # does not hear beside its neighbours is then the likelier story than a
+  # king in a hand.
+  defp supposing(tr, kings? \\ false)
+  defp supposing(%{opts: %{unseen_piece: false}}, _kings?), do: nil
+  defp supposing(%{absent: nil}, _kings?), do: nil
+  defp supposing(%{unseen: unseen}, _kings?) when length(unseen) >= @unseen_max, do: nil
 
-  defp supposing(%{absent: square} = tr) do
+  defp supposing(%{absent: square} = tr, kings?) do
     case elem(tr.phys, square) do
-      {_colour, :k} ->
+      {_colour, :k} when not kings? ->
         nil
 
       piece ->
@@ -850,10 +873,11 @@ defmodule Alnasl.Tracker do
   # One legal move by another piece explains the board, if the absent piece
   # is still where it was. (A move that takes the absent piece, or is the
   # absent piece's own, needs no supposing: the board shows those whole.)
-  defp unseen_move(tr) do
-    with %{} = supposed <- supposing(tr),
+  defp unseen_move(tr, force) do
+    with %{} = supposed <- supposing(tr, force),
          [{move, flags}] <- one_ply(supposed),
-         true <- move.from != tr.absent and move.to != tr.absent do
+         true <- move.from != tr.absent and move.to != tr.absent,
+         false <- match?({_, :k}, elem(tr.phys, tr.absent)) and half_castle?(tr.pos, move) do
       {supposed, move, flags}
     else
       _no -> nil
@@ -955,7 +979,7 @@ defmodule Alnasl.Tracker do
             {supposed, step} = found
             supposed |> accept_under_hand(t, step) |> since(tr)
 
-          (found = unseen_move(tr)) != nil ->
+          (found = unseen_move(tr, force or stable >= o.transient_ms)) != nil ->
             {supposed, move, flags} = found
 
             if force or stable >= max(hold(tr, move, flags), o.unseen_hold_ms),
@@ -997,6 +1021,36 @@ defmodule Alnasl.Tracker do
 
           (step = revision(tr)) != nil ->
             correct(tr, t, length(tr.plies) - 1, [step], :revised)
+
+          (heard = crosstalk(tr)) != nil ->
+            case heard do
+              {:quiet, _cleaned} ->
+                in_sync(tr)
+
+              {:unseen, cleaned, supposed, move, flags} ->
+                if force or stable >= max(hold(tr, move, flags), o.unseen_hold_ms) do
+                  {done, events} =
+                    %{supposed | raw: cleaned} |> accept(t, [{move, flags}], []) |> since(tr)
+
+                  {%{done | raw: tr.raw}, events}
+                else
+                  set_status(tr, :settling, :move)
+                end
+
+              {how, cleaned, move, flags} when how in [:move, :landed] ->
+                # A piece that lands heard as another is half a move as
+                # often as it is a whole one heard wrong (the king on g8 of
+                # a castle, its rook still in the air): it stands as long
+                # as a piece out of sight before it is believed.
+                wait = if how == :landed, do: o.unseen_hold_ms, else: 0
+
+                if force or stable >= max(hold(tr, move, flags), wait) do
+                  {done, events} = accept(%{tr | raw: cleaned}, t, [{move, flags}], [])
+                  {%{done | raw: tr.raw}, events}
+                else
+                  set_status(tr, :settling, :move)
+                end
+            end
 
           true ->
             deeper(tr, t, stable)
@@ -1999,6 +2053,141 @@ defmodule Alnasl.Tracker do
   defp dies(tr, square),
     do: %{tr | dead: tr.dead ++ [square], suspects: tr.suspects -- [square]}
 
+  # --- a piece heard as another --------------------------------------------------
+  #
+  # A DGT board tells a piece by the frequency its coil rings at, and two
+  # pieces close together disturb each other: a bishop beside a king can be
+  # heard as a knight for a moment, or for as long as the two stand there.
+  # No move turns a piece into another of its colour on the same square
+  # (but a promotion's, and a pawn left standing for its piece is the one
+  # square where the game expects that - those are left to the promotion
+  # rules). So a square that holds the right colour and the wrong kind is
+  # the board mishearing, not the game changing: the board is taken as if
+  # it read the game's piece there, and whatever else it shows is judged
+  # as usual. Only when nothing else explains the board - so that two
+  # moves of one side with a hole between (a knight leaving f3 and a
+  # bishop arriving there) are still found as moves.
+  #
+  # It matters when the piece then does something only the piece it was
+  # heard as can do: nothing explains that, and the alarm is raised as for
+  # any board nothing explains.
+
+  # The squares that read a piece of the colour the game has there, and
+  # not its kind. Not a pawn left standing for its piece: there a piece
+  # appearing is the promotion being put right.
+  defp retyped(phys, raw, pos) do
+    for sq <- Position.diff(phys, raw),
+        {colour, kind} <- [elem(phys, sq)],
+        {^colour, read} <- [elem(raw, sq)],
+        read != kind,
+        not stand_in?(pos, sq, {colour, kind}),
+        do: %{square: sq, piece: {colour, kind}, read: {colour, read}}
+  end
+
+  defp stand_in?(pos, square, {colour, :p}),
+    do: match?({^colour, game} when game != :p, elem(pos.board, square))
+
+  defp stand_in?(_pos, _square, _piece), do: false
+
+  # The list the board shows: a piece heard as another goes on it once
+  # that has stood for `unseen_hold_ms` (a moment of it is a hand's
+  # shadow, not worth a word), and comes off it as soon as it is over.
+  defp heard(%{opts: %{crosstalk: false}} = tr, _stable), do: %{tr | confused: []}
+
+  defp heard(tr, stable) do
+    now = retyped(tr.phys, tr.raw, tr.pos)
+
+    confused =
+      if stable >= tr.opts.unseen_hold_ms,
+        do: now,
+        else: Enum.filter(tr.confused, &(&1 in now))
+
+    %{tr | confused: confused}
+  end
+
+  # The board but for the pieces heard as others is the game (`:quiet`),
+  # or the game and one legal move: `{:move, board, move, flags}` with the
+  # board as it would read without them. A piece that lands and is heard
+  # as another counts too - the squares a move goes from and to say which
+  # move it was, whatever is heard on the second.
+  defp crosstalk(%{opts: %{crosstalk: false}}), do: nil
+
+  defp crosstalk(tr) do
+    typed = retyped(tr.phys, tr.raw, tr.pos)
+    cleaned = Enum.reduce(typed, tr.raw, &put_elem(&2, &1.square, &1.piece))
+
+    cond do
+      typed != [] and cleaned == tr.phys ->
+        {:quiet, cleaned}
+
+      typed != [] ->
+        heard = %{tr | raw: cleaned}
+
+        case one_ply(heard) do
+          [{move, flags}] ->
+            {:move, cleaned, move, flags}
+
+          _none_or_several ->
+            # And a piece not heard at all beside one heard as another:
+            # crosstalk rarely comes alone.
+            case unseen_move(heard, true) do
+              {supposed, move, flags} -> {:unseen, cleaned, supposed, move, flags}
+              nil -> landed(tr)
+            end
+        end
+
+      true ->
+        landed(tr)
+    end
+  end
+
+  defp landed(tr) do
+    o = tr.opts
+    squares = Position.diff(tr.phys, tr.raw)
+    from = squares ++ for(%{square: sq} <- tr.unseen, elem(tr.phys, sq) == nil, do: sq)
+    raw = blind(tr.raw, tr.dead)
+
+    found =
+      if length(squares) > 4,
+        do: [],
+        else:
+          for(
+            move <- Chess.moves_from(tr.pos, Enum.uniq(from ++ tr.dead)),
+            move.promo == nil,
+            {board, flags} <- Search.outcomes(tr.phys, move, tr.pos.turn, o.promotion_default),
+            board = blind(shown(board, move, tr.unseen), tr.dead),
+            differ = Position.diff(board, raw),
+            differ != [],
+            Enum.all?(differ, &heard_as?(board, raw, &1)),
+            Chess.legal?(tr.pos, move),
+            do: {move, flags, board}
+          )
+
+    case Enum.uniq_by(found, fn {move, _flags, _board} -> {move.from, move.to} end) do
+      [{move, flags, board}] ->
+        cleaned =
+          board |> Position.diff(raw) |> Enum.reduce(tr.raw, &put_elem(&2, &1, elem(board, &1)))
+
+        {:landed, cleaned, move, flags}
+
+      _none_or_several ->
+        nil
+    end
+  end
+
+  # The square reads a piece of the colour expected there, and another
+  # kind - and not where a pawn may stand on its last rank, and not a king:
+  # a king where a king can go is the king.
+  defp heard_as?(board, raw, square) do
+    case {elem(board, square), elem(raw, square)} do
+      {{colour, kind}, {colour, read}} ->
+        kind != read and read != :k and not (kind == :p and div(square, 8) in [0, 7])
+
+      _other ->
+        false
+    end
+  end
+
   # A piece that is read on the square beside its own (`ghost`) is read
   # there no longer once it moves, or is taken where it really stands.
   defp shown(board, move, unseen) do
@@ -2534,6 +2723,10 @@ defmodule Alnasl.Tracker do
   defp noting({%__MODULE__{unseen: now} = tr, events}, %__MODULE__{unseen: was} = before) do
     events = if Enum.sort(now) == Enum.sort(was), do: events, else: events ++ [{:unseen, now}]
     events = if tr.dead == before.dead, do: events, else: events ++ [{:dead, tr.dead}]
+
+    events =
+      if tr.confused == before.confused, do: events, else: events ++ [{:confused, tr.confused}]
+
     {tr, events}
   end
 

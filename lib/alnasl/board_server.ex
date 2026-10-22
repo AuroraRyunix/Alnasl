@@ -1083,6 +1083,11 @@ defmodule Alnasl.BoardServer do
             do: if(entry[:ghost], do: {sq, piece, entry.ghost}, else: {sq, piece})
           ),
         dead: Tracker.dead(tracker),
+        confused:
+          for(
+            %{square: sq, piece: piece, read: read} <- Tracker.confused(tracker),
+            do: {sq, piece, read}
+          ),
         clock: Clock.read(state.session.clock, t),
         clock_check: Session.clock_check(state.session),
         clock_alarm: state.session.clock_alarm,
@@ -1109,6 +1114,7 @@ defmodule Alnasl.BoardServer do
         plies: [],
         unseen: [],
         dead: [],
+        confused: [],
         clock: nil,
         clock_check: Clock.start_check(state.clock),
         clock_alarm: nil,
