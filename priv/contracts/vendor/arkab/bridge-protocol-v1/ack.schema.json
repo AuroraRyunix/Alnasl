@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/teapot-chess/Arkab/main/priv/contracts/bridge-protocol-v1/ack.schema.json",
+  "title": "ack (server -> bridge)",
+  "description": "Everything up to and including seq belongs to the server now: stored and processed, in that order (Arkab.Protocol.ack/1). A seq at or below what the bridge already counts as acknowledged changes nothing.",
+  "type": "object",
+  "properties": {
+    "type": { "const": "ack" },
+    "seq": { "type": "integer", "minimum": 0 }
+  },
+  "required": ["type", "seq"],
+  "additionalProperties": false
+}

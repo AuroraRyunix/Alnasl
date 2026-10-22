@@ -1,0 +1,82 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/teapot-chess/Arkab/main/priv/contracts/bridge-protocol-v1/command.schema.json",
+  "title": "command (server -> bridge)",
+  "description": "A command for the bridge (Arkab.Protocol.command/3; the set is Arkab.Protocol.commands/0). Every command gets exactly one reply with the same id. When two servers disagree both are obeyed and the later wins. The server sends resend (no board) on every connect.",
+  "type": "object",
+  "oneOf": [
+    {
+      "description": "The whole board again: status, what it says about itself, position, clock. Without board: every board.",
+      "properties": {
+        "type": { "const": "command" },
+        "id": { "$ref": "#/definitions/id" },
+        "cmd": { "const": "resend" },
+        "board": { "$ref": "common.schema.json#/definitions/board_id" }
+      },
+      "required": ["type", "id", "cmd"],
+      "additionalProperties": false
+    },
+    {
+      "description": "Read the port again from scratch, which finds a loop again. Without port: every port.",
+      "properties": {
+        "type": { "const": "command" },
+        "id": { "$ref": "#/definitions/id" },
+        "cmd": { "const": "rescan" },
+        "port": { "type": "string" }
+      },
+      "required": ["type", "id", "cmd"],
+      "additionalProperties": false
+    },
+    {
+      "description": "Read this port from now on, also after a restart.",
+      "properties": {
+        "type": { "const": "command" },
+        "id": { "$ref": "#/definitions/id" },
+        "cmd": { "const": "add_port" },
+        "port": { "type": "string", "minLength": 1 }
+      },
+      "required": ["type", "id", "cmd", "port"],
+      "additionalProperties": false
+    },
+    {
+      "description": "Owner only: stop reading this port.",
+      "properties": {
+        "type": { "const": "command" },
+        "id": { "$ref": "#/definitions/id" },
+        "cmd": { "const": "forget_port" },
+        "port": { "type": "string" }
+      },
+      "required": ["type", "id", "cmd", "port"],
+      "additionalProperties": false
+    },
+    {
+      "description": "Owner only: stop reading this board until its port is added again.",
+      "properties": {
+        "type": { "const": "command" },
+        "id": { "$ref": "#/definitions/id" },
+        "cmd": { "const": "forget_board" },
+        "board": { "$ref": "common.schema.json#/definitions/board_id" }
+      },
+      "required": ["type", "id", "cmd", "board"],
+      "additionalProperties": false
+    },
+    {
+      "description": "Capture files on or off.",
+      "properties": {
+        "type": { "const": "command" },
+        "id": { "$ref": "#/definitions/id" },
+        "cmd": { "const": "record" },
+        "on": { "type": "boolean" }
+      },
+      "required": ["type", "id", "cmd", "on"],
+      "additionalProperties": false
+    }
+  ],
+  "definitions": {
+    "id": {
+      "description": "Chosen by the server, echoed in the reply.",
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

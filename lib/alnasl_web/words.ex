@@ -150,6 +150,12 @@ defmodule AlnaslWeb.Words do
         "The results site has paused all sending. It goes on by itself when that is lifted."
       )
 
+  def link_error({:http, 409, "board_not_published"}),
+    do:
+      gettext(
+        "The results site does not show this round yet. The moves go as soon as it is published."
+      )
+
   def link_error({:http, status, _code}),
     do: gettext("The results site answers with an error of its own (%{status}).", status: status)
 
@@ -190,6 +196,12 @@ defmodule AlnaslWeb.Words do
 
   def entry_error("older_than_stored"),
     do: gettext("The results site already had more moves than this.")
+
+  def entry_error("live_game_limit"),
+    do:
+      gettext(
+        "The results site already shows as many live games as it allows for this tournament."
+      )
 
   def entry_error("discarded_by_arbiter"), do: gettext("Discarded: it could not be sent.")
   def entry_error(nil), do: nil
@@ -770,6 +782,12 @@ defmodule AlnaslWeb.Words do
 
   defp log("outbox.conflict", _d),
     do: gettext("The results site held other moves for this game; it was sent again in full.")
+
+  defp log("outbox.live_game_limit", _d),
+    do:
+      gettext(
+        "The results site shows no more live games for this tournament; this game is tried again with its next move."
+      )
 
   defp log("outbox.discarded", d),
     do:

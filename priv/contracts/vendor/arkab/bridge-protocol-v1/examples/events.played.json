@@ -1,0 +1,7 @@
+{
+  "type": "events",
+  "events": [
+    {"s": 7, "t": 1000, "id": "game", "e": {"k": "pos", "b": "rnbqkbnrpppppppp....................P...........PPPP.PPPRNBQKBNR"}, "at": [4, 1200]},
+    {"s": 8, "t": 1200, "id": "game", "e": {"k": "clk", "w": 59600, "b": 60000, "r": "black"}, "at": [4, null]}
+  ]
+}

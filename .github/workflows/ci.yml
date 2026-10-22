@@ -5,12 +5,18 @@ name: CI
 # serial port program and the launcher - so that a Windows build that no
 # longer builds is found on the push that broke it and not on the day of a
 # release.
+#
+# And the contracts of the programs Alnasl talks to (OpenPairings, Arkab,
+# OpenResults), compared with the providers' current ones: on every push,
+# and once a day, since a provider moves without Alnasl having a commit.
 
 on:
   push:
     branches: ["main"]
   pull_request:
     branches: ["main"]
+  schedule:
+    - cron: "17 5 * * *"
 
 permissions:
   contents: read
@@ -22,6 +28,7 @@ concurrency:
 jobs:
   test:
     name: Build and test
+    if: github.event_name != 'schedule'
     # Named, not `ubuntu-latest`: that label moves, and it should move here
     # when somebody decides it does.
     runs-on: ubuntu-24.04
@@ -83,6 +90,7 @@ jobs:
 
   windows:
     name: Windows builds (serial program, launcher)
+    if: github.event_name != 'schedule'
     runs-on: windows-latest
     env:
       # On Windows the serial library is asked for, not assumed (mix.exs).
@@ -137,3 +145,33 @@ jobs:
         shell: pwsh
         run: |
           .\rel\windows\build_launcher.ps1 -OutputPath "$env:RUNNER_TEMP\Alnasl.exe"
+
+  contracts:
+    name: Contracts match their providers
+    runs-on: ubuntu-24.04
+    env:
+      MIX_ENV: test
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
+        with:
+          elixir-version: "1.20"
+          otp-version: "29.0"
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-mix-contracts-otp29.0-ex1.20-${{ hashFiles('mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-contracts-otp29.0-ex1.20-
+
+      - run: mix deps.get --check-locked
+
+      # Fetches each provider's contract from GitHub and fails, naming the
+      # files, if it is not byte for byte the vendored copy. The fix is
+      # `mix contracts.sync`, the tests, and whatever they then say.
+      - name: Compare the vendored contracts with the providers'
+        run: mix contracts.check

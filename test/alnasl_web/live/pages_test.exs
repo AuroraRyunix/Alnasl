@@ -653,7 +653,7 @@ defmodule AlnaslWeb.PagesTest do
            board.moved board.flipped board.out_of_sync board.resumed move.recovered move.guessed move.assumed move.corrected
            clock.move_missing clock.wrong_side clock.side_ok result.suggested result.set result.reopened repair.undo repair.append repair.edit
            repair.set_fen repair.resync repair.choose repair.paused repair.resumed pgn.attached outbox.offline
-           outbox.online outbox.blocked outbox.conflict outbox.server_ahead outbox.discarded door.unlocked door.refused door.throttled setup.saved
+           outbox.online outbox.blocked outbox.conflict outbox.server_ahead outbox.live_game_limit outbox.discarded door.unlocked door.refused door.throttled setup.saved
            destination.offline destination.online destination.blocked destination.enabled destination.disabled
            table.set table.cleared table.moved table.remapped table.swapped board.recognised
            board.other_serial board.replaced piece.unseen piece.accounted square.dead game.new game.switched move.rewritten move.out_of_turn move.illegal

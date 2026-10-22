@@ -567,6 +567,21 @@ alnasl.link_e2e`).
 It is not part of `mix test` and does not run in CI: it needs two programs,
 two ports and both sets of dependencies.
 
+### The other programs' contracts
+
+What OpenPairings (the board link), Arkab (the bridge's socket, its join
+and the bytes it writes to a DGT board) and OpenResults (where the moves
+go) promise Alnasl is written down by each of them as JSON Schemas with
+examples, and copied here, byte for byte, under `priv/contracts/vendor/`
+(the list is `priv/contracts/vendor/contracts.json`). `mix test`
+(`test/contracts/`) puts every example answer through Alnasl's own code and
+checks every request Alnasl builds against the schemas - and holds the
+stand-ins the other tests talk to to the same. `mix contracts.sync` copies
+the providers' current versions in; `mix contracts.check` only says whether
+they differ, and CI runs it on every push and once a day, so a provider
+that moved is found before a user finds it. A vendored file is never
+edited here: a schema that is wrong goes to its provider.
+
 ### From source on the box (Raspberry Pi, Linux)
 
 [Install](#install) is the short way. This is the long one, for a system

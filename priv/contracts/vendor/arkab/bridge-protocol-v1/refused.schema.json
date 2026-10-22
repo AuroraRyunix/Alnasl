@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/teapot-chess/Arkab/main/priv/contracts/bridge-protocol-v1/refused.schema.json",
+  "title": "refused (server -> bridge)",
+  "description": "The answer to a hello that is not accepted (Arkab.Protocol.refused/1); the server closes the socket. revoked: the bridge forgets this server. Any other reason: shown on the bridge's page and tried again in 60 s.",
+  "type": "object",
+  "properties": {
+    "type": { "const": "refused" },
+    "reason": {
+      "description": "version: the server does not speak the bridge's v. key: not a key the server knows. revoked: the bridge was removed on the server.",
+      "type": "string",
+      "enum": ["version", "key", "revoked"]
+    }
+  },
+  "required": ["type", "reason"],
+  "additionalProperties": false
+}

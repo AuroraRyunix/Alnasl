@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/teapot-chess/Arkab/main/priv/contracts/bridge-protocol-v1/join-response.schema.json",
+  "title": "join response (server -> bridge, HTTP 200)",
+  "description": "The server's answer to an accepted join request (Arkab.Bridge.Join reads it). The socket URL keeps the join link's host and port, with ws for an http link and wss for https.",
+  "type": "object",
+  "properties": {
+    "key": { "description": "This bridge's long secret for this server; it goes in hello.", "type": "string", "minLength": 1 },
+    "socket": { "description": "The path of the link on the same host.", "const": "/bridge/link" },
+    "server": { "description": "The server's name to show. The bridge falls back to the host when absent.", "type": "string" },
+    "owner": { "description": "Whether this server may give owner-only commands (forget_port, forget_board). Anything but true is false.", "type": "boolean" }
+  },
+  "required": ["key", "socket", "server", "owner"],
+  "additionalProperties": false
+}
