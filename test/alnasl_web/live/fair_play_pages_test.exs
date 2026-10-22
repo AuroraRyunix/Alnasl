@@ -22,7 +22,7 @@ defmodule AlnaslWeb.FairPlayPagesTest do
     %{conn: log_in(conn, owner), owner: owner, tournament: Tournaments.default()}
   end
 
-  defp calibrate(dir) do
+  defp calibrate(dir, scan \\ nil) do
     Repo.insert!(%Setting{
       hall_id: Halls.own_id(),
       enabled: true,
@@ -44,7 +44,8 @@ defmodule AlnaslWeb.FairPlayPagesTest do
         within: List.duplicate([0.0, 0.0, 0.0], 3),
         between: List.duplicate([0.0, 0.0, 0.0], 3)
       },
-      weights: [1.0, 1.0, 1.0]
+      weights: [1.0, 1.0, 1.0],
+      scan: scan
     }
 
     Model.save(model, Model.path("sf19", dir))
@@ -161,6 +162,24 @@ defmodule AlnaslWeb.FairPlayPagesTest do
       refute has_element?(view, "#fair-play-uncalibrated")
       assert has_element?(view, "#fair-play-player-id-1", "statistically very unusual")
       assert has_element?(view, "#fair-play-player-id-1", "100.0%")
+    end
+
+    test "one game far better than the rest: the score says which round",
+         %{conn: conn, tournament: t, tmp_dir: dir} do
+      calibrate(dir, Map.new(~w(20-29 30-44 45+), &{&1, {0.0, 1.0, 1000}}))
+      # Plies 1-59 are one game, 60-119 another: the first lost what a
+      # 2000 player loses, the second is all engine.
+      insert_moves(t, 130)
+
+      Repo.update_all(from(m in Alnasl.FairPlay.Move, where: m.ply <= 59),
+        set: [rank: 4, played_cp: 0]
+      )
+
+      {:ok, view, _} = live(conn, ~p"/fair-play/#{t.id}")
+      assert has_element?(view, "#fair-play-one-game-id-1", "decided by one game: round 1")
+
+      {:ok, view, _} = live(conn, ~p"/fair-play/#{t.id}/player?#{[p: "id:1"]}")
+      assert has_element?(view, "#fp-one-game", "decided by one game: round 1")
     end
 
     test "too few moves is said, not scored", %{conn: conn, tournament: t, tmp_dir: dir} do
