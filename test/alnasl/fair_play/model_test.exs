@@ -108,6 +108,63 @@ defmodule Alnasl.FairPlay.ModelTest do
     assert abs(numbers.mm_z) < 4
   end
 
+  test "the correlations are measured on events the regression did not see" do
+    # Two halves of the events that disagree completely: in one, players
+    # match 90% of the time, in the other 10%. Fitted on all of them the
+    # model says 50% and its own residuals look perfectly ordinary. Judged
+    # across the halves, it is wrong by 0.8 every time - which is what the
+    # variance must hear about.
+    :rand.seed(:exsss, {5, 5, 5})
+
+    events =
+      for i <- 1..80 do
+        key = "event #{i}"
+        chance = if Model.fold(key) == 0, do: 0.9, else: 0.1
+
+        records =
+          for g <- 1..4, _ <- 1..15 do
+            gap = 40
+
+            base = %{
+              game: g,
+              rating: 2000,
+              best: [%{move: "a1a1", cp: 0}, %{move: "b1b1", cp: -gap}],
+              near_count: 0,
+              material: 60,
+              skip: nil
+            }
+
+            if :rand.uniform() < chance,
+              do: Map.merge(base, %{rank: 1, played_cp: 0}),
+              else: Map.merge(base, %{rank: 2, played_cp: -gap})
+          end
+
+        {key, records}
+      end
+
+    model = Model.fit(events)
+
+    # The fitted chance is the average of the two halves...
+    assert_in_delta Model.p_match(model, hd(elem(hd(events), 1))), 0.5, 0.05
+
+    # ...and the move-level dispersion is what a 0.9 looks like where 0.1
+    # is true: E[(x − 0.9)²] / 0.09 = 0.73 / 0.09, about 8, not about 1.
+    %{r0: [[mm | _] | _]} = Model.dispersion(model)
+    assert mm > 5
+
+    # The split is the same every time, and both halves get events.
+    folds = Enum.map(events, &Model.fold(elem(&1, 0)))
+    assert folds == Enum.map(events, &Model.fold(elem(&1, 0)))
+    assert Enum.sort(Enum.uniq(folds)) == [0, 1]
+    assert model.meta["dispersion"] =~ "cross-fitted"
+  end
+
+  test "too few events to cross-fit: no correlations, and the independent formula" do
+    model = Model.fit([synthetic(beta(%{"rating" => 0.5}), 200, {9, 9, 9})])
+    assert model.dispersion == nil
+    assert Model.dispersion(model) == Alnasl.FairPlay.Cluster.default()
+  end
+
   @tag :tmp_dir
   test "saved and loaded, and missing until calibrated", %{tmp_dir: dir} do
     assert Model.load("sf19", dir) == {:error, :missing}

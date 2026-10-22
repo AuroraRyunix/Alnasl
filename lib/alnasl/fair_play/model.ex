@@ -33,7 +33,8 @@ defmodule Alnasl.FairPlay.Model do
       the rating. The single global covariance of the z-scores that stood
       here before gave every player-event the inflation of the average
       one, and was measured on the very games the regression was fitted
-      on;
+      on. These are cross-fitted (`fit/2`): measured only on games the
+      regression that judged them had not seen;
     * the held-out false-positive table (`false_positives`): for each
       threshold, how many normal player-events scored that high, with a
       95% interval. Written by the fit (`Alnasl.FairPlay.Calibration`),
@@ -145,41 +146,108 @@ defmodule Alnasl.FairPlay.Model do
 
   @doc """
   Fits a model from player-events: each a list of one player's records in
-  one event. Skipped plies are ignored. Options: `:engine`, `:bench`,
-  `:nodes` (stored as they are), `:meta` (a map, merged into the json's
-  meta), `:lambda` (ridge, default 1.0e-4).
+  one event, or `{key, records}` with a key that says which event (the
+  calibration passes the event's name). Skipped plies are ignored.
+  Options: `:engine`, `:bench`, `:nodes` (stored as they are), `:meta` (a
+  map, merged into the json's meta), `:lambda` (ridge, default 1.0e-4).
+
+  ## Cross-fitted
+
+  The regressions and the loss table are fitted on all the player-events.
+  The correlations of `Alnasl.FairPlay.Cluster` are not, because a model's
+  residuals on its own data are smaller than on anybody else's, and a
+  variance measured on them is the variance of a model that has seen the
+  answers. So the events are split in two by a hash of their key (the
+  same split every run, and a whole event on one side); a model is fitted
+  on each half, and the residual sums of the *other* half are what the
+  correlations are measured on, both halves pooled. The correlations are
+  then those of a model fitted on half the data, judged on data it did
+  not see: if anything slightly too wide for the model fitted on all of
+  it, which is the side to err on. With fewer than two events per half
+  there is nothing to measure and the model has none (`dispersion/1`
+  falls back to independent plies).
   """
-  @spec fit([[map()]], keyword()) :: t()
+  @spec fit([[map()] | {term(), [map()]}], keyword()) :: t()
   def fit(events, opts \\ []) do
+    keyed =
+      events
+      |> Enum.with_index()
+      |> Enum.map(fn
+        {{key, records}, _i} -> {key, records}
+        {records, i} -> {i, records}
+      end)
+
+    all = Enum.map(keyed, &elem(&1, 1))
+    regression = Task.async(fn -> regression(all, opts) end)
+    halves = Enum.split_with(keyed, &(fold(elem(&1, 0)) == 0))
+    dispersion = cross_fitted(halves, opts)
+    model = Task.await(regression, :infinity)
+
+    %{
+      model
+      | engine: opts[:engine],
+        bench: opts[:bench],
+        nodes: opts[:nodes],
+        dispersion: dispersion,
+        meta:
+          Map.merge(
+            %{
+              "plies" => model.meta["plies"],
+              "player_events" => length(events),
+              "dispersion" => "cross-fitted, two halves by event",
+              "attribution" => @attribution
+            },
+            opts[:meta] || %{}
+          )
+    }
+  end
+
+  @doc "Which half (0 or 1) an event's key falls in, for the cross-fit: by hash, so every run agrees."
+  def fold(key) do
+    text = if is_binary(key), do: key, else: inspect(key)
+    <<byte, _::binary>> = :crypto.hash(:sha256, "fold:" <> text)
+    rem(byte, 2)
+  end
+
+  # The regressions and the loss table, nothing else.
+  defp regression(events, opts) do
     counted = events |> List.flatten() |> Enum.filter(&Selection.counted?/1)
     rows = Enum.map(counted, &features/1)
     lambda = Keyword.get(opts, :lambda, 1.0e-4)
 
-    model = %__MODULE__{
-      engine: opts[:engine],
-      bench: opts[:bench],
-      nodes: opts[:nodes],
-      match:
+    match =
+      Task.async(fn ->
         logistic_fit(
           rows,
           Enum.map(counted, &if(Stats.engine_match?(&1), do: 1, else: 0)),
           lambda
-        ),
-      ev: logistic_fit(rows, Enum.map(counted, &if(Stats.ev_match?(&1), do: 1, else: 0)), lambda),
-      loss: loss_table(counted),
-      meta:
-        Map.merge(
-          %{
-            "plies" => length(counted),
-            "player_events" => length(events),
-            "attribution" => @attribution
-          },
-          opts[:meta] || %{}
         )
-    }
+      end)
 
-    %{model | dispersion: dispersion_of(events, model)}
+    ev = logistic_fit(rows, Enum.map(counted, &if(Stats.ev_match?(&1), do: 1, else: 0)), lambda)
+
+    %__MODULE__{
+      match: Task.await(match, :infinity),
+      ev: ev,
+      loss: loss_table(counted),
+      meta: %{"plies" => length(counted)}
+    }
   end
+
+  defp cross_fitted({a, b}, opts) when length(a) >= 2 and length(b) >= 2 do
+    a = Enum.map(a, &elem(&1, 1))
+    b = Enum.map(b, &elem(&1, 1))
+    on_a = Task.async(fn -> regression(a, opts) end)
+    on_b = regression(b, opts)
+    on_a = Task.await(on_a, :infinity)
+
+    (Enum.map(b, &accumulate(&1, on_a)) ++ Enum.map(a, &accumulate(&1, on_b)))
+    |> Cluster.fit()
+  end
+
+  defp cross_fitted(_halves, _opts), do: nil
+
+  defp accumulate(records, model), do: records |> Stats.residuals(model) |> Cluster.accumulate()
 
   @doc """
   Logistic regression by Newton's method: `rows` are feature lists, `ys`
@@ -292,14 +360,6 @@ defmodule Alnasl.FairPlay.Model do
     mean = Enum.sum(xs) / n
     var = Enum.reduce(xs, 0.0, &((&1 - mean) * (&1 - mean) + &2)) / max(n - 1, 1)
     {mean, var, n}
-  end
-
-  # The correlations of `Alnasl.FairPlay.Cluster`, from the residual sums
-  # of every player-event's games.
-  defp dispersion_of(events, model) do
-    events
-    |> Enum.map(&(&1 |> Stats.residuals(model) |> Cluster.accumulate()))
-    |> Cluster.fit()
   end
 
   # --- files -------------------------------------------------------------------

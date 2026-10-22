@@ -636,7 +636,7 @@ defmodule Alnasl.FairPlay.Calibration do
       {held, train} = Enum.split_with(games, &held_out?(holdout_key(&1), holdout))
 
       model =
-        Model.fit(player_events(train),
+        Model.fit(keyed_events(train),
           engine: meta["id"],
           bench: meta["bench"],
           nodes: meta["nodes"],
@@ -715,6 +715,16 @@ defmodule Alnasl.FairPlay.Calibration do
 
   # One player in one event: all their plies there, as records.
   defp player_events(games), do: games |> keyed_player_events() |> Enum.map(&elem(&1, 1))
+
+  # The same, keyed by the event alone: what `Model.fit/2` splits its
+  # cross-fit by, so an event's players are all on one side.
+  defp keyed_events(games),
+    do:
+      games
+      |> keyed_player_events()
+      |> Enum.map(fn {{event, _}, records} ->
+        {event || "game:" <> hd(records).game, records}
+      end)
 
   # The same, with who and where: `{{event, player}, records}`, in a fixed
   # order. Each record knows its game and its opponent's rating.
