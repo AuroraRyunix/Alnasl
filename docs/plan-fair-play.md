@@ -122,24 +122,40 @@ centipawn loss / (1 + |eval|/100), capped at 5.00.
 
 - **Expected match.** A logistic model of the chance of playing the
   engine's first choice, from:
-  - the rating,
+  - the rating, as a linear spline with a knot every 200 points from
+    1200 to 2600 (not one straight line: the old model's worst band was
+    its lowest, which a straight line more or less guarantees),
   - the scaled gap from the best move to the second best,
   - the number of moves within 0.30 of the best,
-  - the material left.
+  - the material left,
+  - the rating times the gap and times the number of good moves,
+  - how far from level the position is, the opponent's rating against
+    the player's, and the share of the remaining clock the move took
+    (with a flag for when that is unknown).
+
+  Players rated under 1000 are not scored (`:low_rating`): the corpus
+  holds six such player-games.
 - **Expected scaled loss.** Its mean and variance per rating band and
   position type.
 - **The three tests:**
-  - **MM**: `(Σ match − Σ p) / sqrt(Σ p(1−p))`.
+  - **MM**: `(Σ match − Σ p) / sqrt(V)`.
   - **EV**: the same, but a move within 0.01 of the best counts as a match.
-  - **ASD**: `(Σ E[d] − Σ d) / sqrt(Σ Var[d])`.
-- **Combined.** `wᵀz / sqrt(wᵀΣw)`, Σ being the three tests' **covariance**
-  measured on the fitting player-events (about zero, not about their mean:
-  under the null each z has mean 0). Phase 1 used the correlation, which
-  assumes every z has variance exactly 1; real player-events are
-  overdispersed (their z's spread wider than the model's variances say),
-  so the combined score ran high and its false-positive rate was
-  optimistic. A model file without a covariance falls back to the
-  correlation (`Alnasl.FairPlay.Model.dispersion/1`).
+  - **ASD**: `(Σ E[d] − Σ d) / sqrt(V)`.
+
+  `V` is not `Σ p(1−p)`: moves of one game, and games of one event, are
+  not independent. Each player-event's covariance of the three sums is
+  built from its own games with an exchangeable correlation at three
+  levels - a ply with itself, two plies of one game, two plies of
+  different games - whose values are measured by the method of moments
+  on residual sums per game (`Alnasl.FairPlay.Cluster` has the formulas).
+  Those values are **cross-fitted**: measured only on events the
+  regression that judged them had not seen.
+- **Combined.** `wᵀz / sqrt(wᵀCw)`, `C` being the three tests' correlation
+  in this player-event, from the same covariance. Phase 1 divided by a
+  correlation that assumed every z had variance 1; phase 2 by one global
+  covariance measured in-sample, which gave every player-event the
+  inflation of the average one. Both are gone; a model file of format 1
+  is refused rather than read.
 - **False-positive rates.** On the held-out player-events, the share
   scoring at or above 2.0, 2.5, 3.0, 3.5, 4.0, 4.5 and 5.0, with the
   exact (Clopper-Pearson) 95% interval and the sample size, stored in the
@@ -226,6 +242,10 @@ a deleted report.
      lines about a hall or an upload rather than a tournament;
    - false-positive rates per threshold, the covariance fix, holdout by
      event (section 5);
+   - the model's second form: rating spline and interactions, more
+     features, per-game variance, cross-fitting, model format 2, the
+     held-out hits by name (`mix fair_play.hits`), and per-band
+     thresholds as a variant that the report does not use;
    - still to come: the bigger calibration itself (run sheet written),
      rapid and blitz models.
 3. **Phase 3:** Maia (the Lc0 network trained per rating) as the human
