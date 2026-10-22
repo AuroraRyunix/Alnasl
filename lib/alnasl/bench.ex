@@ -363,7 +363,27 @@ defmodule Alnasl.Bench do
         {"bullet speed, no faults, fast-play preset", :fast_clean, Map.put(bullet, :faults, %{}),
          fast},
         {"bullet: slams, knocks, missed plies; preset", :bullet, bullet, fast}
-      ]
+      ] ++ hall(bullet, fast)
+  end
+
+  # What hands in a hall do besides the above (`Alnasl.Simulator.Script`,
+  # "Faults"): j'adoube on the opponent's time, a piece knocked onto the
+  # square beside it and put back, the next hand lifting its piece before
+  # this move has landed, the clock's lever knocked back and pressed again.
+  defp hall(bullet, fast) do
+    new = [:adjust, :knock_over, :overlap, :press_back]
+    benign = [:hover, :lift, :knock, :swap, :clock_miss, :leave_pawn, :takeback, :slide]
+
+    [
+      {"j'adoube on the opponent's time 20%", :hall, %{faults: %{adjust: 0.2}}, []},
+      {"knocked onto the next square, put back 10%", :hall, %{faults: %{knock_over: 0.1}}, []},
+      {"the next hand lifts before the move lands 20%", :hall, %{faults: %{overlap: 0.2}}, []},
+      {"the lever knocked back and pressed again 10%", :hall, %{faults: %{press_back: 0.1}}, []},
+      {"the four of them 5% + the benign faults 5%", :hall,
+       %{faults: Map.new(new ++ benign, &{&1, 0.05})}, []},
+      {"bullet + the four of them 10%; preset", :hall_bullet,
+       Map.update!(bullet, :faults, &Map.merge(&1, Map.new(new, fn f -> {f, 0.1} end))), fast}
+    ]
   end
 
   defp classical do

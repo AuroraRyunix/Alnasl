@@ -165,13 +165,34 @@ defmodule Mix.Tasks.Alnasl.Bench do
               |> Enum.map(&Path.join(path, &1)),
             else: [path]
 
-        {games, problems} =
-          files |> Enum.map(&File.read!/1) |> Enum.join("\n\n") |> Alnasl.Pgn.load()
+        # Read once and replayed on every core: ten thousand games take a
+        # quarter of an hour one at a time.
+        read =
+          files
+          |> Enum.map(&File.read!/1)
+          |> Enum.join("\n\n")
+          |> Alnasl.PgnReader.parse()
+          |> Enum.filter(&(&1.headers["FEN"] in [nil, Alnasl.Chess.start_fen()]))
 
-        games = Enum.filter(games, &(&1.start_fen in [nil, Alnasl.Chess.start_fen()]))
+        games =
+          read
+          |> Task.async_stream(
+            fn game ->
+              case Alnasl.Chess.replay(Alnasl.Chess.start_fen(), game.moves) do
+                {:ok, plies} ->
+                  %{game | moves: Enum.map(plies, & &1.san)} |> Map.put(:start_fen, nil)
 
-        if problems != [],
-          do: Mix.shell().info("#{length(problems)} games left out: they do not replay")
+                {:error, _} ->
+                  nil
+              end
+            end,
+            timeout: :infinity
+          )
+          |> Enum.flat_map(fn {:ok, game} -> if game, do: [game], else: [] end)
+
+        if length(games) < length(read),
+          do:
+            Mix.shell().info("#{length(read) - length(games)} games left out: they do not replay")
 
         games
     end
