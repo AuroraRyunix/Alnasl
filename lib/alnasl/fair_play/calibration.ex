@@ -598,7 +598,12 @@ defmodule Alnasl.FairPlay.Calibration do
     end
   end
 
-  # `:zstd.finish/2` only ever answers `{:done, out}`: it loops on its own.
+  # `:zstd.finish/2` only ever answers `{:done, out}`: it loops on its own,
+  # over whatever `stream/2` left behind, and hands back the tail whole. It
+  # used to be matched for `{:continue, ...}` as well, which OTP's spec says
+  # it cannot return, and Dialyzer (rightly) said so. A match error here
+  # would be OTP breaking its own contract, which is loud enough, and is
+  # not a thing this function is expected to survive.
   defp zstd_finish(ctx, acc) do
     {:done, out} = :zstd.finish(ctx, <<>>)
     [acc, out]
