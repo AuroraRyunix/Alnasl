@@ -22,8 +22,6 @@ defmodule Alnasl.LauncherDetails.CLI do
   @log_lines 20
 
   @doc "Entry point for `eval`. Never returns: halts with 0, or 1 when it could not ask."
-  @spec main() :: no_return()
-  @spec main([String.t()]) :: no_return()
   def main(args \\ System.argv()) do
     System.halt(run(args))
   end
@@ -303,4 +301,8 @@ defmodule Alnasl.LauncherDetails.CLI do
 
     if String.starts_with?(language, "nl"), do: "nl", else: "en"
   end
+
+  # main/0 and main/1 end in System.halt/1. (Here, not above them, so the lines
+  # .sobelow-skips cites do not move.)
+  @dialyzer {:no_return, main: 0, main: 1}
 end
