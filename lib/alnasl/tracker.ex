@@ -162,6 +162,7 @@ defmodule Alnasl.Tracker do
             trail: [],
             presses: nil,
             debt: 0,
+            idle: 0,
             pressed_at: nil,
             accepted_at: nil,
             deaf?: false,
@@ -422,9 +423,17 @@ defmodule Alnasl.Tracker do
   def presses(%__MODULE__{} = tr, count, t) do
     pressed? = tr.presses != nil and count > tr.presses
 
+    # Pressed again with nothing on the board changed since the last press:
+    # the lever knocked back and pressed again, or a hand on the wrong
+    # button. Counted - a clock is a clock - but not as moves made: the
+    # search for a longer line than the board shows (`pressed_for/3`)
+    # leaves these out.
+    idle? = pressed? and tr.pressed_at != nil and tr.raw_since <= tr.pressed_at
+
     %{
       tr
       | presses: count,
+        idle: if(idle?, do: tr.idle + count - tr.presses, else: tr.idle),
         # Measured when a press arrives: between presses the game is
         # always a move ahead of the clock.
         debt: if(pressed?, do: max(tr.debt, length(tr.plies) - count), else: tr.debt),
@@ -974,6 +983,11 @@ defmodule Alnasl.Tracker do
           (step = move_under_hand(tr)) != nil ->
             accept_under_hand(tr, t, step)
 
+          (step = move_and_lift(tr)) != nil ->
+            if force or stable >= o.settle_ms,
+              do: accept_under_hand(tr, t, step),
+              else: set_status(tr, :settling, :move)
+
           # The same, with a piece that is not on the board any more.
           (found = unseen_under_hand(tr)) != nil ->
             {supposed, step} = found
@@ -1173,6 +1187,13 @@ defmodule Alnasl.Tracker do
 
       (result = unseen_search(tr, t, stable)) != nil ->
         result
+
+      # The last move or two were believed on the board alone, and nothing
+      # leads on from them: a knocked piece that stood on a square it could
+      # have gone to, and was then put back under the next hand.
+      (back = scope == :all && undone(tr, stable)) not in [nil, false] ->
+        {keep, steps} = back
+        correct(tr, t, keep, steps, :revised)
 
       # Only when the alarm is next: a king on g8 with its rook still on h8
       # is half a castle for a second, and a king's walk if one insists.
@@ -1606,6 +1627,48 @@ defmodule Alnasl.Tracker do
     end
   end
 
+  # The board is reached from nothing the game holds now - but from the
+  # position one or two plies back it is, by moves the readings saw.
+  # Those plies are then not what happened: a piece knocked onto a square
+  # it could go to stands there like a move, and when it is put back with
+  # the next hand already over the board, no takeback is ever read. The
+  # line that changes the game least is taken, the plies it drops are
+  # gone, and every move it puts in their place is a guess (red): a move
+  # that was seen is being unsaid.
+  #
+  # Not the moves the arbiter entered, not across a hole in contact, and
+  # only searched by the squares that were seen to change.
+  defp undone(tr, stable) do
+    count = length(tr.plies)
+    pressed? = tr.pressed_at != nil and tr.pressed_at >= tr.raw_since
+
+    if not (pressed? or stable >= tr.opts.deep_settle_ms) or tr.deaf? or tr.unseen != [] do
+      nil
+    else
+      1..min(1, count)//1
+      |> Enum.find_value(fn back ->
+        dropped = Enum.take(tr.plies, -back)
+
+        with false <- Enum.any?(dropped, &(:arbiter in &1.flags or :imported in &1.flags)),
+             before = Enum.at(tr.history, back - 1),
+             [] <- before.unseen,
+             from = %{pos: before.pos, phys: before.phys, unseen: [], count: count - back},
+             {found, _sure?, _hit?, _tr} <- paths(tr, from, stable, :guided, 1),
+             sans = Enum.map(dropped, & &1.san),
+             [_ | _] = found <-
+               found
+               |> Enum.reject(&(Enum.take(sans_of(from.pos, &1.steps), back) == sans))
+               |> Enum.filter(&(length(&1.steps) <= 3))
+               |> then(&usable(tr, from, &1)) do
+          flags = if length(found) == 1, do: [:guessed, :alone], else: [:guessed]
+          {from.count, marked(hd(found).steps, flags, false)}
+        else
+          _no -> nil
+        end
+      end)
+    end
+  end
+
   # The paths from `from` to the board, best first: `{found, sure?,
   # budget_hit?, tr}`.
   #
@@ -1706,7 +1769,7 @@ defmodule Alnasl.Tracker do
     have = length(one.steps)
     # One press is allowed for: the lever that started the clock is a
     # press too on some clocks, and "Move missing?" waits for two as well.
-    want = tr.presses - 1 - from.count
+    want = tr.presses - tr.idle - 1 - from.count
 
     if want > have and have < tr.opts.search_depth do
       o = tr.opts
@@ -2262,6 +2325,59 @@ defmodule Alnasl.Tracker do
     else
       _no -> nil
     end
+  end
+
+  # The same, when the move never stood alone: the next hand lifted its
+  # piece while this one was still in the air. The board is one legal move
+  # on, but for a piece or two of the side that moves next, gone from
+  # squares the move does not touch. A capture half made reads otherwise:
+  # it is the mover's piece, or both colours, that are missing. Believed
+  # once it has stood for `settle_ms`, or on a press - the move landed
+  # and stands, and the hand belongs to the other side.
+  defp move_and_lift(tr) do
+    them = other(tr.pos.turn)
+
+    gone =
+      for sq <- Position.diff(tr.phys, tr.raw),
+          elem(tr.raw, sq) == nil,
+          match?({^them, _}, elem(tr.phys, sq)),
+          do: sq
+
+    with [_ | _] when length(gone) <= 2 <- gone,
+         filled = Enum.reduce(gone, tr.raw, &put_elem(&2, &1, elem(tr.phys, &1))),
+         [{move, []}] <- one_ply(tr.pos, tr.phys, filled, tr.opts.promotion_default, tr.unseen),
+         true <- elem(tr.raw, move.to) != nil,
+         true <- Enum.all?(gone, &(&1 not in [move.from, move.to] and not crooked?(tr, &1, move))),
+         false <- half_castle?(tr.pos, move),
+         true <- lifted_after?(tr, move.from, gone) do
+      {move, filled}
+    else
+      _no -> nil
+    end
+  end
+
+  # A piece gone from beside the square a quiet move lands on, that came
+  # to where it was read in the last few moves, is as likely that move's
+  # capture, read one square off (a knight set down between d7 and c6 and
+  # taken on d7), as a hand.
+  defp crooked?(tr, square, move) do
+    move.capture == nil and
+      abs(rem(square, 8) - rem(move.to, 8)) <= 1 and
+      abs(div(square, 8) - div(move.to, 8)) <= 1 and
+      tr.plies |> Enum.take(-@misread_back) |> Enum.any?(&(&1.to == square))
+  end
+
+  # The pieces taken to be in the next hand were read on their squares
+  # after the move's piece had left its own: they went up while it was in
+  # the air. Pieces that vanished together with it, in one reading, are
+  # moves nobody saw - a capture among them - and not a hand.
+  defp lifted_after?(tr, from, gone) do
+    count = length(tr.plies)
+
+    Enum.any?(tr.trail, fn {at, board} ->
+      at == count and elem(board, from) == nil and
+        Enum.all?(gone, &(elem(board, &1) == elem(tr.phys, &1)))
+    end)
   end
 
   defp accept_under_hand(tr, t, {move, board}) do
