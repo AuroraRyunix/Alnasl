@@ -386,7 +386,7 @@ defmodule Alnasl.FairPlay.Uploads do
 
                 {accepted, [problem | problems], seen}
 
-              MapSet.member?(boards, {attrs.round, attrs.white_key, attrs.black_key}) ->
+              Map.has_key?(boards, {attrs.round, attrs.white_key, attrs.black_key}) ->
                 problem = %{
                   "game" => number,
                   "white" => attrs.white,
@@ -456,14 +456,15 @@ defmodule Alnasl.FairPlay.Uploads do
   end
 
   # The board games of a tournament, as {round, white key, black key}.
-  defp board_games(nil), do: MapSet.new()
+  defp board_games(nil), do: %{}
 
   defp board_games(tournament_id) do
     from(g in Game, where: g.tournament_id == ^tournament_id)
     |> Repo.all()
     |> Enum.filter(&Alnasl.Games.begun?/1)
-    |> MapSet.new(fn g ->
-      {g.round, FairPlay.Analysis.player_key(g, :white), FairPlay.Analysis.player_key(g, :black)}
+    |> Map.new(fn g ->
+      {{g.round, FairPlay.Analysis.player_key(g, :white),
+        FairPlay.Analysis.player_key(g, :black)}, true}
     end)
   end
 

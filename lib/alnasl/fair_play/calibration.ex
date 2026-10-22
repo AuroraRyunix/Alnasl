@@ -595,18 +595,13 @@ defmodule Alnasl.FairPlay.Calibration do
         if IO.iodata_length(rest) == 0,
           do: [acc, out],
           else: zstd_feed(ctx, rest, [acc, out])
-
-      {:done, out} ->
-        [acc, out]
     end
   end
 
+  # `:zstd.finish/2` only ever answers `{:done, out}`: it loops on its own.
   defp zstd_finish(ctx, acc) do
-    case :zstd.finish(ctx, <<>>) do
-      {:done, out} -> [acc, out]
-      {:continue, out} -> zstd_finish(ctx, [acc, out])
-      {:continue, _rest, out} -> zstd_finish(ctx, [acc, out])
-    end
+    {:done, out} = :zstd.finish(ctx, <<>>)
+    [acc, out]
   end
 
   # --- fit -----------------------------------------------------------------------

@@ -51,15 +51,23 @@ defmodule Alnasl.ThemePacks.Scanner do
   """
   @spec scan(String.t(), String.t()) :: :ok | {:error, String.t()}
   def scan(css, id) when is_binary(css) and is_binary(id) do
-    with true <- String.valid?(css) || {:error, "not UTF-8"},
-         {:ok, tokens} <- tokenize(css, []),
+    if String.valid?(css), do: scan_text(css, id), else: {:error, "not UTF-8"}
+  catch
+    {:refuse, reason} -> {:error, reason}
+  end
+
+  defp scan_text(css, id) do
+    with {:ok, tokens} <- tokenize(css, []),
          :ok <- forbidden(tokens),
          :ok <- urls(tokens),
          :ok <- rules(tokens, id, false) do
       :ok
+    else
+      {:error, _reason} = error -> error
+      # `rules/3` hands back {:ok, rest} only for a nested block, and the
+      # top level is not one; Dialyzer cannot know that.
+      {:ok, _rest} -> {:error, "unexpected }"}
     end
-  catch
-    {:refuse, reason} -> {:error, reason}
   end
 
   # ---------------------------------------------------------------------------

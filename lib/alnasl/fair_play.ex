@@ -193,7 +193,7 @@ defmodule Alnasl.FairPlay do
   anything. Whether the hall has fair play on is the queue's question, not
   the tracker's.
   """
-  @spec game_changed(%{id: integer()}) :: :ok
+  @spec game_changed(term()) :: :ok
   def game_changed(%{id: id}) when is_integer(id), do: Queue.enqueue(id)
   def game_changed(_other), do: :ok
 
