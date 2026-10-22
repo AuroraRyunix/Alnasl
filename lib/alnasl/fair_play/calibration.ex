@@ -764,7 +764,9 @@ defmodule Alnasl.FairPlay.Calibration do
 
   # The same, keyed by the event alone: what `Model.fit/2` splits its
   # cross-fit by, so an event's players are all on one side.
-  defp keyed_events(games),
+  # `Alnasl.FairPlay.Power` fits with it too, so its model is this one.
+  @doc false
+  def keyed_events(games),
     do:
       games
       |> keyed_player_events()

@@ -127,3 +127,4 @@ XSS.SendResp: XSS in `send_resp`,lib/alnasl_web/controllers/file_controller.ex:8
 XSS.SendResp: XSS in `send_resp`,lib/alnasl_web/controllers/theme_pack_controller.ex:63,73B3CD8
 XSS.SendResp: XSS in `send_resp`,lib/alnasl_web/endpoint.ex:73,116D82F
 XSS.SendResp: XSS in `send_resp`,lib/alnasl_web/endpoint.ex:77,3C28565
+Traversal.FileModule: Directory Traversal in `File.write!`,lib/alnasl/fair_play/power.ex:192,1ED194B
