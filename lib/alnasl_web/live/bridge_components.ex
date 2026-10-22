@@ -183,6 +183,22 @@ defmodule AlnaslWeb.BridgeComponents do
             >
               {gettext("Send every board again")}
             </.button>
+            <form id={"bridge-#{b.id}-rename"} phx-submit="rename_bridge" class="inline row">
+              <input type="hidden" name="bridge" value={b.id} />
+              <label class="sr-only" for={"bridge-#{b.id}-name"}>{gettext("Name of the bridge")}</label>
+              <input
+                id={"bridge-#{b.id}-name"}
+                type="text"
+                name="name"
+                value={b.name}
+                maxlength="80"
+                required
+                class="input"
+              />
+              <.button id={"bridge-#{b.id}-rename-submit"} small type="submit">
+                {gettext("Rename")}
+              </.button>
+            </form>
             <.button
               id={"bridge-#{b.id}-remove"}
               small
@@ -262,6 +278,19 @@ defmodule AlnaslWeb.BridgeComponents do
       end
 
     assign(socket, bridge_message: message)
+  end
+
+  def handle("rename_bridge", %{"bridge" => id, "name" => name}, socket, hall_id) do
+    message =
+      with %{} = bridge <- here(id, hall_id),
+           {:ok, _bridge} <- Bridges.rename(bridge, name) do
+        gettext("Renamed.")
+      else
+        nil -> gettext("The bridge does not know that.")
+        {:error, _name} -> gettext("A bridge's name is one to 80 characters.")
+      end
+
+    assign(socket, bridge_message: message, bridges: list(hall_id))
   end
 
   def handle("remove_bridge", %{"id" => id}, socket, hall_id) do

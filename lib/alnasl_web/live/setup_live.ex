@@ -1192,6 +1192,14 @@ defmodule AlnaslWeb.SetupLive do
   defp name_of(t), do: Tournaments.title(t) || gettext("The hall's own tournament")
 
   # One tournament: a line that says the most, and the rest when it is opened.
+  attr :may_arbiter, :boolean, default: false
+  attr :t, :any, required: true
+  attr :open?, :boolean, default: false
+  attr :ranges, :any, default: nil
+  attr :placements, :any, default: nil
+  attr :addable, :any, default: nil
+  attr :board_counts, :any, default: nil
+
   defp tournament_row(assigns) do
     ~H"""
     <li id={"tournament-#{@t.id}"} class={["trow", @open? && "open"]}>
@@ -1253,11 +1261,19 @@ defmodule AlnaslWeb.SetupLive do
           placements={@placements}
           addable={@addable}
           board_counts={@board_counts}
+          may_arbiter={@may_arbiter}
         />
       </div>
     </li>
     """
   end
+
+  attr :may_arbiter, :boolean, default: false
+  attr :t, :any, required: true
+  attr :ranges, :any, default: nil
+  attr :placements, :any, default: nil
+  attr :addable, :any, default: nil
+  attr :board_counts, :any, default: nil
 
   defp tournament_body(assigns) do
     ~H"""
@@ -1346,6 +1362,7 @@ defmodule AlnaslWeb.SetupLive do
     </p>
     <% {table_from, table_to} = @ranges[t.id] || {nil, nil} %>
     <.form
+      :if={@may_arbiter}
       for={to_form(%{"id" => t.id, "from" => table_from, "to" => table_to}, as: :tables)}
       id={"tables-form-#{t.id}"}
       phx-submit="assign_tables"
@@ -1426,6 +1443,7 @@ defmodule AlnaslWeb.SetupLive do
         >
           <%= if row.may? do %>
             <.form
+              :if={@may_arbiter}
               for={
                 to_form(
                   %{
@@ -1509,7 +1527,7 @@ defmodule AlnaslWeb.SetupLive do
               </.button>
 
               <.button
-                :if={not row.last?}
+                :if={@may_arbiter and not row.last?}
                 id={"placement-remove-#{t.id}-#{row.placement.hall_id}"}
                 small
                 type="button"
@@ -1536,7 +1554,7 @@ defmodule AlnaslWeb.SetupLive do
       </ul>
 
       <.form
-        :if={@addable[t.id] != []}
+        :if={@may_arbiter and @addable[t.id] != []}
         for={to_form(%{"t" => t.id}, as: :add)}
         id={"placement-add-#{t.id}"}
         phx-submit="placement_add"
@@ -1564,7 +1582,7 @@ defmodule AlnaslWeb.SetupLive do
 
     <div class="row">
       <.button
-        :if={t.kind == "linked"}
+        :if={@may_arbiter and t.kind == "linked"}
         id={"auto-start-#{t.id}"}
         small
         phx-click="auto_start"
@@ -1577,7 +1595,7 @@ defmodule AlnaslWeb.SetupLive do
       </.button>
 
       <.button
-        :if={t.gone}
+        :if={@may_arbiter and t.gone}
         id={"remove-tournament-#{t.id}"}
         small
         variant="danger"
@@ -1692,6 +1710,7 @@ defmodule AlnaslWeb.SetupLive do
                 placements={@placements}
                 addable={@addable}
                 board_counts={@board_counts}
+                may_arbiter={@may_arbiter}
               />
             </ul>
 
@@ -1752,6 +1771,7 @@ defmodule AlnaslWeb.SetupLive do
                   placements={@placements}
                   addable={@addable}
                   board_counts={@board_counts}
+                  may_arbiter={@may_arbiter}
                 />
               </ul>
             </div>
@@ -1816,6 +1836,7 @@ defmodule AlnaslWeb.SetupLive do
 
                     <div class="link-menu-list">
                       <.button
+                        :if={@may_arbiter}
                         id={"test-link-#{link.id}"}
                         small
                         variant="ghost"
@@ -1826,7 +1847,7 @@ defmodule AlnaslWeb.SetupLive do
                         phx-disable-with={gettext("Testing...")}
                       >{gettext("Test connection")}</.button>
                       <.button
-                        :if={link.state in ["unauthorized", "unsupported"]}
+                        :if={@may_arbiter and link.state in ["unauthorized", "unsupported"]}
                         id={"retry-link-#{link.id}"}
                         small
                         variant="ghost"
@@ -1836,6 +1857,7 @@ defmodule AlnaslWeb.SetupLive do
                         }
                       >{gettext("Try this code again")}</.button>
                       <.button
+                        :if={@may_arbiter}
                         id={"remove-link-#{link.id}"}
                         small
                         variant="danger"
@@ -1880,6 +1902,7 @@ defmodule AlnaslWeb.SetupLive do
                   </p>
 
                   <.button
+                    :if={@may_arbiter}
                     id={"use-code-#{link.id}-#{found.remote_id}"}
                     small
                     phx-click="use_code"
@@ -1900,7 +1923,7 @@ defmodule AlnaslWeb.SetupLive do
                   </p>
 
                   <.button
-                    :if={also != nil and also.may?}
+                    :if={@may_arbiter and (also != nil and also.may?)}
                     id={"link-also-here-#{link.id}-#{found.remote_id}"}
                     small
                     phx-click="placement_add"
@@ -1989,7 +2012,13 @@ defmodule AlnaslWeb.SetupLive do
               class={["add-panel", not (@adding? or @links == []) && "is-collapsed"]}
             >
               <div id={"code-wrap-#{@code_key}"}>
-                <.form for={@code_form} id="code-form" phx-submit="add_code" class="stack">
+                <.form
+                  :if={@may_arbiter}
+                  for={@code_form}
+                  id="code-form"
+                  phx-submit="add_code"
+                  class="stack"
+                >
                   <.input
                     field={@code_form[:code]}
                     id="code-input"
@@ -2056,7 +2085,13 @@ defmodule AlnaslWeb.SetupLive do
                 )}
               </p>
 
-              <.form for={@server_form} id="server-form" phx-submit="save_server" class="stack">
+              <.form
+                :if={@may_arbiter}
+                for={@server_form}
+                id="server-form"
+                phx-submit="save_server"
+                class="stack"
+              >
                 <.input
                   field={@server_form[:server_url]}
                   id="server-url"
@@ -2173,7 +2208,13 @@ defmodule AlnaslWeb.SetupLive do
                 </select>
               </form>
 
-              <.form for={@lichess_form} id="lichess-form" phx-submit="save_lichess" class="stack">
+              <.form
+                :if={@may_arbiter}
+                for={@lichess_form}
+                id="lichess-form"
+                phx-submit="save_lichess"
+                class="stack"
+              >
                 <.input
                   field={@lichess_form[:round]}
                   id="lichess-round"
@@ -2231,7 +2272,7 @@ defmodule AlnaslWeb.SetupLive do
                   </.button>
 
                   <.button
-                    :if={@lichess_hint || @lichess_round_id not in [nil, ""]}
+                    :if={@may_arbiter and (@lichess_hint || @lichess_round_id not in [nil, ""])}
                     id="clear-lichess"
                     type="button"
                     variant="danger"
@@ -2336,7 +2377,13 @@ defmodule AlnaslWeb.SetupLive do
               id="setup-box"
               title={if(@server?, do: gettext("This server"), else: gettext("This box"))}
             >
-              <.form for={@box_form} id="box-form" phx-submit="save_box" class="stack">
+              <.form
+                :if={@may_admin}
+                for={@box_form}
+                id="box-form"
+                phx-submit="save_box"
+                class="stack"
+              >
                 <div class="form-grid">
                   <.input
                     :if={not @server?}
@@ -2529,7 +2576,7 @@ defmodule AlnaslWeb.SetupLive do
 
                 <div :if={!@listen_forced} class="row">
                   <.button
-                    :if={@listen == "local"}
+                    :if={@may_admin and @listen == "local"}
                     id="listen-lan"
                     type="button"
                     phx-click="set_listen"
@@ -2540,7 +2587,7 @@ defmodule AlnaslWeb.SetupLive do
                   </.button>
 
                   <.button
-                    :if={@listen == "lan"}
+                    :if={@may_admin and @listen == "lan"}
                     id="listen-local"
                     type="button"
                     phx-click="set_listen"
@@ -2574,6 +2621,7 @@ defmodule AlnaslWeb.SetupLive do
               </p>
 
               <.form
+                :if={@may_admin}
                 for={@pin_form}
                 id="pin-form"
                 phx-submit="save_pin"
@@ -2587,7 +2635,7 @@ defmodule AlnaslWeb.SetupLive do
                   autocomplete="new-password"
                 /> <.button id="save-pin" type="submit">{gettext("Set the PIN")}</.button>
                 <.button
-                  :if={@pin_set?}
+                  :if={@may_admin and @pin_set?}
                   id="clear-pin"
                   type="button"
                   variant="danger"
@@ -2686,7 +2734,7 @@ defmodule AlnaslWeb.SetupLive do
                 </a>
               </p>
 
-              <form id="update-mode-form" phx-change="save_update_mode" class="stack">
+              <form :if={@may_admin} id="update-mode-form" phx-change="save_update_mode" class="stack">
                 <fieldset class="field">
                   <legend>{gettext("Look for a new version")}</legend>
 
@@ -2721,7 +2769,7 @@ defmodule AlnaslWeb.SetupLive do
               </form>
 
               <div class="row mt-4">
-                <.button id="check-update" type="button" phx-click="check_update">
+                <.button :if={@may_admin} id="check-update" type="button" phx-click="check_update">
                   {gettext("Look now")}
                 </.button>
 
@@ -2813,6 +2861,7 @@ defmodule AlnaslWeb.SetupLive do
 
                       <div class="row">
                         <.button
+                          :if={@may_admin}
                           id="update-cancel"
                           type="button"
                           variant="primary"
@@ -2822,6 +2871,7 @@ defmodule AlnaslWeb.SetupLive do
                         </.button>
 
                         <.button
+                          :if={@may_admin}
                           id="update-force"
                           type="button"
                           variant="danger"
@@ -2854,6 +2904,7 @@ defmodule AlnaslWeb.SetupLive do
 
                       <div class="row">
                         <.button
+                          :if={@may_admin}
                           id="update-yes"
                           type="button"
                           variant="primary"
@@ -2862,7 +2913,12 @@ defmodule AlnaslWeb.SetupLive do
                           {gettext("Yes, download and install")}
                         </.button>
 
-                        <.button id="update-cancel" type="button" phx-click="update_cancel">
+                        <.button
+                          :if={@may_admin}
+                          id="update-cancel"
+                          type="button"
+                          phx-click="update_cancel"
+                        >
                           {gettext("Not now")}
                         </.button>
                       </div>
@@ -2870,6 +2926,7 @@ defmodule AlnaslWeb.SetupLive do
                   <% true -> %>
                     <div class="row">
                       <.button
+                        :if={@may_admin}
                         id="update-start"
                         type="button"
                         variant="primary"
@@ -2882,7 +2939,7 @@ defmodule AlnaslWeb.SetupLive do
               </div>
 
               <form
-                :if={@autostart?}
+                :if={@may_admin and @autostart?}
                 id="autostart-form"
                 phx-change="set_autostart"
                 class="stack mt-5"
@@ -2920,6 +2977,7 @@ defmodule AlnaslWeb.SetupLive do
               <div id="tracker-presets" class="callout">
                 <div class="row">
                   <.button
+                    :if={@may_admin}
                     id="preset-bullet"
                     type="button"
                     phx-click="preset_tracker"
@@ -2942,7 +3000,13 @@ defmodule AlnaslWeb.SetupLive do
                 </p>
               </div>
 
-              <.form for={@tracker_form} id="tracker-form" phx-submit="save_tracker" class="stack">
+              <.form
+                :if={@may_admin}
+                for={@tracker_form}
+                id="tracker-form"
+                phx-submit="save_tracker"
+                class="stack"
+              >
                 <div class="form-grid">
                   <.input
                     field={@tracker_form[:settle_ms]}
@@ -3041,7 +3105,7 @@ defmodule AlnaslWeb.SetupLive do
 
                 <div class="row">
                   <.button id="save-tracker" variant="primary" type="submit">{gettext("Save")}</.button>
-                  <.button id="reset-tracker" type="button" phx-click="reset_tracker">{gettext(
+                  <.button :if={@may_admin} id="reset-tracker" type="button" phx-click="reset_tracker">{gettext(
                     "Back to the defaults"
                   )}</.button>
                 </div>

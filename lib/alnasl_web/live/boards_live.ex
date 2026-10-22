@@ -226,61 +226,114 @@ defmodule AlnaslWeb.BoardsLive do
   end
 
   def handle_event("read_as_loop", %{"id" => id}, socket) do
-    case Alnasl.Loops.read_as_loop(Boards.get!(id)) do
-      {:ok, boards} ->
-        {:noreply, socket |> put_flash(:info, loop_added(boards)) |> load()}
+    with_board(socket, id, fn board ->
+      case Alnasl.Loops.read_as_loop(board) do
+        {:ok, boards} ->
+          {:noreply, socket |> put_flash(:info, loop_added(boards)) |> load()}
 
-      {:error, :not_a_loop} ->
-        {:noreply,
-         socket
-         |> put_flash(
-           :error,
-           gettext("Only one board answers on that port now. It is read as one board again.")
-         )
-         |> load()}
+        {:error, :not_a_loop} ->
+          {:noreply,
+           socket
+           |> put_flash(
+             :error,
+             gettext("Only one board answers on that port now. It is read as one board again.")
+           )
+           |> load()}
 
-      {:error, _reason} ->
-        {:noreply,
-         socket
-         |> put_flash(:error, gettext("The port could not be opened. Try again in a moment."))
-         |> load()}
-    end
+        {:error, _reason} ->
+          {:noreply,
+           socket
+           |> put_flash(:error, gettext("The port could not be opened. Try again in a moment."))
+           |> load()}
+      end
+    end)
   end
 
   def handle_event("toggle", %{"id" => id}, socket) do
-    board = Boards.get!(id)
-    if board.enabled, do: Boards.disconnect(board), else: Boards.connect(board)
-    {:noreply, load(socket)}
+    with_board(socket, id, fn board ->
+      if board.enabled, do: Boards.disconnect(board), else: Boards.connect(board)
+      {:noreply, load(socket)}
+    end)
   end
 
   def handle_event("flip", %{"id" => id}, socket) do
-    board = Boards.get!(id)
-
-    case Boards.flip(board, not board.flipped) do
-      :ok -> {:noreply, load(socket)}
-      _not_running -> {:noreply, put_flash(socket, :error, gettext("Connect the board first."))}
-    end
+    with_board(socket, id, fn board ->
+      case Boards.flip(board, not board.flipped) do
+        :ok -> {:noreply, load(socket)}
+        _not_running -> {:noreply, put_flash(socket, :error, gettext("Connect the board first."))}
+      end
+    end)
   end
 
+  # Removing a board: the row goes, and with it the reading. Its games stay
+  # (a game belongs to a tournament's round and board, not to the reader),
+  # and so do its captures. A bridge's board is also told to the bridge,
+  # which would otherwise report it at once and make the row again.
   def handle_event("delete", %{"id" => id}, socket) do
-    board = Boards.get!(id)
-    Boards.delete(board)
+    with_board(socket, id, fn board ->
+      told = Alnasl.Bridges.forget_board(board)
+      Boards.delete(board)
 
-    {:noreply,
-     socket
-     |> put_flash(:info, gettext("\"%{name}\" removed. Its game is kept.", name: board.name))
-     |> load()}
+      message =
+        case told do
+          :local ->
+            gettext("\"%{name}\" removed. Its game is kept.", name: board.name)
+
+          :sent ->
+            gettext(
+              "\"%{name}\" removed, and the bridge told to stop reporting it. Its game is kept.",
+              name: board.name
+            )
+
+          :offline ->
+            gettext(
+              "\"%{name}\" removed. Its bridge is not connected, so it will report the board again when it is: forget the board on the bridge to stop that. Its game is kept.",
+              name: board.name
+            )
+        end
+
+      {:noreply,
+       socket
+       |> put_flash(if(told == :offline, do: :error, else: :info), message)
+       |> load()}
+    end)
+  end
+
+  def handle_event("rename", %{"board_id" => id, "name" => name}, socket) do
+    with_board(socket, id, fn board ->
+      name = String.trim(name)
+
+      cond do
+        name == "" or String.length(name) > 60 ->
+          {:noreply,
+           put_flash(socket, :error, gettext("A board's name is one to 60 characters."))}
+
+        name == board.name ->
+          {:noreply, socket}
+
+        true ->
+          {:ok, _board} = Boards.update(board, %{name: name})
+
+          {:noreply,
+           socket
+           |> put_flash(
+             :info,
+             gettext("\"%{old}\" is now \"%{new}\".", old: board.name, new: name)
+           )
+           |> load()}
+      end
+    end)
   end
 
   def handle_event("link", %{"board_id" => id, "board_no" => value}, socket) do
-    board = Boards.get!(id)
+    with_board(socket, id, fn board ->
+      case Integer.parse(value) do
+        {number, ""} when number > 0 -> Boards.link(board, socket.assigns.round, number)
+        _none -> Boards.unlink(board)
+      end
 
-    case Integer.parse(value) do
-      {number, ""} when number > 0 -> Boards.link(board, socket.assigns.round, number)
-      _none -> Boards.unlink(board)
-    end
-
-    {:noreply, load(socket)}
+      {:noreply, load(socket)}
+    end)
   end
 
   # Which tournament this board plays in: one board, by hand. A range of
@@ -330,19 +383,33 @@ defmodule AlnaslWeb.BoardsLive do
 
   # The sticker: which table this board stands on.
   def handle_event("table", %{"board_id" => id, "table_no" => value}, socket) do
-    board = Boards.get!(id)
+    with_board(socket, id, fn board ->
+      case String.trim(value) do
+        "" ->
+          if board.table_no, do: Tables.set_table(board, nil)
+          {:noreply, load(socket)}
 
-    case Integer.parse(String.trim(value)) do
-      {number, ""} when number > 0 and number < 10_000 -> Tables.set_table(board, number)
-      _empty -> if board.table_no, do: Tables.set_table(board, nil)
-    end
+        text ->
+          case Integer.parse(text) do
+            {number, ""} when number > 0 and number < 10_000 ->
+              Tables.set_table(board, number)
+              {:noreply, load(socket)}
 
-    {:noreply, load(socket)}
+            _bad ->
+              {:noreply,
+               socket
+               |> put_flash(:error, gettext("A table number is a number from 1 to 9999."))
+               |> load()}
+          end
+      end
+    end)
   end
 
   def handle_event("back_to_table", %{"id" => id}, socket) do
-    Tables.clear_remap(Boards.get!(id))
-    {:noreply, load(socket)}
+    with_board(socket, id, fn board ->
+      Tables.clear_remap(board)
+      {:noreply, load(socket)}
+    end)
   end
 
   def handle_event("clear_remaps", _params, socket) do
@@ -385,7 +452,9 @@ defmodule AlnaslWeb.BoardsLive do
 
   # "Show me": the arbiter goes looking for this one; touching it confirms.
   def handle_event("show_me", %{"id" => id}, socket) do
-    {:noreply, assign(socket, seeking: String.to_integer(id), missed: nil)}
+    with_board(socket, id, fn board ->
+      {:noreply, assign(socket, seeking: board.id, missed: nil)}
+    end)
   end
 
   def handle_event("stop_seeking", _params, socket),
@@ -396,6 +465,49 @@ defmodule AlnaslWeb.BoardsLive do
   end
 
   def handle_event("rescan", _params, socket), do: {:noreply, load(socket)}
+
+  # The board an event names, or a word that it is gone: another tab, or
+  # another arbiter, may have removed it since this page was drawn.
+  defp with_board(socket, id, fun) do
+    with {id, ""} <- Integer.parse(to_string(id)),
+         %Alnasl.Boards.Board{} = board <- Boards.get(id) do
+      fun.(board)
+    else
+      _gone ->
+        {:noreply,
+         socket
+         |> put_flash(:error, gettext("That board is no longer there."))
+         |> load()}
+    end
+  end
+
+  # What Remove asks: what goes, and what stays, said for this board.
+  defp remove_question(s) do
+    playing? = s.running? and s[:game_status] == "live" and s.plies != []
+
+    cond do
+      s.driver == "remote" and playing? ->
+        gettext(
+          "A game is being played on \"%{name}\". Remove it anyway? The moves so far are kept, but nothing reads the board any more, and its bridge is told to stop reporting it.",
+          name: s.name
+        )
+
+      s.driver == "remote" ->
+        gettext(
+          "Remove \"%{name}\"? Its game and captures are kept, and its bridge is told to stop reporting it.",
+          name: s.name
+        )
+
+      playing? ->
+        gettext(
+          "A game is being played on \"%{name}\". Remove it anyway? The moves so far are kept, but nothing reads the board any more.",
+          name: s.name
+        )
+
+      true ->
+        gettext("Remove \"%{name}\"? Its game and captures are kept.", name: s.name)
+    end
+  end
 
   defp int(text, default) do
     case Integer.parse(to_string(text)) do
@@ -525,7 +637,7 @@ defmodule AlnaslWeb.BoardsLive do
           {gettext("Which board is this?")}
         </.button>
 
-        <.button id="number-by-touch" small navigate={~p"/boards/number"}>
+        <.button :if={@may_arbiter} id="number-by-touch" small navigate={~p"/boards/number"}>
           {gettext("Number by touching")}
         </.button>
         <.button id="print-labels" small href={~p"/files/labels"}>{gettext("Labels")}</.button>
@@ -602,7 +714,7 @@ defmodule AlnaslWeb.BoardsLive do
         </ul>
 
         <.form
-          :if={length(@snapshots) > 1}
+          :if={@may_arbiter and length(@snapshots) > 1}
           for={@swap_form}
           id="swap-form"
           phx-submit="swap"
@@ -622,7 +734,7 @@ defmodule AlnaslWeb.BoardsLive do
           </select>
           <.button id="swap-submit" small type="submit">{gettext("Swap")}</.button>
           <.button
-            :if={Enum.any?(@snapshots, &Tables.remapped?/1)}
+            :if={@may_arbiter and Enum.any?(@snapshots, &Tables.remapped?/1)}
             id="clear-remaps"
             small
             type="button"
@@ -635,7 +747,13 @@ defmodule AlnaslWeb.BoardsLive do
 
       <.panel id="board-list" title={gettext("Connected and known boards")} flush>
         <:actions>
-          <.form for={@order_form} id="link-in-order-form" phx-submit="link_in_order" class="row">
+          <.form
+            :if={@may_arbiter}
+            for={@order_form}
+            id="link-in-order-form"
+            phx-submit="link_in_order"
+            class="row"
+          >
             <label for="order-first" class="note">{gettext(
               "Number all in connection order, starting at"
             )}</label>
@@ -696,7 +814,12 @@ defmodule AlnaslWeb.BoardsLive do
               do: gettext("Add a bridge"),
               else: gettext("Open the Bridges tab")}
           </.link>
-          <.link id="boards-empty-wizard" navigate={~p"/setup/wizard"} class="btn ghost">
+          <.link
+            :if={@may_owner}
+            id="boards-empty-wizard"
+            navigate={~p"/setup/wizard"}
+            class="btn ghost"
+          >
             {gettext("Setup wizard")}
           </.link>
         </div>
@@ -740,6 +863,26 @@ defmodule AlnaslWeb.BoardsLive do
               >
                 <td class="b-name">
                   <b>{s.name}</b>
+                  <details :if={@may_arbiter} id={"rename-#{s.id}"} class="rename">
+                    <summary class="note">{gettext("Rename")}</summary>
+                    <form id={"rename-form-#{s.id}"} phx-submit="rename" class="row">
+                      <input type="hidden" name="board_id" value={s.id} />
+                      <label class="sr-only" for={"rename-name-#{s.id}"}>{gettext(
+                        "New name of %{name}",
+                        name: s.name
+                      )}</label>
+                      <input
+                        id={"rename-name-#{s.id}"}
+                        type="text"
+                        name="name"
+                        value={s.name}
+                        maxlength="60"
+                        required
+                        class="input"
+                      />
+                      <.button id={"rename-submit-#{s.id}"} small type="submit">{gettext("Save")}</.button>
+                    </form>
+                  </details>
                   <.badge :if={Tables.new?(s)} id={"new-board-#{s.id}"} tone="warn" icon="warning">
                     {gettext("New board")}
                   </.badge>
@@ -842,6 +985,7 @@ defmodule AlnaslWeb.BoardsLive do
                     </div>
 
                     <.button
+                      :if={@may_arbiter}
                       id={"read-as-loop-#{s.id}"}
                       phx-click="read_as_loop"
                       phx-value-id={s.id}
@@ -941,7 +1085,12 @@ defmodule AlnaslWeb.BoardsLive do
                 </td>
 
                 <td class="b-table">
-                  <form id={"table-form-#{s.id}"} phx-change="table" phx-submit="table">
+                  <form
+                    :if={@may_arbiter}
+                    id={"table-form-#{s.id}"}
+                    phx-change="table"
+                    phx-submit="table"
+                  >
                     <input type="hidden" name="board_id" value={s.id} />
                     <label class="sr-only" for={"table-#{s.id}"}>{gettext("Table number of %{name}",
                       name: s.name
@@ -959,9 +1108,10 @@ defmodule AlnaslWeb.BoardsLive do
                       phx-debounce="blur"
                     />
                   </form>
+                  <span :if={not @may_arbiter} id={"table-text-#{s.id}"}>{s.table_no}</span>
 
                   <form
-                    :if={length(@tournaments) > 1}
+                    :if={@may_arbiter and length(@tournaments) > 1}
                     id={"tournament-form-#{s.id}"}
                     phx-change="tournament"
                   >
@@ -1010,7 +1160,7 @@ defmodule AlnaslWeb.BoardsLive do
                   class="b-link"
                   data-label={gettext("Board of round %{n}", n: @round)}
                 >
-                  <form id={"link-form-#{s.id}"} phx-change="link">
+                  <form :if={@may_arbiter} id={"link-form-#{s.id}"} phx-change="link">
                     <input type="hidden" name="board_id" value={s.id} />
                     <label class="sr-only" for={"link-#{s.id}"}>{gettext("Board number for %{name}",
                       name: s.name
@@ -1034,6 +1184,12 @@ defmodule AlnaslWeb.BoardsLive do
                       </option>
                     </select>
                   </form>
+                  <span
+                    :if={not @may_arbiter and s.round == @round and s.board_no}
+                    id={"link-text-#{s.id}"}
+                  >
+                    {gettext("board %{n}", n: s.board_no)}
+                  </span>
 
                   <div :if={s.round == @round and Tables.remapped?(s)} class="note">
                     <span id={"remapped-#{s.id}"} class="flag plain">
@@ -1041,6 +1197,7 @@ defmodule AlnaslWeb.BoardsLive do
                     </span>
 
                     <.button
+                      :if={@may_arbiter}
                       id={"back-to-table-#{s.id}"}
                       small
                       variant="ghost"
@@ -1067,11 +1224,18 @@ defmodule AlnaslWeb.BoardsLive do
                     {gettext("Show me")}
                   </.button>
 
-                  <.button id={"toggle-#{s.id}"} small phx-click="toggle" phx-value-id={s.id}>
+                  <.button
+                    :if={@may_arbiter}
+                    id={"toggle-#{s.id}"}
+                    small
+                    phx-click="toggle"
+                    phx-value-id={s.id}
+                  >
                     {if s.running?, do: gettext("Disconnect"), else: gettext("Connect")}
                   </.button>
 
                   <.button
+                    :if={@may_arbiter}
                     id={"flip-#{s.id}"}
                     small
                     icon="flip"
@@ -1084,14 +1248,13 @@ defmodule AlnaslWeb.BoardsLive do
                   </.button>
 
                   <.button
+                    :if={@may_arbiter}
                     id={"delete-#{s.id}"}
                     small
                     variant="danger"
                     phx-click="delete"
                     phx-value-id={s.id}
-                    data-confirm={
-                      gettext("Remove \"%{name}\"? Its game and captures are kept.", name: s.name)
-                    }
+                    data-confirm={remove_question(s)}
                   >
                     {gettext("Remove")}
                   </.button>
@@ -1124,7 +1287,7 @@ defmodule AlnaslWeb.BoardsLive do
           />
         </.panel>
 
-        <.panel :if={not @server?} id="add-board" title={gettext("Add a board")}>
+        <.panel :if={not @server? and @may_arbiter} id="add-board" title={gettext("Add a board")}>
           <.form
             for={@add_form}
             id="add-board-form"

@@ -166,7 +166,27 @@ defmodule Alnasl.Bridges do
 
   # --- the list ----------------------------------------------------------------
 
+  @doc """
+  Gives a bridge another name here. The name is the server's own: the
+  bridge's name for itself is only where it started, and is not asked again.
+  Rows already made for its boards keep the names they have.
+  """
+  def rename(%Bridge{} = bridge, name) when is_binary(name) do
+    name = String.trim(name)
+
+    if name == "" or String.length(name) > 80 do
+      {:error, :name}
+    else
+      with {:ok, bridge} <- bridge |> Ecto.Changeset.change(name: name) |> Repo.update() do
+        Log.add(:info, "bridge.renamed", %{name: name}, %{})
+        notify()
+        {:ok, bridge}
+      end
+    end
+  end
+
   @doc "The bridges let in and not removed, oldest first."
+
   def list do
     Repo.all(from b in Bridge, where: is_nil(b.revoked_at), order_by: b.id)
   end
@@ -267,6 +287,38 @@ defmodule Alnasl.Bridges do
         String.starts_with?(row.port || "", prefix),
         do: row
   end
+
+  @doc """
+  Tells the bridge a row came from to stop reporting that board
+  (`forget_board`), so that removing the row here sticks: a bridge keeps
+  naming its boards, and each report would make the row again.
+
+  `:local` for a row that is not a bridge's, `:sent` when the bridge was
+  told, `:offline` when it is not connected - it will report the board
+  again when it is.
+  """
+  def forget_board(%Boards.Board{driver: "remote", port: "bridge-" <> rest}) do
+    with [id, name] <- String.split(rest, ":", parts: 2),
+         {id, ""} <- Integer.parse(id),
+         {:ok, _command} <- command(id, "forget_board", %{"board" => name}) do
+      # Events the bridge queued before it heard are dropped, not made into
+      # a row again: the socket says when it has taken that in.
+      ref = make_ref()
+      if pid = link(id), do: send(pid, {:forget_board, name, self(), ref})
+
+      receive do
+        {^ref, :ok} -> :ok
+      after
+        2_000 -> :ok
+      end
+
+      :sent
+    else
+      _offline -> :offline
+    end
+  end
+
+  def forget_board(_row), do: :local
 
   @doc """
   The row that reads the board the bridge calls `name`: the one connected

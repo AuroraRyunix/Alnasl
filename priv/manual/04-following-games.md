@@ -87,7 +87,12 @@ Set the result on every board, or confirm the suggestion: "Finish game" on the b
 
 A game that was not captured at all: Games page, read the scoresheet's moves, and "Attach" it to its board.
 
+## Deleting a game {#deleting-a-game}
+
+"Delete this game" at the end of "This game" on a board's page is the hall's owner's. It removes the game's moves, its PGN file and what was still waiting to be sent for it; the board is then empty again for the pairing. What was already sent to the results site or the pairing program stays there. A game that a connected board is reading cannot be deleted: disconnect the board on the Boards page first. Every deletion is written in the Log with who played and how far the game got.
+
 ## Rounds {#rounds}
+
 
 With OpenPairings, a round starts by itself a few seconds after the arbiter pairs it there: that tournament's boards show the new round with names, ratings and colours. The boards of the other tournaments are not touched. "Start round N" on the Live page stays for when there is no connection, and a tournament can be told not to start rounds by itself (Setup, Tournaments, open the tournament).
 

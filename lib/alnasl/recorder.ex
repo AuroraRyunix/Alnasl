@@ -90,6 +90,41 @@ defmodule Alnasl.Recorder do
     end
   end
 
+  @doc """
+  Writes down, beside a board's captures, the hall the board was in, so that
+  the captures of a board since removed still belong to that hall: its owner
+  can reach them, and nobody else of it (`removed_visible?/2`).
+  """
+  def remember_hall(board_id, hall_id) when is_integer(hall_id) do
+    dir = Path.join(Paths.captures(), "board-#{board_id}")
+    if File.dir?(dir), do: File.write(Path.join(dir, "hall"), Integer.to_string(hall_id))
+    :ok
+  end
+
+  def remember_hall(_board_id, _hall_id), do: :ok
+
+  @doc "The hall a removed board's captures belong to, or `nil` (removed before that was written down)."
+  def hall_of(board_id) do
+    with {:ok, text} <- File.read(Path.join([Paths.captures(), "board-#{board_id}", "hall"])),
+         {id, ""} <- Integer.parse(String.trim(text)) do
+      id
+    else
+      _none -> nil
+    end
+  end
+
+  @doc """
+  May `scope` open the captures of the removed board `board_id`? The owner
+  of the hall it was in, and an admin; not an arbiter. A board removed before
+  its hall was written down belongs to nobody but an admin.
+  """
+  def removed_visible?(scope, board_id) do
+    case hall_of(board_id) do
+      nil -> Alnasl.Accounts.Scope.everything?(scope)
+      hall_id -> Alnasl.Accounts.Scope.can?(scope, :owner, hall_id)
+    end
+  end
+
   @doc "The capture file `name` of board `board_id`, if it is one of ours."
   def find(board_id, name), do: Enum.find(list(), &(&1.board_id == board_id and &1.name == name))
 

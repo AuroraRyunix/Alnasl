@@ -15,7 +15,7 @@ defmodule AlnaslWeb.BridgeSocket do
   process is waited for (`Alnasl.BoardServer.sync/1`) before the number is
   written down and acknowledged. So an `ack` means saved, queued, logged -
   and a number the box has seen before is acknowledged again without being
-  applied twice. A board whose row is switched off here is not read: its
+  applied twice. A board whose row is switched off here, or was removed here, is not read: its
   events are acknowledged and dropped, as a board with its cable pulled
   would be. A board whose process is not up yet (it is starting, or its
   driver restarting) is waited for; if it does not come, the link is closed
@@ -49,7 +49,7 @@ defmodule AlnaslWeb.BridgeSocket do
   def child_spec(_opts), do: :ignore
 
   @impl true
-  def connect(_info), do: {:ok, %{bridge: nil}}
+  def connect(_info), do: {:ok, %{bridge: nil, forgotten: %{}}}
 
   @impl true
   def init(state) do
@@ -107,8 +107,9 @@ defmodule AlnaslWeb.BridgeSocket do
 
     Registry.update_value(Alnasl.BridgeRegistry, state.bridge.id, fn _old -> live end)
 
-    for %{"id" => name} when is_binary(name) <- live.boards,
-        do: Bridges.board_row(state.bridge, name)
+    names = for %{"id" => name} when is_binary(name) <- live.boards, do: name
+    {state, listed} = reconcile(state, names)
+    for name <- listed, do: Bridges.board_row(state.bridge, name)
 
     Bridges.notify()
     {:ok, state}
@@ -126,6 +127,22 @@ defmodule AlnaslWeb.BridgeSocket do
   end
 
   defp frame(_other, state), do: {:ok, state}
+
+  # A board removed here is `:pending` until a report without it shows that
+  # the bridge has forgotten it (`:gone`); reported again after that, it was
+  # put back on the bridge on purpose and is let in. Returns the new state
+  # and the names to make rows of.
+  defp reconcile(%{forgotten: forgotten} = state, names) do
+    forgotten =
+      Map.new(forgotten, fn
+        {name, :pending} -> {name, if(name in names, do: :pending, else: :gone)}
+        other -> other
+      end)
+
+    back = for {name, :gone} <- forgotten, name in names, do: name
+    forgotten = Map.drop(forgotten, back)
+    {%{state | forgotten: forgotten}, Enum.reject(names, &Map.has_key?(forgotten, &1))}
+  end
 
   defp register(bridge) do
     Registry.register(Alnasl.BridgeRegistry, bridge.id, %{
@@ -147,7 +164,7 @@ defmodule AlnaslWeb.BridgeSocket do
     highest = Enum.reduce(raw, seen, &max(&2, seq(&1)))
     fresh = Enum.filter(decoded, &(&1.seq > seen))
 
-    case apply_events(state.bridge, Enum.chunk_by(fresh, & &1.id), seen) do
+    case apply_events(state, Enum.chunk_by(fresh, & &1.id), seen) do
       {:ok, _done} ->
         state = mark(state, highest)
         reply(Protocol.ack(highest), state)
@@ -170,18 +187,18 @@ defmodule AlnaslWeb.BridgeSocket do
 
   defp mark(state, _seq), do: state
 
-  defp apply_events(_bridge, [], done), do: {:ok, done}
+  defp apply_events(_state, [], done), do: {:ok, done}
 
-  defp apply_events(bridge, [[%{id: name} | _] = events | rest], done) do
-    case board(bridge, name) do
+  defp apply_events(state, [[%{id: name} | _] = events | rest], done) do
+    case board(state, name) do
       :off ->
-        apply_events(bridge, rest, List.last(events).seq)
+        apply_events(state, rest, List.last(events).seq)
 
       {:ok, pid} ->
         try do
           owner = Remote.deliver(pid, events)
           :ok = BoardServer.sync(owner)
-          apply_events(bridge, rest, List.last(events).seq)
+          apply_events(state, rest, List.last(events).seq)
         catch
           :exit, reason -> {:stopped, done, {:board_went, reason}}
         end
@@ -193,10 +210,14 @@ defmodule AlnaslWeb.BridgeSocket do
 
   # The driver of the board the bridge calls `name`, or :off for a row
   # switched off here.
-  defp board(bridge, name) do
-    case Bridges.board_row(bridge, name) do
-      {:ok, %{enabled: false}} -> :off
-      {:ok, row} -> wait_for(row.port, System.monotonic_time(:millisecond) + @board_wait_ms)
+  defp board(%{bridge: bridge, forgotten: forgotten}, name) do
+    with false <- Map.has_key?(forgotten, name),
+         {:ok, row} <- Bridges.board_row(bridge, name) do
+      if row.enabled,
+        do: wait_for(row.port, System.monotonic_time(:millisecond) + @board_wait_ms),
+        else: :off
+    else
+      true -> :off
       {:error, reason} -> {:error, reason}
     end
   end
@@ -221,6 +242,14 @@ defmodule AlnaslWeb.BridgeSocket do
   @impl true
   def handle_info({:command, frame}, %{bridge: %{}} = state),
     do: {:push, {:text, Protocol.encode(frame)}, state}
+
+  # A board removed here (`Alnasl.Bridges.forget_board/1`): what the bridge
+  # still has queued of it is acknowledged and dropped, not made into a row
+  # again. Answered, so the row is removed only after this has been taken in.
+  def handle_info({:forget_board, name, from, ref}, state) do
+    send(from, {ref, :ok})
+    {:ok, %{state | forgotten: Map.put(state.forgotten, name, :pending)}}
+  end
 
   def handle_info(:leave, state) do
     send(self(), {:stop, :normal})

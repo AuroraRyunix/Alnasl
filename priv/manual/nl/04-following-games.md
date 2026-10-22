@@ -87,7 +87,12 @@ Stel op elk bord het resultaat in, of bevestig het voorstel: "Partij beëindigen
 
 Een partij die helemaal niet vastgelegd werd: pagina Partijen, lees de zetten van het partijformulier in en wijs ze toe aan haar bord.
 
+## Een partij verwijderen {#deleting-a-game}
+
+"Deze partij verwijderen" onderaan "Deze partij" op de pagina van een bord is voor de eigenaar van de zaal. Het haalt de zetten van de partij weg, haar PGN-bestand en wat nog wachtte om verstuurd te worden; het bord is dan weer leeg voor de pairing. Wat al naar de resultatensite of het pairingprogramma is gestuurd, blijft daar staan. Een partij die een verbonden bord leest, kan niet verwijderd worden: koppel het bord eerst los op de pagina Borden. Elke verwijdering staat in het logboek, met wie speelde en hoe ver de partij kwam.
+
 ## Rondes {#rounds}
+
 
 Met OpenPairings begint een ronde vanzelf een paar seconden nadat de arbiter ze daar paart: de borden van dat toernooi tonen de nieuwe ronde met namen, ratings en kleuren. De borden van de andere toernooien blijven ongemoeid. "Ronde N starten" op de pagina Live blijft er voor als er geen verbinding is, en een toernooi kan ingesteld worden om rondes niet vanzelf te starten (Instellingen, Toernooien, open het toernooi).
 

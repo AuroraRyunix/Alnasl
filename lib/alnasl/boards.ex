@@ -78,6 +78,7 @@ defmodule Alnasl.Boards do
   def delete(%Board{} = board) do
     stop(board)
     Repo.delete(board)
+    Alnasl.Recorder.remember_hall(board.id, board.hall_id)
     Log.add(:info, "board.removed", %{name: board.name}, %{board_id: board.id})
     notify(board.id)
     Tournaments.notify(board.tournament_id)

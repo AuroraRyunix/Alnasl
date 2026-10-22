@@ -303,7 +303,7 @@ defmodule AlnaslWeb.HallsLive do
   end
 
   def handle_event(event, params, socket)
-      when event in ~w(add_bridge bridge_command remove_bridge move_bridge) do
+      when event in ~w(add_bridge bridge_command rename_bridge remove_bridge move_bridge) do
     scope = socket.assigns.current_scope
     hall = socket.assigns.shown
     need = if event == "move_bridge", do: :admin, else: :owner

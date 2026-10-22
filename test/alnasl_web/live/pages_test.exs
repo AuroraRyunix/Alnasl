@@ -663,7 +663,7 @@ defmodule AlnaslWeb.PagesTest do
            round.started pairing.changed pairing.gone pairing.board_moved pairing.adopted
            pairing.set_aside destination.forced update.requested loop.read loop.joined
            seating.joined seating.undone table.game_carried table.game_fresh table.game_left
-           bridge.joined bridge.removed bridge.moved hall.created hall.deleted account.first account.invited
+           bridge.joined bridge.removed bridge.renamed bridge.moved game.deleted hall.created hall.deleted account.first account.invited
            account.joined account.made account.temporary_password account.refused)
 
       for kind <- kinds do

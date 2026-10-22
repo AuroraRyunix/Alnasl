@@ -26,11 +26,10 @@ defmodule AlnaslWeb.RecordingsLive do
   defp load(socket) do
     Recorder.flush()
     %{current_scope: account, all?: all?, q: q} = socket.assigns
-    everything? = Alnasl.Accounts.Scope.everything?(account)
 
     # The default is this hall's boards; "all my halls" is every hall the
-    # account may see. A capture of a board since removed belongs to no hall:
-    # only an admin's all-halls list has it.
+    # account may see. A capture of a board since removed stays with the hall it was
+    # in, and its owner (`listed?/5`).
     boards =
       if all?,
         do: Alnasl.Halls.visible(account, Boards.list()),
@@ -41,7 +40,7 @@ defmodule AlnaslWeb.RecordingsLive do
 
     captures =
       Recorder.list()
-      |> Enum.filter(&(open? or (all? and everything?) or Map.has_key?(names, &1.board_id)))
+      |> Enum.filter(&listed?(&1.board_id, names, account, all?, open?))
       |> Enum.map(
         &Map.put(
           &1,
@@ -113,20 +112,46 @@ defmodule AlnaslWeb.RecordingsLive do
   def handle_event("delete", %{"board" => board, "name" => name}, socket) do
     case find(board, name, socket.assigns.current_scope) do
       %{path: path} ->
-        File.rm(path)
-        {:noreply, socket |> put_flash(:info, gettext("The capture was deleted.")) |> load()}
+        case File.rm(path) do
+          :ok ->
+            {:noreply, socket |> put_flash(:info, gettext("The capture was deleted.")) |> load()}
+
+          {:error, _reason} ->
+            {:noreply,
+             put_flash(
+               socket,
+               :error,
+               gettext("The capture could not be deleted. Is it open somewhere?")
+             )}
+        end
 
       nil ->
-        {:noreply, socket}
+        {:noreply,
+         socket
+         |> put_flash(:error, gettext("That capture is already gone."))
+         |> load()}
+    end
+  end
+
+  # A board of this hall, or - for one since removed - its hall's owner
+  # (`Alnasl.Recorder.removed_visible?/2`), in this hall's list or in "all
+  # my halls".
+  defp listed?(board_id, names, account, all?, open?) do
+    cond do
+      Map.has_key?(names, board_id) -> true
+      open? -> true
+      not Recorder.removed_visible?(account, board_id) -> false
+      all? -> true
+      true -> Recorder.hall_of(board_id) == Alnasl.Accounts.Scope.hall_id(account)
     end
   end
 
   # A capture of a board since removed has no hall to give a role in
-  # (`AlnaslWeb.Permit` finds no board), so only whoever sees everything may
-  # touch it, as in the list and the download.
+  # (`AlnaslWeb.Permit` finds no board): its hall's owner may touch it, as
+  # in the list and the download.
   defp find(board, name, scope) do
     with {id, ""} <- Integer.parse(board),
-         true <- Boards.get(id) != nil or Alnasl.Accounts.Scope.everything?(scope) do
+         true <- Boards.get(id) != nil or Recorder.removed_visible?(scope, id) do
       Recorder.find(id, name)
     else
       _bad -> nil
@@ -290,6 +315,7 @@ defmodule AlnaslWeb.RecordingsLive do
 
                 <td class="act">
                   <.button
+                    :if={@may_arbiter}
                     id={"dry-#{c.board_id}-#{Path.rootname(c.name)}"}
                     small
                     variant="primary"
@@ -301,6 +327,7 @@ defmodule AlnaslWeb.RecordingsLive do
                   </.button>
 
                   <.button
+                    :if={@may_arbiter}
                     id={"fixture-#{c.board_id}-#{Path.rootname(c.name)}"}
                     small
                     phx-click="export"
@@ -314,6 +341,7 @@ defmodule AlnaslWeb.RecordingsLive do
                     "Download"
                   )}</.button>
                   <.button
+                    :if={@may_arbiter}
                     id={"delete-#{c.board_id}-#{Path.rootname(c.name)}"}
                     small
                     variant="danger"

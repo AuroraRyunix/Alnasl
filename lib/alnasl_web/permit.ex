@@ -45,17 +45,32 @@ defmodule AlnaslWeb.Permit do
     SetupLive
   }
 
-  @everywhere %{"live_ping" => :viewer, "phone_signin" => :viewer, "search" => :viewer}
+  @everywhere %{
+    "live_ping" => :viewer,
+    "phone_signin" => :viewer,
+    "search" => :viewer,
+    "page" => :viewer
+  }
+
+  # About the person, not the hall: the guided tour (`AlnaslWeb.Tour`) - what
+  # they have seen. Whoever has the page may answer it, whatever the page is
+  # about; nothing of a hall, a tournament or a board is named or changed.
+  @personal ~w(tour_start tour_dismiss tour_finish)
 
   @levels %{
-    RoundLive => %{"set_view" => :viewer, "share" => :viewer, "unshare" => :viewer},
+    RoundLive => %{
+      "set_view" => :viewer,
+      "share" => :viewer,
+      "unshare" => :viewer
+    },
     GameLive => %{
       "goto" => :viewer,
       "nav" => :viewer,
       "review" => :viewer,
       "pick" => :viewer,
       "choice_back" => :viewer,
-      "choice_close" => :viewer
+      "choice_close" => :viewer,
+      "delete_game" => :owner
     },
     BoardsLive => %{
       "change_add" => :viewer,
@@ -82,12 +97,19 @@ defmodule AlnaslWeb.Permit do
     OutboxLive => %{"dest_toggle" => :admin, "prune" => :admin},
     SetupLive => %{
       "pick_lichess" => :viewer,
+      "goto_section" => :viewer,
+      "search_tournaments" => :viewer,
+      "toggle_tournament" => :viewer,
+      "toggle_rest" => :viewer,
+      "toggle_quiet" => :viewer,
+      "toggle_adding" => :viewer,
       "wizard_change" => :viewer,
       "wizard_edit" => :viewer,
       "wizard_cancel" => :viewer,
       "save_wizard" => :owner,
       "add_bridge" => :owner,
       "bridge_command" => :owner,
+      "rename_bridge" => :owner,
       "remove_bridge" => :owner,
       "save_box" => :admin,
       "save_pin" => :admin,
@@ -144,6 +166,7 @@ defmodule AlnaslWeb.Permit do
   @doc false
   def allowed?(%Scope{open?: true}, _view, _event, _params, _assigns), do: true
   def allowed?(nil, _view, _event, _params, _assigns), do: false
+  def allowed?(%Scope{}, _view, event, _params, _assigns) when event in @personal, do: true
 
   def allowed?(%Scope{} = scope, view, event, params, assigns) do
     case needed(view, event) do
@@ -177,7 +200,7 @@ defmodule AlnaslWeb.Permit do
   # the Open is played there too.
   @here_events %{
     SetupLive =>
-      ~w(assign_tables add_code add_bridge bridge_command remove_bridge save_wizard wizard_mark),
+      ~w(assign_tables add_code add_bridge bridge_command rename_bridge remove_bridge save_wizard wizard_mark),
     BoardsLive => ~w(link_in_order clear_remaps swap)
   }
   @here_everywhere ~w(seat_tables)
@@ -407,8 +430,9 @@ defmodule AlnaslWeb.Permit do
        when event in ~w(placement_add placement_save placement_remove),
        do: with(id when is_integer(id) <- int(value), do: Alnasl.Halls.get(id))
 
-  defp ref(SetupLive, event, "id", value) when event in ~w(remove_bridge bridge_command),
-    do: with(id when is_integer(id) <- int(value), do: Bridges.get(id))
+  defp ref(SetupLive, event, "id", value)
+       when event in ~w(remove_bridge bridge_command rename_bridge),
+       do: with(id when is_integer(id) <- int(value), do: Bridges.get(id))
 
   defp ref(_view, _event, "id", value) do
     # Elsewhere an "id" in a form of tables or seats is a tournament's.

@@ -117,6 +117,14 @@ De kleuren komen in dezelfde thema's als OpenResults: Papier, Nacht, Bord, Leist
 
 Er kunnen meer thema's bij als themapakketten: een map per thema, in de map `themes` binnen de gegevensmap. Bij de volgende keer laden staan ze na de ingebouwde thema's. Een pakket dat Alnasl niet wil laden, staat in het grijs in de lijst, met de reden.
 
+## De rondleiding {#the-tour}
+
+De eerste keer dat je de site opent (met accounts: de eerste keer dat je aanmeldt), biedt een kaartje in de hoek een rondleiding aan. Ze loopt door de pagina's in de volgorde waarin je een zaal inricht en speelt: de plaatsen, de installatiewizard, bruggen, OpenPairings koppelen, toernooien en hun tafels, de borden en hun nummers, de controle voor de ronde, Live, Resultaten en fair play. Elke stap wijst aan waar het over gaat, zegt in een zin of twee waarvoor het dient, en linkt naar het stuk van deze handleiding dat de rest vertelt. Een stap op een andere pagina brengt je daarheen.
+
+Je ziet alleen de stappen voor wat je rol je laat gebruiken: een kijker krijgt de installatiewizard en de bruggen niet te zien, en fair play alleen de eigenaar van de zaal. Waar een pagina nog niets heeft om aan te wijzen (geen borden, geen toernooien), zegt de stap wat er zal verschijnen.
+
+Gebruik **Volgende** en **Terug** (of de pijltjestoetsen), of **Rondleiding overslaan**; Escape sluit ze ook. Druk je op het kaartje op **Nu niet**, dan wordt ze niet meer aangeboden. Wil je ze later volgen, open dan het accountmenu (de knop onderaan de balk, op een telefoon rechtsboven) en kies **Rondleiding volgen**. Met accounts wordt bij je account bewaard of je ze volgde; op een kastje zonder accounts geldt dat voor het kastje.
+
 ## Woorden in deze handleiding {#words}
 
 De schermen en deze handleiding gebruiken één woord per ding:

@@ -530,6 +530,31 @@ defmodule AlnaslWeb.GameLive do
     end)
   end
 
+  # Deleting a game is the hall owner's. A board that is reading the game
+  # (running) is refused: its process holds the game and would write it back.
+  def handle_event("delete_game", _params, %{assigns: %{game: %{} = game}} = socket) do
+    if reading?(socket.assigns) do
+      {:noreply,
+       put_flash(
+         socket,
+         :error,
+         gettext(
+           "A board is connected to this game. Disconnect it on the Boards page first, then delete the game."
+         )
+       )}
+    else
+      Games.delete(Games.get!(game.id))
+
+      {:noreply,
+       socket
+       |> put_flash(:info, gettext("The game was deleted."))
+       |> assign(forms())
+       |> load()}
+    end
+  end
+
+  def handle_event("delete_game", _params, socket), do: {:noreply, socket}
+
   def handle_event("reopen", _params, socket) do
     with_board(socket, fn board ->
       Boards.reopen(board.id)
@@ -653,6 +678,22 @@ defmodule AlnaslWeb.GameLive do
     end)
   end
 
+  # Is a connected board reading this game now?
+  defp reading?(%{board: %{} = _board, view: %{snap: %{running?: true}}}), do: true
+  defp reading?(_assigns), do: false
+
+  defp delete_game_question(game) do
+    if game.status == "live" do
+      gettext(
+        "Delete this game, which has not been finished? Its moves, its PGN file and what waits to be sent of it go, and the board is empty again for the pairing. What was already sent to the results site or the pairing program stays there."
+      )
+    else
+      gettext(
+        "Delete this game? Its moves, its PGN file and what waits to be sent of it go, and the board is empty again for the pairing. What was already sent to the results site or the pairing program stays there."
+      )
+    end
+  end
+
   defp with_board(socket, fun) do
     case socket.assigns.board do
       nil ->
@@ -771,7 +812,7 @@ defmodule AlnaslWeb.GameLive do
 
         <div class="row">
           <.button
-            :if={@pairing[:game]}
+            :if={@may_arbiter and @pairing[:game]}
             id="pairing-adopt"
             variant="primary"
             phx-click="adopt_pairing"
@@ -782,6 +823,7 @@ defmodule AlnaslWeb.GameLive do
             }
           >{gettext("These moves are that game")}</.button>
           <.button
+            :if={@may_arbiter}
             id="pairing-set-aside"
             phx-click="set_aside"
             data-confirm={
@@ -811,6 +853,7 @@ defmodule AlnaslWeb.GameLive do
 
         <div class="row">
           <.button
+            :if={@may_arbiter}
             id="send-this-instead"
             phx-click="send_this"
             data-confirm={Words.send_this_confirm()}
@@ -954,7 +997,11 @@ defmodule AlnaslWeb.GameLive do
               >{gettext("Live")}</.button>
             </div>
           </.panel>
-          <.help_box state={@view.snap.status} detail={help_detail(@view.snap)} />
+          <.help_box
+            state={@view.snap.status}
+            detail={help_detail(@view.snap)}
+            may_arbiter={@may_arbiter}
+          />
           <div
             :if={@view.snap[:unseen] not in [nil, []]}
             id="unseen-help"
@@ -1016,6 +1063,7 @@ defmodule AlnaslWeb.GameLive do
               <p>{gettext("Nothing is final until you say so.")}</p>
 
               <.button
+                :if={@may_arbiter}
                 id="confirm-suggestion"
                 small
                 variant="primary"
@@ -1150,7 +1198,7 @@ defmodule AlnaslWeb.GameLive do
               marked(@view.snap.plies, :recovered)
             )}: {gettext("not seen one by one, and only one line of moves fits.")}
           </div>
-          <.choice :if={@choice} choice={@choice} line={@view.line} />
+          <.choice :if={@choice} choice={@choice} line={@view.line} may_arbiter={@may_arbiter} />
           <.panel id="finish" title={gettext("This game")}>
             <:actions>
               <span :if={length(@history) > 1} id="game-no" class="note">
@@ -1181,6 +1229,7 @@ defmodule AlnaslWeb.GameLive do
             <div class="row finish-row">
               <.button
                 :for={result <- ["1-0", "1/2-1/2", "0-1"]}
+                :if={@may_arbiter}
                 id={"result-#{String.replace(result, "/", "")}"}
                 phx-click="result"
                 phx-value-result={result}
@@ -1189,7 +1238,7 @@ defmodule AlnaslWeb.GameLive do
               </.button>
 
               <.button
-                :if={@view.snap[:game_status] != "finished"}
+                :if={@may_arbiter and @view.snap[:game_status] != "finished"}
                 id="result-none"
                 phx-click="result"
                 phx-value-result="*"
@@ -1207,7 +1256,7 @@ defmodule AlnaslWeb.GameLive do
 
             <div class="row mt-3">
               <.button
-                :if={@board}
+                :if={@may_arbiter and @board}
                 id="new-game"
                 variant={
                   if @view.snap[:game_status] == "finished" and @new_kind == :replace,
@@ -1225,7 +1274,7 @@ defmodule AlnaslWeb.GameLive do
               </.button>
 
               <.button
-                :if={@board && @new_kind == :extra && @paired?}
+                :if={@may_arbiter and (@board && @new_kind == :extra && @paired?)}
                 id="new-game-replace"
                 phx-click="new_game"
                 phx-value-kind="replace"
@@ -1234,14 +1283,24 @@ defmodule AlnaslWeb.GameLive do
                 }
               >{gettext("It replaces the game of the pairing")}</.button>
               <.button
-                :if={@view.snap[:game_status] == "finished"}
+                :if={@may_arbiter and @view.snap[:game_status] == "finished"}
                 id="tool-reopen"
                 phx-click="reopen"
               >{gettext("Reopen the game")}</.button>
+              <.button
+                :if={@game && @may_owner}
+                id="delete-game"
+                variant="danger"
+                phx-click="delete_game"
+                disabled={reading?(assigns)}
+                data-confirm={delete_game_question(@game)}
+              >{gettext("Delete this game")}</.button>
             </div>
-
+            <p :if={@game && reading?(assigns)} id="delete-game-why" class="note">
+              {gettext("To delete this game, disconnect its board first.")}
+            </p>
             <.form
-              :if={@tournament.kind == "local"}
+              :if={@may_arbiter and @tournament.kind == "local"}
               for={@names_form}
               id="names-form"
               phx-submit="save_names"
@@ -1305,12 +1364,20 @@ defmodule AlnaslWeb.GameLive do
                     "Search deeper for the moves between the last certain position and what the board reads now."
                   )}
                 </p>
-                <.button id="tool-resync" phx-click="resync">{gettext("Resync from here")}</.button>
+                <.button :if={@may_arbiter} id="tool-resync" phx-click="resync">{gettext(
+                  "Resync from here"
+                )}</.button>
               </div>
 
               <div class="tool">
                 <b>{gettext("Type the moves")}</b>
-                <.form for={@moves_form} id="type-moves-form" phx-submit="type_moves" class="stack">
+                <.form
+                  :if={@may_arbiter}
+                  for={@moves_form}
+                  id="type-moves-form"
+                  phx-submit="type_moves"
+                  class="stack"
+                >
                   <.input
                     field={@moves_form[:moves]}
                     id="typed-moves"
@@ -1341,11 +1408,18 @@ defmodule AlnaslWeb.GameLive do
                 </script>
 
                 <.button
+                  :if={@may_arbiter}
                   id="tool-undo"
                   phx-click="undo"
                   data-confirm={gettext("Take back the last move?")}
                 >{gettext("Undo last move")}</.button>
-                <.form for={@edit_form} id="edit-move-form" phx-submit="edit_move" class="stack">
+                <.form
+                  :if={@may_arbiter}
+                  for={@edit_form}
+                  id="edit-move-form"
+                  phx-submit="edit_move"
+                  class="stack"
+                >
                   <div class="row">
                     <.input
                       field={@edit_form[:ply]}
@@ -1374,7 +1448,13 @@ defmodule AlnaslWeb.GameLive do
                   {gettext("For a resumed game, or as a last resort. The moves so far are replaced.")}
                 </p>
 
-                <.form for={@fen_form} id="set-fen-form" phx-submit="set_fen" class="stack">
+                <.form
+                  :if={@may_arbiter}
+                  for={@fen_form}
+                  id="set-fen-form"
+                  phx-submit="set_fen"
+                  class="stack"
+                >
                   <.input
                     field={@fen_form[:fen]}
                     id="fen-input"
@@ -1388,9 +1468,13 @@ defmodule AlnaslWeb.GameLive do
                     }
                   />
                   <div class="row">
-                    <.button id="tool-fen-from-board" type="button" small phx-click="use_board_fen">{gettext(
-                      "Take it from the board"
-                    )}</.button>
+                    <.button
+                      :if={@may_arbiter}
+                      id="tool-fen-from-board"
+                      type="button"
+                      small
+                      phx-click="use_board_fen"
+                    >{gettext("Take it from the board")}</.button>
                     <.button
                       id="tool-fen"
                       type="submit"
@@ -1403,28 +1487,30 @@ defmodule AlnaslWeb.GameLive do
               <div class="tool">
                 <b>{gettext("This board")}</b>
                 <.button
-                  :if={!@view.snap[:paused]}
+                  :if={@may_arbiter and !@view.snap[:paused]}
                   id="tool-pause"
                   phx-click="pause"
                   phx-value-paused="true"
                 >{gettext("Pause sending")}</.button>
                 <.button
-                  :if={@view.snap[:paused]}
+                  :if={@may_arbiter and @view.snap[:paused]}
                   id="tool-resume"
                   variant="primary"
                   phx-click="pause"
                   phx-value-paused="false"
                 >{gettext("Resume sending")}</.button>
-                <.button id="tool-flip" icon="flip" phx-click="flip">{gettext("Turn the board round")}</.button>
+                <.button :if={@may_arbiter} id="tool-flip" icon="flip" phx-click="flip">{gettext(
+                  "Turn the board round"
+                )}</.button>
                 <%= if @view.snap[:player] do %>
                   <.button
-                    :if={!@view.snap.player.paused?}
+                    :if={@may_arbiter and !@view.snap.player.paused?}
                     id="tool-sim-pause"
                     phx-click="player"
                     phx-value-do="pause"
                   >{gettext("Stop the simulated game")}</.button>
                   <.button
-                    :if={@view.snap.player.paused?}
+                    :if={@may_arbiter and @view.snap.player.paused?}
                     id="tool-sim-resume"
                     phx-click="player"
                     phx-value-do="resume"
@@ -1518,6 +1604,7 @@ defmodule AlnaslWeb.GameLive do
   # position after, and one move at a time.
   attr :choice, :map, required: true
   attr :line, :list, required: true
+  attr :may_arbiter, :boolean, default: false
 
   defp choice(assigns) do
     %{alt: alt, picked: picked} = assigns.choice
@@ -1650,7 +1737,7 @@ defmodule AlnaslWeb.GameLive do
 
       <div class="row choice-actions mt-4">
         <.button
-          :if={@ask.line && @total > 1}
+          :if={@may_arbiter and (@ask.line && @total > 1)}
           id="choice-apply"
           variant="primary"
           phx-click="choice_apply"
@@ -1659,6 +1746,7 @@ defmodule AlnaslWeb.GameLive do
         </.button>
 
         <.button
+          :if={@may_arbiter}
           id="choice-keep"
           variant={if @ask.line && @total > 1, do: nil, else: "primary"}
           phx-click="choice_keep"
@@ -1667,7 +1755,7 @@ defmodule AlnaslWeb.GameLive do
         </.button>
 
         <.button
-          :if={@total == 1 and @last?}
+          :if={@may_arbiter and (@total == 1 and @last?)}
           id="choice-undo"
           phx-click="choice_undo"
           data-confirm={gettext("Take these moves back?")}
@@ -1675,7 +1763,7 @@ defmodule AlnaslWeb.GameLive do
           {gettext("Take them back")}
         </.button>
 
-        <.button :if={@total == 1} id="choice-type" phx-click="choice_type">
+        <.button :if={@may_arbiter and @total == 1} id="choice-type" phx-click="choice_type">
           {gettext("Type the right moves")}
         </.button>
 
@@ -1704,6 +1792,7 @@ defmodule AlnaslWeb.GameLive do
 
   attr :state, :atom, required: true
   attr :detail, :any, default: nil
+  attr :may_arbiter, :boolean, default: false
 
   defp help_box(assigns) do
     {headline, text} = Words.state_help(assigns.state, assigns.detail)
@@ -1722,7 +1811,7 @@ defmodule AlnaslWeb.GameLive do
         <p>{@text}</p>
 
         <.button
-          :if={match?({kind, _} when kind in [:out_of_turn, :illegal], @detail)}
+          :if={@may_arbiter and match?({kind, _} when kind in [:out_of_turn, :illegal], @detail)}
           id="alarm-missing-move"
           small
           phx-click="missing_move"

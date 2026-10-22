@@ -159,7 +159,7 @@ defmodule AlnaslWeb.BridgesTest do
       {:ok, _row} = Bridges.board_row(bridge, "COM3")
       Arkab.Bridge.remove(server_id)
       eventually(fn -> Bridges.list() == [] end)
-      assert Bridges.rows(bridge) == []
+      eventually(fn -> Bridges.rows(bridge) == [] end)
     end
   end
 end

@@ -300,6 +300,13 @@ defmodule AlnaslWeb.FairPlayLive do
     {:ok, views} = FairPlay.views(scope, subject)
     {:ok, keep} = FairPlay.keep(scope, subject)
     {:ok, grants} = Grants.list(scope, hall_id, subject)
+
+    snapshots =
+      case subject do
+        %Tournaments.Tournament{} -> elem(FairPlay.snapshots(scope, subject), 1)
+        _upload -> []
+      end
+
     {:ok, people} = Grants.candidates(scope, hall_id)
 
     played =
@@ -310,6 +317,7 @@ defmodule AlnaslWeb.FairPlayLive do
 
     %{
       views: views,
+      snapshots: snapshots,
       keep: keep,
       grants: grants,
       people: people,
@@ -581,6 +589,28 @@ defmodule AlnaslWeb.FairPlayLive do
     end
   end
 
+  def handle_event("delete_analysis", params, socket) do
+    scope = socket.assigns.current_scope
+    reason = get_in(params, ["delete", "reason"])
+
+    with %Tournaments.Tournament{} = tournament <- socket.assigns.fp_subject,
+         {:ok, _snapshot} <- FairPlay.delete_analysis(scope, tournament, reason) do
+      {:noreply,
+       socket
+       |> put_flash(
+         :info,
+         gettext("The analysis is deleted. A frozen copy of the report is kept below.")
+       )
+       |> reload()}
+    else
+      {:error, :nothing} ->
+        {:noreply, put_flash(socket, :error, gettext("There is no analysis to delete."))}
+
+      _no ->
+        {:noreply, refuse(socket)}
+    end
+  end
+
   def handle_event("delete_upload", _params, socket) do
     with %Upload{} = upload <- socket.assigns.fp_subject,
          :ok <- Uploads.delete(socket.assigns.current_scope, upload) do
@@ -842,6 +872,7 @@ defmodule AlnaslWeb.FairPlayLive do
   defp action_label("upload"), do: gettext("uploaded")
   defp action_label("delete_upload"), do: gettext("deleted an upload")
   defp action_label("analyse_round"), do: gettext("had a round analysed")
+  defp action_label("delete_analysis"), do: gettext("deleted the analysis")
   defp action_label(other), do: other
 
   defp problem_text(%{"kind" => "illegal", "detail" => detail}),
@@ -1584,6 +1615,81 @@ defmodule AlnaslWeb.FairPlayLive do
               />
               <.button id="fair-play-extend-submit" type="submit">{gettext("Keep it")}</.button>
             </.form>
+          </div>
+        </.panel>
+
+        <.panel
+          :if={@fp_owner? and match?(%Tournaments.Tournament{}, @fp_subject)}
+          id="fair-play-delete"
+          title={gettext("Delete this analysis")}
+        >
+          <.form
+            for={to_form(%{"reason" => ""}, as: :delete)}
+            id="fair-play-delete-form"
+            phx-submit="delete_analysis"
+            class="stack"
+          >
+            <p class="note">
+              {gettext(
+                "Removes every analysed move of this tournament. A frozen copy of the report as it is now stays below, with who deleted it, when and why, for as long as the report would have been kept, and the audit says so. Games analysed again later make a new analysis."
+              )}
+            </p>
+            <.input
+              id="fair-play-delete-reason"
+              type="text"
+              name="delete[reason]"
+              value=""
+              label={gettext("Why (not needed, but written down)")}
+            />
+            <div class="row">
+              <.button
+                id="fair-play-delete-analysis"
+                type="submit"
+                variant="danger"
+                data-confirm={
+                  gettext(
+                    "Delete the analysis of this tournament? The report goes; a frozen copy of it stays in this page for the owner."
+                  )
+                }
+              >{gettext("Delete the analysis")}</.button>
+            </div>
+          </.form>
+        </.panel>
+
+        <.panel
+          :if={@fp_owner? and @fp_data.snapshots != []}
+          id="fair-play-snapshots"
+          title={gettext("Deleted analyses (frozen copies)")}
+        >
+          <div :for={s <- @fp_data.snapshots} id={"fair-play-snapshot-#{s.id}"} class="stack">
+            <p class="note">
+              {gettext("Deleted %{when} by %{who}, %{moves} analysed moves.",
+                when: time(s.deleted_at),
+                who: s.deleted_by || gettext("this computer"),
+                moves: s.moves
+              )}
+              <span :if={s.reason not in [nil, ""]}>
+                {gettext("Reason: %{reason}", reason: s.reason)}
+              </span>
+            </p>
+            <table id={"fair-play-snapshot-#{s.id}-players"}>
+              <thead>
+                <tr>
+                  <th>{gettext("Player")}</th>
+                  <th class="num">{gettext("Moves counted")}</th>
+                  <th class="num">{gettext("Score")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr :for={p <- Alnasl.FairPlay.Snapshot.players(s)}>
+                  <td>{p["name"]}</td>
+                  <td class="num">{p["counted"]}</td>
+                  <td class="num">
+                    {if is_number(p["score"]), do: Float.round(p["score"] * 1.0, 2), else: "-"}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </.panel>
 
