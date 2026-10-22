@@ -11,8 +11,15 @@ end
 # has to be configured before it starts is a box that does not start in a
 # playing hall. `Alnasl.DataHome` says where an installed copy keeps it and
 # why that is never a folder an installer owns.
+#
+# Not in a test run: `config/test.exs` gives every run a throwaway directory,
+# and `test/test_helper.exs` deletes it, parent and all, at exit. Honouring
+# ALNASL_DATA there pointed the suite at a real data folder and then removed
+# the folder that held it - which is how a working directory on the VM kept
+# vanishing mid-run, twice, with nobody's `rm` in sight.
 data_dir =
   cond do
+    config_env() == :test -> nil
     data = System.get_env("ALNASL_DATA") -> Path.expand(data)
     config_env() == :prod -> Path.expand(Alnasl.DataHome.default())
     true -> nil

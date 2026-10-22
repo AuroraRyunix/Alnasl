@@ -32,5 +32,10 @@ Ecto.Adapters.SQL.Sandbox.mode(Alnasl.Repo, :manual)
 
 # This run's database and data directory (config/test.exs) go with it.
 # Best effort: Windows keeps a file the pool still has open.
+# Only ever a `run-<pid>` directory: anything else means the data directory
+# came from somewhere other than config/test.exs, and that is not ours to delete.
 run_dir = Path.dirname(Application.fetch_env!(:alnasl, :data_dir))
-System.at_exit(fn _ -> File.rm_rf(run_dir) end)
+
+if String.starts_with?(Path.basename(run_dir), "run-") do
+  System.at_exit(fn _ -> File.rm_rf(run_dir) end)
+end
