@@ -1157,14 +1157,30 @@ defmodule Alnasl.Tracker do
 
     misread =
       cond do
-        scope != :all -> []
-        stable >= tr.opts.deep_settle_ms -> rewrites(tr)
-        hand?(tr) -> []
+        scope != :all ->
+          []
+
+        stable >= tr.opts.deep_settle_ms ->
+          rewrites(tr)
+
+        hand?(tr) ->
+          []
+
+        # The side to move's own piece, lifted and set down beside where
+        # the game has it, with nothing else changed: a straightened piece
+        # if the clock says the turn is over, and a rook, bishop or queen
+        # resting on its way while it is not. A slide stops for well under
+        # a second, so the rewrite waits for the press, or for the board
+        # to have stood long enough that nobody is still moving.
+        not pressed_since?(tr) ->
+          Enum.reject(rewrites(tr), &(&1.takes? or own_rest?(tr, &1)))
+
         # A move read since that turns out to have taken the piece, though
         # nobody saw anything taken: possible (the piece is lifted off
         # afterwards), but so is a king put on a bishop's square for a
         # second while the two are being swapped back. It waits.
-        true -> Enum.reject(rewrites(tr), & &1.takes?)
+        true ->
+          Enum.reject(rewrites(tr), & &1.takes?)
       end
 
     # And a move that is legal only if a piece stands beside where it still
@@ -1224,6 +1240,17 @@ defmodule Alnasl.Tracker do
   # piece missing: a hand. (A knocked-over queen beside a bishop that went
   # to f4 reads exactly like "the queen was on f4 all along, and the bishop
   # took her there".)
+  defp pressed_since?(tr), do: tr.pressed_at != nil and tr.pressed_at >= tr.raw_since
+
+  # A rewrite that adds no move and moves a piece of the side to move.
+  defp own_rest?(tr, line) do
+    {move, _flags} = hd(line.steps)
+    before = Enum.at(tr.history, line.back - 1)
+    turn = tr.pos.turn
+
+    line.new == 0 and match?({^turn, _}, elem(before.pos.board, move.from))
+  end
+
   defp hand?(tr) do
     gone = for sq <- Position.diff(tr.phys, tr.raw), elem(tr.raw, sq) == nil, do: sq
 
@@ -2400,9 +2427,34 @@ defmodule Alnasl.Tracker do
       # Onto a square that is not read: all the board shows is a piece
       # gone, and so does a hand.
       move.to in tr.dead and move.from not in tr.dead -> max(o.settle_ms, o.unseen_hold_ms)
+      echo?(tr, move) -> max(o.settle_ms, o.takeback_settle_ms)
       true -> o.settle_ms
     end
   end
+
+  # A capture taken back, and the same hand straight back over the board
+  # for the move it meant to make: its piece in the air and its real
+  # target lifted. Where the target could have recaptured, what the board
+  # shows is the recapture - the piece just taken is back on its square,
+  # the one that took it gone, a piece of the other side gone from where
+  # it could have come. A real recapture with a piece of that kind looks
+  # the same, so it waits as a takeback would, or for the press.
+  defp echo?(%{history: [before | _], plies: plies} = tr, move) when plies != [] do
+    last = List.last(plies)
+    count = length(plies)
+    taken = elem(before.pos.board, last.to)
+
+    lands =
+      case elem(tr.pos.board, move.from) do
+        {colour, kind} -> {colour, move.promo || kind}
+        nil -> nil
+      end
+
+    move.to == last.to and taken != nil and taken == lands and
+      Enum.any?(tr.trail, fn {at, board} -> at == count and board == before.phys end)
+  end
+
+  defp echo?(_tr, _move), do: false
 
   # A rook going from its corner to the square it lands on when castling,
   # while castling that side is legal: the king may be about to follow.
@@ -2495,13 +2547,20 @@ defmodule Alnasl.Tracker do
   # `:recovered`. Several (a knight, a rook and a bishop all leave a king
   # on h8 out of check): the first of knight, rook, bishop, `:guessed`
   # and still `:assumed`, so that the next move it cannot make asks again.
+  #
+  # Every assumed promotion in reach is asked, the latest first: two pawns
+  # left standing for knights, and the first of them is the one that jumps.
   defp promotion_retry(tr) do
-    with index when index != nil <-
-           tr.plies
-           |> Enum.reverse()
-           |> Enum.take(@promotion_back)
-           |> Enum.find_index(&(:assumed in &1.flags and &1.promo != nil)),
-         number = length(tr.plies) - index,
+    tr.plies
+    |> Enum.reverse()
+    |> Enum.take(@promotion_back)
+    |> Enum.with_index()
+    |> Enum.filter(fn {ply, _index} -> :assumed in ply.flags and ply.promo != nil end)
+    |> Enum.find_value(fn {_ply, index} -> promotion_retry(tr, index) end)
+  end
+
+  defp promotion_retry(tr, index) do
+    with number = length(tr.plies) - index,
          ply = Enum.at(tr.plies, number - 1),
          later = Enum.drop(tr.plies, number),
          before = Enum.at(tr.history, index),
