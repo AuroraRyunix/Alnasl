@@ -596,9 +596,14 @@ defmodule Alnasl.FairPlay.Power do
   weight vectors, the per-band thresholds of `Alnasl.FairPlay.BandScale`
   with their scales measured on the tuning half's honest scores, and
   `fitted` - the weight vector of a coarse grid with the most realistic
-  power at the budget threshold *on the tuning half*. `verdict` says
-  whether any of them beats the default on the final half at both
-  thresholds without more false positives at 3.0.
+  power at the budget threshold *on the tuning half* - the probes of
+  `Alnasl.FairPlay.Probes` as weights over six tests, and the per-game
+  scan as `max(event, scan − offset)`. With `scan?` (the model has a scan,
+  so the shipped score uses it) the default is the event score or the
+  scan, every weighting is judged with the scan, and "no scan" is a
+  variant. `verdict` says whether any of them beats the default on the
+  final half at both thresholds without more false positives at 3.0, and
+  picks among several by the tuning half.
   """
   def variants(results, scenarios, budget, scan? \\ false) do
     realistic = Enum.filter(scenarios, &realistic?/1)

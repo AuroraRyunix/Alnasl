@@ -50,7 +50,7 @@ Under **Reports** on the same page, open the report of a tournament. It lists th
 - **Counted moves**: how many moves went into the numbers (below, what is left out).
 - **Matches the engine**, and what was **expected** for that player's rating in those positions.
 - **Average loss**, and what was expected. The loss is how much worse the move played was than the engine's best, scaled so that a pawn thrown away in an even position counts for more than one thrown away when you are two pawns up.
-- **Score**, with its interval, and one of the two wordings below.
+- **Score**, with its interval, and one of the two wordings below. When one game decided it, the report says **decided by one game** and gives its round.
 - **Left out**: how many moves did not count, and why.
 
 Press a player's name for the **positions to look at**: the moves the player made that were the engine's first choice, where that choice stood out most from the second, each on a board with the move played and the engine's four best.
@@ -80,12 +80,14 @@ The **expected** values come from a model fitted on real games from over-the-boa
 
 The standard deviation is the one the player's own games have: the moves of one game are not independent of each other (a good day lasts more than one move), and nine short games spread differently from five long ones. How strongly moves hang together within a game, and across one player's games in an event, is measured on real games when the model is made.
 
+Each game of at least 20 counted moves is also looked at on its own. One game played far better than the rest disappears in the score of a whole event of nine games; on its own it does not. Alnasl takes the most unusual of the player's games and asks how unusual that is, given how many games there were to pick from (with nine games, one of them is bound to be the player's best). The **score** is whichever of the two is higher: the whole event, or that one game. When it is the game, the report says **decided by one game: round N**. Open that game first.
+
 - **From 2: "worth a closer look".** Such scores come up by chance in a few of every hundred honest players. Look at the games, not at the number.
 - **Above 5: "statistically very unusual".** Honest players almost never have such a score in a model that fits. It is still not proof of anything, and the next section says what you may do with it.
 
 Those two words and those two numbers are Alnasl's own, for its own score. They are not FIDE's thresholds (FIDE's 5.00 for over-the-board play belongs to the approved method, and its 2.50 only supports other evidence), and a 5 here is not a 5 there.
 
-The interval beside the score is the range the player's true standing probably lies in: a score of 2.4 from 40 moves is not very different from a score of 0.5.
+The interval beside the score is the range the player's true standing probably lies in: a score of 2.4 from 40 moves is not very different from a score of 0.5. When one game decided the score there is no interval: a range around the best of several games would be a different number, and not a more honest one.
 
 ### How often an honest player scores this high {#false-positives}
 
