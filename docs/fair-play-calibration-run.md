@@ -325,3 +325,106 @@ a short one alike. The three new ones are short-to-medium events that the
 old global inflation had been holding down, or that the added features
 pushed over the line. None of this is evidence about any of these
 players; it is evidence that the old variance was the wrong shape.
+
+## 8. Power: how many made-up cheaters it catches, 2026-10-22
+
+`mix fair_play.power --holdout 0.67` on the same 30,029 labelled games
+(method and limitations: `docs/fair-play-calibration.md`, "Power"). The
+model is fitted inside the task on the same 9,944 training games, and its
+honest held-out table is §7's to the event: 120, 23, 4 and 0 of 6,626 at
+2.0, 2.5, 3.0 and 3.5. Seed 1, about four minutes on 8 schedulers.
+
+**Detection** (share of the held-out player-events, with cheating
+injected, scoring at least; the exact 95% intervals are in the task's
+output, none wider than ±1.3 points here) and the mean change in each z:
+
+| scenario | >= 2.0 | >= 2.5 | >= 3.0 | >= 3.5 | dMM | dEV | dASD |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| honest (false positives) | 1.81% | 0.35% | 0.06% | 0.00% | | | |
+| naive 5% | 4.2% | 1.1% | 0.2% | 0.0% | 0.47 | 0.38 | 0.14 |
+| naive 10% | 9.2% | 3.0% | 0.6% | 0.0% | 0.94 | 0.76 | 0.29 |
+| naive 20% | 32.1% | 14.4% | 5.1% | 1.4% | 1.88 | 1.51 | 0.57 |
+| naive 30% | 65.3% | 43.9% | 24.1% | 10.0% | 2.83 | 2.28 | 0.87 |
+| naive 50% | 97.4% | 91.7% | 80.3% | 64.7% | 4.74 | 3.81 | 1.45 |
+| selective 5% | 18.1% | 6.7% | 1.9% | 0.4% | 0.86 | 0.82 | 1.26 |
+| selective 10% | 51.9% | 31.7% | 14.9% | 5.2% | 1.73 | 1.64 | 1.77 |
+| selective 20% | 91.5% | 82.1% | 68.5% | 51.3% | 3.43 | 3.26 | 2.35 |
+| selective 30% | 99.4% | 97.4% | 93.9% | 86.4% | 5.15 | 4.89 | 2.66 |
+| selective 50% | 100% | 100% | 100% | 99.8% | 7.88 | 7.24 | 2.87 |
+| camouflaged 5% | 1.9% | 0.4% | 0.1% | 0.0% | 0.01 | 0.01 | 0.09 |
+| camouflaged 10% | 2.0% | 0.4% | 0.1% | 0.0% | 0.01 | 0.02 | 0.18 |
+| camouflaged 20% | 1.9% | 0.6% | 0.1% | 0.0% | 0.01 | 0.03 | 0.34 |
+| camouflaged 30% | 2.5% | 0.6% | 0.0% | 0.0% | 0.02 | 0.06 | 0.51 |
+| camouflaged 50% | 4.1% | 1.3% | 0.3% | 0.1% | 0.03 | 0.09 | 0.85 |
+| whole games 1 (6,434 events) | 40.2% | 27.2% | 16.7% | 9.9% | 2.11 | 1.69 | 0.65 |
+| whole games 2 (5,611) | 76.6% | 64.6% | 51.8% | 39.2% | 3.77 | 3.05 | 1.17 |
+| whole games 3 (4,494) | 93.0% | 86.5% | 78.1% | 66.4% | 5.06 | 4.10 | 1.57 |
+
+What it says:
+
+- **At 3.0 the score catches heavy cheating and very little else.** A
+  random 20% of engine moves is caught 5% of the time; 30%, a quarter;
+  half the moves, four in five. The match tests (MM, then EV) carry it;
+  ASD barely moves, because a random engine move mostly replaces a move
+  that lost little anyway.
+- **Selective cheating is the one it sees best**, because it removes the
+  player's worst moves, which ASD and the match tests both feel: "one move
+  a game" (5%) is caught 1.9% of the time at 3.0, 10% one in seven, 20%
+  two in three. The profile is generous to the detector - it assumes the
+  cheater knows which moves were going to be their worst, which takes an
+  engine on every move - so read it as an upper bound for selective cheats.
+- **Camouflaged cheating is invisible** (0.0-0.3% at 3.0, the false
+  positive rate). A move picked by lot within 40 cp of the best is, to
+  these tests, what a good player plays anyway: the match rate does not
+  rise at all and the loss falls by a fraction of a standard deviation.
+  The cheater gains little from it too, but no move-quality statistic of
+  this kind will catch it, and nobody should claim otherwise.
+- **One whole game is caught in 17% of events at 3.0**: 48% when the
+  event is one or two games, 4% when it is six or more. One engine game
+  hides well in a long event. Two games, half; three, four in five.
+- **By length and rating** (each profile at 20%, at 3.0): more counted
+  moves and games mean more power for spread-out cheating (selective: 47%
+  at 40-99 moves, 98% at 200 or more). By rating it depends on the cheat:
+  random engine moves are caught more often under 1600 (8.5%) than at
+  2400+ (3.4%), whose honest players already play many of them; fixing
+  the worst moves the other way round (61% against 77%), since a strong
+  player's few bad moves stand out more once they are gone.
+
+**Variants**, chosen on the tuning half (3,293 events), reported on the
+final half (3,333). Power is pooled over selective and camouflaged up to
+30% and one whole game; "vs default" is the paired difference in points,
+with its 95% interval.
+
+| variant | weights | (a) 1% budget: FP final | power | vs default | (b) 3.0: FP final / all | power | vs default |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| default | 1, 1, 1 | 40 | 31.9% | | 3 / 4 | 22.2% | |
+| MM only | 1, 0, 0 | 24 | 28.7% | −3.3 (−3.5, −3.0) | 5 / 7 | 22.0% | −0.1 (−0.3, +0.1) |
+| EV only | 0, 1, 0 | 45 | 28.0% | −4.0 (−4.2, −3.7) | 7 / 11 | 20.1% | −2.0 (−2.2, −1.8) |
+| ASD only | 0, 0, 1 | 35 | 32.1% | +0.1 (−0.3, +0.5) | 0 / 0 | 5.8% | −16.3 (−16.7, −15.9) |
+| MM-heavy | 2, 1, 1 | 31 | 30.7% | −1.2 (−1.4, −1.1) | 3 / 4 | 22.7% | +0.5 (+0.4, +0.6) |
+| ASD-heavy | 1, 1, 2 | 38 | 33.1% | +1.2 (+1.1, +1.4) | 1 / 1 | 20.6% | −1.5 (−1.7, −1.4) |
+| MM+ASD | 1, 0, 1 | 28 | 32.4% | +0.5 (+0.3, +0.7) | 1 / 1 | 21.1% | −1.1 (−1.3, −1.0) |
+| fitted (grid) | 0.33, 0.17, 1 | 39 | 34.3% | +2.4 (+2.2, +2.6) | 0 / 0 | 17.7% | −4.5 (−4.7, −4.2) |
+| per-band thresholds | 1, 1, 1 | 37 | 32.0% | +0.0 (−0.1, +0.2) | 4 / 6 | 22.4% | +0.2 (+0.1, +0.3) |
+
+**Verdict: the default stays.** No variant wins on the final half at both
+thresholds without more false positives at 3.0.
+
+- The fitted weights, and ASD-heavy, catch 1-2.4 points more *at the same
+  false-positive cost* (1% of the tuning half's honest events). At the
+  report's 3.0 they catch fewer cheaters because they also flag fewer
+  honest players (0-1 of 6,626 instead of 4): a thinner tail, not a
+  sharper test. Using them would mean a threshold other than 3.0, set
+  where the corpus has about four honest events to set it with. A lead for
+  a corpus several times larger, not a change.
+- MM-heavy gains half a point at 3.0 with the same four false positives,
+  and loses 1.2 points at equal cost. Noise one way, a loss the other.
+- Per-band thresholds: nothing at equal cost, +0.2 points at 3.0 bought
+  with 6 false positives instead of 4. Worse, as in §7.
+- Each test alone is worse than the three together; EV alone is worst on
+  both counts, and ASD alone hardly ever reaches 3.0 at all.
+
+All of this is about this corpus and this way of making cheaters: the
+moves after an injected one are the honest game's, the clock is the
+honest player's, the engine is the labeller's at its node count. A real
+cheater changes the game after the engine move; that is not in here.

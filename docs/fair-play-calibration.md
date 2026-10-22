@@ -126,6 +126,70 @@ Three disjoint sets - fit, thresholds, test - so the test set never sets
 a threshold. Both tables and both gates are printed; the model above is
 then fitted on fewer games. The report does not use the variant.
 
+### Power: how many cheaters it would catch
+
+The false-positive table says how often an honest player is accused. A
+score that accuses nobody passes it perfectly, so it is half a check.
+The other half needs cheaters, and a corpus of broadcast games has none
+anybody can name, so they are made up:
+
+```sh
+mix fair_play.power --holdout 0.67 [--model model-sf19.json] [--out power.json] labels-*.jsonl
+# from a release
+$A eval 'Alnasl.FairPlay.Power.main()' --holdout 0.67 labels-*.jsonl
+```
+
+**Method** (`Alnasl.FairPlay.Power`). The same split as the fit (same
+`--holdout`, same hash); the model is fitted on the training events, or
+read with `--model` (it must be the one fitted with that holdout). Every
+held-out player-event with a score is scored as recorded (honest), then
+once per cheating scenario: chosen counted plies get the played move
+replaced by one of the label's own MultiPV lines, with `played_cp` and
+`rank` taken from that line, so loss, match and equal-value match are
+exactly what that move would have scored. What the model expects of a
+ply does not depend on the move played, so only the residuals move.
+Injection is seeded (`--seed`) per player-event and scenario, and every
+scenario uses the same events: the comparisons are paired.
+
+**The cheaters**, each at 5, 10, 20, 30 and 50% of the counted moves
+(`--rates`):
+
+| profile | what it does |
+|---|---|
+| naive | the engine's first choice on random moves |
+| selective | the first choice on the player's worst moves (largest scaled loss; among equals, the fewest good alternatives): the "one move a game" cheat at 3-5% |
+| camouflaged | on random moves, a line by lot among those within 40 cp of the best (`--window`), the best included: built to keep the match rate down |
+| whole games k | every counted move of k games (`--games 1,2,3`), in events of more than k games |
+
+**Output.** Per scenario, the share of cheating player-events at 2.0, 2.5,
+3.0 and 3.5 with exact 95% intervals, beside the honest events' share at
+the same thresholds (the false positives, same events), and the mean change
+in each z (MM, EV, ASD): which test noticed. Then, at 3.0, each profile at
+20% (and one whole game) by counted moves, games and rating.
+
+**Variants, without tuning on the test.** The held-out events are split
+once more by a hash of the event (`"power:"`, `--tune 0.5`): a tuning half
+and a final half. Every choice - weights, a threshold that spends a given
+false-positive budget (`--budget 0.01`), per-band scales - is made on the
+tuning half and reported only on the final half. Compared: the default
+weights `[1,1,1]`, each test alone, MM-heavy `[2,1,1]`, ASD-heavy `[1,1,2]`,
+MM+ASD `[1,0,1]`, "fitted" (the grid vector with the most realistic power
+on the tuning half) and the per-band thresholds of `BandScale` with their
+scales measured on the tuning half's honest scores. Realistic power is
+pooled over selective and camouflaged up to 30% and one whole game. Each
+variant is judged (a) at its own budget threshold and (b) at the report's
+3.0, with its paired difference from the default and a 95% interval. The
+verdict names a variant only if it beats the default on the final half at
+both, with no more held-out false positives at 3.0.
+
+**Limitations.** Later plies stay as recorded: a real engine move would
+have changed the opponent's reply and everything after, here the game goes
+on as if the human move had been played. The clock and the time spent are
+the honest player's. The cheater's engine is the labelling engine at its
+node count. And the honest events are whatever the broadcasts held. The
+numbers are therefore about this score on these positions, not a promise
+about any particular cheater.
+
 On one machine, both steps at once: `mix fair_play.calibrate --engine ...
 --games 7000 --holdout 0.2 --out priv/fair_play/model-sf19.json files...`
 (labels go to `<out>.labels.jsonl`).
