@@ -15,7 +15,7 @@ defmodule Alnasl.TrackerCrosstalkTest do
   defp put(board, square, piece), do: put_elem(board, sq(square), piece)
   defp move(board, from, to), do: board |> put(to, elem(board, sq(from))) |> lift(from)
 
-  defp feed(tr, timed, tail \\ 70_000) do
+  defp feed(tr, timed, tail) do
     {tr, out, last} =
       Enum.reduce(timed, {tr, [], 0}, fn {t, what}, {tr, out, _last} ->
         {tr, out} = ticks(tr, t, out)
@@ -111,7 +111,7 @@ defmodule Alnasl.TrackerCrosstalkTest do
     {tr, out} = feed(tr, [{t, landed}], 10_000)
     assert Tracker.sans(tr) == ~w(e4 e5 Nf3)
     assert alarms(out) == []
-    [{at, _}] = for {at, {:moves, _}} = e <- out, do: e
+    [{at, _}] = for {_at, {:moves, _}} = e <- out, do: e
     assert at >= t + tr.opts.unseen_hold_ms
 
     # Pressed for: at once.
