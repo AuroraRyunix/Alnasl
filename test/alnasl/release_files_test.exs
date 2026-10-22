@@ -120,7 +120,9 @@ defmodule Alnasl.ReleaseFilesTest do
       build_app = read("rel/macos/build_app.sh")
 
       # The ready-made Erlang for macOS said "15.0"; it is not used there.
-      assert workflow =~ "if: runner.os != 'macOS'"
+      # setup-beam is for Linux only, Windows gets its OTP by name.
+      assert workflow =~ "if: runner.os == 'Linux'"
+      assert workflow =~ ".github/scripts/install-beam-windows.ps1"
       assert workflow =~ ~s(sh rel/macos/build_otp.sh "$HOME/otp-macos")
 
       assert workflow =~

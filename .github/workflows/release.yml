@@ -164,7 +164,8 @@ jobs:
       # The serial library, on every system: a box that cannot open a
       # serial port is a simulator. (On Linux it is on anyway.)
       ALNASL_UART: "1"
-      # One OTP everywhere. On Linux and Windows setup-beam installs it; on
+      # One OTP everywhere. On Linux setup-beam installs it, on Windows
+      # .github/scripts/install-beam-windows.ps1; on
       # the Mac rel/macos/build_otp.sh compiles it, with this OpenSSL and
       # this exact Elixir (setup-beam's "1.20" is the newest 1.20 there).
       OTP_VERSION: "29.0.5"
@@ -179,10 +180,18 @@ jobs:
       # the newest runner for the newest macOS, and every program in it
       # said "macOS 15 or newer". A Mac on 14 would not open the app.
       - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
-        if: runner.os != 'macOS'
+        if: runner.os == 'Linux'
         with:
           otp-version: ${{ env.OTP_VERSION }}
           elixir-version: "1.20"
+
+      # Not setup-beam on Windows either: see the script.
+      - name: Erlang/OTP and Elixir (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: .github/scripts/install-beam-windows.ps1 -Otp $env:OTP_VERSION -Elixir $env:ELIXIR_VERSION
 
       # Everything compiled on the Mac - the runtime, the SQLite NIF, the
       # serial program (circuits_uart's C port, native on either runner) -
