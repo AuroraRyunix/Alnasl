@@ -229,6 +229,28 @@ defmodule Alnasl.FairPlay.ModelTest do
     assert loaded.meta["attribution"] =~ "CC BY-SA 4.0"
   end
 
+  @tag :tmp_dir
+  test "the file says its format and its features, and an old or foreign one is refused", %{
+    tmp_dir: dir
+  } do
+    json = Model.to_json(%Model{match: [], ev: []})
+    assert json["format"] == 2
+    assert json["features"] == Model.feature_names()
+
+    # Phase 1's files: one rating line, independent moves.
+    old = %{"format" => 1, "features" => ~w(intercept rating scaled_gap near_count material)}
+    assert Model.from_json(old) == {:error, {:outdated_format, 1}}
+
+    File.write!(Model.path("sf19", dir), Jason.encode!(old))
+    assert Model.load("sf19", dir) == {:error, {:outdated_format, 1}}
+
+    # Coefficients for features this version does not compute.
+    other = %{json | "features" => ["intercept", "moon_phase"]}
+    assert Model.from_json(other) == {:error, {:unknown_features, ["intercept", "moon_phase"]}}
+
+    assert Model.from_json(%{"format" => 99}) == {:error, :unknown_format}
+  end
+
   test "the shipped location" do
     assert Model.path("sf19")
            |> String.replace("\\", "/")

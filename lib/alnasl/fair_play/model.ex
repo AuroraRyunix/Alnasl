@@ -48,6 +48,18 @@ defmodule Alnasl.FairPlay.Model do
   A model belongs to one engine build and one node count: the json says
   which, and a model fitted on one is not used with another.
 
+  ## The file
+
+  `"format": 2`, with the feature names in the order the coefficients
+  are in. A file whose features are not exactly this module's is refused
+  (`{:error, {:unknown_features, names}}`) rather than read as if they
+  were: coefficients applied to the wrong features give confident
+  nonsense. A format-1 file (one straight rating line, independent moves
+  and a global covariance) is refused too, `{:error, {:outdated_format,
+  1}}`: its score is the one this format exists to replace, and the report
+  says "not calibrated" until a new one is fitted rather than show it.
+  No format-1 model ever shipped in a release.
+
   Saved as `priv/fair_play/model-<engine>.json`. The parameters are derived
   from Lichess broadcast games (database.lichess.org, CC BY-SA 4.0), and
   the file says so.
@@ -69,6 +81,7 @@ defmodule Alnasl.FairPlay.Model do
             meta: %{}
 
   @min_cell 30
+  @format 2
   # The knots of the rating spline: a hinge `max(rating − knot, 0)/400`
   # each, on top of the straight line.
   @knots [1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600]
@@ -454,7 +467,7 @@ defmodule Alnasl.FairPlay.Model do
     triple = fn {mean, var, n} -> [mean, var, n] end
 
     %{
-      "format" => 1,
+      "format" => @format,
       "engine" => m.engine,
       "bench" => m.bench,
       "nodes" => m.nodes,
@@ -473,7 +486,7 @@ defmodule Alnasl.FairPlay.Model do
     }
   end
 
-  def from_json(%{"format" => 1} = j) do
+  def from_json(%{"format" => @format, "features" => @feature_names} = j) do
     triple = fn [mean, var, n] -> {mean / 1, var / 1, n} end
 
     {:ok,
@@ -495,5 +508,14 @@ defmodule Alnasl.FairPlay.Model do
      }}
   end
 
+  def from_json(%{"format" => @format, "features" => names}),
+    do: {:error, {:unknown_features, names}}
+
+  def from_json(%{"format" => old}) when is_integer(old) and old < @format,
+    do: {:error, {:outdated_format, old}}
+
   def from_json(_other), do: {:error, :unknown_format}
+
+  @doc "The format `to_json/1` writes."
+  def format, do: @format
 end

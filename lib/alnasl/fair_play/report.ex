@@ -25,7 +25,9 @@ defmodule Alnasl.FairPlay.Report do
   `model/1` loads the calibration file of the hall's engine
   (`priv/fair_play/model-<engine>.json`) and returns it only when it was
   fitted on the engine, bench and node count the analysis was made with.
-  Until there is one, `nil`: the report shows the counts and no score. The
+  Until there is one, `nil`: the report shows the counts and no score. A
+  file of a format this version refuses (`Model.from_json/1`) is `nil`
+  too, with a warning in the log, so nobody wonders for long. The
   directory can be changed with `config :alnasl, :fair_play_model_dir`.
 
   ## Key positions
@@ -38,6 +40,8 @@ defmodule Alnasl.FairPlay.Report do
   alias Alnasl.Chess
   alias Alnasl.FairPlay.{Analyzer, Model, Move, Selection, Setting, Stats}
   alias Alnasl.Position
+
+  require Logger
 
   @closer_look 2.0
   @very_unusual 5.0
@@ -60,6 +64,10 @@ defmodule Alnasl.FairPlay.Report do
       {:ok, %Model{nodes: nodes, bench: bench} = model}
       when nodes == setting.nodes and bench == setting.engine_bench ->
         model
+
+      {:error, reason} when reason != :missing ->
+        Logger.warning("fair play: the model for #{id} is not used: #{inspect(reason)}")
+        nil
 
       _missing_or_other ->
         nil

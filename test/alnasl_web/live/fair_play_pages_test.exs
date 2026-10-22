@@ -36,8 +36,8 @@ defmodule AlnaslWeb.FairPlayPagesTest do
       engine: "sf19",
       bench: 2_497_913,
       nodes: 1_000_000,
-      match: List.duplicate(0.0, 5),
-      ev: List.duplicate(0.0, 5),
+      match: List.duplicate(0.0, length(Model.feature_names())),
+      ev: List.duplicate(0.0, length(Model.feature_names())),
       loss: %{cells: %{}, bands: %{}, global: {0.2, 0.05, 1000}},
       dispersion: %{
         r0: [[1.0, 0.5, 0.5], [0.5, 1.0, 0.5], [0.5, 0.5, 1.0]],
