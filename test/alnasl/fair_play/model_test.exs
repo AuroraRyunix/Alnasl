@@ -108,6 +108,50 @@ defmodule Alnasl.FairPlay.ModelTest do
     assert abs(numbers.mm_z) < 4
   end
 
+  test "prepare: the share of the clock each move took, from the clock before the next" do
+    records =
+      [
+        %{game: "a", ply: 17, clock_before_ms: 600_000},
+        %{game: "a", ply: 19, clock_before_ms: 540_000},
+        # The increment paid back more than the move took.
+        %{game: "a", ply: 21, clock_before_ms: 560_000},
+        %{game: "a", ply: 23, clock_before_ms: nil},
+        %{game: "a", ply: 25, clock_before_ms: 300_000},
+        # Another game's ply 19 is not this game's next move.
+        %{game: "b", ply: 17, clock_before_ms: 600_000},
+        %{game: "c", ply: 19, clock_before_ms: 1_000}
+      ]
+      |> Model.prepare()
+
+    assert Enum.map(records, & &1.think) == [0.1, 0.0, nil, nil, nil, nil, nil]
+  end
+
+  test "the features beyond the position: how level, the opponent, the clock" do
+    named = fn record -> Enum.zip(Model.feature_names(), Model.features(record)) |> Map.new() end
+
+    base = %{
+      rating: 1800,
+      best: [%{move: "a1a1", cp: -120}, %{move: "b1b1", cp: -200}],
+      near_count: 0,
+      material: 40
+    }
+
+    f = named.(Map.merge(base, %{opponent_rating: 2200, think: 0.25}))
+    assert f["abs_eval"] == 1.2
+    assert f["opponent"] == 1.0
+    assert f["think"] == 0.25
+    assert f["think_known"] == 1.0
+
+    # Unknown opponent: as if equal. Unknown clock: zero, and said so.
+    f = named.(base)
+    assert f["opponent"] == 0.0
+    assert f["think"] == 0.0
+    assert f["think_known"] == 0.0
+
+    # A 1000 against a 2500 is as far as it goes.
+    assert named.(Map.merge(base, %{rating: 1000, opponent_rating: 2500}))["opponent"] == 2.0
+  end
+
   test "the correlations are measured on events the regression did not see" do
     # Two halves of the events that disagree completely: in one, players
     # match 90% of the time, in the other 10%. Fitted on all of them the

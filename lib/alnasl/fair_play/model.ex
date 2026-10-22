@@ -16,6 +16,11 @@ defmodule Alnasl.FairPlay.Model do
       flipped, and the rating also bends the effect of the gap and of the
       number of good moves (a strong player finds the one good move more
       reliably than a weak one; that is rather the point of a rating).
+      Then what else the label records already hold: how far from level
+      the position is, the opponent's rating against the player's, and
+      the share of their remaining time the player spent on the move
+      (`prepare/1`). The number of legal moves would be another, but the
+      label records do not keep it, and it is not worth a relabel;
       Ratings under 1000 are not scored at all
       (`Alnasl.FairPlay.Selection`, `:low_rating`). Fitted by Newton's
       method (IRLS) with a whisker of ridge, so a perfectly separable
@@ -69,7 +74,8 @@ defmodule Alnasl.FairPlay.Model do
   @knots [1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600]
   @feature_names ~w(intercept rating) ++
                    Enum.map(@knots, &"rating>#{&1}") ++
-                   ~w(scaled_gap near_count material rating*scaled_gap rating*near_count)
+                   ~w(scaled_gap near_count material rating*scaled_gap rating*near_count) ++
+                   ~w(abs_eval opponent think think_known)
   @attribution "Parameters derived from Lichess broadcast games (database.lichess.org), " <>
                  "licensed CC BY-SA 4.0; this file is under the same licence."
 
@@ -79,7 +85,16 @@ defmodule Alnasl.FairPlay.Model do
   The features of a ply, in the order of `feature_names/0`: `1`, the
   rating as `(rating − 2000)/400`, a hinge `max(rating − k, 0)/400` per
   knot `k` (1200, 1400, ... 2600), the scaled gap, the near count (at most
-  3), material/78, and the rating times the gap and times the near count.
+  3), material/78, the rating times the gap and times the near count, and
+  then:
+
+    * `abs_eval` - the best line's evaluation, either sign, in pawns (at
+      most 3: beyond that the ply is `:decided` and not counted);
+    * `opponent` - `(opponent's rating − rating)/400`, between −2 and 2;
+      0 when the opponent's rating is not known, as if they were equal;
+    * `think`, `think_known` - the share of the clock the move took
+      (`prepare/1`), and 1 when that is known; 0 and 0 when it is not.
+
   Scaled so the coefficients come out of comparable size, which Newton's
   method appreciates.
   """
@@ -88,11 +103,54 @@ defmodule Alnasl.FairPlay.Model do
     r = (record.rating - 2000) / 400
     gap = Stats.scaled_gap(record)
     near = min(record.near_count || 0, 3) / 1
+    think = record[:think]
 
     [1.0, r] ++
       Enum.map(@knots, &(max(record.rating - &1, 0) / 400)) ++
-      [gap, near, record.material / 78, r * gap, r * near]
+      [gap, near, record.material / 78, r * gap, r * near] ++
+      [abs_eval(record), opponent(record), think || 0.0, if(think, do: 1.0, else: 0.0)]
   end
+
+  defp abs_eval(%{best: [%{cp: cp} | _]}), do: min(abs(cp), 300) / 100
+  defp abs_eval(_record), do: 0.0
+
+  defp opponent(%{opponent_rating: opp, rating: own}) when is_integer(opp) and opp > 0,
+    do: ((opp - own) / 400) |> max(-2.0) |> min(2.0)
+
+  defp opponent(_record), do: 0.0
+
+  @doc """
+  Adds `:think` to every record of one player: the share of the time on
+  their clock before the move that the move took, from the clock before
+  their next move in the same game, between 0 and 1 - or `nil` when
+  either clock is unknown, when it is the last move they made in that
+  game, or when an increment paid back more than the move took (which
+  reads as no time at all, and is clamped to 0, not left out).
+
+  Plies of one game are told apart by `:game` and must be numbered by
+  `:ply`, as both the boards and the label files have them. Skipped
+  plies count as the next move when they have a clock: the board does
+  not care why a move was left out.
+  """
+  @spec prepare([map()]) :: [map()]
+  def prepare(records) do
+    clocks =
+      for r <- records, is_integer(r[:clock_before_ms]), into: %{} do
+        {{r[:game], r[:ply]}, r[:clock_before_ms]}
+      end
+
+    Enum.map(records, fn r -> Map.put(r, :think, think(r, clocks)) end)
+  end
+
+  defp think(%{clock_before_ms: before, ply: ply} = r, clocks)
+       when is_integer(before) and before > 0 and is_integer(ply) do
+    case clocks[{r[:game], ply + 2}] do
+      next when is_integer(next) -> ((before - next) / before) |> max(0.0) |> min(1.0)
+      nil -> nil
+    end
+  end
+
+  defp think(_record, _clocks), do: nil
 
   def feature_names, do: @feature_names
 
@@ -211,7 +269,7 @@ defmodule Alnasl.FairPlay.Model do
 
   # The regressions and the loss table, nothing else.
   defp regression(events, opts) do
-    counted = events |> List.flatten() |> Enum.filter(&Selection.counted?/1)
+    counted = events |> Enum.flat_map(&prepare/1) |> Enum.filter(&Selection.counted?/1)
     rows = Enum.map(counted, &features/1)
     lambda = Keyword.get(opts, :lambda, 1.0e-4)
 

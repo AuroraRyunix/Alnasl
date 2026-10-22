@@ -56,7 +56,7 @@ defmodule Alnasl.FairPlay.Stats do
   """
   @spec player([map()], Model.t() | nil) :: map()
   def player(records, model) do
-    counted = Enum.filter(records, &Selection.counted?/1)
+    counted = records |> Model.prepare() |> Enum.filter(&Selection.counted?/1)
     n = length(counted)
     losses = Enum.map(counted, &scaled_loss/1)
 
@@ -115,7 +115,7 @@ defmodule Alnasl.FairPlay.Stats do
   """
   @spec residuals([map()], Model.t()) :: [map()]
   def residuals(records, model) do
-    counted = Enum.filter(records, &Selection.counted?/1)
+    counted = records |> Model.prepare() |> Enum.filter(&Selection.counted?/1)
     residuals(counted, Enum.map(counted, &scaled_loss/1), model)
   end
 

@@ -71,16 +71,39 @@ defmodule Alnasl.FairPlay.Report do
   @doc "One line per player, best score first."
   @spec build([struct()], Model.t() | nil) :: [map()]
   def build(rows, model) do
+    opponents = opponent_ratings(rows)
+
     rows
     |> Enum.group_by(& &1.player_key)
-    |> Enum.map(fn {key, rows} -> player(key, rows, model) end)
+    |> Enum.map(fn {key, rows} -> player(key, rows, model, opponents) end)
     |> Enum.sort_by(&{&1.score == nil, -(&1.score || 0), -&1.counted, &1.name})
   end
 
-  @doc "One player's line from their rows."
-  def player(key, rows, model) do
+  @doc """
+  Who played whom at what rating, from all the rows of a report: the
+  model wants the opponent's rating beside each move, and the rows only
+  carry the mover's. Pass it to `player/4` when that player's rows have
+  been picked out of the rest.
+  """
+  def opponent_ratings(rows) do
+    for row <- rows, is_integer(row.rating), into: %{} do
+      {{row.__struct__, row.game_id, row.colour}, row.rating}
+    end
+  end
+
+  @doc "One player's line from their rows, and the opponents' ratings (`opponent_ratings/1`)."
+  def player(key, rows, model, opponents \\ %{}) do
     rows = Enum.sort_by(rows, &{&1.round, &1.game_id, &1.ply})
-    records = Enum.map(rows, &Move.to_record/1)
+
+    records =
+      Enum.map(rows, fn row ->
+        other = if row.colour == "white", do: "black", else: "white"
+
+        row
+        |> Move.to_record()
+        |> Map.put(:opponent_rating, opponents[{row.__struct__, row.game_id, other}])
+      end)
+
     numbers = Stats.player(records, model)
     last = List.last(rows)
 

@@ -765,6 +765,7 @@ defmodule Alnasl.FairPlay.Calibration do
       rank: ply["rank"],
       near_count: ply["near"],
       material: ply["material"],
+      clock_before_ms: ply["clock"],
       skip: nil
     }
 

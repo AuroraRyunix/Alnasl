@@ -343,12 +343,13 @@ defmodule AlnaslWeb.FairPlayLive do
          {:ok, _view} <- FairPlay.record_view(scope, subject, round, key) do
       setting = FairPlay.settings(FairPlay.hall_of(subject))
       model = Report.model(setting)
+      opponents = Report.opponent_ratings(rows)
       rows = Enum.filter(rows, &(&1.player_key == key))
 
       line =
         if rows == [],
           do: nil,
-          else: Report.player(key, rows, model)
+          else: Report.player(key, rows, model, opponents)
 
       assign(socket,
         fp_data: %{
