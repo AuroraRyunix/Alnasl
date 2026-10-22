@@ -181,6 +181,26 @@ defmodule Alnasl.TrackerMatrixTest do
           assert m.guessed == 0
           assert m.named_games >= m.games * 0.9
 
+        # What hands do in a hall besides moving: a j'adoube on the
+        # opponent's time, a piece knocked onto the next square and put
+        # back, the next player lifting before the last piece has landed,
+        # the lever knocked back and pressed again. The knocked piece is
+        # what the board shows for a few seconds and is called out while
+        # it lies there; the game is whole all the same.
+        :hall ->
+          assert m.faults > 50
+          assert v.(:flagged) == 0
+          assert v.(:reconstructed_wrong) == 0
+          assert v.(:guessed_wrong) == 0
+          assert right + v.(:assumed) >= m.games * 0.95
+
+        # The same at bullet speed, among the scramble's own faults:
+        # nothing unmarked, and nearly every game right.
+        :hall_bullet ->
+          assert v.(:flagged) == 0
+          assert right >= m.games * 0.9
+          assert v.(:reconstructed_wrong) + v.(:guessed_wrong) <= m.games * 0.03
+
         :stuck ->
           assert m.faults > 50
           assert right >= m.games * 0.8

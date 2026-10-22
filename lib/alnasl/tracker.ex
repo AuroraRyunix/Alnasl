@@ -425,10 +425,11 @@ defmodule Alnasl.Tracker do
 
     # Pressed again with nothing on the board changed since the last press:
     # the lever knocked back and pressed again, or a hand on the wrong
-    # button. Counted - a clock is a clock - but not as moves made: the
+    # button. (Unless the board is not being heard: then nothing changing
+    # says nothing.) Counted - a clock is a clock - but not as moves made: the
     # search for a longer line than the board shows (`pressed_for/3`)
     # leaves these out.
-    idle? = pressed? and tr.pressed_at != nil and tr.raw_since <= tr.pressed_at
+    idle? = pressed? and not tr.deaf? and tr.pressed_at != nil and tr.raw_since <= tr.pressed_at
 
     %{
       tr

@@ -130,18 +130,15 @@
     "capture": "2026-10-12-out-of-turn-session.jsonl",
     "note": "Board 06310 with a clock: 1. e4, a long think, 1...e5, then a black knight to c6 out of turn and a bishop through its own pawn, both taken back; the rest of the 90 minutes is test handling whose game nobody wrote down.",
     "pinned": {
-      "alarms": 5,
+      "alarms": 4,
       "marks": [
-        "1. Nc3: guessed",
-        "2. e6: guessed",
-        "3. e4: guessed",
-        "4. e5: guessed"
+        "1. e4: recovered",
+        "2. e5: recovered"
       ],
       "moves": [
-        "Nc3",
-        "e6",
         "e4",
-        "e5"
+        "e5",
+        "Nc3"
       ],
       "status": "live"
     },
