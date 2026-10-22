@@ -8,18 +8,24 @@ defmodule Alnasl.FairPlay.Stats do
       `1 + |eval|/100`, in pawns, capped at 5.00 - a pawn thrown away in a
       level position is worth more than a pawn thrown away while two
       pawns up;
-    * **MM**: `(Σ match − Σ p) / sqrt(Σ p(1−p))`, a match being the
-      engine's first choice and `p` the model's chance of it;
+    * **MM**: `(Σ match − Σ p) / sqrt(V)`, a match being the engine's
+      first choice and `p` the model's chance of it;
     * **EV**: the same, a match being any move within 0.01 of the best;
-    * **ASD**: `(Σ E[d] − Σ d) / sqrt(Σ Var[d])`: positive when the player
-      lost less than their rating predicts;
-    * **combined**: `w·z / sqrt(wᵀ Σ w)`, with `Σ` the three tests'
-      covariance measured in calibration (`Model.dispersion/1`). They are
-      far from independent (a player who matches the engine also loses
-      little), so adding them up as if they were would shout about every
-      good day; and none of them has the variance of one its formula
-      promises, so dividing by their correlation alone would shout a
-      little about every day.
+    * **ASD**: `(Σ E[d] − Σ d) / sqrt(V)`: positive when the player lost
+      less than their rating predicts;
+    * **combined**: `w·z / sqrt(wᵀ C w)`, with `C` the correlation of the
+      three tests in this player-event. They are far from independent (a
+      player who matches the engine also loses little), so adding them up
+      as if they were would shout about every good day.
+
+  `V` is not `Σ p(1−p)`: that is the variance of moves that have nothing
+  to do with each other, and the moves of one game, and the games of one
+  event, have a great deal to do with each other. The variances and the
+  correlation `C` come from `Alnasl.FairPlay.Cluster`, which builds them
+  from this player-event's own games and the within-game and between-game
+  correlations the calibration measured (`Model.dispersion/1`). The
+  formulas `binomial_z/2` and `asd_z/2` remain as the independent
+  special case, and a model without those correlations gets exactly them.
 
   Below 40 counted moves there is no score (`:too_few_moves`); without a
   model there is no score either (`:uncalibrated`), and the raw counts are
@@ -35,7 +41,7 @@ defmodule Alnasl.FairPlay.Stats do
   is arithmetic over records.
   """
 
-  alias Alnasl.FairPlay.{Model, Selection}
+  alias Alnasl.FairPlay.{Cluster, Model, Selection}
 
   @min_moves 40
   @cap 5.0
@@ -80,19 +86,17 @@ defmodule Alnasl.FairPlay.Stats do
 
   defp scored(raw, counted, losses, model) do
     n = raw.counted
-    p = Enum.map(counted, &Model.p_match(model, &1))
-    q = Enum.map(counted, &Model.p_ev(model, &1))
-    moments = Enum.map(counted, &Model.loss_moments(model, &1))
+    plies = residuals(counted, losses, model)
 
-    mm_z = binomial_z(raw.matches, p)
-    ev_z = binomial_z(raw.ev_matches, q)
-    asd_z = asd_z(losses, moments)
-    score = combined([mm_z, ev_z, asd_z], model.weights, Model.dispersion(model))
+    {[mm_z, ev_z, asd_z] = zs, correlation} =
+      plies |> Cluster.accumulate() |> Cluster.z_scores(Model.dispersion(model))
+
+    score = combined(zs, model.weights, correlation)
 
     numbers = %{
       raw
-      | expected_mm_share: Enum.sum(p) / n,
-        expected_avg_loss: (moments |> Enum.map(&elem(&1, 0)) |> Enum.sum()) / n,
+      | expected_mm_share: (plies |> Enum.map(& &1.p) |> Enum.sum()) / n,
+        expected_avg_loss: (plies |> Enum.map(& &1.expected_loss) |> Enum.sum()) / n,
         mm_z: mm_z,
         ev_z: ev_z,
         asd_z: asd_z
@@ -102,6 +106,37 @@ defmodule Alnasl.FairPlay.Stats do
       do: %{numbers | reason: :too_few_moves},
       else: %{numbers | score: score, interval: score && {score - 1.96, score + 1.96}}
   end
+
+  @doc """
+  The counted plies of `records` as `Alnasl.FairPlay.Cluster` takes them:
+  per ply its `:game`, the three residuals `:e` (match − p, ev − q,
+  E[d] − d) and the three model standard deviations `:s`, plus `:p` and
+  `:expected_loss`. Skipped plies are left out.
+  """
+  @spec residuals([map()], Model.t()) :: [map()]
+  def residuals(records, model) do
+    counted = Enum.filter(records, &Selection.counted?/1)
+    residuals(counted, Enum.map(counted, &scaled_loss/1), model)
+  end
+
+  defp residuals(counted, losses, model) do
+    Enum.zip_with(counted, losses, fn record, loss ->
+      p = Model.p_match(model, record)
+      q = Model.p_ev(model, record)
+      {mean, var} = Model.loss_moments(model, record)
+
+      %{
+        game: record[:game],
+        p: p,
+        expected_loss: mean,
+        e: [indicator(engine_match?(record)) - p, indicator(ev_match?(record)) - q, mean - loss],
+        s: [:math.sqrt(p * (1 - p)), :math.sqrt(q * (1 - q)), :math.sqrt(max(var, 0.0))]
+      }
+    end)
+  end
+
+  defp indicator(true), do: 1.0
+  defp indicator(false), do: 0.0
 
   defp share(_k, 0), do: nil
   defp share(k, n), do: k / n
@@ -128,7 +163,11 @@ defmodule Alnasl.FairPlay.Stats do
   @doc "The move played is within 0.01 of the best (an equal-top-value move)."
   def ev_match?(%{best: [%{cp: best} | _], played_cp: played}), do: played >= best - 1
 
-  @doc "`(Σ x − Σ p) / sqrt(Σ p(1−p))`; nil when the variance is nil."
+  @doc """
+  `(Σ x − Σ p) / sqrt(Σ p(1−p))`, as if every move were independent of
+  every other; nil when the variance is nil. What `player/2` gives with a
+  model that has no within-game correlation.
+  """
   @spec binomial_z(number(), [float()]) :: float() | nil
   def binomial_z(observed, ps) do
     variance = Enum.reduce(ps, 0.0, &(&1 * (1 - &1) + &2))
@@ -144,9 +183,9 @@ defmodule Alnasl.FairPlay.Stats do
   end
 
   @doc """
-  `w·z / sqrt(wᵀ Σ w)`: the weighted sum of the z-scores over its own
-  standard deviation, `Σ` being their covariance (or, failing that, their
-  correlation). Nil when any of them is.
+  `w·z / sqrt(wᵀ C w)`: the weighted sum of the z-scores over its own
+  standard deviation, `C` being their correlation. Nil when any of them
+  is, or when `C` says the sum has no spread.
   """
   @spec combined([float() | nil], [number()], [[number()]]) :: float() | nil
   def combined(zs, weights, correlation) do

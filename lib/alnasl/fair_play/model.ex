@@ -17,16 +17,15 @@ defmodule Alnasl.FairPlay.Model do
       points) and position type (how many other moves are within 0.30:
       none, one, two or more), falling back to the band, then to all
       plies, where a cell has fewer than 30 plies;
-    * the correlation of the three z-scores across the calibration's
-      player-events, and their **covariance** (second moments about zero),
-      which `Stats.combined/3` divides by (`dispersion/1`). The covariance
-      and not the correlation, because the z-scores are not unit-variance
-      in real life: moves of one game are not independent, and a player's
-      form on the day is not in the rating. Dividing by the correlation
-      assumes a variance of one that the data do not have, and every
-      tail probability that follows from it is too small. Phase 1 did
-      that; a model without a covariance (a file from then) still falls
-      back to the correlation;
+    * how strongly the tests hang together within a ply, within a game
+      and across the games of one player-event (`dispersion/1`, the
+      `R0`, `W` and `B` of `Alnasl.FairPlay.Cluster`), from which each
+      player-event's variance is built from its own games. Moves of one
+      game are not independent, and a player's form on the day is not in
+      the rating. The single global covariance of the z-scores that stood
+      here before gave every player-event the inflation of the average
+      one, and was measured on the very games the regression was fitted
+      on;
     * the held-out false-positive table (`false_positives`): for each
       threshold, how many normal player-events scored that high, with a
       95% interval. Written by the fit (`Alnasl.FairPlay.Calibration`),
@@ -40,7 +39,7 @@ defmodule Alnasl.FairPlay.Model do
   the file says so.
   """
 
-  alias Alnasl.FairPlay.{Selection, Stats}
+  alias Alnasl.FairPlay.{Cluster, Selection, Stats}
 
   @type t :: %__MODULE__{}
 
@@ -50,8 +49,7 @@ defmodule Alnasl.FairPlay.Model do
             match: nil,
             ev: nil,
             loss: %{cells: %{}, bands: %{}, global: {0.0, 0.0, 0}},
-            correlation: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
-            covariance: nil,
+            dispersion: nil,
             weights: [1.0, 1.0, 1.0],
             false_positives: nil,
             meta: %{}
@@ -82,12 +80,12 @@ defmodule Alnasl.FairPlay.Model do
   def feature_names, do: @feature_names
 
   @doc """
-  The matrix `Stats.combined/3` divides by: the covariance of the three
-  z-scores when the model has one, else their correlation (a model from
-  before there was one).
+  The correlations `Alnasl.FairPlay.Cluster` builds a player-event's
+  variance from; independent plies (`Cluster.default/0`) for a model
+  without them.
   """
-  def dispersion(%__MODULE__{covariance: [_ | _] = covariance}), do: covariance
-  def dispersion(%__MODULE__{correlation: correlation}), do: correlation
+  def dispersion(%__MODULE__{dispersion: %{} = params}), do: params
+  def dispersion(%__MODULE__{}), do: Cluster.default()
 
   @doc "The model's chance that this ply is the engine's first choice."
   def p_match(%__MODULE__{match: beta}, record), do: logistic(dot(beta, features(record)))
@@ -164,8 +162,7 @@ defmodule Alnasl.FairPlay.Model do
         )
     }
 
-    {correlation, covariance} = dispersion_of(events, model)
-    %{model | correlation: correlation, covariance: covariance}
+    %{model | dispersion: dispersion_of(events, model)}
   end
 
   @doc """
@@ -281,44 +278,12 @@ defmodule Alnasl.FairPlay.Model do
     {mean, var, n}
   end
 
-  # The three z-scores of every player-event with as many counted moves
-  # as the report wants before it shows a score, and from them their
-  # Pearson correlations and their covariance about zero. About zero, not
-  # about their mean: a z-score is supposed to have mean zero, and a model
-  # whose scores drift off it should pay for that in a wider spread rather
-  # than have it subtracted away. Too few events, or a test with no spread:
-  # the identity and no covariance, which is the honest "don't know".
+  # The correlations of `Alnasl.FairPlay.Cluster`, from the residual sums
+  # of every player-event's games.
   defp dispersion_of(events, model) do
-    zs =
-      for records <- events,
-          numbers = Stats.player(records, model),
-          numbers.counted >= Stats.min_moves(),
-          z = [numbers.mm_z, numbers.ev_z, numbers.asd_z],
-          Enum.all?(z, &is_number/1),
-          do: z
-
-    if length(zs) < 3 do
-      {model.correlation, nil}
-    else
-      columns = zs |> Enum.zip() |> Enum.map(&Tuple.to_list/1)
-      n = length(zs)
-
-      {for(a <- columns, do: for(b <- columns, do: pearson(a, b))),
-       for(
-         a <- columns,
-         do: for(b <- columns, do: Enum.zip_reduce(a, b, 0.0, &(&1 * &2 + &3)) / n)
-       )}
-    end
-  end
-
-  defp pearson(a, b) do
-    n = length(a)
-    ma = Enum.sum(a) / n
-    mb = Enum.sum(b) / n
-    cov = Enum.zip_reduce(a, b, 0.0, fn x, y, s -> s + (x - ma) * (y - mb) end)
-    va = Enum.reduce(a, 0.0, &((&1 - ma) * (&1 - ma) + &2))
-    vb = Enum.reduce(b, 0.0, &((&1 - mb) * (&1 - mb) + &2))
-    if va > 0 and vb > 0, do: cov / :math.sqrt(va * vb), else: if(a == b, do: 1.0, else: 0.0)
+    events
+    |> Enum.map(&(&1 |> Stats.residuals(model) |> Cluster.accumulate()))
+    |> Cluster.fit()
   end
 
   # --- files -------------------------------------------------------------------
@@ -367,8 +332,7 @@ defmodule Alnasl.FairPlay.Model do
         "bands" => Map.new(m.loss.bands, fn {k, v} -> {Integer.to_string(k), triple.(v)} end),
         "global" => triple.(m.loss.global)
       },
-      "correlation" => m.correlation,
-      "covariance" => m.covariance,
+      "dispersion" => m.dispersion && Cluster.to_json(m.dispersion),
       "weights" => m.weights,
       "false_positives" => m.false_positives,
       "meta" => m.meta
@@ -390,8 +354,7 @@ defmodule Alnasl.FairPlay.Model do
          bands: Map.new(j["loss"]["bands"], fn {k, v} -> {String.to_integer(k), triple.(v)} end),
          global: triple.(j["loss"]["global"])
        },
-       correlation: j["correlation"],
-       covariance: j["covariance"],
+       dispersion: Cluster.from_json(j["dispersion"]),
        weights: j["weights"],
        false_positives: j["false_positives"],
        meta: j["meta"] || %{}

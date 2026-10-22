@@ -72,16 +72,14 @@ defmodule Alnasl.FairPlay.ModelTest do
     {got_mean, _var} = Model.loss_moments(model, %{rating: 1650, near_count: 0})
     assert_in_delta got_mean, mean, 1.0e-12
 
-    # MM and EV are the same test here, so their correlation is one.
-    [[1.0, mm_ev | _] | _] = model.correlation
-    assert_in_delta mm_ev, 1.0, 1.0e-9
-
-    # The covariance the score divides by: plies drawn from the model
-    # itself are independent, so the MM z-score has a variance near one
-    # here - and the combined score is scaled by this, not by the identity.
-    assert [[mm_var | _] | _] = model.covariance
-    assert_in_delta mm_var, 1.0, 0.3
-    assert Model.dispersion(model) == model.covariance
+    # The correlations the variance is built from: plies drawn from the
+    # model itself are independent, so the move-level dispersion of MM is
+    # one and two plies of one player-event are uncorrelated. MM and EV
+    # are the same test here, so they correlate fully on a ply.
+    %{r0: [[mm_var, mm_ev | _] | _], within: [[within | _] | _]} = Model.dispersion(model)
+    assert_in_delta mm_var, 1.0, 0.05
+    assert_in_delta mm_ev, 1.0, 0.05
+    assert_in_delta within, 0.0, 0.02
 
     # And a normal player-event scores normally.
     numbers = Stats.player(hd(events), model)
@@ -104,7 +102,7 @@ defmodule Alnasl.FairPlay.ModelTest do
     assert loaded.match == model.match
     assert loaded.loss == model.loss
     assert loaded.engine == "sf19"
-    assert loaded.covariance == model.covariance
+    assert loaded.dispersion == model.dispersion
     assert loaded.meta["attribution"] =~ "CC BY-SA 4.0"
   end
 

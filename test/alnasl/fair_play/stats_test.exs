@@ -102,20 +102,32 @@ defmodule Alnasl.FairPlay.StatsTest do
       assert numbers.reason == :too_few_moves
     end
 
-    test "the score is scaled by the measured covariance, when the model has one" do
-      records = List.duplicate(match(), 30) ++ List.duplicate(miss(), 10)
+    test "the variance is the one its games have, when the model knows how games hang together" do
+      ones = [[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]
+      zeros = [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
 
-      # Every test twice as spread as its formula says, and independent:
-      # the same z-scores, a score half as large.
-      wide = %{coin_model() | covariance: [[4.0, 0.0, 0.0], [0.0, 4.0, 0.0], [0.0, 0.0, 4.0]]}
-      plain = Stats.player(records, coin_model())
-      scaled = Stats.player(records, wide)
+      # A game that hangs together completely: forty plies of one game are
+      # one ply forty times over. MM: (30 − 20) / (40 × 0.5), not / sqrt(10).
+      solid = %{coin_model() | dispersion: %{r0: ones, within: ones, between: zeros}}
 
-      assert scaled.mm_z == plain.mm_z
-      assert_in_delta scaled.score, plain.score / 2, 1.0e-9
+      one_game =
+        Enum.map(
+          List.duplicate(match(), 30) ++ List.duplicate(miss(), 10),
+          &Map.put(&1, :game, 1)
+        )
 
-      # A model from before there was a covariance divides by its correlation.
-      assert Model.dispersion(coin_model()) == coin_model().correlation
+      numbers = Stats.player(one_game, solid)
+      assert_in_delta numbers.mm_z, 0.5, 1.0e-9
+      # And the three tests are one test: the score is their average.
+      assert_in_delta numbers.score, (numbers.mm_z + numbers.ev_z + numbers.asd_z) / 3, 1.0e-9
+
+      # The same plies over forty games: the within-game correlation has
+      # no pairs to act on, and it is the independent formula again.
+      forty = Enum.with_index(one_game, fn r, i -> %{r | game: i} end)
+      assert_in_delta Stats.player(forty, solid).mm_z, 3.162278, 1.0e-6
+
+      # A model without the correlations is the independent formula.
+      assert Model.dispersion(coin_model()) == Alnasl.FairPlay.Cluster.default()
     end
 
     test "without a model: the raw counts and no score" do

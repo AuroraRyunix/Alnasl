@@ -39,7 +39,11 @@ defmodule AlnaslWeb.FairPlayPagesTest do
       match: List.duplicate(0.0, 5),
       ev: List.duplicate(0.0, 5),
       loss: %{cells: %{}, bands: %{}, global: {0.2, 0.05, 1000}},
-      correlation: [[1.0, 0.5, 0.5], [0.5, 1.0, 0.5], [0.5, 0.5, 1.0]],
+      dispersion: %{
+        r0: [[1.0, 0.5, 0.5], [0.5, 1.0, 0.5], [0.5, 0.5, 1.0]],
+        within: List.duplicate([0.0, 0.0, 0.0], 3),
+        between: List.duplicate([0.0, 0.0, 0.0], 3)
+      },
       weights: [1.0, 1.0, 1.0]
     }
 

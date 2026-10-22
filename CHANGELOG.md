@@ -20,6 +20,7 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 ## [Unreleased]
 
 - [Feature] **The false positives have names now.** `mix fair_play.hits --model FILE --holdout F` (or `main(["hits" | ...])` from a release) lists the held-out player-events a model scores at 3 or more - or at `--threshold` - with the event, the player, their rating, their opponents' average, the counted moves and the three z-scores. A false-positive rate is a number; six players somebody can look up are a hypothesis. `--holdout` has to be the fit's, or the list is cheerfully made of games the model was fitted on.
+- [Change] **A fair-play score's variance is built from the player's own games.** Each of the three tests used to divide by the variance of moves that have nothing to do with each other, after which one covariance, measured once over all the fitting player-events, was supposed to make up the difference for everybody. Moves of one game have a great deal to do with each other, and so do the games of one event, and how much depends on how many games of how many moves a player actually had. The variance is now assembled per player-event from its games, using how strongly moves hang together within a game and across one player's games in an event - measured by the calibration from residual sums per game, pooled over thousands of them (`Alnasl.FairPlay.Cluster` has the formulas, and why the textbook sandwich from one player's own five games would be a worse idea).
 
 ## [0.6.0] - 2026-10-22
 
