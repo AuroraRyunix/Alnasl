@@ -62,6 +62,7 @@ Een zet zegt niets over de speler, of Alnasl weet niet zeker dat hij gespeeld is
 | Niet meegeteld | Waarom |
 | --- | --- |
 | geen rating | Zonder rating is er niets om mee te vergelijken. Ratings komen uit de paring |
+| rating onder 1000 | De partijen waaruit het model gemaakt is, bevatten te weinig spelers onder 1000 om te zeggen wat je van hen mag verwachten, en een gok is geen verwachting |
 | geraden door de tracker | De tracker wist niet zeker wat er gespeeld werd, en dat geldt ook voor elke zet erna in die partij |
 | herschreven, uitslag nog niet bevestigd | De tracker heeft hem gecorrigeerd en de arbiter heeft de uitslag nog niet bevestigd |
 | opening (zet 1 tot 8) | Theorie, geen denkwerk |

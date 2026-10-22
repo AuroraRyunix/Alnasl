@@ -10,9 +10,17 @@ defmodule Alnasl.FairPlay.Model do
       (`match`) and of playing a move within 0.01 of it (`ev`), each from
       the same features (`features/1`): the rating, the scaled gap from the
       best move to the second, how many other moves are within 0.30 of the
-      best, and the material left. Fitted by Newton's method (IRLS) with a
-      whisker of ridge, so a perfectly separable corner of the data gives
-      a large coefficient rather than an infinite one;
+      best, and the material left. The rating is not one straight line: a
+      linear spline with a knot every 200 points from 1200 to 2600, so a
+      1300 player is not assumed to be a 2500 player with the sign
+      flipped, and the rating also bends the effect of the gap and of the
+      number of good moves (a strong player finds the one good move more
+      reliably than a weak one; that is rather the point of a rating).
+      Ratings under 1000 are not scored at all
+      (`Alnasl.FairPlay.Selection`, `:low_rating`). Fitted by Newton's
+      method (IRLS) with a whisker of ridge, so a perfectly separable
+      corner of the data gives a large coefficient rather than an
+      infinite one;
     * the mean and variance of the scaled loss per rating band (200
       points) and position type (how many other moves are within 0.30:
       none, one, two or more), falling back to the band, then to all
@@ -55,26 +63,34 @@ defmodule Alnasl.FairPlay.Model do
             meta: %{}
 
   @min_cell 30
-  @feature_names ~w(intercept rating scaled_gap near_count material)
+  # The knots of the rating spline: a hinge `max(rating − knot, 0)/400`
+  # each, on top of the straight line.
+  @knots [1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600]
+  @feature_names ~w(intercept rating) ++
+                   Enum.map(@knots, &"rating>#{&1}") ++
+                   ~w(scaled_gap near_count material rating*scaled_gap rating*near_count)
   @attribution "Parameters derived from Lichess broadcast games (database.lichess.org), " <>
                  "licensed CC BY-SA 4.0; this file is under the same licence."
 
   # --- prediction --------------------------------------------------------------
 
   @doc """
-  The features of a ply: `[1, (rating − 2000)/400, scaled gap, near count
-  (at most 3), material/78]`. Scaled so the coefficients come out of
-  comparable size, which Newton's method appreciates.
+  The features of a ply, in the order of `feature_names/0`: `1`, the
+  rating as `(rating − 2000)/400`, a hinge `max(rating − k, 0)/400` per
+  knot `k` (1200, 1400, ... 2600), the scaled gap, the near count (at most
+  3), material/78, and the rating times the gap and times the near count.
+  Scaled so the coefficients come out of comparable size, which Newton's
+  method appreciates.
   """
   @spec features(map()) :: [float()]
   def features(record) do
-    [
-      1.0,
-      (record.rating - 2000) / 400,
-      Stats.scaled_gap(record),
-      min(record.near_count || 0, 3) / 1,
-      record.material / 78
-    ]
+    r = (record.rating - 2000) / 400
+    gap = Stats.scaled_gap(record)
+    near = min(record.near_count || 0, 3) / 1
+
+    [1.0, r] ++
+      Enum.map(@knots, &(max(record.rating - &1, 0) / 400)) ++
+      [gap, near, record.material / 78, r * gap, r * near]
   end
 
   def feature_names, do: @feature_names

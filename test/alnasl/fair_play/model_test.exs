@@ -51,15 +51,37 @@ defmodule Alnasl.FairPlay.ModelTest do
     for {want, got} <- Enum.zip(beta, fitted), do: assert_in_delta(got, want, 0.08)
   end
 
+  # Coefficients by name, zero where not named.
+  defp beta(named), do: Enum.map(Model.feature_names(), &Map.get(named, &1, 0.0))
+
   test "fit recovers the match model from synthetic plies, and keeps loss moments by band" do
-    beta = [0.2, 0.6, 1.5, -0.4, -0.5]
+    # A rating effect that bends at 1600, and a gap that matters more to
+    # a stronger player.
+    beta =
+      beta(%{
+        "intercept" => 0.2,
+        "rating" => 0.6,
+        "rating>1600" => -0.5,
+        "scaled_gap" => 1.5,
+        "near_count" => -0.4,
+        "material" => -0.5,
+        "rating*scaled_gap" => 0.3
+      })
+
     plies = synthetic(beta, 20_000, {1, 2, 3})
     # 400 player-events of 50 plies each.
     events = Enum.chunk_every(plies, 50)
 
     model = Model.fit(events, engine: "sf19", bench: 2_497_913, nodes: 1_000_000)
 
-    for {want, got} <- Enum.zip(beta, model.match), do: assert_in_delta(got, want, 0.15)
+    # The chances it predicts are the chances the plies were drawn with;
+    # the spline's coefficients one by one are too collinear to compare.
+    errors =
+      for ply <- Enum.take(plies, 1000),
+          do: abs(Model.p_match(model, ply) - logistic(dot(beta, Model.features(ply))))
+
+    assert Enum.sum(errors) / 1000 < 0.015
+    assert Enum.max(errors) < 0.08
 
     # Every match is also an equal-top move here and nothing else is.
     for {a, b} <- Enum.zip(model.match, model.ev), do: assert_in_delta(a, b, 1.0e-9)
@@ -91,7 +113,7 @@ defmodule Alnasl.FairPlay.ModelTest do
     assert Model.load("sf19", dir) == {:error, :missing}
 
     model =
-      Model.fit([synthetic([0.0, 0.5, 1.0, 0.0, 0.0], 500, {3, 2, 1})],
+      Model.fit([synthetic(beta(%{"rating" => 0.5, "scaled_gap" => 1.0}), 500, {3, 2, 1})],
         engine: "sf19",
         nodes: 1000
       )

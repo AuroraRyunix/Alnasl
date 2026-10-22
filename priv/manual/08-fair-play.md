@@ -62,6 +62,7 @@ A move says nothing about the player, or Alnasl is not sure it was played, in th
 | Left out | Why |
 | --- | --- |
 | no rating | Without a rating there is nothing to compare with. Ratings come from the pairing |
+| rating under 1000 | The games the model is made from hold too few players rated under 1000 to say what to expect of them, and a guess is not an expectation |
 | guessed by the tracker | The tracker was not sure what was played, and neither is any move after it in that game |
 | rewritten, result not yet confirmed | The tracker corrected it, and the arbiter has not yet confirmed the result |
 | opening (moves 1 to 8) | Book, not thought |

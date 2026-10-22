@@ -747,6 +747,7 @@ defmodule AlnaslWeb.FairPlayLive do
   # --- words -------------------------------------------------------------------
 
   defp skip_label(:unrated), do: gettext("no rating")
+  defp skip_label(:low_rating), do: gettext("rating under 1000")
   defp skip_label(:tracker_guessed), do: gettext("guessed by the tracker")
   defp skip_label(:tracker_rewritten), do: gettext("rewritten, result not yet confirmed")
   defp skip_label(:opening), do: gettext("opening (moves 1 to 8)")

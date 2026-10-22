@@ -747,7 +747,7 @@ defmodule Alnasl.FairPlay.Calibration do
   end
 
   def decode_record(ply) do
-    %{
+    record = %{
       ply: ply["ply"],
       rating: ply["rating"],
       best: Enum.map(ply["best"], fn [move, cp] -> %{move: move, cp: cp} end),
@@ -757,6 +757,10 @@ defmodule Alnasl.FairPlay.Calibration do
       material: ply["material"],
       skip: nil
     }
+
+    # Labels made before the rule: the fit and the check apply it as the
+    # halls do.
+    if Selection.low_rating?(record), do: %{record | skip: :low_rating}, else: record
   end
 
   @doc """
