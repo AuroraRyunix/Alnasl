@@ -57,6 +57,31 @@ config :alnasl,
 
 config :logger, level: :warning
 
+# The browser tests' driver (test/e2e, docs/e2e.md). Playwright lives in e2e/
+# with its own package.json; traces and screenshots of a failed run go under
+# _build so nothing is committed by accident.
+config :phoenix_test,
+  otp_app: :alnasl,
+  playwright: [
+    assets_dir: "e2e",
+    browser_pools: [[id: :default_pool, size: 1]],
+    timeout: to_timeout(second: 10),
+    browser_launch_timeout: to_timeout(second: 30),
+    trace: System.get_env("PW_TRACE", "false") in ~w(1 true),
+    trace_dir: "_build/e2e/traces",
+    screenshot: System.get_env("PW_SCREENSHOT", "false") in ~w(1 true),
+    screenshot_dir: "_build/e2e/screenshots",
+    ecto_sandbox_stop_owner_delay: 100
+  ]
+
+# On Windows, where Erlang cannot spawn Playwright's driver (a .js file), the
+# browser runs in `npx playwright run-server` and the tests connect to it.
+# Only when set, since the option refuses a nil; `config` merges it into the
+# list above.
+if ws_endpoint = System.get_env("PLAYWRIGHT_WS_ENDPOINT") do
+  config :phoenix_test, playwright: [ws_endpoint: ws_endpoint]
+end
+
 # Password hashes that take a millisecond, not a third of a second, and
 # Keycloak's answers from a stub, never from auth.zerotwo.cloud.
 config :alnasl, pbkdf2_iterations: 1_000, keycloak_req_plug: Alnasl.KeycloakStub
