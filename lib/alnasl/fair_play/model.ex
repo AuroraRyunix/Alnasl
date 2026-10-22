@@ -280,8 +280,10 @@ defmodule Alnasl.FairPlay.Model do
     rem(byte, 2)
   end
 
-  # The regressions and the loss table, nothing else.
-  defp regression(events, opts) do
+  # The regressions and the loss table, nothing else. Public for
+  # `Alnasl.FairPlay.Probes`, which cross-fits its own tests the same way.
+  @doc false
+  def regression(events, opts) do
     counted = events |> Enum.flat_map(&prepare/1) |> Enum.filter(&Selection.counted?/1)
     rows = Enum.map(counted, &features/1)
     lambda = Keyword.get(opts, :lambda, 1.0e-4)

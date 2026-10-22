@@ -86,9 +86,14 @@ defmodule Alnasl.FairPlay.Cluster do
   @type mat :: [[float()]]
   @type params :: %{r0: mat(), within: mat(), between: mat()}
 
-  @doc "Independent plies: `R0 = I`, `W = B = 0`. The old score."
-  @spec default() :: params()
-  def default, do: %{r0: identity(), within: zeros(), between: zeros()}
+  @doc """
+  Independent plies: `R0 = I`, `W = B = 0`. The old score. Three tests
+  unless told otherwise: the arithmetic does not care how many there are
+  (`Alnasl.FairPlay.Probes` sums more of them), as long as every ply of a
+  player-event has the same number.
+  """
+  @spec default(pos_integer()) :: params()
+  def default(k \\ @k), do: %{r0: identity(k), within: zeros(k), between: zeros(k)}
 
   @doc """
   The sums of one player-event, from its plies: each a map with `:game`
@@ -97,26 +102,32 @@ defmodule Alnasl.FairPlay.Cluster do
   """
   @spec accumulate([map()]) :: map()
   def accumulate(plies) do
+    k =
+      case plies do
+        [%{e: e} | _] -> length(e)
+        [] -> @k
+      end
+
     games =
       plies
       |> Enum.group_by(& &1[:game])
       |> Map.values()
       |> Enum.map(fn ps ->
         %{
-          s: vsum(Enum.map(ps, & &1.s)),
-          e: vsum(Enum.map(ps, & &1.e)),
-          ee: msum(Enum.map(ps, &outer(&1.e, &1.e))),
-          ss: msum(Enum.map(ps, &outer(&1.s, &1.s)))
+          s: vsum(Enum.map(ps, & &1.s), k),
+          e: vsum(Enum.map(ps, & &1.e), k),
+          ee: msum(Enum.map(ps, &outer(&1.e, &1.e)), k),
+          ss: msum(Enum.map(ps, &outer(&1.s, &1.s)), k)
         }
       end)
 
     %{
-      t: vsum(Enum.map(games, & &1.e)),
-      se: vsum(Enum.map(games, & &1.s)),
-      e0: msum(Enum.map(games, & &1.ee)),
-      m0: msum(Enum.map(games, & &1.ss)),
-      eg: msum(Enum.map(games, &outer(&1.e, &1.e))),
-      mg: msum(Enum.map(games, &outer(&1.s, &1.s))),
+      t: vsum(Enum.map(games, & &1.e), k),
+      se: vsum(Enum.map(games, & &1.s), k),
+      e0: msum(Enum.map(games, & &1.ee), k),
+      m0: msum(Enum.map(games, & &1.ss), k),
+      eg: msum(Enum.map(games, &outer(&1.e, &1.e)), k),
+      mg: msum(Enum.map(games, &outer(&1.s, &1.s)), k),
       games: length(games)
     }
   end
@@ -137,14 +148,15 @@ defmodule Alnasl.FairPlay.Cluster do
   @spec z_scores(map(), params()) :: {[float() | nil], mat()}
   def z_scores(acc, params) do
     v = variance(acc, params)
-    d = for i <- 0..(@k - 1), do: at(v, i, i)
+    k = length(acc.t)
+    d = for i <- 0..(k - 1), do: at(v, i, i)
 
     zs =
       Enum.zip_with(acc.t, d, fn t, var -> if var > 0, do: t / :math.sqrt(var) end)
 
     corr =
-      for i <- 0..(@k - 1) do
-        for j <- 0..(@k - 1) do
+      for i <- 0..(k - 1) do
+        for j <- 0..(k - 1) do
           di = Enum.at(d, i)
           dj = Enum.at(d, j)
 
@@ -165,7 +177,13 @@ defmodule Alnasl.FairPlay.Cluster do
   """
   @spec fit([map()]) :: params()
   def fit(accs) do
-    zero = zeros()
+    k =
+      case accs do
+        [%{t: t} | _] -> length(t)
+        [] -> @k
+      end
+
+    zero = zeros(k)
 
     {n0, d0, n1, d1, n2, d2} =
       Enum.reduce(accs, {zero, zero, zero, zero, zero, zero}, fn a, {n0, d0, n1, d1, n2, d2} ->
@@ -180,7 +198,7 @@ defmodule Alnasl.FairPlay.Cluster do
       end)
 
     %{
-      r0: ratio(n0, d0, identity()),
+      r0: ratio(n0, d0, identity(k)),
       within: ratio(n1, d1, zero) |> floor_diagonal(),
       between: ratio(n2, d2, zero) |> floor_diagonal()
     }
@@ -196,22 +214,22 @@ defmodule Alnasl.FairPlay.Cluster do
 
   def from_json(_none), do: nil
 
-  # --- three by three ------------------------------------------------------------
+  # --- k by k (three, as shipped) --------------------------------------------------
 
   defp floats(m), do: Enum.map(m, fn row -> Enum.map(row, &(&1 / 1)) end)
 
-  defp identity,
-    do: for(i <- 0..(@k - 1), do: for(j <- 0..(@k - 1), do: if(i == j, do: 1.0, else: 0.0)))
+  defp identity(k),
+    do: for(i <- 0..(k - 1), do: for(j <- 0..(k - 1), do: if(i == j, do: 1.0, else: 0.0)))
 
-  defp zeros, do: List.duplicate(List.duplicate(0.0, @k), @k)
+  defp zeros(k), do: List.duplicate(List.duplicate(0.0, k), k)
 
   defp at(m, i, j), do: m |> Enum.at(i) |> Enum.at(j)
 
-  defp vsum([]), do: List.duplicate(0.0, @k)
-  defp vsum(vs), do: Enum.reduce(vs, fn v, acc -> Enum.zip_with(v, acc, &(&1 + &2)) end)
+  defp vsum([], k), do: List.duplicate(0.0, k)
+  defp vsum(vs, _k), do: Enum.reduce(vs, fn v, acc -> Enum.zip_with(v, acc, &(&1 + &2)) end)
 
-  defp msum([]), do: zeros()
-  defp msum(ms), do: Enum.reduce(ms, &madd/2)
+  defp msum([], k), do: zeros(k)
+  defp msum(ms, _k), do: Enum.reduce(ms, &madd/2)
 
   defp outer(a, b), do: for(x <- a, do: for(y <- b, do: x * y))
 
