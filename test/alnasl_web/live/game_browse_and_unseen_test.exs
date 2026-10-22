@@ -194,4 +194,25 @@ defmodule AlnaslWeb.GameBrowseAndUnseenTest do
     {:ok, setup, _html} = live(conn, ~p"/setup/advanced")
     refute has_element?(setup, "#tracker-unseen[checked]")
   end
+
+  describe "a square that is not read" do
+    test "a sensor that keeps its knight is named once, on the board's page and the tile", %{
+      conn: conn,
+      view: view,
+      board: board
+    } do
+      # ...Nc6, and b8 goes on reading the knight that has left it.
+      {:ok, after_nc6} = Position.from_text(position(~w(d4 d5 Nc3 Nf6 Nf3 Nc6)))
+      set_pieces("FAKE1", put_elem(after_nc6, Position.square_index("b8"), {:b, :n}))
+      eventually(fn -> length(Boards.snapshot(board.id).plies) == 6 end)
+      assert sans(board.id) == ~w(d4 d5 Nc3 Nf6 Nf3 Nc6)
+      eventually_html(view, fn _ -> has_element?(view, "#game-dead-1") end)
+      assert has_element?(view, "#game-dead-1", "Square b8 seems dead")
+      assert has_element?(view, "#game-state[data-state=live]")
+      assert "square.dead" in log_kinds()
+
+      {:ok, round, _html} = live(conn, ~p"/round/1")
+      assert has_element?(round, "#tile-dead-3-1", "b8")
+    end
+  end
 end

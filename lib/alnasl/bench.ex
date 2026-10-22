@@ -248,7 +248,11 @@ defmodule Alnasl.Bench do
         {"unplugged for 8 plies", :lost, %{unplug: [{11, 8}]}},
         {"a move out of turn at ply 12, taken back", :named, %{out_of_turn_at: 12}},
         {"an illegal move at ply 12, taken back", :named, %{illegal_back_at: 12}},
-        {"an illegal move at ply 12, played on", :illegal, %{illegal_at: 12}}
+        {"an illegal move at ply 12, played on", :illegal, %{illegal_at: 12}},
+        {"a dead square (reads empty) from ply 10", :dead, %{dead_square: {10, :off}}},
+        {"a stuck square (keeps its piece) from ply 10", :stuck, %{dead_square: {10, :stuck}}},
+        {"a stuck square + the benign faults 5%", :stuck,
+         %{faults: Map.new(benign, &{&1, 0.05}), dead_square: {10, :stuck}}}
       ]
   end
 end

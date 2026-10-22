@@ -447,6 +447,7 @@ defmodule AlnaslWeb.RoundLive do
       paused: (snap && snap[:paused]) || (game && game.paused) || false,
       warning: snap && snap[:warning],
       unseen: (snap && snap[:unseen]) || [],
+      dead: (snap && snap[:dead]) || [],
       # An alarm that has a name: a move out of turn, a move that is not one.
       alarm: snap && snap[:status] == :out_of_sync && AlnaslWeb.Words.alarm(snap[:detail]),
       reconstructed: Enum.count(plies, &(:recovered in &1.flags)),
@@ -1366,6 +1367,11 @@ defmodule AlnaslWeb.RoundLive do
             class="flag"
           >{gettext("Stays in Alnasl")}</span>
           <span :if={@tile.warning} class="flag">{gettext("Move missing?")}</span>
+          <span
+            :for={square <- @tile.dead}
+            id={"tile-dead-#{@tile.dom}-#{square}"}
+            class="flag"
+          >{AlnaslWeb.Words.dead(square)}</span>
           <span :for={piece <- @tile.unseen} id={"tile-unseen-#{@tile.dom}"} class="flag">{AlnaslWeb.Words.unseen(
             piece
           )}</span> <.state state={@tile.state} />

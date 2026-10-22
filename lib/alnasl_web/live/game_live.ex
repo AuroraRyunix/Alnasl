@@ -873,6 +873,11 @@ defmodule AlnaslWeb.GameLive do
                 "Move missing?"
               )}</span>
               <span
+                :for={square <- @view.snap[:dead] || []}
+                id={"game-dead-#{square}"}
+                class="flag"
+              >{Words.dead(square)}</span>
+              <span
                 :for={{piece, index} <- Enum.with_index(@view.snap[:unseen] || [])}
                 id={"game-unseen-#{index}"}
                 class="flag"

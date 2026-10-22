@@ -40,8 +40,19 @@ defmodule Alnasl.Simulator.Script do
   move no rule allows, left standing a few seconds and taken back),
   `:illegal_at` (a ply at which the
   player makes a move that is not legal, after which the game is played on as
-  if nothing happened) and `:gesture` (the kings set in the centre for the
-  result once the game is over).
+  if nothing happened), `:gesture` (the kings set in the centre for the
+  result once the game is over) and `:dead_square`.
+
+  ## A sensor that has died
+
+  `:dead_square` (`{ply, :off | :stuck}`) breaks one square's sensor before
+  `ply`, for the rest of the game: `:off` reads it empty whatever stands on
+  it, `:stuck` goes on reading the piece that stood there when it broke,
+  after that piece has left and whatever comes. Not any square: one that
+  the game has a piece leave or land on at least twice from there on (for
+  `:stuck`, one with a piece on it that will leave), since a dead corner
+  nobody plays on is a dead sensor nobody needs to know about. `:log` has
+  `{ply, :dead_square}` and `:dead` says which square.
 
   ## Fast play
 
@@ -96,7 +107,8 @@ defmodule Alnasl.Simulator.Script do
     # For how many plies a piece of the `:unseen` fault stays out of sight.
     unseen_plies: {1, 5},
     # For how many plies a piece of the `:between` fault is left crooked.
-    between_plies: {1, 4}
+    between_plies: {1, 4},
+    dead_square: nil
   }
 
   @bullet %{
@@ -115,7 +127,8 @@ defmodule Alnasl.Simulator.Script do
           events: [{non_neg_integer(), term()}],
           log: [{pos_integer(), atom()}],
           duration_ms: non_neg_integer(),
-          sans: [String.t()]
+          sans: [String.t()],
+          dead: 0..63 | nil
         }
 
   def defaults, do: @defaults
@@ -149,7 +162,11 @@ defmodule Alnasl.Simulator.Script do
       streak: 0,
       clock_at: 0,
       hidden: nil,
-      crooked: nil
+      crooked: nil,
+      dead: nil,
+      # The positions of the game, so that a square can be chosen for what
+      # the game will do on it.
+      positions: positions(pos, sans)
     }
 
     st = emit(st, {:position, st.b})
@@ -176,13 +193,21 @@ defmodule Alnasl.Simulator.Script do
     # everything in the order it arrives. Stable, so events of one
     # millisecond keep the order they were made in.
     events = st.ev |> Enum.reverse() |> Enum.sort_by(&elem(&1, 0))
-    %{events: events, log: Enum.reverse(st.log), duration_ms: st.t, sans: sans}
+
+    %{
+      events: events,
+      log: Enum.reverse(st.log),
+      duration_ms: st.t,
+      sans: sans,
+      dead: st.dead && st.dead.square
+    }
   end
 
   # --- one ply -----------------------------------------------------------------
 
   defp ply(st, pos, move, number) do
     o = st.o
+    st = maybe_die(st, number)
 
     st =
       case Enum.find(o.unplug, fn {at, _plies} -> at == number end) do
@@ -337,6 +362,49 @@ defmodule Alnasl.Simulator.Script do
       number >= hidden.until -> %{st | hidden: nil} |> emit({:position, st.b}) |> pause()
       true -> st
     end
+  end
+
+  # The `:dead_square` fault: from this ply the square reads what `emit/2`
+  # makes it read.
+  defp maybe_die(%{o: %{dead_square: {at, kind}}, dead: nil} = st, number) when at == number do
+    {board, _} = Enum.at(st.positions, number - 1)
+    later = st.positions |> Enum.drop(number - 1) |> Enum.map(&elem(&1, 1))
+    used = later |> Enum.flat_map(&[&1.from, &1.to]) |> Enum.frequencies()
+
+    squares =
+      for {sq, n} <- Enum.sort(used),
+          n >= 2,
+          kind == :off or leaves?(board, sq, later),
+          do: sq
+
+    if squares == [] do
+      st
+    else
+      {square, st} = pick(st, squares)
+      reading = if kind == :off, do: nil, else: elem(board, square)
+      st = %{st | dead: %{square: square, reading: reading}}
+      st |> note(number, :dead_square) |> emit({:position, st.b})
+    end
+  end
+
+  defp maybe_die(st, _number), do: st
+
+  # A piece stands on the square now, and the first move to touch it takes
+  # it away (and not, say, captures it, which a stuck square shows exactly
+  # as it should).
+  defp leaves?(board, square, later) do
+    elem(board, square) != nil and
+      match?(%{from: ^square}, Enum.find(later, &(&1.from == square or &1.to == square)))
+  end
+
+  defp positions(pos, sans) do
+    {list, _pos} =
+      Enum.map_reduce(sans, pos, fn san, pos ->
+        {:ok, move} = Chess.parse_san(pos, san)
+        {{pos.board, move}, Chess.apply_move(pos, move)}
+      end)
+
+    list
   end
 
   defp plug(st) do
@@ -717,6 +785,11 @@ defmodule Alnasl.Simulator.Script do
 
   defp emit(%{mute: true} = st, {:position, _board}), do: st
   defp emit(%{mute: true} = st, {:clock, _reading}), do: st
+
+  defp emit(%{dead: %{square: square, reading: reading} = dead} = st, {:position, board}) do
+    st = emit(%{st | dead: nil}, {:position, put_elem(board, square, reading)})
+    %{st | dead: dead}
+  end
 
   defp emit(%{hidden: %{square: square, piece: piece}} = st, {:position, board})
        when elem(board, square) == piece,

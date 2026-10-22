@@ -396,6 +396,13 @@ defmodule AlnaslWeb.Words do
     do: gettext("Black's clock is running and White has not moved")
 
   @doc """
+  A square whose sensor the tracker has stopped believing: the warning that
+  stays for the rest of the game, since nobody mends a board mid-round.
+  """
+  def dead(square),
+    do: gettext("Square %{square} seems dead", square: Position.square_name(square))
+
+  @doc """
   A piece the board does not show, taken to stand where it stood
   (`{square, piece}`): the warning that stays for as long as that lasts.
   """
@@ -591,6 +598,13 @@ defmodule AlnaslWeb.Words do
 
   defp log("move.assumed", d),
     do: gettext("Promotion piece not seen, a queen assumed: %{moves}", moves: moves(d))
+
+  defp log("square.dead", d),
+    do:
+      gettext(
+        "Square %{square} has stopped reading what stands on it. It is not read any more: what the game puts there is taken to be there. Check the board after the game.",
+        square: d["square"]
+      )
 
   defp log("piece.unseen", %{"read" => read} = d) when is_binary(read),
     do:

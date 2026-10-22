@@ -32,6 +32,13 @@ defmodule Alnasl.TrackerMatrixTest do
     silent.
   - `:fast_default`, `:fast_clean`, `:bullet` - fast play: see the cases
     below.
+  - `:stuck` - a square's sensor dies with a piece on it and goes on
+    reading that piece after it has left: found out by the second piece of
+    it the board then shows, and not read again. Nearly every game whole.
+  - `:dead` - a square's sensor dies and reads empty. A piece going onto it
+    reads as a piece lifted, which a hand does too, so only a square a
+    piece was seen to leave while it read empty is ever found out; the
+    rest is what the box makes of a piece that vanished. Nothing silent.
   - `:illegal` - an illegal move played on. No game leads to that board, so
     whatever the box makes of it is wrong: the alarm, or moves marked as
     reconstructed or guessed. Everything before the illegal move is right,
@@ -139,6 +146,15 @@ defmodule Alnasl.TrackerMatrixTest do
           assert right == m.games
           assert m.guessed == 0
           assert m.named_games >= m.games * 0.9
+
+        :stuck ->
+          assert m.faults > 50
+          assert right >= m.games * 0.8
+          assert v.(:alarm) <= m.games * 0.2
+
+        :dead ->
+          assert m.faults > 50
+          assert right >= m.games * 0.2
 
         :illegal ->
           for {index, run} <- m.runs, game = Enum.at(games, index - 1), length(game.moves) > 14 do
