@@ -241,6 +241,111 @@ defmodule Alnasl.Bench do
   end
 
   @doc """
+  `matrix/4` for thousands of games: the same runs and the same seeds, but
+  nothing of a run is kept beyond a few numbers - a tracker holds every
+  position of its game, and ten thousand of them do not fit in one summary.
+  The runs that did not end `:exact` are kept as `failures`, slim, with
+  what it takes to play one again (`index`, `seed`, the faults played).
+
+  `opts`: `:seed_base` (added to every seed: another sample of the same
+  games), `:concurrency` (default: the schedulers online).
+  """
+  def scale(games, sim, tracker \\ [], passes \\ 1, opts \\ []) do
+    base = opts[:seed_base] || 0
+    games = Enum.with_index(games, 1)
+
+    empty = %{
+      games: 0,
+      faulted: 0,
+      plies: 0,
+      verdicts: %{},
+      alarms: 0,
+      corrections: 0,
+      recovered: 0,
+      guessed: 0,
+      named: 0,
+      named_games: 0,
+      recovered_wrong: 0,
+      guessed_wrong: 0,
+      faults: 0,
+      searches: 0,
+      max_nodes: 0,
+      max_search_ms: 0.0,
+      budget_hits: 0,
+      failures: [],
+      bad: []
+    }
+
+    for(pass <- 1..passes, {game, index} <- games, do: {pass, game, index})
+    |> Task.async_stream(
+      fn {pass, game, index} ->
+        options = if is_function(sim), do: sim.({index, pass}), else: sim
+        seed = base + index * 1000 + pass
+        r = play(game.moves, Map.put(Map.new(options), :seed, seed), tracker)
+
+        %{
+          index: index,
+          pass: pass,
+          seed: seed,
+          verdict: r.verdict,
+          difference: r.difference,
+          alarms: r.alarms,
+          corrections: r.corrections,
+          recovered: r.recovered,
+          guessed: r.guessed,
+          named: r.named,
+          recovered_wrong: r.recovered_wrong,
+          guessed_wrong: r.guessed_wrong,
+          plies: length(r.session.tracker.plies),
+          log: r.log,
+          stats: r.stats
+        }
+      end,
+      timeout: :infinity,
+      ordered: false,
+      max_concurrency: opts[:concurrency] || System.schedulers_online()
+    )
+    |> Enum.reduce(empty, fn {:ok, r}, acc ->
+      acc =
+        Enum.reduce(
+          ~w(alarms corrections recovered guessed named recovered_wrong guessed_wrong plies)a,
+          acc,
+          fn key, acc -> %{acc | key => Map.fetch!(acc, key) + Map.fetch!(r, key)} end
+        )
+
+      %{
+        acc
+        | games: acc.games + 1,
+          faulted: acc.faulted + if(r.log == [], do: 0, else: 1),
+          verdicts: Map.update(acc.verdicts, r.verdict, 1, &(&1 + 1)),
+          named_games: acc.named_games + if(r.named > 0, do: 1, else: 0),
+          faults: acc.faults + length(r.log),
+          searches: acc.searches + r.stats.searches,
+          max_nodes: max(acc.max_nodes, r.stats.max_nodes),
+          max_search_ms: max(acc.max_search_ms, r.stats.max_us / 1000),
+          budget_hits: acc.budget_hits + r.stats.budget_hits,
+          failures:
+            if(r.verdict == :exact,
+              do: acc.failures,
+              else: [Map.delete(r, :stats) | acc.failures]
+            ),
+          bad:
+            if(r.verdict == :silent,
+              do: [{r.index, r.seed, r.difference, r.log} | acc.bad],
+              else: acc.bad
+            )
+      }
+    end)
+    |> then(fn acc ->
+      %{
+        acc
+        | failures: Enum.sort_by(acc.failures, &{&1.index, &1.pass}),
+          bad: Enum.sort(acc.bad)
+      }
+    end)
+  end
+
+  @doc """
   The fault mixes the bench reports on, as `{name, kind, simulator options,
   tracker options}`. The last three are fast play
   (`Alnasl.Simulator.Script.profile(:bullet)`): at speed alone, with the

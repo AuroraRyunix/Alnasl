@@ -28,62 +28,168 @@ defmodule Mix.Tasks.Alnasl.Bench do
 
   Then the recordings of real boards (`Alnasl.HallReplays`, `mix alnasl.hall`):
   how many still come out as pinned, and how many as the game played.
+
+  ## At scale
+
+      mix alnasl.bench --pgn games.pgn --limit 5000 --suites 15,16,19 --out runs/
+
+  - `--pgn FILE|DIR` - the games of that file (or of every `.pgn` in that
+    directory) instead of the bundled ones; games from another starting
+    position, or that do not replay, are left out;
+  - `--offset N`, `--limit N` - a slice of them;
+  - `--suites LIST` - only these suites: their numbers (`--list` prints
+    them) or kinds (`gap2`, `between`, ...), comma-separated;
+  - `--seed-base N` - added to every seed, for another sample of the same
+    games;
+  - `--out DIR` - every run that did not end exact, per suite, as an
+    Erlang term file (`Alnasl.Bench.scale/5`'s `failures`), to play again
+    and sort by cause.
+
+  Nothing is kept of a run but its numbers, so ten thousand games fit.
+  The real-board recordings are left out of such a run.
   """
 
   use Mix.Task
 
+  @switches [
+    passes: :integer,
+    pgn: :string,
+    offset: :integer,
+    limit: :integer,
+    suites: :string,
+    seed_base: :integer,
+    out: :string,
+    list: :boolean
+  ]
+
   @impl Mix.Task
   def run(args) do
-    {opts, _rest} = OptionParser.parse!(args, strict: [passes: :integer])
+    {opts, _rest} = OptionParser.parse!(args, strict: @switches)
     passes = opts[:passes] || 1
     Mix.Task.run("app.config")
     Application.ensure_all_started(:jason)
-    games = Alnasl.Pgn.all_bundled()
 
-    Mix.shell().info(
-      "#{length(games)} games, #{games |> Enum.map(&length(&1.moves)) |> Enum.sum()} plies, #{passes} pass(es)\n"
-    )
+    suites = Alnasl.Bench.suites() |> Enum.with_index(1) |> select(opts[:suites])
 
-    header =
-      String.pad_trailing("fault mix", 46) <>
-        "  exact  rec ok  rec WRONG  guess ok  guess WRONG  assumed  flagged  alarm  misread  silent   faults    rec plies  guess plies  alarms  named  worst search  gave up"
-
-    Mix.shell().info(header)
-
-    for {name, _kind, sim, tracker} <- Alnasl.Bench.suites() do
-      m = Alnasl.Bench.matrix(games, sim, tracker, passes)
-
-      v = fn key, width ->
-        m.verdicts |> Map.get(key, 0) |> Integer.to_string() |> String.pad_leading(width)
-      end
-
-      n = fn number, width -> number |> Integer.to_string() |> String.pad_leading(width) end
+    if opts[:list] do
+      for {{name, kind, _sim, _tracker}, n} <- suites,
+          do: Mix.shell().info("#{String.pad_leading("#{n}", 3)}  #{kind}  #{name}")
+    else
+      scaled? = opts[:pgn] != nil or opts[:out] != nil
+      games = opts |> games() |> slice(opts)
 
       Mix.shell().info(
-        String.pad_trailing(name, 46) <>
-          v.(:exact, 7) <>
-          v.(:reconstructed_right, 8) <>
-          v.(:reconstructed_wrong, 11) <>
-          v.(:guessed_right, 10) <>
-          v.(:guessed_wrong, 13) <>
-          v.(:assumed, 9) <>
-          v.(:flagged, 9) <>
-          v.(:alarm, 7) <>
-          v.(:unnoticed, 9) <>
-          v.(:silent, 8) <>
-          n.(m.faults, 9) <>
-          String.pad_leading("#{m.recovered_wrong}/#{m.recovered}", 13) <>
-          String.pad_leading("#{m.guessed_wrong}/#{m.guessed}", 13) <>
-          n.(m.alarms, 8) <>
-          n.(m.named_games, 7) <>
-          String.pad_leading("#{Float.round(m.max_search_ms, 1)} ms", 14) <>
-          n.(m.budget_hits, 9)
+        "#{length(games)} games, #{games |> Enum.map(&length(&1.moves)) |> Enum.sum()} plies, #{passes} pass(es)\n"
       )
 
-      for bad <- m.bad, do: Mix.shell().info("    SILENT: #{inspect(bad, limit: 12)}")
+      header =
+        String.pad_trailing("fault mix", 46) <>
+          "  exact  rec ok  rec WRONG  guess ok  guess WRONG  assumed  flagged  alarm  misread  silent   faults    rec plies  guess plies  alarms  named  worst search  gave up"
+
+      Mix.shell().info(header)
+      if opts[:out], do: File.mkdir_p!(opts[:out])
+
+      for {{name, kind, sim, tracker}, n} <- suites do
+        m =
+          if scaled?,
+            do: Alnasl.Bench.scale(games, sim, tracker, passes, seed_base: opts[:seed_base]),
+            else: Alnasl.Bench.matrix(games, sim, tracker, passes)
+
+        Mix.shell().info(row(name, m))
+        for bad <- m.bad, do: Mix.shell().info("    SILENT: #{inspect(bad, limit: 12)}")
+
+        if opts[:out] do
+          file = Path.join(opts[:out], "#{String.pad_leading("#{n}", 2, "0")}-#{kind}.etf")
+
+          term = %{
+            suite: n,
+            name: name,
+            kind: kind,
+            sim: sim,
+            tracker: tracker,
+            pgn: opts[:pgn],
+            offset: opts[:offset] || 0,
+            seed_base: opts[:seed_base] || 0,
+            summary: Map.drop(m, [:failures]),
+            failures: m.failures
+          }
+
+          File.write!(file, :erlang.term_to_binary(term))
+        end
+      end
+
+      unless scaled?, do: hall(Alnasl.HallReplays.check())
+    end
+  end
+
+  defp row(name, m) do
+    v = fn key, width ->
+      m.verdicts |> Map.get(key, 0) |> Integer.to_string() |> String.pad_leading(width)
     end
 
-    hall(Alnasl.HallReplays.check())
+    n = fn number, width -> number |> Integer.to_string() |> String.pad_leading(width) end
+
+    String.pad_trailing(name, 46) <>
+      v.(:exact, 7) <>
+      v.(:reconstructed_right, 8) <>
+      v.(:reconstructed_wrong, 11) <>
+      v.(:guessed_right, 10) <>
+      v.(:guessed_wrong, 13) <>
+      v.(:assumed, 9) <>
+      v.(:flagged, 9) <>
+      v.(:alarm, 7) <>
+      v.(:unnoticed, 9) <>
+      v.(:silent, 8) <>
+      n.(m.faults, 9) <>
+      String.pad_leading("#{m.recovered_wrong}/#{m.recovered}", 13) <>
+      String.pad_leading("#{m.guessed_wrong}/#{m.guessed}", 13) <>
+      n.(m.alarms, 8) <>
+      n.(m.named_games, 7) <>
+      String.pad_leading("#{Float.round(m.max_search_ms / 1, 1)} ms", 14) <>
+      n.(m.budget_hits, 9)
+  end
+
+  defp games(opts) do
+    case opts[:pgn] do
+      nil ->
+        Alnasl.Pgn.all_bundled()
+
+      path ->
+        files =
+          if File.dir?(path),
+            do:
+              path
+              |> File.ls!()
+              |> Enum.filter(&String.ends_with?(&1, ".pgn"))
+              |> Enum.sort()
+              |> Enum.map(&Path.join(path, &1)),
+            else: [path]
+
+        {games, problems} =
+          files |> Enum.map(&File.read!/1) |> Enum.join("\n\n") |> Alnasl.Pgn.load()
+
+        games = Enum.filter(games, &(&1.start_fen in [nil, Alnasl.Chess.start_fen()]))
+
+        if problems != [],
+          do: Mix.shell().info("#{length(problems)} games left out: they do not replay")
+
+        games
+    end
+  end
+
+  defp slice(games, opts) do
+    games = Enum.drop(games, opts[:offset] || 0)
+    if opts[:limit], do: Enum.take(games, opts[:limit]), else: games
+  end
+
+  defp select(suites, nil), do: suites
+
+  defp select(suites, list) do
+    wanted = list |> String.split(",", trim: true) |> Enum.map(&String.trim/1)
+
+    Enum.filter(suites, fn {{_name, kind, _sim, _tracker}, n} ->
+      "#{n}" in wanted or "#{kind}" in wanted
+    end)
   end
 
   defp hall([]), do: :ok
