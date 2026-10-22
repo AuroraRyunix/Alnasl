@@ -9,6 +9,7 @@ defmodule Alnasl.FairPlay.Selection do
   | reason | the move |
   |---|---|
   | `:unrated` | by a player with no rating: no expectation to compare with |
+  | `:low_rating` | by a player rated under 1000: the calibration has too few such games to say what to expect, and a made-up expectation is worse than none |
   | `:tracker_guessed` | the tracker guessed it (red), or guessed any move before it in this game: after a wrong guess every position is fiction. A promotion piece the board never saw (`:assumed`) counts as a guess |
   | `:tracker_rewritten` | the tracker rewrote it, and the arbiter has not yet confirmed the game's result |
   | `:opening` | moves 1-8 of either side: book, not thought |
@@ -27,6 +28,7 @@ defmodule Alnasl.FairPlay.Selection do
 
   @type reason ::
           :unrated
+          | :low_rating
           | :tracker_guessed
           | :tracker_rewritten
           | :opening
@@ -38,6 +40,7 @@ defmodule Alnasl.FairPlay.Selection do
 
   @reasons [
     :unrated,
+    :low_rating,
     :tracker_guessed,
     :tracker_rewritten,
     :opening,
@@ -52,9 +55,13 @@ defmodule Alnasl.FairPlay.Selection do
   @decided_cp 300
   @forced_gap_cp 200
   @time_trouble_ms 60_000
+  @min_rating 1000
 
   @doc "Every reason, in the order they are tried."
   def reasons, do: @reasons
+
+  @doc "The lowest rating whose moves count."
+  def min_rating, do: @min_rating
 
   @doc """
   The rules that need no engine, over a whole game's records in order.
@@ -73,6 +80,7 @@ defmodule Alnasl.FairPlay.Selection do
           cond do
             record.skip != nil -> record.skip
             unrated?(record) -> :unrated
+            low_rating?(record) -> :low_rating
             guessed? -> :tracker_guessed
             rewritten?(record) and not confirmed? -> :tracker_rewritten
             opening?(record) -> :opening
@@ -117,6 +125,13 @@ defmodule Alnasl.FairPlay.Selection do
   # --- the rules, one by one ---------------------------------------------------
 
   def unrated?(record), do: not (is_integer(record.rating) and record.rating > 0)
+
+  # Below 1000 the calibration's broadcasts hold a handful of
+  # player-events, and the old model's lowest band was the one it got most
+  # wrong (a mean score of +1.3 where 0 was promised). No score beats a
+  # score made of extrapolation.
+  def low_rating?(%{rating: rating}) when is_integer(rating), do: rating < @min_rating
+  def low_rating?(_record), do: false
   def guessed?(record), do: :guessed in record.flags or :assumed in record.flags
   def rewritten?(record), do: :rewritten in record.flags
   # By the move number, not by counting: a game set up at move 40 has no opening.

@@ -92,7 +92,39 @@ mix fair_play.fit --holdout 0.2 --out priv/fair_play/model-sf19.json labels-*.js
 - The gate (plan §5): more than about 1 in 700 held-out player-events at 3
   or more and the model does not ship; "passed" needs the upper end of the
   interval under 1 in 700. The task says which, and how many held-out
-  player-events it would have needed.
+  player-events it would have needed. "Passed by default" (the point
+  estimate is under the line, the interval is not) does **not** ship.
+- What is fitted on the training events: the two regressions and the loss
+  table on all of them; the correlations the per-game variance is built
+  from (`Alnasl.FairPlay.Cluster`) **cross-fitted** - the training events
+  split in two by a hash of the event, a model fitted on each half, the
+  correlations measured on the other half. Nothing is measured on the
+  games it was fitted on.
+- The model file is format 2 and lists its features. A format-1 file is
+  refused (the report then says "not calibrated"), and so is a file whose
+  features are not the code's.
+
+### Who scored high
+
+```sh
+mix fair_play.hits --model model-sf19.json --holdout 0.67 [--threshold 3.0] labels-*.jsonl
+```
+
+The held-out player-events at or over the threshold, highest first: the
+score, the three z's, the counted moves, the games, the rating, the
+opponents' average rating, the player and the event. `--holdout` must be
+the fit's, or the list is of games the model was fitted on.
+
+### Per-band thresholds (a variant, off by default)
+
+`--band-thresholds 0.4` on the fit keeps 40% of the **training** events
+out of the fit, measures each 200-point band's mean and spread of scores
+on them (`Alnasl.FairPlay.BandScale`: shrunk towards all bands with 50
+pseudo-events, chosen in advance), and then judges the same held-out
+events by `(score − mean_band) / sd_band` as well as by the plain score.
+Three disjoint sets - fit, thresholds, test - so the test set never sets
+a threshold. Both tables and both gates are printed; the model above is
+then fitted on fewer games. The report does not use the variant.
 
 On one machine, both steps at once: `mix fair_play.calibrate --engine ...
 --games 7000 --holdout 0.2 --out priv/fair_play/model-sf19.json files...`

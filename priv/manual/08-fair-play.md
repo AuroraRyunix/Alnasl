@@ -62,6 +62,7 @@ A move says nothing about the player, or Alnasl is not sure it was played, in th
 | Left out | Why |
 | --- | --- |
 | no rating | Without a rating there is nothing to compare with. Ratings come from the pairing |
+| rating under 1000 | The games the model is made from hold too few players rated under 1000 to say what to expect of them, and a guess is not an expectation |
 | guessed by the tracker | The tracker was not sure what was played, and neither is any move after it in that game |
 | rewritten, result not yet confirmed | The tracker corrected it, and the arbiter has not yet confirmed the result |
 | opening (moves 1 to 8) | Book, not thought |
@@ -75,7 +76,9 @@ A player gets a score only with at least 40 counted moves in the event; below th
 
 ## What the numbers mean {#what-the-numbers-mean}
 
-The **expected** values come from a model fitted on real games from over-the-board events (Lichess broadcasts, with FIDE ratings and clocks): for a player of that rating, in a position with that many good moves, how often does the engine's first choice get played, and how much is lost on average. The **score** is how far the player is from that expectation, in units of standard deviation, taking the three measures (matching the first choice, matching an equally good move, loss) together. Zero means as expected. Higher means stronger than the rating predicts.
+The **expected** values come from a model fitted on real games from over-the-board events (Lichess broadcasts, with FIDE ratings and clocks): for a player of that rating, against an opponent of that rating, in a position with that many good moves and that evaluation, having spent that share of the clock on the move, how often does the engine's first choice get played, and how much is lost on average. The **score** is how far the player is from that expectation, in units of standard deviation, taking the three measures (matching the first choice, matching an equally good move, loss) together. Zero means as expected. Higher means stronger than the rating predicts.
+
+The standard deviation is the one the player's own games have: the moves of one game are not independent of each other (a good day lasts more than one move), and nine short games spread differently from five long ones. How strongly moves hang together within a game, and across one player's games in an event, is measured on real games when the model is made.
 
 - **From 2: "worth a closer look".** Such scores come up by chance in a few of every hundred honest players. Look at the games, not at the number.
 - **Above 5: "statistically very unusual".** Honest players almost never have such a score in a model that fits. It is still not proof of anything, and the next section says what you may do with it.

@@ -262,6 +262,92 @@ defmodule Alnasl.FairPlay.CalibrationTest do
     assert held == Enum.filter(ids(hd(shards)), &Calibration.held_out?(&1, 0.25))
   end
 
+  test "hits lists the held-out player-events at a threshold, by name, highest first", %{
+    tmp_dir: dir
+  } do
+    labels = Path.join(dir, "labels.jsonl")
+    {:ok, _} = label([corpus(dir)], out: labels)
+    model = Path.join(dir, "model.json")
+
+    {:ok, %{report: report}} =
+      Calibration.fit([labels], holdout: 0.5, out: model, log: fn _ -> :ok end)
+
+    quiet = fn _ -> :ok end
+
+    assert {:ok, all} =
+             Calibration.hits([labels], model: model, holdout: 0.5, threshold: -100.0, log: quiet)
+
+    # Every held-out player-event with a score, and nothing else.
+    assert length(all) == report.events
+    assert all != []
+    assert Enum.map(all, & &1.score) == Enum.sort(Enum.map(all, & &1.score), :desc)
+
+    for hit <- all do
+      assert Calibration.held_out?("event:" <> hit.event, 0.5)
+      assert hit.counted >= 40
+      assert is_binary(hit.player)
+      assert is_integer(hit.rating) and is_integer(hit.opponents)
+      assert hit.games >= 1
+      assert Enum.all?([hit.mm_z, hit.ev_z, hit.asd_z], &is_float/1)
+    end
+
+    assert {:ok, []} =
+             Calibration.hits([labels], model: model, holdout: 0.5, threshold: 100.0, log: quiet)
+
+    # The command line, and what it says without a model.
+    printed =
+      ExUnit.CaptureIO.capture_io(fn ->
+        Calibration.main(
+          ["hits", "--model", model, "--holdout", "0.5", "--threshold", "-100", labels],
+          halt: false
+        )
+      end)
+
+    assert printed =~ "fair_play hits: #{length(all)} held-out player-events"
+
+    assert ExUnit.CaptureIO.capture_io(:stderr, fn ->
+             assert {:error, :no_model} = Calibration.main(["hits", labels], halt: false)
+           end) =~ "--model"
+  end
+
+  test "the per-band variant takes its thresholds from training events, never from the test", %{
+    tmp_dir: dir
+  } do
+    labels = Path.join(dir, "labels.jsonl")
+    {:ok, _} = label([corpus(dir)], out: labels)
+    me = self()
+
+    {:ok, plain} = Calibration.fit([labels], holdout: 0.3, log: fn _ -> :ok end)
+
+    {:ok, %{model: model, report: report, band_variant: variant}} =
+      Calibration.fit([labels], holdout: 0.3, band_thresholds: 0.4, log: &send(me, {:line, &1}))
+
+    # The same held-out events, judged both ways.
+    assert report.events == plain.report.events
+    assert variant.report.events == report.events
+    assert plain.band_variant == nil
+
+    # The threshold share came out of the training games, not the test's.
+    assert model.meta["held_out_games"] == plain.model.meta["held_out_games"]
+    assert model.meta["games"] + variant.games == plain.model.meta["games"]
+    assert variant.games > 0
+
+    # And it is exactly the training games in the share, by their own hash.
+    {:ok, games, _} = Calibration.read_labels([labels])
+
+    setting =
+      Enum.count(games, fn g ->
+        key = Calibration.holdout_key(g)
+        not Calibration.held_out?(key, 0.3) and Calibration.in_share?("bands:", key, 0.4)
+      end)
+
+    assert setting == variant.games
+
+    assert model.meta["band_scale_variant"]["k"] == 50
+    assert_received {:line, "VARIANT, per-band thresholds" <> _}
+    assert_received {:line, "variant gate: " <> _}
+  end
+
   test "the gate reads the table, and says when the sample is too small to show anything" do
     small = Alnasl.FairPlay.FalsePositives.table(List.duplicate(0.0, 500))
     assert Calibration.gate_verdict(small) == :passed_unproven
