@@ -160,6 +160,49 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  dialyzer:
+    name: Dialyzer
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Elixir
+        id: beam
+        uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
+        with:
+          elixir-version: "1.20"
+          otp-version: "29.0"
+
+      - name: Restore dependencies and build cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-dialyzer-build-otp29.0-ex1.20-${{ hashFiles('mix.lock') }}
+          restore-keys: ${{ runner.os }}-dialyzer-build-otp29.0-ex1.20-
+
+      # The PLT is the slow part (minutes); keyed on OTP, Elixir and the lock
+      # so that it is rebuilt only when one of them moves.
+      - name: Restore the PLTs
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: priv/plts
+          key: plt-${{ runner.os }}-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-${{ hashFiles('mix.lock') }}
+          restore-keys: plt-${{ runner.os }}-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-
+
+      - name: Install dependencies
+        run: mix deps.get --check-locked
+
+      - name: Build the PLTs
+        run: mix dialyzer --plt
+
+      # A finding fails the build; what is not ours is in .dialyzer_ignore.exs.
+      - name: Dialyzer
+        run: mix dialyzer --format github
+
   windows:
     name: Windows builds (serial program, launcher)
     if: github.event_name != 'schedule'

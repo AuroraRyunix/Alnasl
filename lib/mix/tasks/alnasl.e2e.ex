@@ -150,7 +150,7 @@ defmodule Mix.Tasks.Alnasl.E2e do
 
     info("\nwatch it at http://localhost:#{opts[:port] || 4042}\n")
     deadline = System.monotonic_time(:second) + (opts[:timeout] || 900)
-    wait(plan, round, deadline, MapSet.new())
+    wait(plan, round, deadline, %{})
     verify(plan, round, url, opts[:slug])
   end
 
@@ -165,9 +165,9 @@ defmodule Mix.Tasks.Alnasl.E2e do
         finished? =
           (snap.player && snap.player.finished?) and length(snap.plies) == length(p.game.moves)
 
-        if finished? and p.number not in done do
+        if finished? and not is_map_key(done, p.number) do
           :ok = Boards.set_result(p.board.id, p.game.result)
-          MapSet.put(done, p.number)
+          Map.put(done, p.number, true)
         else
           done
         end
@@ -184,7 +184,7 @@ defmodule Mix.Tasks.Alnasl.E2e do
     stuck = for {p, snap} <- snapshots, snap.status == :out_of_sync, do: p.number
 
     cond do
-      MapSet.size(done) == length(plan) and link.pending == 0 ->
+      map_size(done) == length(plan) and link.pending == 0 ->
         :ok
 
       System.monotonic_time(:second) > deadline ->

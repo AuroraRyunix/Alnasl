@@ -412,8 +412,8 @@ defmodule Alnasl.FairPlay.Uci do
   nearer mate is worth more and every mate outranks every evaluation.
   """
   @spec mate_cp(integer()) :: integer()
-  def mate_cp(y) when y > 0, do: 10_000 - (2 * y - 1)
-  def mate_cp(y) when y < 0, do: -(10_000 - 2 * -y)
+  def mate_cp(y) when is_integer(y) and y > 0, do: 10_000 - (2 * y - 1)
+  def mate_cp(y) when is_integer(y) and y < 0, do: -(10_000 - 2 * -y)
   def mate_cp(0), do: -10_000
 
   @doc """

@@ -301,4 +301,8 @@ defmodule Alnasl.LauncherDetails.CLI do
 
     if String.starts_with?(language, "nl"), do: "nl", else: "en"
   end
+
+  # main/0 and main/1 end in System.halt/1. (Here, not above them, so the lines
+  # .sobelow-skips cites do not move.)
+  @dialyzer {:no_return, main: 0, main: 1}
 end

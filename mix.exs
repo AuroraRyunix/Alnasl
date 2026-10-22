@@ -12,7 +12,8 @@ defmodule Alnasl.MixProject do
       deps: deps(),
       test_coverage: [summary: [threshold: 0]],
       dialyzer: [
-        plt_add_apps: [:mix, :ex_unit],
+        plt_add_apps: [:mix, :ex_unit, :iex],
+        ignore_warnings: ".dialyzer_ignore.exs",
         plt_local_path: "priv/plts",
         plt_core_path: "priv/plts",
         flags: [:error_handling, :unknown, :extra_return, :missing_return]
