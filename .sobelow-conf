@@ -7,6 +7,7 @@
 #     are touched; no request string is ever joined into a path.
 #     (`Alnasl.HallReplays` writes where a developer's own `mix alnasl.hall pin`
 #     tells it to, which is the point.)
+#     (`mix fair_play.power --out FILE` likewise: the operator's own file.)
 #   * XSS.* - bodies are fixed SVG/PDF/ndjson/escaped-HTML builders or the app's own
 #     bundled manual; content types are literals.
 #   * DOS.StringToAtom - atoms come from the app's own literals, bundled data or a
