@@ -343,12 +343,13 @@ defmodule AlnaslWeb.FairPlayLive do
          {:ok, _view} <- FairPlay.record_view(scope, subject, round, key) do
       setting = FairPlay.settings(FairPlay.hall_of(subject))
       model = Report.model(setting)
+      opponents = Report.opponent_ratings(rows)
       rows = Enum.filter(rows, &(&1.player_key == key))
 
       line =
         if rows == [],
           do: nil,
-          else: Report.player(key, rows, model)
+          else: Report.player(key, rows, model, opponents)
 
       assign(socket,
         fp_data: %{
@@ -747,6 +748,7 @@ defmodule AlnaslWeb.FairPlayLive do
   # --- words -------------------------------------------------------------------
 
   defp skip_label(:unrated), do: gettext("no rating")
+  defp skip_label(:low_rating), do: gettext("rating under 1000")
   defp skip_label(:tracker_guessed), do: gettext("guessed by the tracker")
   defp skip_label(:tracker_rewritten), do: gettext("rewritten, result not yet confirmed")
   defp skip_label(:opening), do: gettext("opening (moves 1 to 8)")

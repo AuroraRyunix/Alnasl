@@ -53,7 +53,7 @@ msgid "%{a} and %{b} are swapped (%{sq_a}, %{sq_b})"
 msgstr "%{a} en %{b} zijn verwisseld (%{sq_a}, %{sq_b})"
 
 #: lib/alnasl_web/components/layouts.ex:793
-#: lib/alnasl_web/live/fair_play_live.ex:1737
+#: lib/alnasl_web/live/fair_play_live.ex:1739
 #, elixir-autogen, elixir-format
 msgid "%{count} waiting"
 msgstr "%{count} wachtend"
@@ -217,7 +217,7 @@ msgid "Access from other machines"
 msgstr "Toegang vanaf andere machines"
 
 #: lib/alnasl_web/live/boards_live.ex:854
-#: lib/alnasl_web/live/fair_play_live.ex:1201
+#: lib/alnasl_web/live/fair_play_live.ex:1203
 #: lib/alnasl_web/live/halls_live.ex:428
 #: lib/alnasl_web/live/pgn_live.ex:423
 #: lib/alnasl_web/live/pgn_live.ex:537
@@ -322,7 +322,7 @@ msgstr "Weer synchroon."
 msgid "Back to the defaults"
 msgstr "Terug naar de standaardwaarden"
 
-#: lib/alnasl_web/live/fair_play_live.ex:836
+#: lib/alnasl_web/live/fair_play_live.ex:838
 #: lib/alnasl_web/live/game_live.ex:895
 #: lib/alnasl_web/live/game_live.ex:1317
 #: lib/alnasl_web/live/pgn_live.ex:628
@@ -1294,7 +1294,7 @@ msgid "Rough (knocks, swaps, missed moves)"
 msgstr "Ruw (stoten, verwisselingen, gemiste zetten)"
 
 #: lib/alnasl_web/destination_words.ex:151
-#: lib/alnasl_web/live/fair_play_live.ex:1548
+#: lib/alnasl_web/live/fair_play_live.ex:1550
 #: lib/alnasl_web/live/outbox_live.ex:680
 #: lib/alnasl_web/live/pgn_live.ex:338
 #, elixir-autogen, elixir-format
@@ -1309,7 +1309,7 @@ msgstr "Ronde"
 msgid "Round %{n}"
 msgstr "Ronde %{n}"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1438
+#: lib/alnasl_web/live/fair_play_live.ex:1440
 #: lib/alnasl_web/live/round_live.ex:157
 #: lib/alnasl_web/live/round_live.ex:1222
 #, elixir-autogen, elixir-format
@@ -2070,7 +2070,7 @@ msgid "Times faster than life"
 msgstr "Keer sneller dan echt"
 
 #: lib/alnasl_web/live/boards_live.ex:617
-#: lib/alnasl_web/live/fair_play_live.ex:1200
+#: lib/alnasl_web/live/fair_play_live.ex:1202
 #: lib/alnasl_web/live/pgn_live.ex:331
 #: lib/alnasl_web/live/setup_live.ex:2106
 #: lib/alnasl_web/live/setup_live.ex:2203
@@ -2206,7 +2206,7 @@ msgstr "Wat het bord nu leest"
 msgid "Which moves were played?"
 msgstr "Welke zetten zijn gespeeld?"
 
-#: lib/alnasl_web/live/fair_play_live.ex:835
+#: lib/alnasl_web/live/fair_play_live.ex:837
 #: lib/alnasl_web/live/game_live.ex:950
 #: lib/alnasl_web/live/game_live.ex:1316
 #: lib/alnasl_web/live/pgn_live.ex:628
@@ -3823,7 +3823,7 @@ msgstr "Afgelopen: %{r}"
 msgid "For game after game on one board: when the starting position is back on a board whose game is over - or is more than two moves old - Alnasl closes that game and begins the next. In a paired round a board has one game, so by default this is left to the arbiter there."
 msgstr "Voor partij na partij op één bord: als de beginstelling weer op een bord staat waarvan de partij afgelopen is - of meer dan twee zetten oud - sluit Alnasl die partij af en begint de volgende. In een gepaarde ronde heeft een bord één partij, dus daar wordt dit standaard aan de arbiter gelaten."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1756
+#: lib/alnasl_web/live/fair_play_live.ex:1758
 #: lib/alnasl_web/live/game_live.ex:1335
 #, elixir-autogen, elixir-format
 msgid "Game %{n}"
@@ -6414,8 +6414,8 @@ msgstr "eigenaar"
 msgid "read"
 msgstr "gelezen"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1028
-#: lib/alnasl_web/live/fair_play_live.ex:1373
+#: lib/alnasl_web/live/fair_play_live.ex:1030
+#: lib/alnasl_web/live/fair_play_live.ex:1375
 #: lib/alnasl_web/live/halls_live.ex:667
 #, elixir-autogen, elixir-format
 msgid "until %{date}"
@@ -6997,7 +6997,7 @@ msgstr "Spelen"
 msgid "Send"
 msgstr "Versturen"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1364
+#: lib/alnasl_web/live/fair_play_live.ex:1366
 #: lib/alnasl_web/live/round_live.ex:968
 #, elixir-autogen, elixir-format
 msgid "Share"
@@ -7198,7 +7198,7 @@ msgstr "Doorzoek het logboek"
 msgid "Search the recordings"
 msgstr "Doorzoek de opnames"
 
-#: lib/alnasl_web/live/fair_play_live.ex:981
+#: lib/alnasl_web/live/fair_play_live.ex:983
 #: lib/alnasl_web/live/halls_live.ex:88
 #, elixir-autogen, elixir-format
 msgid "Settings"
@@ -7858,408 +7858,408 @@ msgstr "De live borden op de uitslagensite openen"
 msgid "It is being read as a loop: a row for each board appears in a moment. If none does, try it by hand."
 msgstr "Hij wordt als lus gelezen: zo meteen verschijnt er een rij per bord. Gebeurt dat niet, probeer het dan met de hand."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1069
+#: lib/alnasl_web/live/fair_play_live.ex:1071
 #, elixir-autogen, elixir-format
 msgid "Alnasl can check the games its boards record against a strong chess engine, and show you, as the owner of this hall and nobody else, which players' moves matched it more often than their rating predicts. It is off until you switch it on."
 msgstr "Alnasl kan de partijen die de borden vastleggen naast een sterke schaakengine leggen en jou, als eigenaar van deze zaal en niemand anders, laten zien welke spelers vaker dezelfde zetten speelden dan hun rating voorspelt. Het staat uit tot je het aanzet."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1103
+#: lib/alnasl_web/live/fair_play_live.ex:1105
 #, elixir-autogen, elixir-format
 msgid "Analyses the moves of this hall's games as they are played."
 msgstr "Analyseert de zetten van de partijen in deze zaal terwijl ze gespeeld worden."
 
-#: lib/alnasl_web/live/fair_play_live.ex:665
+#: lib/alnasl_web/live/fair_play_live.ex:666
 #, elixir-autogen, elixir-format
 msgid "At most 365 days after the tournament's last round."
 msgstr "Hoogstens 365 dagen na de laatste ronde van het toernooi."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1482
-#: lib/alnasl_web/live/fair_play_live.ex:1825
+#: lib/alnasl_web/live/fair_play_live.ex:1484
+#: lib/alnasl_web/live/fair_play_live.ex:1827
 #, elixir-autogen, elixir-format
 msgid "Average loss"
 msgstr "Gemiddeld verlies"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1062
+#: lib/alnasl_web/live/fair_play_live.ex:1064
 #, elixir-autogen, elixir-format
 msgid "Back to %{hall}"
 msgstr "Terug naar %{hall}"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1802
+#: lib/alnasl_web/live/fair_play_live.ex:1804
 #, elixir-autogen, elixir-format
 msgid "Back to the report"
 msgstr "Terug naar het rapport"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1126
+#: lib/alnasl_web/live/fair_play_live.ex:1128
 #, elixir-autogen, elixir-format
 msgid "Checking the file. This takes a minute."
 msgstr "Het bestand wordt gecontroleerd. Dat duurt een minuutje."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1170
+#: lib/alnasl_web/live/fair_play_live.ex:1172
 #, elixir-autogen, elixir-format
 msgid "Choose a file"
 msgstr "Kies een bestand"
 
-#: lib/alnasl_web/live/fair_play_live.ex:462
-#: lib/alnasl_web/live/fair_play_live.ex:502
+#: lib/alnasl_web/live/fair_play_live.ex:463
+#: lib/alnasl_web/live/fair_play_live.ex:503
 #, elixir-autogen, elixir-format
 msgid "Choose the file first."
 msgstr "Kies eerst een bestand."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1479
-#: lib/alnasl_web/live/fair_play_live.ex:1819
+#: lib/alnasl_web/live/fair_play_live.ex:1481
+#: lib/alnasl_web/live/fair_play_live.ex:1821
 #, elixir-autogen, elixir-format
 msgid "Counted moves"
 msgstr "Getelde zetten"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1714
+#: lib/alnasl_web/live/fair_play_live.ex:1716
 #, elixir-autogen, elixir-format
 msgid "Days after the last round (at most 365)"
 msgstr "Dagen na de laatste ronde (hoogstens 365)"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1590
+#: lib/alnasl_web/live/fair_play_live.ex:1592
 #, elixir-autogen, elixir-format
 msgid "Deleted %{days} days after the tournament's last round, along with the list below of who opened this page."
 msgstr "Verwijderd %{days} dagen na de laatste ronde van het toernooi, samen met de lijst hieronder van wie deze pagina opende."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1150
+#: lib/alnasl_web/live/fair_play_live.ex:1152
 #, elixir-autogen, elixir-format
 msgid "Download Stockfish 19"
 msgstr "Stockfish 19 downloaden"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1122
+#: lib/alnasl_web/live/fair_play_live.ex:1124
 #, elixir-autogen, elixir-format
 msgid "Downloading"
 msgstr "Downloaden"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1117
+#: lib/alnasl_web/live/fair_play_live.ex:1119
 #, elixir-autogen, elixir-format
 msgid "Engine"
 msgstr "Engine"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1481
 #: lib/alnasl_web/live/fair_play_live.ex:1483
+#: lib/alnasl_web/live/fair_play_live.ex:1485
 #, elixir-autogen, elixir-format
 msgid "Expected"
 msgstr "Verwacht"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1418
+#: lib/alnasl_web/live/fair_play_live.ex:1420
 #, elixir-autogen, elixir-format
 msgid "Fair-play settings"
 msgstr "Instellingen voor fair play"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1123
+#: lib/alnasl_web/live/fair_play_live.ex:1125
 #, elixir-autogen, elixir-format
 msgid "Fetching Stockfish 19 and checking it. This takes a minute."
 msgstr "Stockfish 19 wordt opgehaald en gecontroleerd. Dat duurt een minuutje."
 
-#: lib/alnasl_web/live/fair_play_live.ex:667
+#: lib/alnasl_web/live/fair_play_live.ex:668
 #, elixir-autogen, elixir-format
 msgid "Give a number of days."
 msgstr "Geef een aantal dagen."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1573
+#: lib/alnasl_web/live/fair_play_live.ex:1575
 #, elixir-autogen, elixir-format
 msgid "How long this is kept"
 msgstr "Hoe lang dit bewaard blijft"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1128
+#: lib/alnasl_web/live/fair_play_live.ex:1130
 #, elixir-autogen, elixir-format
 msgid "Installed"
 msgstr "Geïnstalleerd"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1125
+#: lib/alnasl_web/live/fair_play_live.ex:1127
 #, elixir-autogen, elixir-format
 msgid "Installing"
 msgstr "Installeren"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1112
+#: lib/alnasl_web/live/fair_play_live.ex:1114
 #, elixir-autogen, elixir-format
 msgid "It is on, and does nothing until an engine is installed (below)."
 msgstr "Het staat aan en doet niets zolang er geen engine is geïnstalleerd (hieronder)."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1616
+#: lib/alnasl_web/live/fair_play_live.ex:1618
 #, elixir-autogen, elixir-format
 msgid "Keep it"
 msgstr "Bewaar het"
 
-#: lib/alnasl_web/live/fair_play_live.ex:634
+#: lib/alnasl_web/live/fair_play_live.ex:635
 #, elixir-autogen, elixir-format
 msgid "Kept for longer."
 msgstr "Langer bewaard."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1580
+#: lib/alnasl_web/live/fair_play_live.ex:1582
 #, elixir-autogen, elixir-format
 msgid "Kept until %{date}. Reason: %{reason}"
 msgstr "Bewaard tot %{date}. Reden: %{reason}"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1485
+#: lib/alnasl_web/live/fair_play_live.ex:1487
 #, elixir-autogen, elixir-format
 msgid "Left out"
 msgstr "Niet meegeteld"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1707
-#: lib/alnasl_web/live/fair_play_live.ex:1810
+#: lib/alnasl_web/live/fair_play_live.ex:1709
+#: lib/alnasl_web/live/fair_play_live.ex:1812
 #, elixir-autogen, elixir-format
 msgid "Loading."
 msgstr "Laden."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1480
-#: lib/alnasl_web/live/fair_play_live.ex:1821
+#: lib/alnasl_web/live/fair_play_live.ex:1482
+#: lib/alnasl_web/live/fair_play_live.ex:1823
 #, elixir-autogen, elixir-format
 msgid "Matches the engine"
 msgstr "Zelfde zet als de engine"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1849
+#: lib/alnasl_web/live/fair_play_live.ex:1851
 #, elixir-autogen, elixir-format
 msgid "Moves this player made that were the engine's first choice, where that choice stood out most from the second. Look at them as a person would: a move like that is often the only sensible one."
 msgstr "Zetten van deze speler die de eerste keuze van de engine waren, waar die keuze het meest afstak van de tweede. Bekijk ze zoals een mens dat doet: zo'n zet is vaak de enige verstandige."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1163
+#: lib/alnasl_web/live/fair_play_live.ex:1165
 #, elixir-autogen, elixir-format
 msgid "No internet in the hall? Download the file for this computer on another one and choose it here: stockfish-windows-x86-64-universal.zip, stockfish-macos-universal.tar.gz or stockfish-linux-x86-64-universal.tar.gz, from the Stockfish 19 release on GitHub. It must be the official file; Alnasl checks it."
 msgstr "Geen internet in de zaal? Download het bestand voor deze computer op een andere en kies het hier: stockfish-windows-x86-64-universal.zip, stockfish-macos-universal.tar.gz of stockfish-linux-x86-64-universal.tar.gz, van de Stockfish 19-release op GitHub. Het moet het officiële bestand zijn; Alnasl controleert dat."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1134
+#: lib/alnasl_web/live/fair_play_live.ex:1136
 #, elixir-autogen, elixir-format
 msgid "Not installed"
 msgstr "Niet geïnstalleerd"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1813
+#: lib/alnasl_web/live/fair_play_live.ex:1815
 #, elixir-autogen, elixir-format
 msgid "Nothing has been analysed for this player."
 msgstr "Voor deze speler is niets geanalyseerd."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1213
+#: lib/alnasl_web/live/fair_play_live.ex:1215
 #, elixir-autogen, elixir-format
 msgid "Open report"
 msgstr "Rapport openen"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1885
+#: lib/alnasl_web/live/fair_play_live.ex:1887
 #, elixir-autogen, elixir-format
 msgid "Played %{move}"
 msgstr "Gespeeld: %{move}"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1478
-#: lib/alnasl_web/live/fair_play_live.ex:1678
+#: lib/alnasl_web/live/fair_play_live.ex:1480
+#: lib/alnasl_web/live/fair_play_live.ex:1680
 #, elixir-autogen, elixir-format
 msgid "Player"
 msgstr "Speler"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1847
+#: lib/alnasl_web/live/fair_play_live.ex:1849
 #, elixir-autogen, elixir-format
 msgid "Positions to look at"
 msgstr "Stellingen om te bekijken"
 
-#: lib/alnasl_web/live/fair_play_live.ex:951
+#: lib/alnasl_web/live/fair_play_live.ex:953
 #, elixir-autogen, elixir-format
 msgid "Read the manual section"
 msgstr "Lees het onderdeel in de handleiding"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1190
+#: lib/alnasl_web/live/fair_play_live.ex:1192
 #, elixir-autogen, elixir-format
 msgid "Reports"
 msgstr "Rapporten"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1457
+#: lib/alnasl_web/live/fair_play_live.ex:1459
 #, elixir-autogen, elixir-format
 msgid "Round %{round} only"
 msgstr "Alleen ronde %{round}"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1872
+#: lib/alnasl_web/live/fair_play_live.ex:1874
 #, elixir-autogen, elixir-format
 msgid "Round %{round}, board %{board}, move %{n}"
 msgstr "Ronde %{round}, bord %{board}, zet %{n}"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1455
+#: lib/alnasl_web/live/fair_play_live.ex:1457
 #, elixir-autogen, elixir-format
 msgid "Rounds 1 to %{round}"
 msgstr "Ronde 1 tot en met %{round}"
 
-#: lib/alnasl_web/live/fair_play_live.ex:662
+#: lib/alnasl_web/live/fair_play_live.ex:663
 #, elixir-autogen, elixir-format
 msgid "Say why: a reason is needed to keep the analysis longer."
 msgstr "Zeg waarom: voor langer bewaren van de analyse is een reden nodig."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1484
-#: lib/alnasl_web/live/fair_play_live.ex:1680
-#: lib/alnasl_web/live/fair_play_live.ex:1829
+#: lib/alnasl_web/live/fair_play_live.ex:1486
+#: lib/alnasl_web/live/fair_play_live.ex:1682
+#: lib/alnasl_web/live/fair_play_live.ex:1831
 #, elixir-autogen, elixir-format
 msgid "Score"
 msgstr "Score"
 
-#: lib/alnasl_web/live/fair_play_live.ex:946
+#: lib/alnasl_web/live/fair_play_live.ex:948
 #, elixir-autogen, elixir-format
 msgid "Screening, not evidence"
 msgstr "Screening, geen bewijs"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1129
+#: lib/alnasl_web/live/fair_play_live.ex:1131
 #, elixir-autogen, elixir-format
 msgid "Stockfish %{version}, bench %{bench}"
 msgstr "Stockfish %{version}, bench %{bench}"
 
-#: lib/alnasl_web/live/fair_play_live.ex:730
+#: lib/alnasl_web/live/fair_play_live.ex:731
 #, elixir-autogen, elixir-format
 msgid "The engine is installed."
 msgstr "De engine is geïnstalleerd."
 
-#: lib/alnasl_web/live/fair_play_live.ex:743
+#: lib/alnasl_web/live/fair_play_live.ex:744
 #, elixir-autogen, elixir-format
 msgid "The installation stopped unexpectedly. Try again."
 msgstr "De installatie stopte onverwacht. Probeer het opnieuw."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1867
+#: lib/alnasl_web/live/fair_play_live.ex:1869
 #, elixir-autogen, elixir-format
 msgid "The position before the move"
 msgstr "De stelling voor de zet"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1854
+#: lib/alnasl_web/live/fair_play_live.ex:1856
 #, elixir-autogen, elixir-format
 msgid "There are none yet."
 msgstr "Die zijn er nog niet."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1463
+#: lib/alnasl_web/live/fair_play_live.ex:1465
 #, elixir-autogen, elixir-format
 msgid "There is no score yet: this engine has not been calibrated, so there is nothing to compare a player's moves with. The counts below are real; do not read more into them than that."
 msgstr "Er is nog geen score: deze engine is nog niet gekalibreerd, dus er is niets om de zetten van een speler mee te vergelijken. De aantallen hieronder kloppen; lees er niet meer in dan dat."
 
 #: lib/alnasl_web/live/fair_play_live.ex:89
-#: lib/alnasl_web/live/fair_play_live.ex:659
+#: lib/alnasl_web/live/fair_play_live.ex:660
 #, elixir-autogen, elixir-format
 msgid "There is nothing at that address."
 msgstr "Op dat adres is niets te vinden."
 
-#: lib/alnasl_web/live/fair_play_live.ex:998
-#: lib/alnasl_web/live/fair_play_live.ex:1193
+#: lib/alnasl_web/live/fair_play_live.ex:1000
+#: lib/alnasl_web/live/fair_play_live.ex:1195
 #, elixir-autogen, elixir-format
 msgid "This hall has no tournaments yet."
 msgstr "Deze zaal heeft nog geen toernooien."
 
-#: lib/alnasl_web/live/fair_play_live.ex:947
+#: lib/alnasl_web/live/fair_play_live.ex:949
 #, elixir-autogen, elixir-format
 msgid "This is not the method FIDE has approved (FIDE Fair Play Regulations 2024, Art. 1.6): it is a reason to look closer, nothing more. What to do with a high number is in the manual."
 msgstr "Dit is niet de methode die FIDE heeft goedgekeurd (FIDE Fair Play Regulations 2024, art. 1.6): het is een reden om beter te kijken, niets meer. Wat je met een hoog getal doet, staat in de handleiding."
 
-#: lib/alnasl_web/live/fair_play_live.ex:670
+#: lib/alnasl_web/live/fair_play_live.ex:671
 #, elixir-autogen, elixir-format
 msgid "This tournament has no games yet, so there is no last round to count from."
 msgstr "Dit toernooi heeft nog geen partijen, dus er is geen laatste ronde om vanaf te tellen."
 
-#: lib/alnasl_web/live/fair_play_live.ex:830
+#: lib/alnasl_web/live/fair_play_live.ex:832
 #, elixir-autogen, elixir-format
 msgid "Tournament %{id}"
 msgstr "Toernooi %{id}"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1183
+#: lib/alnasl_web/live/fair_play_live.ex:1185
 #, elixir-autogen, elixir-format
 msgid "Uses Stockfish (GPL-3.0), stockfishchess.org, downloaded from the official release."
 msgstr "Gebruikt Stockfish (GPL-3.0), stockfishchess.org, gedownload van de officiële release."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1696
+#: lib/alnasl_web/live/fair_play_live.ex:1698
 #, elixir-autogen, elixir-format
 msgid "Who opened this"
 msgstr "Wie dit opende"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1613
+#: lib/alnasl_web/live/fair_play_live.ex:1615
 #, elixir-autogen, elixir-format
 msgid "Why (needed)"
 msgstr "Waarom (verplicht)"
 
-#: lib/alnasl_web/live/fair_play_live.ex:756
+#: lib/alnasl_web/live/fair_play_live.ex:758
 #, elixir-autogen, elixir-format
 msgid "decided position"
 msgstr "beslist"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1823
-#: lib/alnasl_web/live/fair_play_live.ex:1827
+#: lib/alnasl_web/live/fair_play_live.ex:1825
+#: lib/alnasl_web/live/fair_play_live.ex:1829
 #, elixir-autogen, elixir-format
 msgid "expected"
 msgstr "verwacht"
 
-#: lib/alnasl_web/live/fair_play_live.ex:754
+#: lib/alnasl_web/live/fair_play_live.ex:756
 #, elixir-autogen, elixir-format
 msgid "forced move"
 msgstr "gedwongen zet"
 
-#: lib/alnasl_web/live/fair_play_live.ex:750
+#: lib/alnasl_web/live/fair_play_live.ex:752
 #, elixir-autogen, elixir-format
 msgid "guessed by the tracker"
 msgstr "geraden door de tracker"
 
-#: lib/alnasl_web/live/fair_play_live.ex:749
+#: lib/alnasl_web/live/fair_play_live.ex:750
 #, elixir-autogen, elixir-format
 msgid "no rating"
 msgstr "geen rating"
 
-#: lib/alnasl_web/live/fair_play_live.ex:781
+#: lib/alnasl_web/live/fair_play_live.ex:783
 #, elixir-autogen, elixir-format
 msgid "no score until the engine is calibrated"
 msgstr "geen score zolang de engine niet gekalibreerd is"
 
-#: lib/alnasl_web/live/fair_play_live.ex:757
+#: lib/alnasl_web/live/fair_play_live.ex:759
 #, elixir-autogen, elixir-format
 msgid "not analysed"
 msgstr "niet geanalyseerd"
 
-#: lib/alnasl_web/live/fair_play_live.ex:752
+#: lib/alnasl_web/live/fair_play_live.ex:754
 #, elixir-autogen, elixir-format
 msgid "opening (moves 1 to 8)"
 msgstr "opening (zet 1 tot 8)"
 
-#: lib/alnasl_web/live/fair_play_live.ex:753
+#: lib/alnasl_web/live/fair_play_live.ex:755
 #, elixir-autogen, elixir-format
 msgid "repeated position"
 msgstr "herhaalde stelling"
 
-#: lib/alnasl_web/live/fair_play_live.ex:751
+#: lib/alnasl_web/live/fair_play_live.ex:753
 #, elixir-autogen, elixir-format
 msgid "rewritten, result not yet confirmed"
 msgstr "herschreven, uitslag nog niet bevestigd"
 
-#: lib/alnasl_web/live/fair_play_live.ex:778
+#: lib/alnasl_web/live/fair_play_live.ex:780
 #, elixir-autogen, elixir-format
 msgid "statistically very unusual"
 msgstr "statistisch zeer ongewoon"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1315
-#: lib/alnasl_web/live/fair_play_live.ex:1668
-#: lib/alnasl_web/live/fair_play_live.ex:1699
+#: lib/alnasl_web/live/fair_play_live.ex:1317
+#: lib/alnasl_web/live/fair_play_live.ex:1670
+#: lib/alnasl_web/live/fair_play_live.ex:1701
 #, elixir-autogen, elixir-format
 msgid "this computer"
 msgstr "deze computer"
 
-#: lib/alnasl_web/live/fair_play_live.ex:783
+#: lib/alnasl_web/live/fair_play_live.ex:785
 #, elixir-autogen, elixir-format
 msgid "too few moves"
 msgstr "te weinig zetten"
 
-#: lib/alnasl_web/live/fair_play_live.ex:755
+#: lib/alnasl_web/live/fair_play_live.ex:757
 #, elixir-autogen, elixir-format
 msgid "under a minute on the clock"
 msgstr "minder dan een minuut op de klok"
 
-#: lib/alnasl_web/live/fair_play_live.ex:777
+#: lib/alnasl_web/live/fair_play_live.ex:779
 #, elixir-autogen, elixir-format
 msgid "worth a closer look"
 msgstr "de moeite van een nader onderzoek waard"
 
-#: lib/alnasl_web/live/fair_play_live.ex:992
+#: lib/alnasl_web/live/fair_play_live.ex:994
 #, elixir-autogen, elixir-format
 msgid "Engine installed"
 msgstr "Engine geïnstalleerd"
 
-#: lib/alnasl_web/live/fair_play_live.ex:994
+#: lib/alnasl_web/live/fair_play_live.ex:996
 #, elixir-autogen, elixir-format
 msgid "Engine not installed"
 msgstr "Engine niet geïnstalleerd"
 
-#: lib/alnasl_web/live/fair_play_live.ex:989
-#: lib/alnasl_web/live/fair_play_live.ex:1097
+#: lib/alnasl_web/live/fair_play_live.ex:991
+#: lib/alnasl_web/live/fair_play_live.ex:1099
 #, elixir-autogen, elixir-format
 msgid "Off"
 msgstr "Uit"
 
-#: lib/alnasl_web/live/fair_play_live.ex:987
-#: lib/alnasl_web/live/fair_play_live.ex:1097
+#: lib/alnasl_web/live/fair_play_live.ex:989
+#: lib/alnasl_web/live/fair_play_live.ex:1099
 #, elixir-autogen, elixir-format
 msgid "On"
 msgstr "Aan"
@@ -8270,25 +8270,25 @@ msgstr "Aan"
 #: lib/alnasl_web/live/fair_play_live.ex:142
 #: lib/alnasl_web/live/fair_play_live.ex:196
 #: lib/alnasl_web/live/fair_play_live.ex:219
-#: lib/alnasl_web/live/fair_play_live.ex:927
-#: lib/alnasl_web/live/fair_play_live.ex:1066
-#: lib/alnasl_web/live/fair_play_live.ex:1101
+#: lib/alnasl_web/live/fair_play_live.ex:929
+#: lib/alnasl_web/live/fair_play_live.ex:1068
+#: lib/alnasl_web/live/fair_play_live.ex:1103
 #: lib/alnasl_web/tour.ex:240
 #, elixir-autogen, elixir-format
 msgid "Fair play"
 msgstr "Fair play"
 
-#: lib/alnasl_web/live/fair_play_live.ex:963
+#: lib/alnasl_web/live/fair_play_live.ex:965
 #, elixir-autogen, elixir-format
 msgid "Fair play is the owner's of a hall and nobody else's. These are the halls you own."
 msgstr "Fair play is van de eigenaar van een zaal en van niemand anders. Dit zijn de zalen die je bezit."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1401
+#: lib/alnasl_web/live/fair_play_live.ex:1403
 #, elixir-autogen, elixir-format
 msgid "Fair play needs macOS 10.15 or newer; this Mac runs %{version}. Everything else in Alnasl works as before."
 msgstr "Fair play heeft macOS 10.15 of nieuwer nodig; deze Mac draait %{version}. Al het andere in Alnasl werkt als voorheen."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1469
+#: lib/alnasl_web/live/fair_play_live.ex:1471
 #, elixir-autogen, elixir-format
 msgid "Nothing has been analysed for this tournament. Is fair play on in this hall, with an engine installed, and are the games recorded by the boards?"
 msgstr "Voor dit toernooi is niets geanalyseerd. Staat Fair play aan in deze zaal, met een geïnstalleerde engine, en worden de partijen door de borden vastgelegd?"
@@ -8373,411 +8373,411 @@ msgstr "wordt verstuurd"
 msgid "this tournament is gone"
 msgstr "dit toernooi is weg"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1734
+#: lib/alnasl_web/live/fair_play_live.ex:1736
 #, elixir-autogen, elixir-format
 msgid "%{count} analysed"
 msgstr "%{count} geanalyseerd"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1740
+#: lib/alnasl_web/live/fair_play_live.ex:1742
 #, elixir-autogen, elixir-format
 msgid "%{count} failed"
 msgstr "%{count} mislukt"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1743
+#: lib/alnasl_web/live/fair_play_live.ex:1745
 #, elixir-autogen, elixir-format
 msgid "%{count} recorded by the boards"
 msgstr "%{count} door de borden opgenomen"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1022
+#: lib/alnasl_web/live/fair_play_live.ex:1024
 #, elixir-autogen, elixir-format
 msgid "All reports of %{hall}"
 msgstr "Alle rapporten van %{hall}"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1534
+#: lib/alnasl_web/live/fair_play_live.ex:1536
 #, elixir-autogen, elixir-format
 msgid "Analyse a round on demand"
 msgstr "Een ronde op vraag analyseren"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1552
+#: lib/alnasl_web/live/fair_play_live.ex:1554
 #, elixir-autogen, elixir-format
 msgid "Analyse this round"
 msgstr "Deze ronde analyseren"
 
-#: lib/alnasl_web/live/fair_play_live.ex:530
+#: lib/alnasl_web/live/fair_play_live.ex:531
 #, elixir-autogen, elixir-format
 msgid "Between 1 and %{max} days."
 msgstr "Tussen 1 en %{max} dagen."
 
-#: lib/alnasl_web/live/fair_play_live.ex:534
+#: lib/alnasl_web/live/fair_play_live.ex:535
 #, elixir-autogen, elixir-format
 msgid "Choose one of the hall's people."
 msgstr "Kies iemand van de zaal."
 
-#: lib/alnasl_web/live/fair_play_live.ex:701
+#: lib/alnasl_web/live/fair_play_live.ex:702
 #, elixir-autogen, elixir-format
 msgid "Choose one of this hall's tournaments."
 msgstr "Kies een toernooi van deze zaal."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1713
+#: lib/alnasl_web/live/fair_play_live.ex:1715
 #, elixir-autogen, elixir-format
 msgid "Days after the upload (at most 365)"
 msgstr "Dagen na het uploaden (hoogstens 365)"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1781
+#: lib/alnasl_web/live/fair_play_live.ex:1783
 #, elixir-autogen, elixir-format
 msgid "Delete this upload"
 msgstr "Deze upload verwijderen"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1778
+#: lib/alnasl_web/live/fair_play_live.ex:1780
 #, elixir-autogen, elixir-format
 msgid "Delete this upload, its games and their analysis? This cannot be undone."
 msgstr "Deze upload, zijn partijen en hun analyse verwijderen? Dat kan niet ongedaan gemaakt worden."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1585
+#: lib/alnasl_web/live/fair_play_live.ex:1587
 #, elixir-autogen, elixir-format
 msgid "Deleted %{days} days after it was uploaded, along with the list below of who opened this page."
 msgstr "Verwijderd %{days} dagen na het uploaden, samen met de lijst hieronder van wie deze pagina opende."
 
-#: lib/alnasl_web/live/fair_play_live.ex:676
+#: lib/alnasl_web/live/fair_play_live.ex:677
 #, elixir-autogen, elixir-format
 msgid "Fair play is off in this hall, or has no engine. Switch it on in the settings."
 msgstr "Fair play staat uit in deze zaal, of heeft geen engine. Zet het aan in de instellingen."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1538
+#: lib/alnasl_web/live/fair_play_live.ex:1540
 #, elixir-autogen, elixir-format
 msgid "For a round played while fair play was off, before the engine was installed, or that the queue could not keep up with. Moves already analysed with this engine are kept; only what is missing costs time. The live games go first."
 msgstr "Voor een ronde die gespeeld werd terwijl fair play uit stond, voor de engine geïnstalleerd was, of die de wachtrij niet kon bijhouden. Zetten die al met deze engine geanalyseerd zijn, blijven; alleen wat ontbreekt kost tijd. De live partijen gaan voor."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1362
+#: lib/alnasl_web/live/fair_play_live.ex:1364
 #, elixir-autogen, elixir-format
 msgid "For how many days"
 msgstr "Voor hoeveel dagen"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1223
+#: lib/alnasl_web/live/fair_play_live.ex:1225
 #, elixir-autogen, elixir-format
 msgid "Games from a PGN file"
 msgstr "Partijen uit een PGN-bestand"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1226
+#: lib/alnasl_web/live/fair_play_live.ex:1228
 #, elixir-autogen, elixir-format
 msgid "Games played without the boards, or a whole event: upload them as a PGN file and they are screened like the games the boards record. The ratings come from the WhiteElo and BlackElo tags; a player without one is not scored. The file is read once and not kept; its games and their analysis are kept as long as a tournament's would be."
 msgstr "Partijen gespeeld zonder de borden, of een heel evenement: upload ze als PGN-bestand en ze worden gescreend zoals de partijen die de borden opnemen. De ratings komen uit de tags WhiteElo en BlackElo; een speler zonder rating krijgt geen score. Het bestand wordt één keer gelezen en niet bewaard; zijn partijen en hun analyse worden even lang bewaard als die van een toernooi."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1563
+#: lib/alnasl_web/live/fair_play_live.ex:1565
 #, elixir-autogen, elixir-format
 msgid "Let one of the hall's people see this report until a date you choose. They can look, and nothing else; you can stop it at any time; every opening is written down."
 msgstr "Laat iemand van de zaal dit rapport zien tot een datum die je kiest. Die persoon kan kijken, en niets anders; je kunt het op elk moment stoppen; elke keer dat het geopend wordt, wordt genoteerd."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1297
+#: lib/alnasl_web/live/fair_play_live.ex:1299
 #, elixir-autogen, elixir-format
 msgid "Let someone see every fair-play report of this hall: the chief arbiter, a fair-play officer. They must be one of the hall's people. They can look, and nothing else; every opening is written down. A single report can be shared from the report itself."
 msgstr "Laat iemand elk fair-playrapport van deze zaal zien: de hoofdarbiter, een fair-playverantwoordelijke. Die persoon moet iemand van de zaal zijn. Die kan kijken, en niets anders; elke keer dat een rapport geopend wordt, wordt genoteerd. Eén rapport deel je vanuit het rapport zelf."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1273
+#: lib/alnasl_web/live/fair_play_live.ex:1275
 #, elixir-autogen, elixir-format
 msgid "Name (optional)"
 msgstr "Naam (optioneel)"
 
-#: lib/alnasl_web/live/fair_play_live.ex:541
+#: lib/alnasl_web/live/fair_play_live.ex:542
 #, elixir-autogen, elixir-format
 msgid "No longer shared."
 msgstr "Niet meer gedeeld."
 
-#: lib/alnasl_web/live/fair_play_live.ex:908
+#: lib/alnasl_web/live/fair_play_live.ex:910
 #, elixir-autogen, elixir-format
 msgid "None: a report of its own"
 msgstr "Geen: een eigen rapport"
 
-#: lib/alnasl_web/live/fair_play_live.ex:584
+#: lib/alnasl_web/live/fair_play_live.ex:585
 #, elixir-autogen, elixir-format
 msgid "One game queued."
 msgid_plural "%{count} games queued."
 msgstr[0] "Eén partij in de wachtrij."
 msgstr[1] "%{count} partijen in de wachtrij."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1748
+#: lib/alnasl_web/live/fair_play_live.ex:1750
 #, elixir-autogen, elixir-format
 msgid "One game with a remark"
 msgid_plural "%{count} games with a remark"
 msgstr[0] "Eén partij met een opmerking"
 msgstr[1] "%{count} partijen met een opmerking"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1262
+#: lib/alnasl_web/live/fair_play_live.ex:1264
 #, elixir-autogen, elixir-format
 msgid "Part of a tournament"
 msgstr "Deel van een toernooi"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1770
+#: lib/alnasl_web/live/fair_play_live.ex:1772
 #, elixir-autogen, elixir-format
 msgid "Queue the waiting games again"
 msgstr "De wachtende partijen opnieuw in de wachtrij zetten"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1878
+#: lib/alnasl_web/live/fair_play_live.ex:1880
 #, elixir-autogen, elixir-format
 msgid "Round %{round}, move %{n}"
 msgstr "Ronde %{round}, zet %{n}"
 
-#: lib/alnasl_web/live/fair_play_live.ex:557
+#: lib/alnasl_web/live/fair_play_live.ex:558
 #, elixir-autogen, elixir-format
 msgid "Round %{round}: one game queued. Moves already analysed with this engine stay as they are."
 msgid_plural "Round %{round}: %{count} games queued. Moves already analysed with this engine stay as they are."
 msgstr[0] "Ronde %{round}: één partij in de wachtrij. Zetten die al met deze engine geanalyseerd zijn, blijven zoals ze zijn."
 msgstr[1] "Ronde %{round}: %{count} partijen in de wachtrij. Zetten die al met deze engine geanalyseerd zijn, blijven zoals ze zijn."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1561
+#: lib/alnasl_web/live/fair_play_live.ex:1563
 #, elixir-autogen, elixir-format
 msgid "Shared with"
 msgstr "Gedeeld met"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1012
+#: lib/alnasl_web/live/fair_play_live.ex:1014
 #, elixir-autogen, elixir-format
 msgid "Shared with you"
 msgstr "Met jou gedeeld"
 
-#: lib/alnasl_web/live/fair_play_live.ex:520
+#: lib/alnasl_web/live/fair_play_live.ex:521
 #, elixir-autogen, elixir-format
 msgid "Shared."
 msgstr "Gedeeld."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1295
+#: lib/alnasl_web/live/fair_play_live.ex:1297
 #, elixir-autogen, elixir-format
 msgid "Sharing"
 msgstr "Delen"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1381
+#: lib/alnasl_web/live/fair_play_live.ex:1383
 #, elixir-autogen, elixir-format
 msgid "Stop sharing"
 msgstr "Niet meer delen"
 
-#: lib/alnasl_web/live/fair_play_live.ex:687
+#: lib/alnasl_web/live/fair_play_live.ex:688
 #, elixir-autogen, elixir-format
 msgid "That is not a PGN file: it is not text. A zipped PGN must be unpacked first."
 msgstr "Dat is geen PGN-bestand: het is geen tekst. Een gezipte PGN moet je eerst uitpakken."
 
-#: lib/alnasl_web/live/fair_play_live.ex:693
+#: lib/alnasl_web/live/fair_play_live.ex:694
 #, elixir-autogen, elixir-format
 msgid "The file has %{count} games; at most %{max} at a time."
 msgstr "Het bestand heeft %{count} partijen; hoogstens %{max} tegelijk."
 
-#: lib/alnasl_web/live/fair_play_live.ex:682
+#: lib/alnasl_web/live/fair_play_live.ex:683
 #, elixir-autogen, elixir-format
 msgid "The file is larger than %{mb} MB. Split it and upload the parts."
 msgstr "Het bestand is groter dan %{mb} MB. Splits het en upload de delen."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1346
+#: lib/alnasl_web/live/fair_play_live.ex:1348
 #, elixir-autogen, elixir-format
 msgid "The hall has nobody to share with yet: invite the person to the hall first (as a viewer is enough)."
 msgstr "De zaal heeft nog niemand om mee te delen: nodig de persoon eerst uit in de zaal (als kijker volstaat)."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1422
+#: lib/alnasl_web/live/fair_play_live.ex:1424
 #, elixir-autogen, elixir-format
 msgid "The owner of this hall shared this report with you. It is confidential: you can look, and your opening it is written down."
 msgstr "De eigenaar van deze zaal heeft dit rapport met jou gedeeld. Het is vertrouwelijk: je kunt kijken, en dat je het opent, wordt genoteerd."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1014
+#: lib/alnasl_web/live/fair_play_live.ex:1016
 #, elixir-autogen, elixir-format
 msgid "The owners of these halls let you see these reports, until the date shown. You can look; you cannot change anything, and you cannot share them further."
 msgstr "De eigenaars van deze zalen laten je deze rapporten zien, tot de vermelde datum. Je kunt kijken; je kunt niets veranderen en ze niet verder delen."
 
-#: lib/alnasl_web/live/fair_play_live.ex:619
+#: lib/alnasl_web/live/fair_play_live.ex:620
 #, elixir-autogen, elixir-format
 msgid "The upload and its analysis are deleted."
 msgstr "De upload en zijn analyse zijn verwijderd."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1265
+#: lib/alnasl_web/live/fair_play_live.ex:1267
 #, elixir-autogen, elixir-format
 msgid "Then its players are matched with the tournament's and its games count in its report."
 msgstr "Dan worden de spelers gekoppeld aan die van het toernooi en tellen de partijen mee in zijn rapport."
 
-#: lib/alnasl_web/live/fair_play_live.ex:689
+#: lib/alnasl_web/live/fair_play_live.ex:690
 #, elixir-autogen, elixir-format
 msgid "There are no games with moves in that file."
 msgstr "Er staan geen partijen met zetten in dat bestand."
 
-#: lib/alnasl_web/live/fair_play_live.ex:673
-#: lib/alnasl_web/live/fair_play_live.ex:1578
+#: lib/alnasl_web/live/fair_play_live.ex:674
+#: lib/alnasl_web/live/fair_play_live.ex:1580
 #, elixir-autogen, elixir-format
 msgid "These games belong to a tournament and are kept as long as it is."
 msgstr "Deze partijen horen bij een toernooi en worden even lang bewaard als dat toernooi."
 
-#: lib/alnasl_web/live/fair_play_live.ex:699
+#: lib/alnasl_web/live/fair_play_live.ex:700
 #, elixir-autogen, elixir-format
 msgid "This file was uploaded before, as \"%{name}\"."
 msgstr "Dit bestand werd al eerder geüpload, als \"%{name}\"."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1278
+#: lib/alnasl_web/live/fair_play_live.ex:1280
 #, elixir-autogen, elixir-format
 msgid "Upload and analyse"
 msgstr "Uploaden en analyseren"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1718
+#: lib/alnasl_web/live/fair_play_live.ex:1720
 #, elixir-autogen, elixir-format
 msgid "Uploaded PGN"
 msgstr "Geüploade PGN"
 
-#: lib/alnasl_web/live/fair_play_live.ex:491
+#: lib/alnasl_web/live/fair_play_live.ex:492
 #, elixir-autogen, elixir-format
 msgid "Uploaded. The games are analysed in the background."
 msgstr "Geüpload. De partijen worden op de achtergrond geanalyseerd."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1310
+#: lib/alnasl_web/live/fair_play_live.ex:1312
 #, elixir-autogen, elixir-format
 msgid "What was done"
 msgstr "Wat er gedaan werd"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1354
+#: lib/alnasl_web/live/fair_play_live.ex:1356
 #, elixir-autogen, elixir-format
 msgid "With"
 msgstr "Met"
 
-#: lib/alnasl_web/live/fair_play_live.ex:902
+#: lib/alnasl_web/live/fair_play_live.ex:904
 #, elixir-autogen, elixir-format
 msgid "a problem"
 msgstr "een probleem"
 
-#: lib/alnasl_web/live/fair_play_live.ex:385
+#: lib/alnasl_web/live/fair_play_live.ex:386
 #, elixir-autogen, elixir-format
 msgid "a report that is gone"
 msgstr "een rapport dat er niet meer is"
 
-#: lib/alnasl_web/live/fair_play_live.ex:807
+#: lib/alnasl_web/live/fair_play_live.ex:809
 #, elixir-autogen, elixir-format
 msgid "about 1 in %{n} normal player-events scores %{threshold} or more (1 in %{low} to 1 in %{high})"
 msgstr "ongeveer 1 op %{n} normale speler-toernooien scoort %{threshold} of meer (1 op %{low} tot 1 op %{high})"
 
-#: lib/alnasl_web/live/fair_play_live.ex:380
+#: lib/alnasl_web/live/fair_play_live.ex:381
 #, elixir-autogen, elixir-format
 msgid "all reports of the hall"
 msgstr "alle rapporten van de zaal"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1330
+#: lib/alnasl_web/live/fair_play_live.ex:1332
 #, elixir-autogen, elixir-format
 msgid "cannot be uploaded"
 msgstr "kan niet geüpload worden"
 
-#: lib/alnasl_web/live/fair_play_live.ex:873
+#: lib/alnasl_web/live/fair_play_live.ex:875
 #, elixir-autogen, elixir-format
 msgid "deleted an upload"
 msgstr "verwijderde een upload"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1385
+#: lib/alnasl_web/live/fair_play_live.ex:1387
 #, elixir-autogen, elixir-format
 msgid "ended %{date}"
 msgstr "afgelopen %{date}"
 
-#: lib/alnasl_web/live/fair_play_live.ex:796
+#: lib/alnasl_web/live/fair_play_live.ex:798
 #, elixir-autogen, elixir-format
 msgid "false-positive rate not measured for this calibration"
 msgstr "vals-positievenratio niet gemeten voor deze kalibratie"
 
-#: lib/alnasl_web/live/fair_play_live.ex:874
+#: lib/alnasl_web/live/fair_play_live.ex:876
 #, elixir-autogen, elixir-format
 msgid "had a round analysed"
 msgstr "liet een ronde analyseren"
 
-#: lib/alnasl_web/live/fair_play_live.ex:900
+#: lib/alnasl_web/live/fair_play_live.ex:902
 #, elixir-autogen, elixir-format
 msgid "no rating for Black in the file: Black's moves do not count"
 msgstr "geen rating voor zwart in het bestand: de zetten van zwart tellen niet"
 
-#: lib/alnasl_web/live/fair_play_live.ex:897
+#: lib/alnasl_web/live/fair_play_live.ex:899
 #, elixir-autogen, elixir-format
 msgid "no rating for White in the file: White's moves do not count"
 msgstr "geen rating voor wit in het bestand: de zetten van wit tellen niet"
 
-#: lib/alnasl_web/live/fair_play_live.ex:894
+#: lib/alnasl_web/live/fair_play_live.ex:896
 #, elixir-autogen, elixir-format
 msgid "no ratings in the file: neither player's moves count"
 msgstr "geen ratings in het bestand: de zetten van geen van beide spelers tellen"
 
-#: lib/alnasl_web/live/fair_play_live.ex:799
+#: lib/alnasl_web/live/fair_play_live.ex:801
 #, elixir-autogen, elixir-format
 msgid "none of %{events} normal player-events scored %{threshold} or more: fewer than about 1 in %{n}"
 msgstr "geen van %{events} normale speler-toernooien scoorde %{threshold} of meer: minder dan ongeveer 1 op %{n}"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1329
+#: lib/alnasl_web/live/fair_play_live.ex:1331
 #, elixir-autogen, elixir-format
 msgid "not a .pgn file"
 msgstr "geen .pgn-bestand"
 
-#: lib/alnasl_web/live/fair_play_live.ex:891
+#: lib/alnasl_web/live/fair_play_live.ex:893
 #, elixir-autogen, elixir-format
 msgid "not analysed again: the boards recorded this game"
 msgstr "niet opnieuw geanalyseerd: de borden namen deze partij op"
 
-#: lib/alnasl_web/live/fair_play_live.ex:793
+#: lib/alnasl_web/live/fair_play_live.ex:795
 #, elixir-autogen, elixir-format
 msgid "not calibrated"
 msgstr "niet gekalibreerd"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1286
+#: lib/alnasl_web/live/fair_play_live.ex:1288
 #, elixir-autogen, elixir-format
 msgid "one game"
 msgid_plural "%{count} games"
 msgstr[0] "één partij"
 msgstr[1] "%{count} partijen"
 
-#: lib/alnasl_web/live/fair_play_live.ex:869
+#: lib/alnasl_web/live/fair_play_live.ex:871
 #, elixir-autogen, elixir-format
 msgid "opened"
 msgstr "opende"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1727
+#: lib/alnasl_web/live/fair_play_live.ex:1729
 #, elixir-autogen, elixir-format
 msgid "part of %{tournament}"
 msgstr "deel van %{tournament}"
 
-#: lib/alnasl_web/live/fair_play_live.ex:879
+#: lib/alnasl_web/live/fair_play_live.ex:881
 #, elixir-autogen, elixir-format
 msgid "refused: an illegal move, %{move}"
 msgstr "geweigerd: een onwettige zet, %{move}"
 
-#: lib/alnasl_web/live/fair_play_live.ex:885
+#: lib/alnasl_web/live/fair_play_live.ex:887
 #, elixir-autogen, elixir-format
 msgid "refused: not standard chess (%{variant})"
 msgstr "geweigerd: geen standaardschaak (%{variant})"
 
-#: lib/alnasl_web/live/fair_play_live.ex:888
+#: lib/alnasl_web/live/fair_play_live.ex:890
 #, elixir-autogen, elixir-format
 msgid "refused: the same game as game %{n}"
 msgstr "geweigerd: dezelfde partij als partij %{n}"
 
-#: lib/alnasl_web/live/fair_play_live.ex:882
+#: lib/alnasl_web/live/fair_play_live.ex:884
 #, elixir-autogen, elixir-format
 msgid "refused: the starting position cannot be read (%{why})"
 msgstr "geweigerd: de beginstelling is onleesbaar (%{why})"
 
-#: lib/alnasl_web/live/fair_play_live.ex:870
+#: lib/alnasl_web/live/fair_play_live.ex:872
 #, elixir-autogen, elixir-format
 msgid "shared"
 msgstr "deelde"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1389
+#: lib/alnasl_web/live/fair_play_live.ex:1391
 #, elixir-autogen, elixir-format
 msgid "stopped %{date}"
 msgstr "gestopt %{date}"
 
-#: lib/alnasl_web/live/fair_play_live.ex:871
+#: lib/alnasl_web/live/fair_play_live.ex:873
 #, elixir-autogen, elixir-format
 msgid "stopped sharing"
 msgstr "stopte met delen"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1327
+#: lib/alnasl_web/live/fair_play_live.ex:1329
 #, elixir-autogen, elixir-format
 msgid "too large: at most %{mb} MB"
 msgstr "te groot: hoogstens %{mb} MB"
 
-#: lib/alnasl_web/live/fair_play_live.ex:872
+#: lib/alnasl_web/live/fair_play_live.ex:874
 #, elixir-autogen, elixir-format
 msgid "uploaded"
 msgstr "uploadde"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1006
+#: lib/alnasl_web/live/fair_play_live.ex:1008
 #, elixir-autogen, elixir-format
 msgid "uploaded PGN"
 msgstr "geüploade PGN"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1723
+#: lib/alnasl_web/live/fair_play_live.ex:1725
 #, elixir-autogen, elixir-format
 msgid "uploaded by %{who}"
 msgstr "geüpload door %{who}"
@@ -8800,7 +8800,7 @@ msgid_plural "The pieces stand in the starting position, but this game already h
 msgstr[0] "De stukken staan in de beginstelling, maar deze partij heeft al een zet. Begint er een nieuwe partij op dit bord, start dan hieronder een nieuwe partij. Zijn de stukken omgevallen, zet dan de stelling terug."
 msgstr[1] "De stukken staan in de beginstelling, maar deze partij heeft al %{count} zetten. Begint er een nieuwe partij op dit bord, start dan hieronder een nieuwe partij. Zijn de stukken omgevallen, zet dan de stelling terug."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1090
+#: lib/alnasl_web/live/fair_play_live.ex:1092
 #, elixir-autogen, elixir-format
 msgid "Switch fair play off? From now on this hall's moves are not analysed. The reports made so far stay, and a round played while it was off can still be analysed later, on demand."
 msgstr "Fair play uitzetten? Vanaf nu worden de zetten in deze zaal niet meer geanalyseerd. De rapporten die al bestaan blijven, en een ronde die gespeeld werd terwijl het uit stond, kun je later nog op vraag laten analyseren."
@@ -9078,17 +9078,17 @@ msgstr "De naam van een brug is 1 tot 80 tekens lang."
 msgid "A game was deleted: %{white} - %{black}, %{moves} moves, result %{result}."
 msgstr "Een partij is verwijderd: %{white} - %{black}, %{moves} zetten, uitslag %{result}."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1654
+#: lib/alnasl_web/live/fair_play_live.ex:1656
 #, elixir-autogen, elixir-format
 msgid "Delete the analysis"
 msgstr "De analyse verwijderen"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1650
+#: lib/alnasl_web/live/fair_play_live.ex:1652
 #, elixir-autogen, elixir-format
 msgid "Delete the analysis of this tournament? The report goes; a frozen copy of it stays in this page for the owner."
 msgstr "De analyse van dit toernooi verwijderen? Het rapport verdwijnt; een bevroren kopie ervan blijft voor de eigenaar op deze pagina staan."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1624
+#: lib/alnasl_web/live/fair_play_live.ex:1626
 #, elixir-autogen, elixir-format
 msgid "Delete this analysis"
 msgstr "Deze analyse verwijderen"
@@ -9108,17 +9108,17 @@ msgstr "Deze partij verwijderen, die nog niet is afgewerkt? De zetten, het PGN-b
 msgid "Delete this game? Its moves, its PGN file and what waits to be sent of it go, and the board is empty again for the pairing. What was already sent to the results site or the pairing program stays there."
 msgstr "Deze partij verwijderen? De zetten, het PGN-bestand en wat nog wacht om verstuurd te worden, gaan weg, en het bord is weer leeg voor de pairing. Wat al naar de resultatensite of het pairingprogramma is gestuurd, blijft daar staan."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1666
+#: lib/alnasl_web/live/fair_play_live.ex:1668
 #, elixir-autogen, elixir-format
 msgid "Deleted %{when} by %{who}, %{moves} analysed moves."
 msgstr "Verwijderd op %{when} door %{who}, %{moves} geanalyseerde zetten."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1662
+#: lib/alnasl_web/live/fair_play_live.ex:1664
 #, elixir-autogen, elixir-format
 msgid "Deleted analyses (frozen copies)"
 msgstr "Verwijderde analyses (bevroren kopieën)"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1679
+#: lib/alnasl_web/live/fair_play_live.ex:1681
 #, elixir-autogen, elixir-format
 msgid "Moves counted"
 msgstr "Getelde zetten"
@@ -9128,17 +9128,17 @@ msgstr "Getelde zetten"
 msgid "Name of the bridge"
 msgstr "Naam van de brug"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1672
+#: lib/alnasl_web/live/fair_play_live.ex:1674
 #, elixir-autogen, elixir-format
 msgid "Reason: %{reason}"
 msgstr "Reden: %{reason}"
 
-#: lib/alnasl_web/live/fair_play_live.ex:1633
+#: lib/alnasl_web/live/fair_play_live.ex:1635
 #, elixir-autogen, elixir-format
 msgid "Removes every analysed move of this tournament. A frozen copy of the report as it is now stays below, with who deleted it, when and why, for as long as the report would have been kept, and the audit says so. Games analysed again later make a new analysis."
 msgstr "Verwijdert elke geanalyseerde zet van dit toernooi. Een bevroren kopie van het rapport zoals het nu is blijft hieronder staan, met wie het verwijderde, wanneer en waarom, zolang het rapport bewaard zou zijn, en het auditlogboek zegt het. Partijen die later opnieuw geanalyseerd worden, maken een nieuwe analyse."
 
-#: lib/alnasl_web/live/fair_play_live.ex:602
+#: lib/alnasl_web/live/fair_play_live.ex:603
 #, elixir-autogen, elixir-format
 msgid "The analysis is deleted. A frozen copy of the report is kept below."
 msgstr "De analyse is verwijderd. Een bevroren kopie van het rapport staat hieronder."
@@ -9148,7 +9148,7 @@ msgstr "De analyse is verwijderd. Een bevroren kopie van het rapport staat hiero
 msgid "The game was deleted."
 msgstr "De partij is verwijderd."
 
-#: lib/alnasl_web/live/fair_play_live.ex:607
+#: lib/alnasl_web/live/fair_play_live.ex:608
 #, elixir-autogen, elixir-format
 msgid "There is no analysis to delete."
 msgstr "Er is geen analyse om te verwijderen."
@@ -9158,12 +9158,12 @@ msgstr "Er is geen analyse om te verwijderen."
 msgid "To delete this game, disconnect its board first."
 msgstr "Koppel eerst het bord los om deze partij te verwijderen."
 
-#: lib/alnasl_web/live/fair_play_live.ex:1642
+#: lib/alnasl_web/live/fair_play_live.ex:1644
 #, elixir-autogen, elixir-format
 msgid "Why (not needed, but written down)"
 msgstr "Waarom (hoeft niet, maar wordt genoteerd)"
 
-#: lib/alnasl_web/live/fair_play_live.ex:875
+#: lib/alnasl_web/live/fair_play_live.ex:877
 #, elixir-autogen, elixir-format
 msgid "deleted the analysis"
 msgstr "verwijderde de analyse"
@@ -9192,6 +9192,11 @@ msgstr "De uitslagensite toont deze ronde nog niet. De zetten gaan zodra ze gepu
 #, elixir-autogen, elixir-format
 msgid "The results site shows no more live games for this tournament; this game is tried again with its next move."
 msgstr "De uitslagensite toont geen live partijen meer voor dit toernooi; deze partij wordt opnieuw geprobeerd bij haar volgende zet."
+
+#: lib/alnasl_web/live/fair_play_live.ex:751
+#, elixir-autogen, elixir-format
+msgid "rating under 1000"
+msgstr "rating onder 1000"
 
 #: lib/alnasl_web/words.ex:466
 #, elixir-autogen, elixir-format

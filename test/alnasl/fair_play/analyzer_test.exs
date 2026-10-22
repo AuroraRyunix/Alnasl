@@ -151,6 +151,14 @@ defmodule Alnasl.FairPlay.AnalyzerTest do
       assert skips(Enum.drop(records, 16)) == [nil, :unrated, nil, :unrated]
     end
 
+    test "a player rated under 1000 gets no expectation, and no counted moves" do
+      {:ok, records} = Analyzer.analyse(game(plies(@italian), white: 999), polite_engine())
+      assert skips(Enum.drop(records, 16)) == [:low_rating, nil, :low_rating, nil]
+
+      {:ok, records} = Analyzer.analyse(game(plies(@italian), white: 1000), polite_engine())
+      assert skips(Enum.drop(records, 16)) == [nil, nil, nil, nil]
+    end
+
     test "a guessed ply and every ply after it" do
       plies = plies(@italian) |> List.update_at(17, &%{&1 | flags: [:guessed]})
       {:ok, records} = Analyzer.analyse(game(plies), polite_engine())

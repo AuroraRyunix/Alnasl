@@ -245,3 +245,83 @@ What came out, so the next run has something to beat.
 - **Per band:** 1400-1799 players reach 2 more often (3.3-3.7%) than the
   rest (0.5-1.8%); the 1000 band has 17 player-events, three of them at 2
   or more, too few to say anything.
+
+## 7. The second model, 2026-10-22
+
+The same 30,029 labelled games as the extended first run
+(`/root/w-calibration/labels-ext.jsonl`, 15,000 from January-March 2024
+plus 15,000 more, 2025 first), the same split (`--holdout 0.67`, the same
+hash): 9,944 games fitted, 19,958 held out, **6,626 held-out
+player-events** with a score. The first-form model's numbers were
+reproduced exactly by a refit before anything was changed.
+
+What changed (CHANGELOG, Unreleased): the per-game variance with
+cross-fitted correlations, the rating spline and its interactions, no
+score under 1000, three more features (evaluation, opponent's rating,
+share of the clock used), format 2.
+
+| | first form | items 2-4 only | second form (shipped code) | second form, band variant fit |
+| --- | --- | --- | --- | --- |
+| games fitted | 9,944 | 9,944 | 9,944 | 5,276 |
+| >= 2.0 | 115 (1.74%) | 99 (1.49%) | 120 (1.81%) | 116 (1.75%) |
+| >= 2.5 | 28 (0.42%) | 21 (0.32%) | 23 (0.35%) | 21 (0.32%) |
+| >= 3.0 | **6 (0.09%, upper 0.20%)** | 3 (0.05%, upper 0.13%) | **4 (0.06%, upper 0.15%)** | 2 (0.03%, upper 0.11%) |
+| >= 3.5 | 1 | 0 | 0 | 1 |
+| gate | passed by default | passed | **passed by default** | passed |
+
+"Items 2-4 only" is the intermediate commit (per-game variance, spline,
+cross-fit, no features beyond the first form's). It is listed because it
+was run, not because it may be picked: choosing between it and the
+second form after seeing these held-out numbers would be tuning on the
+test set. The four columns differ by one or two player-events at 3 out of
+6,626, which is what Poisson noise looks like at this size; none of them
+is shown to be better than another, and the second form is **not shown
+to pass**. If the rate stays near 0.06%, the upper bound gets under 1 in
+700 at about 10,000 held-out player-events, half again as many as now:
+some 10,000 more labelled games at the same holdout.
+
+Per band, second form (events, mean score, share at 2 or more): 1000
+(that is, 1000-1199): 17, +0.80, 17.65%; 1200: 52, +0.13, 0.00%; 1400:
+392, +0.04, 3.57%; 1600: 712, +0.10, 3.09%; 1800: 1111, −0.05, 1.71%;
+2000: 1240, +0.01, 1.53%; 2200: 1564, +0.02, 1.73%; 2400: 1276, +0.06,
+1.02%; 2600: 261, −0.03, 1.15%. The means are flatter than the first
+form's (1000: +1.29, 1200: +0.49, 1400/1600: +0.13); the 1000-1199 band is
+still wrong, and with 17 held-out player-events and a few dozen in the
+fit, no model of this corpus can tell why. Under 1000 the corpus has six
+player-games, now not scored.
+
+The correlations measured (second form, cross-fitted): two moves of one
+game correlate 0.014 (MM), 0.018 (EV), 0.022 (ASD); two moves of
+different games of one player-event 0.003-0.005. Small numbers with
+large effects: a 35-move game has 595 pairs of moves, so its variance is
+about 1.5 times the independent one, and nine such games about 2.4 times.
+
+**The per-band variant** (`--band-thresholds 0.4`, 4,668 training games
+set aside to set the thresholds): thresholds between 2.84 (1600) and 3.44
+(1400), 3.27 for 2600; held out, 2 of 6,626 at or over their band's
+threshold (upper 0.11%), the same 2 as the plain score of that fit. It
+flattens the share at 2 a little (1400: 3.57% to 1.28%) and does nothing
+for the 1000-1199 band, whose threshold rests on two events. Not
+adopted.
+
+**The held-out hits at 3 or more.** First form: six. Second form: four.
+
+| player-event (rating, opponents' average) | first form | items 2-4 | second form | why |
+| --- | --- | --- | --- | --- |
+| 1184 v 1482, 3 games, 72 moves | 3.74 | 3.15 | 3.49 | still there: the 1000-1199 band, which no version fits |
+| 1496 v 2173, 3 games, 118 moves | 3.43 | 2.46 | 2.25 | its EV z was 7.7 under independent moves; three long games are three games, not 118 coins |
+| 1974 v 2359, 1 game, 80 moves | 3.28 | 2.65 | 2.39 | one 80-move game, read as one game |
+| 1466 v 1626, 8 games, 304 moves | 3.21 | 2.31 | 1.83 | a long event gets the spread of eight games, where the global covariance gave every event the average one's |
+| 1537 v 2086, 3 games, 207 moves | 3.16 | 1.80 | 1.51 | long games again |
+| 1564 v 1679, 3 games, 116 moves | 3.10 | 2.78 | 2.61 | the same, more mildly |
+| 1839 v 1794, 2 games, 41 moves | 2.75 | 3.04 | 3.21 | new: a short event now gets less inflation than the average event did |
+| 2345 v 2182, 5 games, 124 moves | 2.74 | 2.78 | 3.11 | new, from the added features |
+| 2013 v 2203, 4 games, 98 moves | < 2.5 | 2.37 | 3.01 | new, from the added features |
+
+`mix fair_play.hits` lists them with names; they are left out here.
+Five of the old six went, and most of the drop is already in the items
+2-4 column: the per-game variance, which no longer treats a long event and
+a short one alike. The three new ones are short-to-medium events that the
+old global inflation had been holding down, or that the added features
+pushed over the line. None of this is evidence about any of these
+players; it is evidence that the old variance was the wrong shape.

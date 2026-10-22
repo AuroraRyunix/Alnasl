@@ -51,15 +51,37 @@ defmodule Alnasl.FairPlay.ModelTest do
     for {want, got} <- Enum.zip(beta, fitted), do: assert_in_delta(got, want, 0.08)
   end
 
+  # Coefficients by name, zero where not named.
+  defp beta(named), do: Enum.map(Model.feature_names(), &Map.get(named, &1, 0.0))
+
   test "fit recovers the match model from synthetic plies, and keeps loss moments by band" do
-    beta = [0.2, 0.6, 1.5, -0.4, -0.5]
+    # A rating effect that bends at 1600, and a gap that matters more to
+    # a stronger player.
+    beta =
+      beta(%{
+        "intercept" => 0.2,
+        "rating" => 0.6,
+        "rating>1600" => -0.5,
+        "scaled_gap" => 1.5,
+        "near_count" => -0.4,
+        "material" => -0.5,
+        "rating*scaled_gap" => 0.3
+      })
+
     plies = synthetic(beta, 20_000, {1, 2, 3})
     # 400 player-events of 50 plies each.
     events = Enum.chunk_every(plies, 50)
 
     model = Model.fit(events, engine: "sf19", bench: 2_497_913, nodes: 1_000_000)
 
-    for {want, got} <- Enum.zip(beta, model.match), do: assert_in_delta(got, want, 0.15)
+    # The chances it predicts are the chances the plies were drawn with;
+    # the spline's coefficients one by one are too collinear to compare.
+    errors =
+      for ply <- Enum.take(plies, 1000),
+          do: abs(Model.p_match(model, ply) - logistic(dot(beta, Model.features(ply))))
+
+    assert Enum.sum(errors) / 1000 < 0.015
+    assert Enum.max(errors) < 0.08
 
     # Every match is also an equal-top move here and nothing else is.
     for {a, b} <- Enum.zip(model.match, model.ev), do: assert_in_delta(a, b, 1.0e-9)
@@ -72,20 +94,119 @@ defmodule Alnasl.FairPlay.ModelTest do
     {got_mean, _var} = Model.loss_moments(model, %{rating: 1650, near_count: 0})
     assert_in_delta got_mean, mean, 1.0e-12
 
-    # MM and EV are the same test here, so their correlation is one.
-    [[1.0, mm_ev | _] | _] = model.correlation
-    assert_in_delta mm_ev, 1.0, 1.0e-9
-
-    # The covariance the score divides by: plies drawn from the model
-    # itself are independent, so the MM z-score has a variance near one
-    # here - and the combined score is scaled by this, not by the identity.
-    assert [[mm_var | _] | _] = model.covariance
-    assert_in_delta mm_var, 1.0, 0.3
-    assert Model.dispersion(model) == model.covariance
+    # The correlations the variance is built from: plies drawn from the
+    # model itself are independent, so the move-level dispersion of MM is
+    # one and two plies of one player-event are uncorrelated. MM and EV
+    # are the same test here, so they correlate fully on a ply.
+    %{r0: [[mm_var, mm_ev | _] | _], within: [[within | _] | _]} = Model.dispersion(model)
+    assert_in_delta mm_var, 1.0, 0.05
+    assert_in_delta mm_ev, 1.0, 0.05
+    assert_in_delta within, 0.0, 0.02
 
     # And a normal player-event scores normally.
     numbers = Stats.player(hd(events), model)
     assert abs(numbers.mm_z) < 4
+  end
+
+  test "prepare: the share of the clock each move took, from the clock before the next" do
+    records =
+      [
+        %{game: "a", ply: 17, clock_before_ms: 600_000},
+        %{game: "a", ply: 19, clock_before_ms: 540_000},
+        # The increment paid back more than the move took.
+        %{game: "a", ply: 21, clock_before_ms: 560_000},
+        %{game: "a", ply: 23, clock_before_ms: nil},
+        %{game: "a", ply: 25, clock_before_ms: 300_000},
+        # Another game's ply 19 is not this game's next move.
+        %{game: "b", ply: 17, clock_before_ms: 600_000},
+        %{game: "c", ply: 19, clock_before_ms: 1_000}
+      ]
+      |> Model.prepare()
+
+    assert Enum.map(records, & &1.think) == [0.1, 0.0, nil, nil, nil, nil, nil]
+  end
+
+  test "the features beyond the position: how level, the opponent, the clock" do
+    named = fn record -> Enum.zip(Model.feature_names(), Model.features(record)) |> Map.new() end
+
+    base = %{
+      rating: 1800,
+      best: [%{move: "a1a1", cp: -120}, %{move: "b1b1", cp: -200}],
+      near_count: 0,
+      material: 40
+    }
+
+    f = named.(Map.merge(base, %{opponent_rating: 2200, think: 0.25}))
+    assert f["abs_eval"] == 1.2
+    assert f["opponent"] == 1.0
+    assert f["think"] == 0.25
+    assert f["think_known"] == 1.0
+
+    # Unknown opponent: as if equal. Unknown clock: zero, and said so.
+    f = named.(base)
+    assert f["opponent"] == 0.0
+    assert f["think"] == 0.0
+    assert f["think_known"] == 0.0
+
+    # A 1000 against a 2500 is as far as it goes.
+    assert named.(Map.merge(base, %{rating: 1000, opponent_rating: 2500}))["opponent"] == 2.0
+  end
+
+  test "the correlations are measured on events the regression did not see" do
+    # Two halves of the events that disagree completely: in one, players
+    # match 90% of the time, in the other 10%. Fitted on all of them the
+    # model says 50% and its own residuals look perfectly ordinary. Judged
+    # across the halves, it is wrong by 0.8 every time - which is what the
+    # variance must hear about.
+    :rand.seed(:exsss, {5, 5, 5})
+
+    events =
+      for i <- 1..80 do
+        key = "event #{i}"
+        chance = if Model.fold(key) == 0, do: 0.9, else: 0.1
+
+        records =
+          for g <- 1..4, _ <- 1..15 do
+            gap = 40
+
+            base = %{
+              game: g,
+              rating: 2000,
+              best: [%{move: "a1a1", cp: 0}, %{move: "b1b1", cp: -gap}],
+              near_count: 0,
+              material: 60,
+              skip: nil
+            }
+
+            if :rand.uniform() < chance,
+              do: Map.merge(base, %{rank: 1, played_cp: 0}),
+              else: Map.merge(base, %{rank: 2, played_cp: -gap})
+          end
+
+        {key, records}
+      end
+
+    model = Model.fit(events)
+
+    # The fitted chance is the average of the two halves...
+    assert_in_delta Model.p_match(model, hd(elem(hd(events), 1))), 0.5, 0.05
+
+    # ...and the move-level dispersion is what a 0.9 looks like where 0.1
+    # is true: E[(x − 0.9)²] / 0.09 = 0.73 / 0.09, about 8, not about 1.
+    %{r0: [[mm | _] | _]} = Model.dispersion(model)
+    assert mm > 5
+
+    # The split is the same every time, and both halves get events.
+    folds = Enum.map(events, &Model.fold(elem(&1, 0)))
+    assert folds == Enum.map(events, &Model.fold(elem(&1, 0)))
+    assert Enum.sort(Enum.uniq(folds)) == [0, 1]
+    assert model.meta["dispersion"] =~ "cross-fitted"
+  end
+
+  test "too few events to cross-fit: no correlations, and the independent formula" do
+    model = Model.fit([synthetic(beta(%{"rating" => 0.5}), 200, {9, 9, 9})])
+    assert model.dispersion == nil
+    assert Model.dispersion(model) == Alnasl.FairPlay.Cluster.default()
   end
 
   @tag :tmp_dir
@@ -93,7 +214,7 @@ defmodule Alnasl.FairPlay.ModelTest do
     assert Model.load("sf19", dir) == {:error, :missing}
 
     model =
-      Model.fit([synthetic([0.0, 0.5, 1.0, 0.0, 0.0], 500, {3, 2, 1})],
+      Model.fit([synthetic(beta(%{"rating" => 0.5, "scaled_gap" => 1.0}), 500, {3, 2, 1})],
         engine: "sf19",
         nodes: 1000
       )
@@ -104,8 +225,30 @@ defmodule Alnasl.FairPlay.ModelTest do
     assert loaded.match == model.match
     assert loaded.loss == model.loss
     assert loaded.engine == "sf19"
-    assert loaded.covariance == model.covariance
+    assert loaded.dispersion == model.dispersion
     assert loaded.meta["attribution"] =~ "CC BY-SA 4.0"
+  end
+
+  @tag :tmp_dir
+  test "the file says its format and its features, and an old or foreign one is refused", %{
+    tmp_dir: dir
+  } do
+    json = Model.to_json(%Model{match: [], ev: []})
+    assert json["format"] == 2
+    assert json["features"] == Model.feature_names()
+
+    # Phase 1's files: one rating line, independent moves.
+    old = %{"format" => 1, "features" => ~w(intercept rating scaled_gap near_count material)}
+    assert Model.from_json(old) == {:error, {:outdated_format, 1}}
+
+    File.write!(Model.path("sf19", dir), Jason.encode!(old))
+    assert Model.load("sf19", dir) == {:error, {:outdated_format, 1}}
+
+    # Coefficients for features this version does not compute.
+    other = %{json | "features" => ["intercept", "moon_phase"]}
+    assert Model.from_json(other) == {:error, {:unknown_features, ["intercept", "moon_phase"]}}
+
+    assert Model.from_json(%{"format" => 99}) == {:error, :unknown_format}
   end
 
   test "the shipped location" do

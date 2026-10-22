@@ -53,13 +53,27 @@ defmodule Alnasl.FairPlay.Calibration do
   record N as the bench instead of running it (for a test engine that has
   none; a real run should let it be measured).
 
-  fit: `--holdout FRACTION` (0.2), `--out FILE`, `--engine-id sf19`.
+  fit: `--holdout FRACTION` (0.2), `--out FILE`, `--engine-id sf19`, and
+  `--band-thresholds FRACTION` for the per-band variant
+  (`Alnasl.FairPlay.BandScale`): that share of the *training* events is
+  kept out of the fit and used only to set each band's threshold, and the
+  held-out events are then judged both ways. Off by default, and the
+  report never uses it.
+
+  hits: `--model FILE` (a fitted model), `--holdout FRACTION` (the same as
+  the fit's, or the list is of the wrong games), `--threshold SCORE` (3.0).
+  Lists the held-out player-events scoring at least the threshold, highest
+  first: the event, the player, their rating, their opponents' average
+  rating, the counted moves, the three z-scores and the score. The false
+  positives by name, so somebody can look at the games and say whether
+  they are false.
 
   calibrate: everything above, plus `--labels FILE` (default `OUT.labels.jsonl`).
   """
 
   alias Alnasl.FairPlay.{
     Analyzer,
+    BandScale,
     Engines,
     FalsePositives,
     Installer,
@@ -87,7 +101,10 @@ defmodule Alnasl.FairPlay.Calibration do
     out: :string,
     labels: :string,
     holdout: :float,
-    bench: :integer
+    bench: :integer,
+    model: :string,
+    threshold: :float,
+    band_thresholds: :float
   ]
 
   @doc """
@@ -98,7 +115,7 @@ defmodule Alnasl.FairPlay.Calibration do
   def main(argv \\ System.argv(), opts \\ [halt: true]) do
     result =
       case argv do
-        [command | args] when command in ~w(label fit calibrate) ->
+        [command | args] when command in ~w(label fit calibrate hits) ->
           {parsed, paths, invalid} = OptionParser.parse(args, strict: @switches)
 
           if invalid != [] do
@@ -124,6 +141,7 @@ defmodule Alnasl.FairPlay.Calibration do
   defp run("label", paths, opts), do: label(paths, opts)
   defp run("fit", paths, opts), do: fit(paths, opts)
   defp run("calibrate", paths, opts), do: calibrate(paths, opts)
+  defp run("hits", paths, opts), do: hits(paths, opts)
 
   defp options(parsed) do
     Enum.flat_map(parsed, fn
@@ -141,7 +159,7 @@ defmodule Alnasl.FairPlay.Calibration do
 
   defp describe(:usage),
     do:
-      "usage: main([\"label\" | \"fit\" | \"calibrate\", options..., files...]); " <>
+      "usage: main([\"label\" | \"fit\" | \"calibrate\" | \"hits\", options..., files...]); " <>
         "see Alnasl.FairPlay.Calibration"
 
   defp describe({:mixed_engines, seen}),
@@ -155,6 +173,8 @@ defmodule Alnasl.FairPlay.Calibration do
   defp describe({:bench_mismatch, want, got}),
     do: "the engine's bench is #{got}, not #{want}: not the build this model is for"
 
+  defp describe(:no_model), do: "hits needs --model FILE, the model to score with"
+  defp describe({:model, path, why}), do: "cannot read the model #{path}: #{inspect(why)}"
   defp describe(other), do: inspect(other)
 
   # --- label ---------------------------------------------------------------------
@@ -617,13 +637,21 @@ defmodule Alnasl.FairPlay.Calibration do
   """
   def fit(paths, opts) do
     holdout = Keyword.get(opts, :holdout, 0.2)
+    band_share = opts[:band_thresholds]
     log = Keyword.get(opts, :log, &IO.puts/1)
 
     with {:ok, games, meta} <- read_labels(paths) do
       {held, train} = Enum.split_with(games, &held_out?(holdout_key(&1), holdout))
 
+      # The variant's third set: out of the training events, never out of
+      # the held-out ones, by a hash of its own.
+      {setting, train} =
+        if band_share,
+          do: Enum.split_with(train, &in_share?("bands:", holdout_key(&1), band_share)),
+          else: {[], train}
+
       model =
-        Model.fit(player_events(train),
+        Model.fit(keyed_events(train),
           engine: meta["id"],
           bench: meta["bench"],
           nodes: meta["nodes"],
@@ -637,13 +665,41 @@ defmodule Alnasl.FairPlay.Calibration do
           }
         )
 
-      report = report(player_events(held), model)
+      held_events = player_events(held)
+      report = report(held_events, model)
       model = %{model | false_positives: report.table}
+
+      {model, variant} =
+        if band_share do
+          scale = band_scale(player_events(setting), model)
+
+          variant = %{
+            report: report(held_events, model, scale),
+            scale: scale,
+            games: length(setting)
+          }
+
+          {%{model | meta: Map.put(model.meta, "band_scale_variant", BandScale.to_json(scale))},
+           variant}
+        else
+          {model, nil}
+        end
 
       if out = opts[:out], do: Model.save(model, out)
       Enum.each(format_report(report, length(train), length(held), opts[:out]), log)
-      {:ok, %{model: model, report: report}}
+      if variant, do: Enum.each(format_variant(variant), log)
+      {:ok, %{model: model, report: report, band_variant: variant}}
     end
+  end
+
+  # The location and scale of each band's scores, on the threshold share.
+  defp band_scale(events, model) do
+    for records <- events,
+        numbers = Stats.player(records, model),
+        numbers.score != nil do
+      {BandScale.band_of(records), numbers.score}
+    end
+    |> BandScale.fit()
   end
 
   @doc """
@@ -693,24 +749,51 @@ defmodule Alnasl.FairPlay.Calibration do
   end
 
   @doc "Whether a key (`holdout_key/1`) is in the held-out share: by hash, so every run agrees."
-  def held_out?(key, fraction) do
+  def held_out?(key, fraction), do: in_share?("holdout:", key, fraction)
+
+  @doc false
+  def in_share?(salt, key, fraction) do
     bucket =
-      :sha256 |> :crypto.hash("holdout:" <> key) |> binary_part(0, 4) |> :binary.decode_unsigned()
+      :sha256 |> :crypto.hash(salt <> key) |> binary_part(0, 4) |> :binary.decode_unsigned()
 
     bucket / 4_294_967_296 < fraction
   end
 
   # One player in one event: all their plies there, as records.
-  defp player_events(games) do
+  defp player_events(games), do: games |> keyed_player_events() |> Enum.map(&elem(&1, 1))
+
+  # The same, keyed by the event alone: what `Model.fit/2` splits its
+  # cross-fit by, so an event's players are all on one side.
+  defp keyed_events(games),
+    do:
+      games
+      |> keyed_player_events()
+      |> Enum.map(fn {{event, _}, records} ->
+        {event || "game:" <> hd(records).game, records}
+      end)
+
+  # The same, with who and where: `{{event, player}, records}`, in a fixed
+  # order. Each record knows its game and its opponent's rating.
+  @doc false
+  def keyed_player_events(games) do
     games
     |> Enum.flat_map(fn g ->
       Enum.map(g["plies"] || [], fn ply ->
-        name = if ply["colour"] == "white", do: g["white"], else: g["black"]
-        {{event_of(g), name}, decode_record(ply)}
+        {name, opponent} =
+          if ply["colour"] == "white",
+            do: {g["white"], g["black_elo"]},
+            else: {g["black"], g["white_elo"]}
+
+        record =
+          ply
+          |> decode_record()
+          |> Map.merge(%{game: g["id"], opponent_rating: opponent})
+
+        {{event_of(g), name}, record}
       end)
     end)
     |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
-    |> Map.values()
+    |> Enum.sort()
   end
 
   @doc false
@@ -720,7 +803,7 @@ defmodule Alnasl.FairPlay.Calibration do
   end
 
   def decode_record(ply) do
-    %{
+    record = %{
       ply: ply["ply"],
       rating: ply["rating"],
       best: Enum.map(ply["best"], fn [move, cp] -> %{move: move, cp: cp} end),
@@ -728,8 +811,13 @@ defmodule Alnasl.FairPlay.Calibration do
       rank: ply["rank"],
       near_count: ply["near"],
       material: ply["material"],
+      clock_before_ms: ply["clock"],
       skip: nil
     }
+
+    # Labels made before the rule: the fit and the check apply it as the
+    # halls do.
+    if Selection.low_rating?(record), do: %{record | skip: :low_rating}, else: record
   end
 
   @doc """
@@ -740,12 +828,15 @@ defmodule Alnasl.FairPlay.Calibration do
   more. Normal players, all of them (as far as anybody knows): every one
   of those shares is a false-positive rate.
   """
-  def report(events, model) do
+  def report(events, model, scale \\ nil) do
     scored =
       for records <- events,
           numbers = Stats.player(records, model),
           numbers.score != nil,
-          do: {band(records), numbers.score}
+          band = band(records),
+          do:
+            {band,
+             if(scale, do: BandScale.adjust(scale, band, numbers.score), else: numbers.score)}
 
     total = length(scored)
 
@@ -774,6 +865,34 @@ defmodule Alnasl.FairPlay.Calibration do
       %{rating: r} -> Model.band(r)
       nil -> nil
     end
+  end
+
+  defp format_variant(%{report: report, scale: scale, games: games}) do
+    pct = fn x -> :erlang.float_to_binary(x * 100, decimals: 2) <> "%" end
+    two = fn x -> :erlang.float_to_binary(x / 1, decimals: 2) end
+
+    [
+      "",
+      "VARIANT, per-band thresholds (not what the report uses): #{games} training games " <>
+        "kept out of the fit to set them, so the model above was fitted on fewer games",
+      "band thresholds (mean + 3 sd of the band's scores, shrunk with k = #{BandScale.k()}):"
+    ] ++
+      Enum.map(Enum.sort(scale.bands), fn {band, {m, sd, n}} ->
+        "  #{band}: #{two.(BandScale.threshold(scale, band, 3.0))} (#{n} events, mean #{two.(m)}, sd #{two.(sd)})"
+      end) ++
+      ["held-out player-events at or over their band's threshold:"] ++
+      Enum.map(report.table["rows"], fn r ->
+        "  >= #{r["threshold"]} sd: #{r["above"]} of #{r["events"]}" <>
+          if(r["events"] > 0,
+            do: ", #{pct.(r["rate"])} (95%: #{pct.(r["low"])} to #{pct.(r["high"])})",
+            else: ""
+          )
+      end) ++
+      ["per rating band (events, mean adjusted score, share >= 2):"] ++
+      Enum.map(report.bands, fn b ->
+        "  #{b.band}: #{b.events}, #{two.(b.mean)}, #{pct.(b.over_2)}"
+      end) ++
+      ["variant gate: " <> Atom.to_string(gate_verdict(report.table))]
   end
 
   defp format_report(report, train, held, out) do
@@ -846,6 +965,96 @@ defmodule Alnasl.FairPlay.Calibration do
             "scores 3."
         ]
     end
+  end
+
+  # --- hits ------------------------------------------------------------------------
+
+  @doc """
+  The held-out player-events of label files that score at least
+  `opts[:threshold]` (3.0) under the model in `opts[:model]`, highest
+  first, and printed one per line. `opts[:holdout]` must be the fit's:
+  the split is by hash, so the same fraction picks the same events.
+  Returns `{:ok, [hit]}`, each hit a map of `event`, `player`, `rating`,
+  `opponents` (their average rating), `games`, `counted`, `mm_z`, `ev_z`,
+  `asd_z` and `score`.
+  """
+  def hits(paths, opts) do
+    holdout = Keyword.get(opts, :holdout, 0.2)
+    threshold = Keyword.get(opts, :threshold, 3.0)
+    log = Keyword.get(opts, :log, &IO.puts/1)
+
+    with {:ok, model} <- hits_model(opts[:model]),
+         {:ok, games, _meta} <- read_labels(paths) do
+      hits =
+        games
+        |> Enum.filter(&held_out?(holdout_key(&1), holdout))
+        |> keyed_player_events()
+        |> Enum.flat_map(fn {{event, player}, records} ->
+          numbers = Stats.player(records, model)
+
+          if is_number(numbers.score) and numbers.score >= threshold,
+            do: [hit(event, player, records, numbers)],
+            else: []
+        end)
+        |> Enum.sort_by(&(-&1.score))
+
+      log.(
+        "fair_play hits: #{length(hits)} held-out player-events at #{threshold} or more " <>
+          "(holdout #{holdout})"
+      )
+
+      log.("score\tmm_z\tev_z\tasd_z\tmoves\tgames\trating\topponents\tplayer\tevent")
+      Enum.each(hits, &log.(format_hit(&1)))
+      {:ok, hits}
+    end
+  end
+
+  defp hits_model(nil), do: {:error, :no_model}
+
+  defp hits_model(path) do
+    case Model.read(path) do
+      {:ok, model} -> {:ok, model}
+      {:error, why} -> {:error, {:model, path, why}}
+    end
+  end
+
+  defp hit(event, player, records, numbers) do
+    rated = Enum.filter(records, &is_integer(&1[:rating]))
+    by_game = records |> Enum.group_by(& &1.game) |> Map.values()
+    opponents = by_game |> Enum.map(&hd(&1).opponent_rating) |> Enum.filter(&is_integer/1)
+
+    %{
+      event: event,
+      player: player,
+      rating: rated |> Enum.map(& &1.rating) |> List.last(),
+      opponents: if(opponents != [], do: round(Enum.sum(opponents) / length(opponents))),
+      games: length(by_game),
+      counted: numbers.counted,
+      mm_z: numbers.mm_z,
+      ev_z: numbers.ev_z,
+      asd_z: numbers.asd_z,
+      score: numbers.score
+    }
+  end
+
+  defp format_hit(h) do
+    two = fn x -> :erlang.float_to_binary(x / 1, decimals: 2) end
+
+    Enum.join(
+      [
+        two.(h.score),
+        two.(h.mm_z),
+        two.(h.ev_z),
+        two.(h.asd_z),
+        h.counted,
+        h.games,
+        h.rating,
+        h.opponents,
+        h.player,
+        h.event
+      ],
+      "\t"
+    )
   end
 
   # --- both ------------------------------------------------------------------------

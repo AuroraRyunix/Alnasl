@@ -62,6 +62,7 @@ Een zet zegt niets over de speler, of Alnasl weet niet zeker dat hij gespeeld is
 | Niet meegeteld | Waarom |
 | --- | --- |
 | geen rating | Zonder rating is er niets om mee te vergelijken. Ratings komen uit de paring |
+| rating onder 1000 | De partijen waaruit het model gemaakt is, bevatten te weinig spelers onder 1000 om te zeggen wat je van hen mag verwachten, en een gok is geen verwachting |
 | geraden door de tracker | De tracker wist niet zeker wat er gespeeld werd, en dat geldt ook voor elke zet erna in die partij |
 | herschreven, uitslag nog niet bevestigd | De tracker heeft hem gecorrigeerd en de arbiter heeft de uitslag nog niet bevestigd |
 | opening (zet 1 tot 8) | Theorie, geen denkwerk |
@@ -75,7 +76,9 @@ Een speler krijgt alleen een score bij minstens 40 getelde zetten in het toernoo
 
 ## Wat de getallen betekenen {#what-the-numbers-mean}
 
-De **verwachte** waarden komen uit een model dat gefit is op echte partijen uit toernooien aan het bord (Lichess-uitzendingen, met FIDE-ratings en klokken): hoe vaak wordt voor een speler met die rating, in een stelling met zoveel goede zetten, de eerste keuze van de engine gespeeld, en hoeveel gaat er gemiddeld verloren. De **score** is hoe ver de speler van die verwachting af zit, in standaarddeviaties, waarbij de drie maten (de eerste keuze spelen, een even goede zet spelen, het verlies) samen genomen worden. Nul is zoals verwacht. Hoger is sterker dan de rating voorspelt.
+De **verwachte** waarden komen uit een model dat gefit is op echte partijen uit toernooien aan het bord (Lichess-uitzendingen, met FIDE-ratings en klokken): hoe vaak wordt voor een speler met die rating, tegen een tegenstander met die rating, in een stelling met zoveel goede zetten en die evaluatie, na dat deel van de klok aan de zet besteed te hebben, de eerste keuze van de engine gespeeld, en hoeveel gaat er gemiddeld verloren. De **score** is hoe ver de speler van die verwachting af zit, in standaarddeviaties, waarbij de drie maten (de eerste keuze spelen, een even goede zet spelen, het verlies) samen genomen worden. Nul is zoals verwacht. Hoger is sterker dan de rating voorspelt.
+
+De standaarddeviatie is die van de eigen partijen van de speler: de zetten van één partij zijn niet onafhankelijk van elkaar (een goede dag duurt langer dan één zet), en negen korte partijen spreiden anders dan vijf lange. Hoe sterk zetten samenhangen binnen een partij, en over de partijen van één speler in een toernooi, wordt gemeten op echte partijen als het model gemaakt wordt.
 
 - **Vanaf 2: "de moeite van een nader onderzoek waard".** Zulke scores komen bij een paar van elke honderd eerlijke spelers toevallig voor. Kijk naar de partijen, niet naar het getal.
 - **Boven 5: "statistisch zeer ongewoon".** Eerlijke spelers hebben zo'n score in een model dat past vrijwel nooit. Het is nog steeds geen bewijs van iets, en het volgende onderdeel zegt wat je ermee mag doen.

@@ -67,6 +67,9 @@ defmodule Alnasl.FairPlay.Move do
       skip: row.skip && String.to_existing_atom(row.skip),
       round: row.round,
       board_no: row.board_no,
+      # What tells the games apart, for the variance: a board game and an
+      # uploaded one can share an id, they are in different tables.
+      game: {kind, row.game_id},
       player_key: row.player_key,
       player_name: row.player_name
     }

@@ -10,23 +10,36 @@ defmodule Alnasl.FairPlay.Model do
       (`match`) and of playing a move within 0.01 of it (`ev`), each from
       the same features (`features/1`): the rating, the scaled gap from the
       best move to the second, how many other moves are within 0.30 of the
-      best, and the material left. Fitted by Newton's method (IRLS) with a
-      whisker of ridge, so a perfectly separable corner of the data gives
-      a large coefficient rather than an infinite one;
+      best, and the material left. The rating is not one straight line: a
+      linear spline with a knot every 200 points from 1200 to 2600, so a
+      1300 player is not assumed to be a 2500 player with the sign
+      flipped, and the rating also bends the effect of the gap and of the
+      number of good moves (a strong player finds the one good move more
+      reliably than a weak one; that is rather the point of a rating).
+      Then what else the label records already hold: how far from level
+      the position is, the opponent's rating against the player's, and
+      the share of their remaining time the player spent on the move
+      (`prepare/1`). The number of legal moves would be another, but the
+      label records do not keep it, and it is not worth a relabel;
+      Ratings under 1000 are not scored at all
+      (`Alnasl.FairPlay.Selection`, `:low_rating`). Fitted by Newton's
+      method (IRLS) with a whisker of ridge, so a perfectly separable
+      corner of the data gives a large coefficient rather than an
+      infinite one;
     * the mean and variance of the scaled loss per rating band (200
       points) and position type (how many other moves are within 0.30:
       none, one, two or more), falling back to the band, then to all
       plies, where a cell has fewer than 30 plies;
-    * the correlation of the three z-scores across the calibration's
-      player-events, and their **covariance** (second moments about zero),
-      which `Stats.combined/3` divides by (`dispersion/1`). The covariance
-      and not the correlation, because the z-scores are not unit-variance
-      in real life: moves of one game are not independent, and a player's
-      form on the day is not in the rating. Dividing by the correlation
-      assumes a variance of one that the data do not have, and every
-      tail probability that follows from it is too small. Phase 1 did
-      that; a model without a covariance (a file from then) still falls
-      back to the correlation;
+    * how strongly the tests hang together within a ply, within a game
+      and across the games of one player-event (`dispersion/1`, the
+      `R0`, `W` and `B` of `Alnasl.FairPlay.Cluster`), from which each
+      player-event's variance is built from its own games. Moves of one
+      game are not independent, and a player's form on the day is not in
+      the rating. The single global covariance of the z-scores that stood
+      here before gave every player-event the inflation of the average
+      one, and was measured on the very games the regression was fitted
+      on. These are cross-fitted (`fit/2`): measured only on games the
+      regression that judged them had not seen;
     * the held-out false-positive table (`false_positives`): for each
       threshold, how many normal player-events scored that high, with a
       95% interval. Written by the fit (`Alnasl.FairPlay.Calibration`),
@@ -35,12 +48,24 @@ defmodule Alnasl.FairPlay.Model do
   A model belongs to one engine build and one node count: the json says
   which, and a model fitted on one is not used with another.
 
+  ## The file
+
+  `"format": 2`, with the feature names in the order the coefficients
+  are in. A file whose features are not exactly this module's is refused
+  (`{:error, {:unknown_features, names}}`) rather than read as if they
+  were: coefficients applied to the wrong features give confident
+  nonsense. A format-1 file (one straight rating line, independent moves
+  and a global covariance) is refused too, `{:error, {:outdated_format,
+  1}}`: its score is the one this format exists to replace, and the report
+  says "not calibrated" until a new one is fitted rather than show it.
+  No format-1 model ever shipped in a release.
+
   Saved as `priv/fair_play/model-<engine>.json`. The parameters are derived
   from Lichess broadcast games (database.lichess.org, CC BY-SA 4.0), and
   the file says so.
   """
 
-  alias Alnasl.FairPlay.{Selection, Stats}
+  alias Alnasl.FairPlay.{Cluster, Selection, Stats}
 
   @type t :: %__MODULE__{}
 
@@ -50,44 +75,105 @@ defmodule Alnasl.FairPlay.Model do
             match: nil,
             ev: nil,
             loss: %{cells: %{}, bands: %{}, global: {0.0, 0.0, 0}},
-            correlation: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
-            covariance: nil,
+            dispersion: nil,
             weights: [1.0, 1.0, 1.0],
             false_positives: nil,
             meta: %{}
 
   @min_cell 30
-  @feature_names ~w(intercept rating scaled_gap near_count material)
+  @format 2
+  # The knots of the rating spline: a hinge `max(rating − knot, 0)/400`
+  # each, on top of the straight line.
+  @knots [1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600]
+  @feature_names ~w(intercept rating) ++
+                   Enum.map(@knots, &"rating>#{&1}") ++
+                   ~w(scaled_gap near_count material rating*scaled_gap rating*near_count) ++
+                   ~w(abs_eval opponent think think_known)
   @attribution "Parameters derived from Lichess broadcast games (database.lichess.org), " <>
                  "licensed CC BY-SA 4.0; this file is under the same licence."
 
   # --- prediction --------------------------------------------------------------
 
   @doc """
-  The features of a ply: `[1, (rating − 2000)/400, scaled gap, near count
-  (at most 3), material/78]`. Scaled so the coefficients come out of
-  comparable size, which Newton's method appreciates.
+  The features of a ply, in the order of `feature_names/0`: `1`, the
+  rating as `(rating − 2000)/400`, a hinge `max(rating − k, 0)/400` per
+  knot `k` (1200, 1400, ... 2600), the scaled gap, the near count (at most
+  3), material/78, the rating times the gap and times the near count, and
+  then:
+
+    * `abs_eval` - the best line's evaluation, either sign, in pawns (at
+      most 3: beyond that the ply is `:decided` and not counted);
+    * `opponent` - `(opponent's rating − rating)/400`, between −2 and 2;
+      0 when the opponent's rating is not known, as if they were equal;
+    * `think`, `think_known` - the share of the clock the move took
+      (`prepare/1`), and 1 when that is known; 0 and 0 when it is not.
+
+  Scaled so the coefficients come out of comparable size, which Newton's
+  method appreciates.
   """
   @spec features(map()) :: [float()]
   def features(record) do
-    [
-      1.0,
-      (record.rating - 2000) / 400,
-      Stats.scaled_gap(record),
-      min(record.near_count || 0, 3) / 1,
-      record.material / 78
-    ]
+    r = (record.rating - 2000) / 400
+    gap = Stats.scaled_gap(record)
+    near = min(record.near_count || 0, 3) / 1
+    think = record[:think]
+
+    [1.0, r] ++
+      Enum.map(@knots, &(max(record.rating - &1, 0) / 400)) ++
+      [gap, near, record.material / 78, r * gap, r * near] ++
+      [abs_eval(record), opponent(record), think || 0.0, if(think, do: 1.0, else: 0.0)]
   end
+
+  defp abs_eval(%{best: [%{cp: cp} | _]}), do: min(abs(cp), 300) / 100
+  defp abs_eval(_record), do: 0.0
+
+  defp opponent(%{opponent_rating: opp, rating: own}) when is_integer(opp) and opp > 0,
+    do: ((opp - own) / 400) |> max(-2.0) |> min(2.0)
+
+  defp opponent(_record), do: 0.0
+
+  @doc """
+  Adds `:think` to every record of one player: the share of the time on
+  their clock before the move that the move took, from the clock before
+  their next move in the same game, between 0 and 1 - or `nil` when
+  either clock is unknown, when it is the last move they made in that
+  game, or when an increment paid back more than the move took (which
+  reads as no time at all, and is clamped to 0, not left out).
+
+  Plies of one game are told apart by `:game` and must be numbered by
+  `:ply`, as both the boards and the label files have them. Skipped
+  plies count as the next move when they have a clock: the board does
+  not care why a move was left out.
+  """
+  @spec prepare([map()]) :: [map()]
+  def prepare(records) do
+    clocks =
+      for r <- records, is_integer(r[:clock_before_ms]), into: %{} do
+        {{r[:game], r[:ply]}, r[:clock_before_ms]}
+      end
+
+    Enum.map(records, fn r -> Map.put(r, :think, think(r, clocks)) end)
+  end
+
+  defp think(%{clock_before_ms: before, ply: ply} = r, clocks)
+       when is_integer(before) and before > 0 and is_integer(ply) do
+    case clocks[{r[:game], ply + 2}] do
+      next when is_integer(next) -> ((before - next) / before) |> max(0.0) |> min(1.0)
+      nil -> nil
+    end
+  end
+
+  defp think(_record, _clocks), do: nil
 
   def feature_names, do: @feature_names
 
   @doc """
-  The matrix `Stats.combined/3` divides by: the covariance of the three
-  z-scores when the model has one, else their correlation (a model from
-  before there was one).
+  The correlations `Alnasl.FairPlay.Cluster` builds a player-event's
+  variance from; independent plies (`Cluster.default/0`) for a model
+  without them.
   """
-  def dispersion(%__MODULE__{covariance: [_ | _] = covariance}), do: covariance
-  def dispersion(%__MODULE__{correlation: correlation}), do: correlation
+  def dispersion(%__MODULE__{dispersion: %{} = params}), do: params
+  def dispersion(%__MODULE__{}), do: Cluster.default()
 
   @doc "The model's chance that this ply is the engine's first choice."
   def p_match(%__MODULE__{match: beta}, record), do: logistic(dot(beta, features(record)))
@@ -131,42 +217,108 @@ defmodule Alnasl.FairPlay.Model do
 
   @doc """
   Fits a model from player-events: each a list of one player's records in
-  one event. Skipped plies are ignored. Options: `:engine`, `:bench`,
-  `:nodes` (stored as they are), `:meta` (a map, merged into the json's
-  meta), `:lambda` (ridge, default 1.0e-4).
+  one event, or `{key, records}` with a key that says which event (the
+  calibration passes the event's name). Skipped plies are ignored.
+  Options: `:engine`, `:bench`, `:nodes` (stored as they are), `:meta` (a
+  map, merged into the json's meta), `:lambda` (ridge, default 1.0e-4).
+
+  ## Cross-fitted
+
+  The regressions and the loss table are fitted on all the player-events.
+  The correlations of `Alnasl.FairPlay.Cluster` are not, because a model's
+  residuals on its own data are smaller than on anybody else's, and a
+  variance measured on them is the variance of a model that has seen the
+  answers. So the events are split in two by a hash of their key (the
+  same split every run, and a whole event on one side); a model is fitted
+  on each half, and the residual sums of the *other* half are what the
+  correlations are measured on, both halves pooled. The correlations are
+  then those of a model fitted on half the data, judged on data it did
+  not see: if anything slightly too wide for the model fitted on all of
+  it, which is the side to err on. With fewer than two events per half
+  there is nothing to measure and the model has none (`dispersion/1`
+  falls back to independent plies).
   """
-  @spec fit([[map()]], keyword()) :: t()
+  @spec fit([[map()] | {term(), [map()]}], keyword()) :: t()
   def fit(events, opts \\ []) do
-    counted = events |> List.flatten() |> Enum.filter(&Selection.counted?/1)
+    keyed =
+      events
+      |> Enum.with_index()
+      |> Enum.map(fn
+        {{key, records}, _i} -> {key, records}
+        {records, i} -> {i, records}
+      end)
+
+    all = Enum.map(keyed, &elem(&1, 1))
+    regression = Task.async(fn -> regression(all, opts) end)
+    halves = Enum.split_with(keyed, &(fold(elem(&1, 0)) == 0))
+    dispersion = cross_fitted(halves, opts)
+    model = Task.await(regression, :infinity)
+
+    %{
+      model
+      | engine: opts[:engine],
+        bench: opts[:bench],
+        nodes: opts[:nodes],
+        dispersion: dispersion,
+        meta:
+          Map.merge(
+            %{
+              "plies" => model.meta["plies"],
+              "player_events" => length(events),
+              "dispersion" => "cross-fitted, two halves by event",
+              "attribution" => @attribution
+            },
+            opts[:meta] || %{}
+          )
+    }
+  end
+
+  @doc "Which half (0 or 1) an event's key falls in, for the cross-fit: by hash, so every run agrees."
+  def fold(key) do
+    text = if is_binary(key), do: key, else: inspect(key)
+    <<byte, _::binary>> = :crypto.hash(:sha256, "fold:" <> text)
+    rem(byte, 2)
+  end
+
+  # The regressions and the loss table, nothing else.
+  defp regression(events, opts) do
+    counted = events |> Enum.flat_map(&prepare/1) |> Enum.filter(&Selection.counted?/1)
     rows = Enum.map(counted, &features/1)
     lambda = Keyword.get(opts, :lambda, 1.0e-4)
 
-    model = %__MODULE__{
-      engine: opts[:engine],
-      bench: opts[:bench],
-      nodes: opts[:nodes],
-      match:
+    match =
+      Task.async(fn ->
         logistic_fit(
           rows,
           Enum.map(counted, &if(Stats.engine_match?(&1), do: 1, else: 0)),
           lambda
-        ),
-      ev: logistic_fit(rows, Enum.map(counted, &if(Stats.ev_match?(&1), do: 1, else: 0)), lambda),
-      loss: loss_table(counted),
-      meta:
-        Map.merge(
-          %{
-            "plies" => length(counted),
-            "player_events" => length(events),
-            "attribution" => @attribution
-          },
-          opts[:meta] || %{}
         )
-    }
+      end)
 
-    {correlation, covariance} = dispersion_of(events, model)
-    %{model | correlation: correlation, covariance: covariance}
+    ev = logistic_fit(rows, Enum.map(counted, &if(Stats.ev_match?(&1), do: 1, else: 0)), lambda)
+
+    %__MODULE__{
+      match: Task.await(match, :infinity),
+      ev: ev,
+      loss: loss_table(counted),
+      meta: %{"plies" => length(counted)}
+    }
   end
+
+  defp cross_fitted({a, b}, opts) when length(a) >= 2 and length(b) >= 2 do
+    a = Enum.map(a, &elem(&1, 1))
+    b = Enum.map(b, &elem(&1, 1))
+    on_a = Task.async(fn -> regression(a, opts) end)
+    on_b = regression(b, opts)
+    on_a = Task.await(on_a, :infinity)
+
+    (Enum.map(b, &accumulate(&1, on_a)) ++ Enum.map(a, &accumulate(&1, on_b)))
+    |> Cluster.fit()
+  end
+
+  defp cross_fitted(_halves, _opts), do: nil
+
+  defp accumulate(records, model), do: records |> Stats.residuals(model) |> Cluster.accumulate()
 
   @doc """
   Logistic regression by Newton's method: `rows` are feature lists, `ys`
@@ -281,46 +433,6 @@ defmodule Alnasl.FairPlay.Model do
     {mean, var, n}
   end
 
-  # The three z-scores of every player-event with as many counted moves
-  # as the report wants before it shows a score, and from them their
-  # Pearson correlations and their covariance about zero. About zero, not
-  # about their mean: a z-score is supposed to have mean zero, and a model
-  # whose scores drift off it should pay for that in a wider spread rather
-  # than have it subtracted away. Too few events, or a test with no spread:
-  # the identity and no covariance, which is the honest "don't know".
-  defp dispersion_of(events, model) do
-    zs =
-      for records <- events,
-          numbers = Stats.player(records, model),
-          numbers.counted >= Stats.min_moves(),
-          z = [numbers.mm_z, numbers.ev_z, numbers.asd_z],
-          Enum.all?(z, &is_number/1),
-          do: z
-
-    if length(zs) < 3 do
-      {model.correlation, nil}
-    else
-      columns = zs |> Enum.zip() |> Enum.map(&Tuple.to_list/1)
-      n = length(zs)
-
-      {for(a <- columns, do: for(b <- columns, do: pearson(a, b))),
-       for(
-         a <- columns,
-         do: for(b <- columns, do: Enum.zip_reduce(a, b, 0.0, &(&1 * &2 + &3)) / n)
-       )}
-    end
-  end
-
-  defp pearson(a, b) do
-    n = length(a)
-    ma = Enum.sum(a) / n
-    mb = Enum.sum(b) / n
-    cov = Enum.zip_reduce(a, b, 0.0, fn x, y, s -> s + (x - ma) * (y - mb) end)
-    va = Enum.reduce(a, 0.0, &((&1 - ma) * (&1 - ma) + &2))
-    vb = Enum.reduce(b, 0.0, &((&1 - mb) * (&1 - mb) + &2))
-    if va > 0 and vb > 0, do: cov / :math.sqrt(va * vb), else: if(a == b, do: 1.0, else: 0.0)
-  end
-
   # --- files -------------------------------------------------------------------
 
   @doc "Where the model of an engine lives: `priv/fair_play/model-<engine>.json`."
@@ -331,11 +443,18 @@ defmodule Alnasl.FairPlay.Model do
   @doc "The model of an engine, or `{:error, :missing}` until one is calibrated."
   @spec load(String.t(), String.t() | nil) :: {:ok, t()} | {:error, :missing | term()}
   def load(engine_id, dir \\ nil) do
-    case File.read(path(engine_id, dir)) do
-      {:ok, text} -> with {:ok, json} <- Jason.decode(text), do: from_json(json)
+    case read(path(engine_id, dir)) do
       {:error, :enoent} -> {:error, :missing}
-      {:error, reason} -> {:error, reason}
+      other -> other
     end
+  end
+
+  @doc "The model in the json file at `path`, wherever it is."
+  @spec read(String.t()) :: {:ok, t()} | {:error, term()}
+  def read(path) do
+    with {:ok, text} <- File.read(path),
+         {:ok, json} <- Jason.decode(text),
+         do: from_json(json)
   end
 
   @doc "Writes a model to `path` as json."
@@ -348,7 +467,7 @@ defmodule Alnasl.FairPlay.Model do
     triple = fn {mean, var, n} -> [mean, var, n] end
 
     %{
-      "format" => 1,
+      "format" => @format,
       "engine" => m.engine,
       "bench" => m.bench,
       "nodes" => m.nodes,
@@ -360,15 +479,14 @@ defmodule Alnasl.FairPlay.Model do
         "bands" => Map.new(m.loss.bands, fn {k, v} -> {Integer.to_string(k), triple.(v)} end),
         "global" => triple.(m.loss.global)
       },
-      "correlation" => m.correlation,
-      "covariance" => m.covariance,
+      "dispersion" => m.dispersion && Cluster.to_json(m.dispersion),
       "weights" => m.weights,
       "false_positives" => m.false_positives,
       "meta" => m.meta
     }
   end
 
-  def from_json(%{"format" => 1} = j) do
+  def from_json(%{"format" => @format, "features" => @feature_names} = j) do
     triple = fn [mean, var, n] -> {mean / 1, var / 1, n} end
 
     {:ok,
@@ -383,13 +501,21 @@ defmodule Alnasl.FairPlay.Model do
          bands: Map.new(j["loss"]["bands"], fn {k, v} -> {String.to_integer(k), triple.(v)} end),
          global: triple.(j["loss"]["global"])
        },
-       correlation: j["correlation"],
-       covariance: j["covariance"],
+       dispersion: Cluster.from_json(j["dispersion"]),
        weights: j["weights"],
        false_positives: j["false_positives"],
        meta: j["meta"] || %{}
      }}
   end
 
+  def from_json(%{"format" => @format, "features" => names}),
+    do: {:error, {:unknown_features, names}}
+
+  def from_json(%{"format" => old}) when is_integer(old) and old < @format,
+    do: {:error, {:outdated_format, old}}
+
   def from_json(_other), do: {:error, :unknown_format}
+
+  @doc "The format `to_json/1` writes."
+  def format, do: @format
 end
