@@ -90,7 +90,8 @@ not see how; that is out of sync like any other.
   `promotion_hold_ms` (4 s) as the default piece (a queen, configurable) and
   flagged `assumed`; `phys` remembers that this "queen" reads as a pawn, so
   it can move on as one. A queen put there later changes nothing; another
-  piece rewrites the promotion and replays the moves after it.
+  piece rewrites the promotion and replays the moves after it. See
+  "A promotion taken at once" below for the hard version.
 - **A repeated position is not a takeback** when legal moves explain it. A
   queen checking from f1 and f2 in turn returns the board to where it was
   two plies ago; rule 5 is asked before rule 3 for takebacks of more than
@@ -136,9 +137,14 @@ So, between rules 6 and 7:
   in time, the alarm. The piece is never dropped from the game by the box:
   if it was in fact captured unseen, the arbiter says so.
 - **Limits.** One piece at a time (a second piece gone is more likely an
-  exchange that went by unseen, which the search has). Never a king. No
-  limit in plies: a warning that stays is honest, an alarm after N moves
-  would be arbitrary.
+  exchange that went by unseen, which the search has). A king only once
+  the clock has been pressed over the other piece's move, or the board has
+  stood like that for as long as the alarm waits (`transient_ms`): nobody
+  parks a king beside the board, but a sensor that stops hearing a king
+  beside its neighbours does (see "A piece heard as another"), and a
+  king in a hand for eight seconds while another piece moved is the less
+  likely story. Never during half a castle. No limit in plies: a warning
+  that stays is honest, an alarm after N moves would be arbitrary.
 
 What keeps an ordinary move from being read as this: a piece in the air
 during its own move is followed by *its own* landing, which rule 2 takes
@@ -196,6 +202,15 @@ the rest of the game.
   guessed (red), because a hand that holds a piece two seconds over a
   square it could go to reads exactly the same. A pawn promoting on it promotes to the usual piece, marked
   assumed: what it became reads as nothing at all.
+- **Found out, off, at the first move onto it.** A square that broke
+  while empty has no suspicion to go on, but sometimes it has this: the
+  clock is pressed, the press count says a move is owed, and all the
+  board shows is one piece of the side to move gone - with exactly one
+  empty square it could legally go to. A hand does not press the clock
+  with the piece in it, and a piece knocked over by the late press of the
+  move before is caught by the count. That is the move, and the square is
+  dead (`onto_unread`). Not a pawn promoting there: four pieces, one
+  square, nothing read.
 - **Said once.** `{:dead, squares}` when the list grows; the site puts
   "Square b8 seems dead" beside the game's state and on the Round tile,
   and the log says what that means. Not an alarm per move: the warning
@@ -226,6 +241,30 @@ the ones a suspicious tracker would ruin.
 | stuck + benign 5% | before | 9 | 0 | 2 | 0 | 21 | 2 | 173 | 0 | 21/38 | 129/154 | 2766 |
 | | after | 159 | 0 | 0 | 21 | 14 | 2 | 11 | 0 | 1/2 | 28/57 | 210 |
 
+Since then (one pass, 69 games): the first move onto a square that broke
+while empty is taken when only one square was possible, which takes the
+suite from 14 exact to 21 (27 guessed wrong instead of 32, 13 alarms
+instead of 15), and nothing else in the bench moves.
+
+**Why the rest stays where it is.** In every one of the 48 games still
+not exact, the first move to touch the dead square is a piece arriving
+on it. Its board is one piece gone; a hand reads the same, a pocket
+reads the same, and the clock says a move happened but not where. With
+two or more empty squares the piece could have gone to, each is a game
+that fits every reading so far. What separates them comes later and
+piecemeal: the piece leaving that square (from where?), other pieces
+crossing it (they vanish too), squares later read with a piece on them
+(not the dead one). Turning that into an answer means carrying a move
+whose destination is unknown for an unknown number of plies, with the
+side to move and every later move's legality depending on it - a search
+over hypotheses through a square that is not read, which the
+reconstruction deliberately does not do (see "What keeps it bounded").
+Guessing one is what the tracker already does when the piece is next
+seen, and marks red. A guess that is right a third of the time is not
+made better by being made earlier; it would only be made more often.
+What would help is cheap and physical: the square named after the game,
+and the board looked at.
+
 The stuck square is solved but for nine games, nearly all two knights that
 could both have made the move. The square that reads empty is halved, not
 solved: most of what is left is a square that broke while empty, and a
@@ -233,6 +272,103 @@ piece arriving on it, which nothing here can tell from a pocket. The two
 silent games are the repetition above, before and after alike. In the
 benign mix the clock misses presses, so moves onto the dead square stand
 on the hold and come out red - 21 of them right, 14 not.
+
+### A promotion taken at once
+
+The hard one. The pawn reaches the last rank and the player has no spare
+queen at hand, so the pawn stays there (or the new piece goes down and is
+taken before the board settles), and the opponent captures it on the
+next move. What the board shows: a pawn on the eighth rank, then a
+different piece on that square. What the promoted piece was is not on the
+board at any moment long enough to read.
+
+- **Both moves are found.** The promotion is accepted as the default
+  piece, flagged `assumed`, the capture after it as a plain capture. The
+  game is right but for the letter after `=`, and says which letter it is
+  not sure of. Never a silent wrong piece: the flag goes out with the game.
+- **A piece read for a moment counts.** When the paths that explain a
+  board differ only in the promoted piece, the readings since the pawn
+  left the seventh are asked: a knight seen on the square for 100 ms,
+  pawn gone from below, is the knight (`unread_promotions`). The bench's
+  "piece read <250 ms" suite gets every game right with nothing marked
+  red or assumed.
+- **Later play rewrites it.** A pawn left standing in for a "queen" that
+  then moves like a knight is a knight: up to 60 plies back, a promotion
+  still marked `assumed` whose stand-in pawn is still standing (or was
+  taken) is tried as each other piece, and if exactly one replays the
+  game to this board, that is the promotion (`promotion_retry`), rewritten
+  and the moves after it replayed. Several: one taken, still marked.
+- **The stand-in can be out of sight.** A pawn standing in for its queen
+  may go unread like any piece; it is supposed under the game's piece, not
+  the pawn's (`standing?/2`).
+- **What it cannot do.** A rook, bishop or knight taken at once, or never
+  moved again, never says what it was. It stays a queen, marked assumed,
+  for the arbiter: the bench's "pawn left" suites end with 6 of 69 games
+  marked like this, every one an underpromotion, every one marked.
+
+The simulator does it on purpose (`promotion_capture: :pawn_left |
+:quick`, `promote_as: :cycle`): the game is cut after its first
+promotion that can be taken, and the capture is played. `leave_pawn` now
+applies to every promotion, not only to a queen, and draws its dice on
+the side (`aside/3`) so that the suites that do not use it see the same
+random stream as before. That is also why four benign suites now show
+one assumed game each: the same underpromotion (a8=N, pawn left, the
+knight never moves again), which the fault used to skip.
+
+### A piece heard as another
+
+A DGT board tells a piece by the frequency its coil answers at. Two
+pieces close together disturb each other (ASSUMED: the mechanism and the
+pairs are inferred from what boards do, not from documentation): a piece
+can read as nothing for a moment or for as long as the two stand there
+(masking), or read as another piece of its colour whose code sits next to
+its own (misidentification: in the DGT order P, R, N, B, K, Q a bishop
+reads as a knight or a king, a rook as a pawn or a knight). The
+simulator has both (`mask`, `mistype`), brief (100-700 ms) or lasting
+until the piece is touched.
+
+- **A wrong kind on the right colour is the board, never the game.** No
+  move turns a piece into another of its colour on the same square, but
+  a promotion's. So a square that holds the right colour and the wrong
+  kind (`retyped`) is taken as if it read the game's piece, and whatever
+  else the board shows is judged as usual: a move made beside it is a
+  plain move, unmarked. A pawn on the last rank standing in for its piece
+  is left out: there a piece appearing is the promotion being put right.
+- **A piece that lands heard wrong** is the move its squares say (from
+  and to, colour right, kind wrong), if exactly one legal move fits - but
+  only after `unseen_hold_ms` or a press, because a king that has landed
+  on g8 with its rook still in the air reads exactly like a rook heard as
+  a king. A square read as a king, or a pawn on its last rank, is never
+  this.
+- **A piece not heard** is a piece out of sight ("A piece not seen"),
+  including beside a piece heard wrong, and including a king, on the
+  conditions given there.
+- **Said, not alarmed.** A piece heard as another for `unseen_hold_ms`
+  goes on the `confused` list; the board's page and the Round tile say
+  "White bishop on e4 reads as a knight" for as long as it lasts.
+- **When it matters.** The piece doing what only the piece it is heard as
+  could (a "knight" jumping from a bishop's square) is a board nothing
+  explains, and the alarm as for any such board. Nothing is ever moved
+  on the strength of the wrong kind.
+
+| suite (69 games, 1 pass) | | exact | other right | assumed | alarm | silent | alarms |
+|---|---|---|---|---|---|---|---|
+| reads as another, 5% | rule off | 20 | 2 | 0 | 46 (+1 marked wrong) | 0 | 702 |
+| | on | 69 | 0 | 0 | 0 | 0 | 0 |
+| reads as another, 15% | rule off | 6 | 4 | 0 | 59 | 0 | 938 |
+| | on | 69 | 0 | 0 | 0 | 0 | 0 |
+| both 10% + benign 5% | rule off | 4 | 4 | 0 | 61 | 0 | 919 |
+| | on | 68 | 0 | 1 | 0 | 0 | 5 |
+| both 10%, no clock | rule off | 7 | 4 | 0 | 52 | **6** | 750 |
+| | on | 69 | 0 | 0 | 0 | 0 | 0 |
+| reads empty, 5% / 15% | either | 69 | 0 | 0 | 0 | 0 | 0 / 1 |
+
+"Rule off" is `crosstalk: false`, which is what 0.6.0 did with a wrong
+kind: an unexplained board, and in time the alarm - or, six times without
+a clock, a wrong move nobody marked, because a "knight" on a bishop's
+square made some other line fit. Masking is the king rule in "A piece not
+seen" and needs nothing new. The one assumed game is the underpromotion
+above.
 
 ### After the arbiter changes the game
 

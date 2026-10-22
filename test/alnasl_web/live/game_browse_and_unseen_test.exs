@@ -195,6 +195,31 @@ defmodule AlnaslWeb.GameBrowseAndUnseenTest do
     refute has_element?(setup, "#tracker-unseen[checked]")
   end
 
+  describe "a piece heard as another" do
+    test "is named on the board's page and the tile, the game going on as it was", %{
+      conn: conn,
+      view: view,
+      board: board
+    } do
+      # After 3. Nf3 the bishop on c8 is heard as a knight.
+      {:ok, now} = Position.from_text(position(~w(d4 d5 Nc3 Nf6 Nf3)))
+      c8 = Position.square_index("c8")
+      set_pieces("FAKE1", put_elem(now, c8, {:b, :n}))
+      eventually(fn -> Boards.snapshot(board.id).confused != [] end)
+      eventually_html(view, fn _ -> has_element?(view, "#game-confused-#{c8}") end)
+      assert has_element?(view, "#game-confused-#{c8}", "Black bishop on c8 reads as a knight")
+      assert has_element?(view, "#game-state[data-state=live]")
+      assert sans(board.id) == ~w(d4 d5 Nc3 Nf6 Nf3)
+
+      {:ok, round, _html} = live(conn, ~p"/round/1")
+      assert has_element?(round, "#tile-confused-3-#{c8}", "c8")
+
+      set_pieces("FAKE1", now)
+      eventually(fn -> Boards.snapshot(board.id).confused == [] end)
+      eventually_html(view, fn _ -> not has_element?(view, "#game-confused-#{c8}") end)
+    end
+  end
+
   describe "a square that is not read" do
     test "a sensor that keeps its knight is named once, on the board's page and the tile", %{
       conn: conn,

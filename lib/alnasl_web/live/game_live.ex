@@ -878,6 +878,11 @@ defmodule AlnaslWeb.GameLive do
                 class="flag"
               >{Words.dead(square)}</span>
               <span
+                :for={{square, _piece, _read} = entry <- @view.snap[:confused] || []}
+                id={"game-confused-#{square}"}
+                class="flag plain"
+              >{Words.confused(entry)}</span>
+              <span
                 :for={{piece, index} <- Enum.with_index(@view.snap[:unseen] || [])}
                 id={"game-unseen-#{index}"}
                 class="flag"

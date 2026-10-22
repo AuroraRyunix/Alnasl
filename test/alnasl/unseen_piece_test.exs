@@ -306,13 +306,21 @@ defmodule Alnasl.UnseenPieceTest do
     assert alarms(out) != []
   end
 
-  test "never a king" do
+  test "never a king in a hand; a king the board stopped hearing, once it has stood for the alarm" do
     {tr, b, t} = after_moves(~w(e4 e5))
     gone = lift(b, "e1")
 
-    {tr, out} = feed(tr, [{t, gone}, {t + 3_000, move(gone, "g1", "f3")}], 10_000)
-    assert Tracker.sans(tr) == ~w(e4 e5)
-    assert unseen(out) == []
+    # Nobody parks a king beside the board, so a king gone with another
+    # move made is not believed while a hand may still be in it; a board
+    # that stands like that for as long as the alarm waits is a king the
+    # sensors do not hear beside its neighbours (crosstalk), and the
+    # knight's move is the move.
+    {tr, out} = feed(tr, [{t, gone}, {t + 3_000, move(gone, "g1", "f3")}], 15_000)
+    assert Tracker.sans(tr) == ~w(e4 e5 Nf3)
+    assert [at] = for({at, {:moves, _}} <- out, do: at)
+    assert at >= t + 3_000 + tr.opts.transient_ms
+    assert [%{piece: {:w, :k}}] = Tracker.unseen(tr)
+    assert alarms(out) == []
   end
 
   test "a takeback does not put a piece out of sight again" do

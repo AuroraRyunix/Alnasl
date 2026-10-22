@@ -28,13 +28,23 @@ defmodule Alnasl.Simulator.Script do
   | `:takeback` | another legal move played, then taken back, then the real move |
   | `:slide` | a rook, bishop or queen resting on a square on its way |
   | `:clock_miss` | the move is seen, the clock press after it is not |
-  | `:leave_pawn` | a pawn promoted to a queen but left standing as a pawn |
+  | `:leave_pawn` | a pawn promoted - to any piece - but left standing as a pawn: no spare piece at hand. It goes on standing in for that piece until it is taken or the game ends |
   | `:slam` | the move in one reading: the piece was never seen in the air, and a capture never in two steps. A hand faster than the board scans |
   | `:topple` | the move knocks a neighbour over: it is off its square when the clock is pressed and set back on the opponent's time |
   | `:between` | a piece set down between two squares: the board reads it on the square NEXT to the one it went to (a legal move too), until it moves on, is taken, or somebody straightens it a few plies later. Nothing looks wrong until a later move makes no sense |
+  | `:mask` | crosstalk: a piece beside another reads empty - for a moment, or for the rest of this ply. See "Crosstalk" |
+  | `:mistype` | crosstalk: a piece beside another reads as another piece of its colour - for a moment, or until it is touched or nothing stands beside it any more |
   | `:unseen` | a piece (never a king) stops being seen where it stands, for `:unseen_plies` plies or until it moves or is taken: parked beside the board, or standing where the sensor loses it. The game goes on |
 
-  Besides those: `:unplug` (`[{ply, plies}]` - the board is gone from before
+  Besides those: `:promotion_capture` (`:pawn_left | :quick`) rewrites the
+  game so that every promotion is taken at once, where the other side can
+  take on that square: the game ends with the capture (`:sans` in the
+  result is the game as played, `:taken_at` the promotion's ply). `:pawn_left` leaves the pawn standing on
+  the last rank until it is taken; `:quick` puts the new piece down and
+  has it taken before it could settle - and the promotion's clock press
+  is the one press that is never on time for that. `:promote_as` (`:q`,
+  `:r`, `:b`, `:n`, or `:cycle` for one by the seed) makes those promotions that piece instead, where the
+  game then still holds. `:unplug` (`[{ply, plies}]` - the board is gone from before
   `ply` for that many plies, then back), `:out_of_turn_at` and
   `:illegal_back_at` (a ply before which a move is made out of turn, or a
   move no rule allows, left standing a few seconds and taken back),
@@ -42,6 +52,23 @@ defmodule Alnasl.Simulator.Script do
   player makes a move that is not legal, after which the game is played on as
   if nothing happened), `:gesture` (the kings set in the centre for the
   result once the game is over) and `:dead_square`.
+
+  ## Crosstalk
+
+  A DGT board finds a piece by the resonance of the coil in its base: each
+  kind of piece rings at its own frequency, and the board reports the
+  piece code (0x01-0x0C: pawn, rook, knight, bishop, king, queen, White's
+  first) whose band it heard. Two pieces close together disturb each
+  other's reading. `:mask` is a piece that is not heard at all - for 100-
+  700 ms, or (half the time) from now until the next ply begins. `:mistype`
+  is a piece heard in the neighbouring band: reported as the piece whose
+  code is next to its own (a pawn as a rook, a rook as a pawn or a knight,
+  a knight as a rook or a bishop, a bishop as a knight or a king, a king
+  as a bishop or a queen, a queen as a king), same colour - for a moment,
+  or (half the time) until the piece is lifted or nothing stands beside it.
+  ASSUMED: that neighbouring codes are neighbouring bands. Either fault
+  picks a piece that has another on a square next to it; `:log` has
+  `{ply, :mask}` and `{ply, :mistype}`.
 
   ## A sensor that has died
 
@@ -108,7 +135,9 @@ defmodule Alnasl.Simulator.Script do
     unseen_plies: {1, 5},
     # For how many plies a piece of the `:between` fault is left crooked.
     between_plies: {1, 4},
-    dead_square: nil
+    dead_square: nil,
+    promotion_capture: nil,
+    promote_as: nil
   }
 
   @bullet %{
@@ -128,7 +157,8 @@ defmodule Alnasl.Simulator.Script do
           log: [{pos_integer(), atom()}],
           duration_ms: non_neg_integer(),
           sans: [String.t()],
-          dead: 0..63 | nil
+          dead: 0..63 | nil,
+          taken_at: pos_integer() | nil
         }
 
   def defaults, do: @defaults
@@ -145,6 +175,7 @@ defmodule Alnasl.Simulator.Script do
     o = Map.merge(@defaults, Map.new(opts))
     fen = o.start_fen || Chess.start_fen()
     {:ok, pos} = Chess.parse_fen(fen)
+    {sans, taken_at} = taken_at_once(pos, sans, o)
 
     st = %{
       o: o,
@@ -163,7 +194,12 @@ defmodule Alnasl.Simulator.Script do
       clock_at: 0,
       hidden: nil,
       crooked: nil,
+      # Crosstalk that lasts: `[%{square, piece, as, until}]` - the square
+      # reads `as` while `piece` stands on it (see "Crosstalk").
+      crosstalk: [],
       dead: nil,
+      # The promotion that the `:promotion_capture` game has taken at once.
+      taken_at: taken_at,
       # The positions of the game, so that a square can be chosen for what
       # the game will do on it.
       positions: positions(pos, sans)
@@ -181,8 +217,9 @@ defmodule Alnasl.Simulator.Script do
       end)
 
     st = if st.unplug_left > 0, do: plug(st), else: st
-    # Whoever tidies the board after the game straightens the piece.
-    st = %{st | crooked: nil}
+    # Whoever tidies the board after the game straightens the piece, and a
+    # piece not heard through the last move is heard again after it.
+    st = %{st | crooked: nil, crosstalk: Enum.filter(st.crosstalk, &(&1.until == nil))}
     # A board is still read when nobody moves: whatever was missed at the
     # end is on the next reading.
     st = st |> wait(1_500) |> emit({:position, st.b})
@@ -199,8 +236,69 @@ defmodule Alnasl.Simulator.Script do
       log: Enum.reverse(st.log),
       duration_ms: st.t,
       sans: sans,
-      dead: st.dead && st.dead.square
+      dead: st.dead && st.dead.square,
+      taken_at: st.taken_at
     }
+  end
+
+  # --- a promotion taken at once ---------------------------------------------------
+
+  # The game up to the first promotion that the other side can take on its
+  # square, that promotion (as `:promote_as`, if that piece leaves the
+  # capture legal), and the capture. `{sans, ply of the promotion | nil}`.
+  defp taken_at_once(_pos, sans, %{promotion_capture: nil}), do: {sans, nil}
+
+  defp taken_at_once(pos, sans, o) do
+    sans
+    |> Enum.with_index(1)
+    |> Enum.reduce_while({pos, []}, fn {san, number}, {pos, acc} ->
+      {:ok, move} = Chess.parse_san(pos, san)
+
+      with promo when promo != nil <- move.promo,
+           {made, capture} <- promoted_and_taken(pos, move, promote_as(o)) do
+        after_it = Chess.apply_move(pos, made)
+        line = Enum.reverse(acc) ++ [Chess.san(pos, made), Chess.san(after_it, capture)]
+        {:halt, {:done, line, number}}
+      else
+        _plain -> {:cont, {Chess.apply_move(pos, move), [san | acc]}}
+      end
+    end)
+    |> case do
+      {:done, line, number} -> {line, number}
+      {_pos, _acc} -> {sans, nil}
+    end
+  end
+
+  # `:cycle`: a piece for each seed, so that a matrix of games has all four.
+  defp promote_as(%{promote_as: :cycle, seed: seed}),
+    do: Enum.at([:q, :r, :b, :n], :erlang.phash2(seed, 4))
+
+  defp promote_as(o), do: o.promote_as
+
+  defp promoted_and_taken(pos, move, as) do
+    Enum.find_value([as, move.promo], fn piece ->
+      made =
+        Enum.find(
+          Chess.legal_moves(pos),
+          &(&1.from == move.from and &1.to == move.to and &1.promo == piece)
+        )
+
+      next = made && Chess.apply_move(pos, made)
+
+      captures =
+        if next,
+          do:
+            next
+            |> Chess.legal_moves()
+            |> Enum.filter(&(&1.to == move.to))
+            |> Enum.sort_by(&Chess.san(next, &1)),
+          else: []
+
+      case captures do
+        [first | _] -> {made, first}
+        [] -> nil
+      end
+    end)
   end
 
   # --- one ply -----------------------------------------------------------------
@@ -222,9 +320,12 @@ defmodule Alnasl.Simulator.Script do
       end
 
     {think, st} =
-      if st.derailed,
-        do: {o.long_think_ms, st},
-        else: between(st, o.think_ms)
+      cond do
+        st.derailed -> {o.long_think_ms, st}
+        # The new piece is taken before it has stood a quarter of a second.
+        quick_capture?(st, number) -> between(st, {10, 60})
+        true -> between(st, o.think_ms)
+      end
 
     st = wait(st, think)
 
@@ -253,7 +354,13 @@ defmodule Alnasl.Simulator.Script do
         if left == 0, do: st |> wait(700) |> plug(), else: st
 
       true ->
-        st = st |> see_again(number) |> maybe_hide(number) |> straighten(move, number)
+        st =
+          st
+          |> see_again(number)
+          |> maybe_hide(number)
+          |> straighten(move, number)
+          |> crosstalk(number)
+
         {missed?, st} = chance(st, :missed)
 
         if missed? and st.streak < o.missed_streak do
@@ -364,6 +471,99 @@ defmodule Alnasl.Simulator.Script do
     end
   end
 
+  # --- crosstalk -----------------------------------------------------------------
+
+  # What is heard instead of a piece in the band beside its own.
+  @mistyped %{
+    p: [:r],
+    r: [:p, :n],
+    n: [:r, :b],
+    b: [:n, :k],
+    k: [:b, :q],
+    q: [:k]
+  }
+
+  defp crosstalk(st, number) do
+    st = fade(st, number)
+    {mask?, st} = chance(st, :mask)
+    {mistype?, st} = chance(st, :mistype)
+    st = if mask?, do: cross(st, number, :mask), else: st
+    if mistype?, do: cross(st, number, :mistype), else: st
+  end
+
+  # Lasting crosstalk ends with the ply it was for, when its piece has been
+  # lifted, or when nothing stands beside it any more.
+  defp fade(%{crosstalk: []} = st, _number), do: st
+
+  defp fade(st, number) do
+    {gone, kept} =
+      Enum.split_with(st.crosstalk, fn entry ->
+        elem(st.b, entry.square) != entry.piece or neighbours(st.b, entry.square) == [] or
+          (entry.until != nil and number > entry.until)
+      end)
+
+    if gone == [], do: st, else: %{st | crosstalk: kept} |> emit({:position, st.b}) |> pause()
+  end
+
+  defp cross(st, number, fault) do
+    taken = Enum.map(st.crosstalk, & &1.square)
+    squares = for sq <- occupied(st.b), sq not in taken, neighbours(st.b, sq) != [], do: sq
+
+    if squares == [] do
+      st
+    else
+      {square, st} = pick(st, squares)
+      {colour, kind} = piece = elem(st.b, square)
+
+      {as, st} =
+        if fault == :mask do
+          {nil, st}
+        else
+          {other, st} = pick(st, Map.fetch!(@mistyped, kind))
+          {{colour, other}, st}
+        end
+
+      {lasting, st} = pick(st, [false, true])
+      entry = %{square: square, piece: piece, as: as, until: nil}
+      st = note(st, number, fault)
+
+      cond do
+        lasting and fault == :mask ->
+          # Until the next ply begins: through this ply's move.
+          %{st | crosstalk: [%{entry | until: number} | st.crosstalk]}
+          |> emit({:position, st.b})
+          |> pause()
+
+        lasting ->
+          %{st | crosstalk: [entry | st.crosstalk]} |> emit({:position, st.b}) |> pause()
+
+        true ->
+          {dt, st} = between(st, {100, 700})
+          was = st.crosstalk
+
+          %{st | crosstalk: [entry | was]}
+          |> emit({:position, st.b})
+          |> wait(dt)
+          |> Map.put(:crosstalk, was)
+          |> emit({:position, st.b})
+          |> pause()
+      end
+    end
+  end
+
+  defp neighbours(board, square) do
+    {file, rank} = {rem(square, 8), div(square, 8)}
+
+    for df <- -1..1,
+        dr <- -1..1,
+        {df, dr} != {0, 0},
+        f = file + df,
+        r = rank + dr,
+        f in 0..7 and r in 0..7,
+        elem(board, r * 8 + f) != nil,
+        do: r * 8 + f
+  end
+
   # The `:dead_square` fault: from this ply the square reads what `emit/2`
   # makes it read.
   defp maybe_die(%{o: %{dead_square: {at, kind}}, dead: nil} = st, number) when at == number do
@@ -448,9 +648,22 @@ defmodule Alnasl.Simulator.Script do
           else: steps(st, [{:lift, taken}, {:lift, move.from}, {:put, move.to, piece}])
 
       %{promo: promo} when promo != nil ->
-        {leave?, st} = if promo == :q and faults?, do: chance(st, :leave_pawn), else: {false, st}
+        {leave?, st} =
+          cond do
+            not faults? -> {false, st}
+            number == st.taken_at -> {st.o.promotion_capture == :pawn_left, st}
+            promo == :q -> chance(st, :leave_pawn)
+            # Drawn apart from the game's other chances, so that every game
+            # without one plays exactly as it did when only queens were left.
+            true -> {aside(st, number, :leave_pawn), st}
+          end
+
         off = if move.capture, do: [{:lift, move.to}], else: []
-        {order, st} = pick(st, [:swap_in_hand, :pawn_then_piece])
+
+        {order, st} =
+          if quick_capture?(st, number + 1),
+            do: {:quick, st},
+            else: pick(st, [:swap_in_hand, :pawn_then_piece])
 
         cond do
           leave? ->
@@ -464,6 +677,13 @@ defmodule Alnasl.Simulator.Script do
             |> pause()
             |> steps([{:put, move.to, {us, promo}}])
 
+          # The new piece is at hand, and so is the hand that takes it.
+          order == :quick ->
+            st
+            |> steps([{:lift, move.from}] ++ off)
+            |> pause()
+            |> steps([{:put, move.to, {us, promo}}], {20, 60})
+
           true ->
             st
             |> steps([{:lift, move.from}] ++ off ++ [{:put, move.to, piece}])
@@ -473,11 +693,17 @@ defmodule Alnasl.Simulator.Script do
 
       %{capture: capture} when capture != nil ->
         {order, st} = pick(st, [:off_first, :lift_first, :replace])
+        range = if quick_capture?(st, number), do: {20, 80}
 
         case order do
-          :off_first -> steps(st, [{:lift, move.to}, {:lift, move.from}, {:put, move.to, piece}])
-          :lift_first -> steps(st, [{:lift, move.from}, {:lift, move.to}, {:put, move.to, piece}])
-          :replace -> steps(st, [{:lift, move.from}, {:put, move.to, piece}])
+          :off_first ->
+            steps(st, [{:lift, move.to}, {:lift, move.from}, {:put, move.to, piece}], range)
+
+          :lift_first ->
+            steps(st, [{:lift, move.from}, {:lift, move.to}, {:put, move.to, piece}], range)
+
+          :replace ->
+            steps(st, [{:lift, move.from}, {:put, move.to, piece}], range)
         end
 
       _quiet ->
@@ -714,6 +940,12 @@ defmodule Alnasl.Simulator.Script do
 
   # --- clock -------------------------------------------------------------------
 
+  # Taken before it could settle: the promotion's own press did not come
+  # in time to say so.
+  defp maybe_press(%{taken_at: at, o: %{promotion_capture: :quick}} = st, pos, number)
+       when at == number,
+       do: silent_press(st, pos)
+
   defp maybe_press(st, pos, number) do
     {miss?, st} = chance(st, :clock_miss)
 
@@ -756,6 +988,9 @@ defmodule Alnasl.Simulator.Script do
     %{white_ms: st.white, black_ms: st.black, running: Map.fetch!(side, running)}
   end
 
+  defp quick_capture?(st, number),
+    do: st.o.promotion_capture == :quick and st.taken_at != nil and number == st.taken_at + 1
+
   defp other(:w), do: :b
   defp other(:b), do: :w
 
@@ -785,6 +1020,23 @@ defmodule Alnasl.Simulator.Script do
 
   defp emit(%{mute: true} = st, {:position, _board}), do: st
   defp emit(%{mute: true} = st, {:clock, _reading}), do: st
+
+  # Crosstalk is in the reading of whatever else is wrong with it: the
+  # board as the rest makes it read, then the pieces heard otherwise -
+  # for as long as each still stands there and has a neighbour.
+  defp emit(%{crosstalk: [_ | _] = talk} = st, {:position, board}) do
+    %{ev: [{t, {:position, read}} | rest]} = st = emit(%{st | crosstalk: []}, {:position, board})
+
+    read =
+      Enum.reduce(talk, read, fn %{square: square, piece: piece, as: as}, read ->
+        if elem(board, square) == piece and elem(read, square) == piece and
+             neighbours(board, square) != [],
+           do: put_elem(read, square, as),
+           else: read
+      end)
+
+    %{st | crosstalk: talk, ev: [{t, {:position, read}} | rest]}
+  end
 
   defp emit(%{dead: %{square: square, reading: reading} = dead} = st, {:position, board}) do
     st = emit(%{st | dead: nil}, {:position, put_elem(board, square, reading)})
@@ -828,6 +1080,13 @@ defmodule Alnasl.Simulator.Script do
         {x, rng} = :rand.uniform_s(st.rng)
         {x < rate, %{st | rng: rng}}
     end
+  end
+
+  # A chance that does not draw on the game's stream: decided by the seed
+  # and the ply alone.
+  defp aside(st, number, fault) do
+    rate = Map.get(st.o.faults, fault, 0)
+    rate > 0 and :erlang.phash2({st.o.seed, number, fault}, 1_000_000) < rate * 1_000_000
   end
 
   defp between(st, {low, high}) do
