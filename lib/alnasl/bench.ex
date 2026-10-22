@@ -19,8 +19,12 @@ defmodule Alnasl.Bench do
     one path and the tracker took the right one (marked `:guessed`, red);
   - `:reconstructed_wrong`, `:guessed_wrong` - the moves differ from the
     game, and the place where they first differ is such a marked move;
+  - `:assumed` - every move went from and to the squares it did in the
+    game, and the one thing that differs is what a pawn became, at a
+    promotion marked `:assumed`: the new piece was never on the board to
+    be read, and the box said it took the usual one;
   - `:flagged` - the moves differ, and the place is marked otherwise: a
-    promotion piece assumed, a piece not seen, a takeback reported there;
+    piece not seen, a takeback reported there;
   - `:alarm` - the tracker stopped, raised out-of-sync, and what it emitted
     until then is right;
   - `:unnoticed` - the moves differ at a move the simulator had the board
@@ -39,6 +43,7 @@ defmodule Alnasl.Bench do
           | :reconstructed_wrong
           | :guessed_right
           | :guessed_wrong
+          | :assumed
           | :flagged
           | :alarm
           | :unnoticed
@@ -53,6 +58,8 @@ defmodule Alnasl.Bench do
   def play(sans, sim \\ %{}, tracker \\ []) do
     script = Script.build(sans, sim)
     {session, out} = Session.run(Session.new(tracker), script.events)
+    # The game as the simulator played it: `:promotion_capture` ends it early.
+    sans = script.sans
 
     session
     |> judge(out, sans)
@@ -98,6 +105,7 @@ defmodule Alnasl.Bench do
         difference == :same -> :exact
         prefix?(mine, truth) and tr.status == :out_of_sync -> :alarm
         prefix?(mine, truth) -> :silent
+        assumed?(tr, truth, elem(difference, 0)) -> :assumed
         true -> wrong(tr, out, elem(difference, 0))
       end
 
@@ -125,9 +133,41 @@ defmodule Alnasl.Bench do
     plies
     |> Enum.zip(truth ++ List.duplicate(nil, length(plies)))
     |> Enum.count(fn {ply, san} ->
-      mark in ply.flags and Pgn.first_difference([ply.san], [san || ""]) != :same
+      mark in ply.flags and Pgn.first_difference([ply.san], [san || ""]) != :same and
+        not (:assumed in ply.flags and unpromoted(ply.san) == unpromoted(san || ""))
     end)
   end
+
+  # Every move from and to the squares of the game's, and the first that
+  # differs is a promotion the box said it assumed: what differs is what
+  # the pawn became, and whatever that piece later did under its other name.
+  defp assumed?(tr, truth, ply) do
+    with true <- length(tr.plies) == length(truth),
+         %{flags: flags} <- Enum.at(tr.plies, ply - 1),
+         true <- :assumed in flags,
+         {:ok, pos} <- Alnasl.Chess.parse_fen(tr.start_fen),
+         {:ok, squares} <- squares(pos, truth) do
+      squares == Enum.map(tr.plies, &{&1.from, &1.to})
+    else
+      _no -> false
+    end
+  end
+
+  defp squares(pos, sans) do
+    sans
+    |> Enum.reduce_while({pos, []}, fn san, {pos, acc} ->
+      case Alnasl.Chess.parse_san(pos, san) do
+        {:ok, move} -> {:cont, {Alnasl.Chess.apply_move(pos, move), [{move.from, move.to} | acc]}}
+        {:error, _} -> {:halt, :error}
+      end
+    end)
+    |> case do
+      {_pos, acc} -> {:ok, Enum.reverse(acc)}
+      :error -> :error
+    end
+  end
+
+  defp unpromoted(san), do: String.replace(san, ~r/=[QRBN]|[+#!?]+$/, "")
 
   defp prefix?(short, long),
     do: Pgn.first_difference(short, Enum.take(long, length(short))) == :same
@@ -249,6 +289,12 @@ defmodule Alnasl.Bench do
         {"a move out of turn at ply 12, taken back", :named, %{out_of_turn_at: 12}},
         {"an illegal move at ply 12, taken back", :named, %{illegal_back_at: 12}},
         {"an illegal move at ply 12, played on", :illegal, %{illegal_at: 12}},
+        {"a promotion taken at once, the pawn left on it", :promotion,
+         %{promotion_capture: :pawn_left, promote_as: :cycle}},
+        {"a promotion taken at once, the pawn left, no clock", :promotion,
+         %{promotion_capture: :pawn_left, promote_as: :cycle, clock: false}},
+        {"a promotion taken at once, its piece read <250 ms", :promotion_seen,
+         %{promotion_capture: :quick, promote_as: :cycle, clock: false}},
         {"a dead square (reads empty) from ply 10", :dead, %{dead_square: {10, :off}}},
         {"a stuck square (keeps its piece) from ply 10", :stuck, %{dead_square: {10, :stuck}}},
         {"a stuck square + the benign faults 5%", :stuck,

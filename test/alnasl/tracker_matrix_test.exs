@@ -9,9 +9,13 @@ defmodule Alnasl.TrackerMatrixTest do
 
   - `:exact` - faults a board survives by itself (a hand, a knocked piece,
     two pieces swapped and put right, a flickering square, a takeback, a
-    piece resting on its way, a missing clock press, a pawn left for a
-    queen): the tracker's moves are the game's moves, and it never once
-    raised an alarm.
+    piece resting on its way, a missing clock press, a pawn left for its
+    piece): the tracker's moves are the game's moves, and it never once
+    raised an alarm. Except what a pawn left standing became: a queen,
+    assumed, until it does something only another piece can.
+  - `:promotion`, `:promotion_seen` - every promotion that can be taken at
+    once is: the pawn left standing until it is, or the new piece read for
+    a moment before it is.
   - `:unseen` - a piece that is not seen where it stands for one to five
     plies (parked beside the board, a weak sensor), alone and among the
     other survivable faults: every game whole, no alarm.
@@ -79,16 +83,35 @@ defmodule Alnasl.TrackerMatrixTest do
       right = v.(:exact) + v.(:reconstructed_right) + v.(:guessed_right)
 
       case @kind do
+        # A pawn left for a rook, bishop or knight is the one thing here
+        # that a board cannot say at once: taken for a queen and marked
+        # assumed until it does something a queen cannot, then rewritten.
         :exact ->
-          assert m.verdicts == %{exact: m.games}
+          assert only_promotions_unsure?(m)
           assert m.alarms == 0
-          assert m.recovered == 0 and m.guessed == 0
           assert m.budget_hits == 0
 
+        # Every promotion that can be taken at once is, with the pawn left
+        # standing for its piece. The queen is assumed; when it was another
+        # piece, the game differs there and only there, and says so.
+        :promotion ->
+          assert only_promotions_unsure?(m)
+          assert v.(:assumed) > 0
+          assert m.alarms == 0
+          assert m.faults >= 5
+
+        # The same with the new piece on the board for a moment: that
+        # moment is enough.
+        :promotion_seen ->
+          assert right == m.games
+          assert m.alarms == 0
+          assert m.guessed == 0
+
         # A piece out of sight for a few plies (`:unseen`): the game is
-        # followed through it, whole, and nobody is called.
+        # followed through it, whole, and nobody is called. (With the
+        # benign faults: a pawn left for its piece, as above.)
         :unseen ->
-          assert m.verdicts == %{exact: m.games}
+          assert only_promotions_unsure?(m)
           assert m.alarms == 0
           assert m.faults > 100
 
@@ -206,6 +229,24 @@ defmodule Alnasl.TrackerMatrixTest do
              hd(scripts)
   end
 
+  # Every game right, or differing only in what a pawn left standing became
+  # (and marked assumed there); and every move marked is such a promotion,
+  # or the capture of it found together with it.
+  defp only_promotions_unsure?(m) do
+    Map.keys(m.verdicts) -- [:exact, :reconstructed_right, :guessed_right, :assumed] == [] and
+      Enum.all?(m.runs, fn {_index, run} ->
+        plies = run.session.tracker.plies
+
+        plies
+        |> Enum.with_index()
+        |> Enum.filter(fn {ply, _i} -> :recovered in ply.flags or :guessed in ply.flags end)
+        |> Enum.all?(fn {ply, i} ->
+          # The promotion, or the capture found with it.
+          ply.promo != nil or (i > 0 and Enum.at(plies, i - 1).promo != nil)
+        end)
+      end)
+  end
+
   defp build(game, profile, seed),
     do: Alnasl.Simulator.Script.build(game.moves, Map.put(profile, :seed, seed))
 
@@ -219,7 +260,7 @@ defmodule Alnasl.TrackerMatrixTest do
     end
 
     m = Bench.matrix(games, sim, [], 2)
-    assert m.verdicts == %{exact: m.games}
+    assert only_promotions_unsure?(m)
     assert m.alarms == 0
     assert m.faults > 1_000
   end

@@ -133,6 +133,11 @@ defmodule Alnasl.Tracker do
   # for two moves each, and the "move" that was somebody straightening it.
   @misread_back 6
 
+  # How many plies back a promotion taken for the default piece is asked
+  # about again (`promotion_retry/1`): a bishop standing in as a pawn can
+  # go a long time before anything it does is beyond a queen.
+  @promotion_back 60
+
   defstruct opts: @defaults,
             start_fen: nil,
             pos: nil,
@@ -826,7 +831,7 @@ defmodule Alnasl.Tracker do
         nil
 
       piece ->
-        if elem(tr.pos.board, square) == piece,
+        if standing?(elem(tr.pos.board, square), piece),
           do: %{
             tr
             | phys: put_elem(tr.phys, square, nil),
@@ -835,6 +840,12 @@ defmodule Alnasl.Tracker do
           }
     end
   end
+
+  # The game has `game` on a square where the sensors are to read `piece`:
+  # the same piece, or a pawn left standing in for what it promoted to.
+  defp standing?(game, game), do: true
+  defp standing?({colour, kind}, {colour, :p}) when kind != :p, do: true
+  defp standing?(_game, _piece), do: false
 
   # One legal move by another piece explains the board, if the absent piece
   # is still where it was. (A move that takes the absent piece, or is the
@@ -977,6 +988,10 @@ defmodule Alnasl.Tracker do
             end
 
           (fix = promotion_fix(tr)) != nil ->
+            {keep, steps} = fix
+            correct(tr, t, keep, steps, :promotion)
+
+          (fix = promotion_retry(tr)) != nil ->
             {keep, steps} = fix
             correct(tr, t, keep, steps, :promotion)
 
@@ -1595,6 +1610,7 @@ defmodule Alnasl.Tracker do
       end
 
     {found, tr} = pressed_for(tr, from, distinct(found))
+    found = unread_promotions(tr, from, found)
     {sure?, tr} = alone?(tr, from, found, sure? and not tr.deaf?, wide)
     {rank(tr, from, allowed(tr, from, found)), sure?, hit?, tr}
   end
@@ -1609,7 +1625,7 @@ defmodule Alnasl.Tracker do
     with_returns = if wide == :blind, do: :blind_with_returns, else: :evidence_with_returns
 
     case search(tr, from, min(depth, 2), depth, with_returns) do
-      {{:ok, all}, tr} -> {length(distinct(all)) <= 1, tr}
+      {{:ok, all}, tr} -> {length(unread_promotions(tr, from, distinct(all))) <= 1, tr}
       {:budget, tr} -> {false, tr}
     end
   end
@@ -1811,7 +1827,10 @@ defmodule Alnasl.Tracker do
   defp illegal(tr) do
     with [a, b] <- Position.diff(tr.phys, tr.raw),
          {from, to} <- carried(tr.phys, tr.raw, a, b) do
-      {colour, kind} = piece = elem(tr.phys, from)
+      # The game's piece, not what the sensors read: a pawn left standing
+      # for its queen is a queen, and asked about as a pawn on the last
+      # rank it has no moves to speak of (and no square in front of it).
+      {colour, kind} = piece = elem(tr.pos.board, from) || elem(tr.phys, from)
       as_mover = %{tr.pos | turn: colour}
 
       why =
@@ -2122,6 +2141,160 @@ defmodule Alnasl.Tracker do
     end
   end
 
+  # A pawn was left on its last rank and taken for the default piece - and
+  # now the board shows something that piece cannot have done: it jumped
+  # like a knight, or the other side ignored the check a queen would have
+  # given. The promotion is tried as each of the other pieces, the moves
+  # since replayed as they were played, and one more move asked for. The
+  # sensors read the same whatever the pawn became (it is still a pawn to
+  # them), so the board the moves are checked against is the one expected.
+  #
+  # One piece fits: the promotion was that, worked out, not seen -
+  # `:recovered`. Several (a knight, a rook and a bishop all leave a king
+  # on h8 out of check): the first of knight, rook, bishop, `:guessed`
+  # and still `:assumed`, so that the next move it cannot make asks again.
+  defp promotion_retry(tr) do
+    with index when index != nil <-
+           tr.plies
+           |> Enum.reverse()
+           |> Enum.take(@promotion_back)
+           |> Enum.find_index(&(:assumed in &1.flags and &1.promo != nil)),
+         number = length(tr.plies) - index,
+         ply = Enum.at(tr.plies, number - 1),
+         later = Enum.drop(tr.plies, number),
+         before = Enum.at(tr.history, index),
+         {colour, :p} <- elem(before.pos.board, ply.from),
+         true <- standing_in?(tr, colour, ply, later) do
+      o = tr.opts
+
+      found =
+        for kind <- [:n, :r, :b, :q] -- [ply.promo],
+            specs = [{ply.from, ply.to, kind, ply.flags -- [:assumed]} | specs_of(later)],
+            {:ok, steps, _phys} <- [replay_specs(before.pos, before.phys, specs, [])],
+            pos = Enum.reduce(steps, before.pos, fn {m, _}, p -> Chess.apply_move(p, m) end),
+            [{move, flags}] <- [
+              one_ply(pos, tr.phys, tr.raw, o.promotion_default, tr.unseen, tr.dead)
+            ],
+            do: {steps, {move, flags}}
+
+      case found do
+        [] ->
+          nil
+
+        [{[{promo, _} | rest], next} | others] ->
+          # Still an assumption when it is one of several: the next thing
+          # the piece does may say which, and it is asked again then.
+          mark = if others == [], do: [:recovered], else: [:guessed, :assumed]
+          {number - 1, [{promo, mark} | rest] ++ [next]}
+      end
+    else
+      _no -> nil
+    end
+  end
+
+  # The pawn that stood in for the promoted piece is still a pawn to the
+  # sensors where it stands now - or it was taken. A piece that was put
+  # there for real and seen has said what it is.
+  defp standing_in?(tr, colour, ply, later) do
+    at =
+      Enum.reduce(later, ply.to, fn
+        _p, nil -> nil
+        %{from: from, to: to}, at when from == at -> to
+        %{to: to}, at when to == at -> nil
+        _p, at -> at
+      end)
+
+    at == nil or elem(tr.phys, at) == {colour, :p}
+  end
+
+  defp specs_of(plies), do: Enum.map(plies, &{&1.from, &1.to, &1.promo, &1.flags})
+
+  # Paths that are the same moves but for what a pawn became. Nobody saw
+  # the new piece on its square - the pawn was left standing, or the piece
+  # was taken before a reading caught it - and every piece fits: they are
+  # one path, with the default piece, `:assumed`. A piece that WAS read
+  # there, for a moment, between the pawn leaving and the capture, is the
+  # piece: the others go. And when the default cannot be (the queen would
+  # have given a check that the next move ignores), the rest stay as they
+  # are, several paths, and the choice among them a guess.
+  defp unread_promotions(_tr, _from, [] = found), do: found
+  defp unread_promotions(_tr, _from, [_one] = found), do: found
+
+  defp unread_promotions(tr, from, found) do
+    if Enum.any?(found, fn f -> Enum.any?(f.steps, fn {m, _} -> m.promo != nil end) end) do
+      boards = [tr.raw | for({count, board} <- tr.trail, count >= from.count, do: board)]
+      # What was taken on the square differs with what the pawn became.
+      key = fn f -> Enum.map(f.steps, fn {m, _} -> {m.from, m.to, m.kind, m.promo != nil} end) end
+
+      found
+      |> Enum.uniq_by(key)
+      |> Enum.flat_map(fn first ->
+        members = Enum.filter(found, &(key.(&1) == key.(first)))
+        if length(members) == 1, do: members, else: read_promotion(tr, from, members, boards)
+      end)
+    else
+      found
+    end
+  end
+
+  defp read_promotion(tr, from, members, boards) do
+    default = tr.opts.promotion_default
+    colour = fn index -> if rem(index, 2) == 0, do: from.pos.turn, else: other(from.pos.turn) end
+
+    # For each promotion step: the pieces read on its square while the
+    # pawn's own square was empty.
+    read =
+      hd(members).steps
+      |> Enum.with_index()
+      |> Enum.flat_map(fn
+        {{%{promo: promo} = m, _flags}, index} when promo != nil ->
+          c = colour.(index)
+
+          kinds =
+            for b <- boards,
+                elem(b, m.from) == nil,
+                {^c, kind} <- [elem(b, m.to)],
+                kind in [:q, :r, :b, :n],
+                uniq: true,
+                do: kind
+
+          [{index, kinds}]
+
+        _plain ->
+          []
+      end)
+
+    kept =
+      Enum.filter(members, fn f ->
+        Enum.all?(read, fn {index, kinds} ->
+          {m, _} = Enum.at(f.steps, index)
+          if kinds == [], do: m.promo == default, else: m.promo in kinds
+        end)
+      end)
+
+    case kept do
+      [] ->
+        members
+
+      kept ->
+        unread = for {index, []} <- read, do: index
+
+        Enum.map(kept, fn f ->
+          steps =
+            f.steps
+            |> Enum.with_index()
+            |> Enum.map(fn {{m, flags}, index} ->
+              if index in unread, do: {m, Enum.uniq(flags ++ [:assumed])}, else: {m, flags}
+            end)
+
+          %{f | steps: steps}
+        end)
+    end
+  end
+
+  defp other(:w), do: :b
+  defp other(:b), do: :w
+
   defp replay_specs(_pos, phys, [], acc), do: {:ok, Enum.reverse(acc), phys}
 
   defp replay_specs(pos, phys, [{from, to, promo, flags} | rest], acc) do
@@ -2322,7 +2495,7 @@ defmodule Alnasl.Tracker do
         # taken where it stood.
         unseen =
           Enum.filter(tr.unseen, fn %{square: sq, piece: piece} ->
-            elem(next.board, sq) == piece and elem(board, sq) == nil
+            standing?(elem(next.board, sq), piece) and elem(board, sq) == nil
           end)
 
         ply = %{

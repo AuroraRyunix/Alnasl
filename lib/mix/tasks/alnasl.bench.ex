@@ -11,7 +11,9 @@ defmodule Mix.Tasks.Alnasl.Bench do
   fault mix of `Alnasl.Bench.suites/0`. The first columns are the verdicts
   of `Alnasl.Bench`, a game each: `silent` is the one that must stay zero,
   and `rec WRONG` / `guess WRONG` are the games that ended as a game that
-  was not played, marked orange or red where they leave it. `rec plies`
+  was not played, marked orange or red where they leave it. `assumed` is
+  the games in which only what a pawn became differs, at a promotion the
+  box marked as assumed: the new piece was never on the board to read. `rec plies`
   and `guess plies` are the marked moves: how many are not the move the
   game has at that place, of how many; `alarms` every
   time a board went out of sync, also when it found its way back; `gave
@@ -44,7 +46,7 @@ defmodule Mix.Tasks.Alnasl.Bench do
 
     header =
       String.pad_trailing("fault mix", 46) <>
-        "  exact  rec ok  rec WRONG  guess ok  guess WRONG  flagged  alarm  misread  silent   faults    rec plies  guess plies  alarms  named  worst search  gave up"
+        "  exact  rec ok  rec WRONG  guess ok  guess WRONG  assumed  flagged  alarm  misread  silent   faults    rec plies  guess plies  alarms  named  worst search  gave up"
 
     Mix.shell().info(header)
 
@@ -64,6 +66,7 @@ defmodule Mix.Tasks.Alnasl.Bench do
           v.(:reconstructed_wrong, 11) <>
           v.(:guessed_right, 10) <>
           v.(:guessed_wrong, 13) <>
+          v.(:assumed, 9) <>
           v.(:flagged, 9) <>
           v.(:alarm, 7) <>
           v.(:unnoticed, 9) <>
