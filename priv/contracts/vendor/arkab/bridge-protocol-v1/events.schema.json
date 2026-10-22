@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/teapot-chess/Arkab/main/priv/contracts/bridge-protocol-v1/events.schema.json",
+  "title": "events (bridge -> server)",
+  "description": "Queued driver events, oldest first, numbered (Arkab.Protocol.events/1). Batches of at most 200; never more than 1000 unacknowledged in flight. The server stores and processes them, then acknowledges the highest number (ack). A number it has seen before is acknowledged again but not applied twice.",
+  "type": "object",
+  "properties": {
+    "type": { "const": "events" },
+    "events": {
+      "type": "array",
+      "items": { "$ref": "common.schema.json#/definitions/event" },
+      "minItems": 1,
+      "maxItems": 200
+    }
+  },
+  "required": ["type", "events"],
+  "additionalProperties": false
+}

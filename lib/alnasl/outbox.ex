@@ -30,6 +30,8 @@ defmodule Alnasl.Outbox do
   |---|---|
   | 200 | `sent` (also `applied: false, older_than_stored`: the server already knew) |
   | 409 `moves_conflict` | the server holds other moves: the row is `rejected` and the game is queued again in full with `replace: true` - the board is the authority |
+  | 409 `board_not_published` | the round is not on the results page yet: the same row again, after the same doubling pause as a 5xx, until it is |
+  | 409 `live_game_limit` | the tournament shows as many live games as it may: `rejected` with that reason, the queue moves on |
   | 422 | this message is wrong and stays wrong: `rejected`, shown to the arbiter, the queue moves on |
   | 401, 403, 404 | the key or the tournament is wrong - nothing a retry of this row fixes, and nothing to throw moves away for: the queue **waits**, says why, and tries again every 30 s and when the settings change |
   | 429, 5xx, no answer | the same row again, after a pause that doubles up to a minute (`Retry-After` is obeyed) |
@@ -423,10 +425,11 @@ defmodule Alnasl.Outbox do
         if note == "older_than_stored", do: server_ahead(entry)
         {:sent, entry}
 
+      # A 409 is three different answers, and only one of them is about the
+      # moves. Treating them all as a conflict used to resend a game with
+      # `replace: true` to a server that had not refused its moves at all.
       {:ok, %{status: 409, body: body}} ->
-        entry = mark(entry, "rejected", "moves_conflict", detail(body))
-        resend_in_full(entry)
-        {:rejected, entry}
+        conflict(entry, error_code(body), body)
 
       {:ok, %{status: 422, body: body}} ->
         {:rejected, mark(entry, "rejected", error_code(body), detail(body))}
@@ -453,6 +456,36 @@ defmodule Alnasl.Outbox do
         {:retry, {:unreachable, :unknown}, nil}
     end
   end
+
+  # The server holds other moves: the board wins, the game goes again in full.
+  defp conflict(entry, "moves_conflict", body) do
+    entry = mark(entry, "rejected", "moves_conflict", detail(body))
+    resend_in_full(entry)
+    {:rejected, entry}
+  end
+
+  # The round is not on the results page yet - a board started before
+  # somebody pressed publish. Nothing is wrong with the row; it is early.
+  # The same row again after the usual growing pause, and it goes through
+  # once the pairings are out.
+  defp conflict(_entry, "board_not_published", _body),
+    do: {:retry, {:http, 409, "board_not_published"}, nil}
+
+  # The tournament shows as many live games as it may. This message is set
+  # aside, said, and the queue moves on; the game's next message carries the
+  # whole game anyway, so nothing is lost once a slot is free.
+  defp conflict(entry, "live_game_limit", body) do
+    Log.add(:warn, "outbox.live_game_limit", %{limit: body["limit"]}, %{
+      round: entry.round,
+      board_no: entry.board_no
+    })
+
+    {:rejected, mark(entry, "rejected", "live_game_limit", detail(body))}
+  end
+
+  # A 409 the contract does not name: refused, with the server's own word.
+  defp conflict(entry, code, body),
+    do: {:rejected, mark(entry, "rejected", code || "http_409", detail(body))}
 
   defp mark(entry, state, error \\ nil, detail \\ nil) do
     entry =

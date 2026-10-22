@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/teapot-chess/Arkab/main/priv/contracts/bridge-protocol-v1/hello.schema.json",
+  "title": "hello (bridge -> server)",
+  "description": "Always the bridge's first frame on a new socket (Arkab.Protocol.hello/4). The key goes here, not in the URL, because URLs end up in proxy logs. The server answers welcome or refused; before hello it listens to nothing else.",
+  "type": "object",
+  "properties": {
+    "type": { "const": "hello" },
+    "v": { "$ref": "common.schema.json#/definitions/version" },
+    "bridge": { "description": "The bridge's own id: random, url-safe base64, kept for the bridge's life.", "type": "string", "minLength": 1 },
+    "key": { "description": "The key the server gave this bridge at join (join-response.key).", "type": "string", "minLength": 1 },
+    "name": { "description": "The bridge's name, for the server's pages.", "type": "string" },
+    "software": { "description": "\"arkab <version>\".", "type": "string", "pattern": "^arkab " }
+  },
+  "required": ["type", "v", "bridge", "key", "name", "software"],
+  "additionalProperties": false
+}

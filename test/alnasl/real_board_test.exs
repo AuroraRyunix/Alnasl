@@ -69,18 +69,35 @@ defmodule Alnasl.RealBoardTest do
     {collect([]), written}
   end
 
-  # What the driver writes before it listens: the bus-mode byte, a ping to
-  # everybody twice, "end bus mode" - and then the handshake, which is what
-  # is returned. Arkab 0.3.6 and later follow it with a question about the
-  # clock, so whatever comes after the five handshake bytes is not our business.
-  defp handshake(port) do
-    case Fake.written(port) do
-      <<0x4A, 0x87, 0, 0, 0x07, 0x87, 0, 0, 0x07, 0x88, 0, 0, 0x08, said::binary-size(5),
-        _asks::binary>> ->
-        said
+  # What the driver writes before it listens, as Arkab's contract pins it
+  # (`dgt-serial-opening` in the vendored bridge-protocol-v1): the probe -
+  # bus mode, a ping to everybody twice, "end bus mode" - then the
+  # handshake, which is what is returned, then the questions it asks
+  # straight after (the clock's, since Arkab 0.3.6). Split by the contract's
+  # three parts and not by a length written here, so the next Arkab that
+  # says something else first is contract drift, not a mystery.
+  @opening Alnasl.Contract.example(:bridge, "dgt-serial-opening")
 
-      _not_yet ->
-        handshake(port)
+  defp handshake(port) do
+    [probe, said, asks] =
+      for part <- ~w(probe_hex handshake_hex asks_hex),
+          do: Base.decode16!(@opening[part], case: :lower)
+
+    assert Base.decode16!(@opening["bytes_hex"], case: :lower) == probe <> said <> asks
+    # The driver is started with its clock option as it comes, as the example's is.
+    assert @opening["clock"] == true
+
+    written = opening(port, byte_size(probe <> said <> asks))
+    assert binary_part(written, 0, byte_size(probe)) == probe
+    assert binary_part(written, byte_size(probe) + byte_size(said), byte_size(asks)) == asks
+    assert binary_part(written, byte_size(probe), byte_size(said)) == said
+    said
+  end
+
+  defp opening(port, size) do
+    case Fake.written(port) do
+      written when byte_size(written) >= size -> written
+      _not_yet -> opening(port, size)
     end
   end
 

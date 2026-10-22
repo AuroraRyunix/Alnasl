@@ -1,0 +1,156 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/teapot-chess/Arkab/main/priv/contracts/bridge-protocol-v1/common.schema.json",
+  "title": "Bridge link v1: shared definitions",
+  "description": "Definitions the frames of the Arkab bridge <-> Alnasl link share. The link is one WebSocket per server, dialled by the bridge. Every data frame in both directions is a JSON TEXT frame holding one object with a \"type\"; there are no binary data frames. The only other frames are WebSocket control frames: the bridge sends a ping with an EMPTY payload every 25 s and answers pings with pongs; a line silent for 75 s is dead. The bytes the bridge writes to a DGT board's serial line when it opens it are pinned in dgt-serial-opening.schema.json.",
+  "definitions": {
+    "version": {
+      "description": "The protocol version. 1 is the only one.",
+      "const": 1
+    },
+    "board_id": {
+      "description": "A board's name on the link (Arkab.Protocol.board_id/2): its port, \"COM3\", or on a DGT loop \"<port>#<bus address>\", \"/dev/ttyUSB0#12799\". A played-back board is called whatever the bridge's source names it.",
+      "type": "string",
+      "minLength": 1
+    },
+    "position": {
+      "description": "Arkab.Board.to_text/1: 64 characters, a8 first, then b8 ... h8, a7 ... h1. Upper case White, lower case Black, \".\" an empty square.",
+      "type": "string",
+      "pattern": "^[.PNBRQKpnbrqk]{64}$"
+    },
+    "side": {
+      "type": "string",
+      "enum": ["white", "black"]
+    },
+    "event": {
+      "description": "One driver event as it is queued and sent (Arkab.Protocol.encode_event/4).",
+      "type": "object",
+      "properties": {
+        "s": {
+          "description": "The event's number in the bridge's queue. Only goes up, never reused, also across restarts.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "t": {
+          "description": "When it happened, in milliseconds: the bridge's wall clock (Unix epoch ms) for a real board, the recording's own clock for a played-back one (then \"at\" is present too).",
+          "type": "integer"
+        },
+        "id": { "$ref": "#/definitions/board_id" },
+        "e": { "$ref": "#/definitions/event_fields" },
+        "at": {
+          "description": "Only from a played-back board (Arkab.Driver.Player): [speed, next]. speed is the playback speed factor; next is the recording time (ms) of the following event, or null after the last.",
+          "type": "array",
+          "items": [
+            { "type": "number" },
+            { "type": ["integer", "null"] }
+          ],
+          "minItems": 2,
+          "maxItems": 2
+        }
+      },
+      "required": ["s", "t", "id", "e"],
+      "additionalProperties": false
+    },
+    "event_fields": {
+      "description": "The driver event itself, \"k\" says which. Raw serial bytes (\"rx\"/\"tx\") are never sent on the link: they stay in the bridge's capture files.",
+      "oneOf": [
+        { "$ref": "#/definitions/event_position" },
+        { "$ref": "#/definitions/event_clock" },
+        { "$ref": "#/definitions/event_status" },
+        { "$ref": "#/definitions/event_poll_ok" },
+        { "$ref": "#/definitions/event_poll_missed" },
+        { "$ref": "#/definitions/event_info" }
+      ]
+    },
+    "event_position": {
+      "description": "The whole board as it stands now.",
+      "type": "object",
+      "properties": {
+        "k": { "const": "pos" },
+        "b": { "$ref": "#/definitions/position" }
+      },
+      "required": ["k", "b"],
+      "additionalProperties": false
+    },
+    "event_clock": {
+      "description": "A clock reading (Arkab.Capture.clock_line/1).",
+      "type": "object",
+      "properties": {
+        "k": { "const": "clk" },
+        "w": { "description": "White's time left, milliseconds.", "type": "integer" },
+        "b": { "description": "Black's time left, milliseconds.", "type": "integer" },
+        "r": {
+          "description": "Whose time is running, or none.",
+          "type": "string",
+          "enum": ["white", "black", "none"]
+        },
+        "l": {
+          "description": "The side the lever is set for (armed), when the clock says. Absent when unknown.",
+          "$ref": "#/definitions/side"
+        }
+      },
+      "required": ["k", "w", "b", "r"],
+      "additionalProperties": false
+    },
+    "event_status": {
+      "description": "The board itself came or went (not the link).",
+      "type": "object",
+      "properties": {
+        "k": { "const": "st" },
+        "v": { "type": "string", "enum": ["connected", "disconnected"] }
+      },
+      "required": ["k", "v"],
+      "additionalProperties": false
+    },
+    "event_poll_ok": {
+      "description": "The board answered. Answers are thinned to about one a second; \"n\" is how many answers this one stands for, absent when 1.",
+      "type": "object",
+      "properties": {
+        "k": { "const": "poll" },
+        "v": { "const": "ok" },
+        "n": { "type": "integer", "minimum": 2 }
+      },
+      "required": ["k", "v"],
+      "additionalProperties": false
+    },
+    "event_poll_missed": {
+      "description": "The board did not answer. Always sent, never thinned.",
+      "type": "object",
+      "properties": {
+        "k": { "const": "poll" },
+        "v": { "const": "missed" }
+      },
+      "required": ["k", "v"],
+      "additionalProperties": false
+    },
+    "event_info": {
+      "description": "What a board says about itself. Only these names travel (Arkab.Protocol's list); each event carries the ones that changed, or on resend all that are known.",
+      "type": "object",
+      "properties": {
+        "k": { "const": "info" },
+        "i": {
+          "type": "object",
+          "properties": {
+            "serial": { "description": "The board's serial number, as the board says it (\"06310\").", "type": "string" },
+            "firmware": { "description": "Firmware version text (\"1.9\").", "type": "string" },
+            "battery": { "description": "Bluetooth boards' battery message, upper-case hex of its data bytes.", "type": "string" },
+            "bus_address": { "description": "The DGT bus address the board answered a ping with; null when none answered.", "type": ["integer", "null"] },
+            "trademark": { "type": "string" },
+            "error": { "description": "Why the port could not be opened or read, as text.", "type": "string" },
+            "loop": {
+              "description": "null: one board (or none) on this port. A list of two or more bus addresses: the port is a loop and is read as one.",
+              "type": ["array", "null"],
+              "items": { "type": "integer" }
+            },
+            "loop_number": { "description": "On a loop: the board's bus address.", "type": "integer" },
+            "clock": { "description": "Only ever false: the clock was switched off or unplugged; its last reading is not to be believed.", "const": false },
+            "clock_battery_low": { "description": "Only ever true.", "const": true }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": ["k", "i"],
+      "additionalProperties": false
+    }
+  }
+}

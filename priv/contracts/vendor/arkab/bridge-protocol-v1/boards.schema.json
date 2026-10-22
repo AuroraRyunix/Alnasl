@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/teapot-chess/Arkab/main/priv/contracts/bridge-protocol-v1/boards.schema.json",
+  "title": "boards (bridge -> server)",
+  "description": "What the bridge reads right now (Arkab.Bridge.Link). Sent after welcome and again on every change (a few changes in a row are one frame). Each frame is the whole picture, not a difference.",
+  "type": "object",
+  "properties": {
+    "type": { "const": "boards" },
+    "boards": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "$ref": "common.schema.json#/definitions/board_id" },
+          "port": { "description": "The port the board is on (for a played-back board, its source name).", "type": "string" },
+          "address": { "description": "The board's DGT bus address on a loop; null for a board alone on its port.", "type": ["integer", "null"] },
+          "connected": { "description": "Whether the board itself answers, not whether the link is up.", "type": "boolean" },
+          "serial": { "description": "The board's serial number once it said it; null before.", "type": ["string", "null"] }
+        },
+        "required": ["id", "port", "address", "connected", "serial"],
+        "additionalProperties": false
+      }
+    },
+    "ports": {
+      "description": "The ports the bridge reads, then the serial ports it can see and does not read.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "port": { "type": "string" },
+          "description": { "description": "What the system says the port is; \"\" when it says nothing.", "type": "string" },
+          "read": { "description": "true: the bridge reads it (rescan/forget_port apply). false: seen, not read (add_port applies).", "type": "boolean" }
+        },
+        "required": ["port", "description", "read"],
+        "additionalProperties": false
+      }
+    },
+    "recording": { "description": "Whether the bridge writes capture files (the record command).", "type": "boolean" }
+  },
+  "required": ["type", "boards", "ports", "recording"],
+  "additionalProperties": false
+}

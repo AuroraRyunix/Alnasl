@@ -1,0 +1,21 @@
+{
+  "type": "events",
+  "events": [
+    {"s": 1040, "t": 1760600000100, "id": "COM3", "e": {"k": "st", "v": "connected"}},
+    {"s": 1041, "t": 1760600000110, "id": "COM3", "e": {"k": "info", "i": {"loop": null, "bus_address": null}}},
+    {"s": 1042, "t": 1760600000123, "id": "COM3", "e": {"k": "info", "i": {"serial": "06310"}}},
+    {"s": 1043, "t": 1760600000124, "id": "COM3", "e": {"k": "info", "i": {"firmware": "1.9"}}},
+    {"s": 1044, "t": 1760600000200, "id": "COM3", "e": {"k": "pos", "b": "rnbqkbnrpppppppp................................PPPPPPPPRNBQKBNR"}},
+    {"s": 1045, "t": 1760600000300, "id": "COM3", "e": {"k": "clk", "w": 5430000, "b": 5430000, "r": "none", "l": "white"}},
+    {"s": 1046, "t": 1760600001300, "id": "COM3", "e": {"k": "clk", "w": 5429000, "b": 5430000, "r": "white"}},
+    {"s": 1047, "t": 1760600002000, "id": "COM3", "e": {"k": "poll", "v": "ok"}},
+    {"s": 1048, "t": 1760600003000, "id": "COM3", "e": {"k": "poll", "v": "ok", "n": 3}},
+    {"s": 1049, "t": 1760600003500, "id": "COM3", "e": {"k": "poll", "v": "missed"}},
+    {"s": 1050, "t": 1760600004000, "id": "/dev/ttyUSB0#12799", "e": {"k": "info", "i": {"firmware": "4.0", "loop_number": 12799}}},
+    {"s": 1051, "t": 1760600004100, "id": "/dev/ttyUSB0#12799", "e": {"k": "info", "i": {"clock": false}}},
+    {"s": 1052, "t": 1760600004200, "id": "/dev/ttyUSB0#12799", "e": {"k": "info", "i": {"clock_battery_low": true, "battery": "0A1B", "trademark": "Digital Game Technology"}}},
+    {"s": 1053, "t": 1760600004300, "id": "/dev/ttyUSB1", "e": {"k": "info", "i": {"loop": [6310, 12799]}}},
+    {"s": 1054, "t": 1760600004400, "id": "/dev/ttyUSB2", "e": {"k": "info", "i": {"error": ":enoent"}}},
+    {"s": 1055, "t": 1760600005000, "id": "COM3", "e": {"k": "st", "v": "disconnected"}}
+  ]
+}

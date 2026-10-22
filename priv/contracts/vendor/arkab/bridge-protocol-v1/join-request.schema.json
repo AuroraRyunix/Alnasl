@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/teapot-chess/Arkab/main/priv/contracts/bridge-protocol-v1/join-request.schema.json",
+  "title": "join request (bridge -> server, HTTP)",
+  "description": "Before the socket, once: the bridge POSTs this JSON (content-type application/json) to the join link https://<host>/join/<code> it was given (Arkab.Bridge.join/2). Answers: 200 with join-response; 404 or 410 code unknown, used or expired; 409 the server does not speak v; 403 with {\"error\":\"elsewhere\"} the bridge is still in another hall on that server. Anything else is 'not a server' to the bridge.",
+  "type": "object",
+  "properties": {
+    "v": { "$ref": "common.schema.json#/definitions/version" },
+    "bridge": { "description": "The bridge's own id (as in hello).", "type": "string", "minLength": 1 },
+    "name": { "description": "The bridge's name.", "type": "string" },
+    "software": { "description": "\"arkab <version>\".", "type": "string", "pattern": "^arkab " }
+  },
+  "required": ["v", "bridge", "name", "software"],
+  "additionalProperties": false
+}

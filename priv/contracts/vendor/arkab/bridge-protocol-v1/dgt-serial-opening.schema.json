@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/teapot-chess/Arkab/main/priv/contracts/bridge-protocol-v1/dgt-serial-opening.schema.json",
+  "title": "DGT serial opening (bridge -> board, raw bytes)",
+  "description": "Not a WebSocket frame: the exact bytes Arkab.Driver.DgtSerial writes to a single-board serial line when it opens it, on a line where nobody answers the bus ping (a single board, or a stand-in such as Arkab.Transport.Fake). Alnasl reads boards with this driver and its tests take these bytes apart, so they are pinned here as hex. bytes_hex is everything written, in order: probe_hex (to bus mode 0x4A, ping-all twice, end bus mode), then handshake_hex (reset 0x40, serial 0x45, version 0x4D, board 0x42, update mode: 0x4B nice with the clock, or 0x44 board only when the clock option is false), then asks_hex (0x41, one clock question, when the clock is wanted; empty when not). Nothing more is written until the first resync. A test reading these bytes should split them by the three parts, not by a hard-coded length.",
+  "type": "object",
+  "properties": {
+    "frame": { "const": "dgt_serial_opening" },
+    "clock": { "description": "The driver's \"clock\" option (true unless set to false; the bridge always reads serial boards with the clock).", "type": "boolean" },
+    "probe_hex": { "const": "4a870000078700000788000008" },
+    "handshake_hex": { "type": "string", "enum": ["40454d424b", "40454d4244"] },
+    "asks_hex": { "type": "string", "enum": ["41", ""] },
+    "bytes_hex": { "type": "string", "pattern": "^4a870000078700000788000008(40454d424b41|40454d4244)$" }
+  },
+  "required": ["frame", "clock", "probe_hex", "handshake_hex", "asks_hex", "bytes_hex"],
+  "additionalProperties": false
+}

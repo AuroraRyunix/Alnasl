@@ -1,0 +1,13 @@
+{
+  "type": "boards",
+  "boards": [
+    {"id": "COM3", "port": "COM3", "address": null, "connected": true, "serial": "06310"},
+    {"id": "COM4#12799", "port": "COM4", "address": 12799, "connected": false, "serial": null}
+  ],
+  "ports": [
+    {"port": "COM3", "description": "USB Serial Port", "read": true},
+    {"port": "COM4", "description": "", "read": true},
+    {"port": "/dev/ttyUSB7", "description": "FT232R USB UART", "read": false}
+  ],
+  "recording": true
+}

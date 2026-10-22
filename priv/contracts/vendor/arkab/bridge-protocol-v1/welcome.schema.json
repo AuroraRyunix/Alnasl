@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/teapot-chess/Arkab/main/priv/contracts/bridge-protocol-v1/welcome.schema.json",
+  "title": "welcome (server -> bridge)",
+  "description": "The answer to an accepted hello (Arkab.Protocol.welcome/2). The bridge then sends boards and starts sending events after seen.",
+  "type": "object",
+  "properties": {
+    "type": { "const": "welcome" },
+    "v": { "$ref": "common.schema.json#/definitions/version" },
+    "seen": {
+      "description": "The highest event number the server holds. The bridge counts everything up to it as acknowledged (it can be more than was acked, when the line went before the ack came back). The bridge ignores a welcome without an integer seen.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "server": { "description": "The server's name, for the bridge's page.", "type": "string" }
+  },
+  "required": ["type", "v", "seen", "server"],
+  "additionalProperties": false
+}

@@ -80,3 +80,8 @@ config :arkab,
   loop_reply_ms: 80,
   loop_gap_ms: 5,
   loop_discover_ms: 400
+
+# The vendored contracts' schemas refer to each other by their GitHub URLs;
+# the tests answer those from priv/contracts/vendor and never from GitHub
+# (Alnasl.Contract).
+config :ex_json_schema, :remote_schema_resolver, {Alnasl.Contract, :resolve}

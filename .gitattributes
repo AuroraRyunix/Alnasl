@@ -6,3 +6,6 @@
 *.bat text eol=crlf
 *.bat.eex text eol=crlf
 *.ico binary
+# Vendored contracts are the providers' bytes, compared byte for byte by
+# `mix contracts.check`: git leaves them exactly as they came.
+priv/contracts/vendor/** -text

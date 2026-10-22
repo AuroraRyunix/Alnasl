@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/teapot-chess/Arkab/main/priv/contracts/bridge-protocol-v1/leave.schema.json",
+  "title": "leave (both directions)",
+  "description": "Sent by the bridge: this server was removed on the bridge. Sent by the server: this bridge was removed on the server, and the bridge forgets the server too. Either way the link ends for both (Arkab.Protocol.leave/0).",
+  "type": "object",
+  "properties": {
+    "type": { "const": "leave" }
+  },
+  "required": ["type"],
+  "additionalProperties": false
+}

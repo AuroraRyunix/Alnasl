@@ -30,7 +30,16 @@ defmodule Alnasl.FakeIngest do
 
   def start_link(_opts \\ []) do
     Agent.start_link(
-      fn -> %{games: %{}, mode: :ok, requests: [], snapshot: snapshot(4), fail_next: 0} end,
+      fn ->
+        %{
+          games: %{},
+          mode: :ok,
+          requests: [],
+          answers: [],
+          snapshot: snapshot(4),
+          fail_next: 0
+        }
+      end,
       name: __MODULE__
     )
   end
@@ -55,7 +64,11 @@ defmodule Alnasl.FakeIngest do
     :ok
   end
 
-  @doc "`:ok | :down | {:status, 500} | :rate_limited | :paused`."
+  @doc """
+  `:ok | :down | {:status, 500} | :rate_limited | :paused`, or `{:answer,
+  status, body}`: every live board is answered with exactly that (a
+  contract example, say) and nothing is stored.
+  """
   def mode(mode), do: Agent.update(__MODULE__, &%{&1 | mode: mode})
 
   @doc "The next `n` requests fail as unreachable, then the server is back."
@@ -67,8 +80,15 @@ defmodule Alnasl.FakeIngest do
   @doc "Every live-boards body received, oldest first, with the status answered."
   def requests, do: Agent.get(__MODULE__, &Enum.reverse(&1.requests))
 
+  @doc "Every live-boards answer given, oldest first: `{status, body}`, the body as JSON has it."
+  def answers, do: Agent.get(__MODULE__, &Enum.reverse(&1.answers))
+
   def reset,
-    do: Agent.update(__MODULE__, &%{&1 | games: %{}, requests: [], mode: :ok, fail_next: 0})
+    do:
+      Agent.update(
+        __MODULE__,
+        &%{&1 | games: %{}, requests: [], answers: [], mode: :ok, fail_next: 0}
+      )
 
   @doc "Puts a game on the server behind Alnasl's back."
   def plant(round, board, moves),
@@ -94,13 +114,14 @@ defmodule Alnasl.FakeIngest do
     end
   end
 
+  # What OpenResults says about itself is the contract's own example.
   defp route(%{method: "GET", path_info: ["api", "server"]} = conn, _mode),
-    do: json(conn, 200, %{name: "fake"})
+    do: json(conn, 200, Alnasl.Contract.example(:publish, "server.response"))
 
   defp route(%{method: "GET", path_info: ["api", "tournaments", slug]} = conn, _mode) do
     if slug == @slug,
       do: json(conn, 200, Agent.get(__MODULE__, & &1.snapshot)),
-      else: json(conn, 404, %{error: "tournament_not_published"})
+      else: json(conn, 404, error("tournament_not_published", "no such tournament"))
   end
 
   defp route(%{method: "POST", path_info: ["api", "tournaments", slug, "live"]} = conn, mode) do
@@ -110,20 +131,50 @@ defmodule Alnasl.FakeIngest do
 
     {status, answer} =
       cond do
-        auth != ["Bearer " <> @key] -> {401, %{error: "unauthorized"}}
-        slug != @slug -> {403, %{error: "relay_key_wrong_tournament"}}
-        mode == :paused -> {503, %{error: "publishing_paused"}}
-        mode == :rate_limited -> {429, %{error: "rate_limited", retry_after: 1}}
-        match?({:status, _}, mode) -> {elem(mode, 1), %{error: "server_error"}}
-        true -> ingest(body)
+        auth != ["Bearer " <> @key] ->
+          {401, error("unauthorized", "no such key")}
+
+        slug != @slug ->
+          {403, error("relay_key_wrong_tournament", "another tournament's")}
+
+        mode == :paused ->
+          {503, error("publishing_paused", "paused by the operator")}
+
+        mode == :rate_limited ->
+          {429, Map.put(error("rate_limited", "slow down"), :retry_after, 1)}
+
+        match?({:status, _}, mode) ->
+          {elem(mode, 1), %{error: "server_error"}}
+
+        match?({:answer, _, _}, mode) ->
+          {elem(mode, 1), elem(mode, 2)}
+
+        true ->
+          ingest(body)
       end
 
-    Agent.update(__MODULE__, &%{&1 | requests: [{status, body} | &1.requests]})
-    conn = if status == 429, do: Plug.Conn.put_resp_header(conn, "retry-after", "1"), else: conn
+    Agent.update(
+      __MODULE__,
+      &%{
+        &1
+        | requests: [{status, body} | &1.requests],
+          answers: [{status, answer |> Jason.encode!() |> Jason.decode!()} | &1.answers]
+      }
+    )
+
+    wait = answer[:retry_after] || answer["retry_after"] || 1
+
+    conn =
+      if status == 429,
+        do: Plug.Conn.put_resp_header(conn, "retry-after", to_string(wait)),
+        else: conn
+
     json(conn, status, answer)
   end
 
-  defp route(conn, _mode), do: json(conn, 404, %{error: "not_found"})
+  defp route(conn, _mode), do: json(conn, 404, error("not_found", "no such route"))
+
+  defp error(code, detail), do: %{error: code, detail: detail}
 
   defp json(conn, status, body) do
     conn
@@ -151,7 +202,7 @@ defmodule Alnasl.FakeIngest do
   end
 
   defp ingest(_body),
-    do: {422, %{error: "invalid_request", detail: "round, board and moves are required"}}
+    do: {422, error("invalid_request", "round, board and moves are required")}
 
   defp decide(state, key, moves, body) do
     held = state.games[key]
