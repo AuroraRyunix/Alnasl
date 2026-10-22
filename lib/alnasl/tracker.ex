@@ -1637,8 +1637,11 @@ defmodule Alnasl.Tracker do
   # gone, and every move it puts in their place is a guess (red): a move
   # that was seen is being unsaid.
   #
-  # Not the moves the arbiter entered, not across a hole in contact, and
-  # only searched by the squares that were seen to change.
+  # Only lines in which the dropped move is not made again: a line that
+  # plays it later is moves nobody saw before it, which is the search's
+  # business, not an undo. Not the moves the arbiter entered, not across a
+  # hole in contact, and only searched by the squares that were seen to
+  # change.
   defp undone(tr, stable) do
     count = length(tr.plies)
     pressed? = tr.pressed_at != nil and tr.pressed_at >= tr.raw_since
@@ -1658,7 +1661,7 @@ defmodule Alnasl.Tracker do
              sans = Enum.map(dropped, & &1.san),
              [_ | _] = found <-
                found
-               |> Enum.reject(&(Enum.take(sans_of(from.pos, &1.steps), back) == sans))
+               |> Enum.reject(&Enum.any?(sans_of(from.pos, &1.steps), fn san -> san in sans end))
                |> Enum.filter(&(length(&1.steps) <= 3))
                |> then(&usable(tr, from, &1)) do
           flags = if length(found) == 1, do: [:guessed, :alone], else: [:guessed]
