@@ -40,6 +40,11 @@ defmodule Alnasl.FairPlay.Model do
       one, and was measured on the very games the regression was fitted
       on. These are cross-fitted (`fit/2`): measured only on games the
       regression that judged them had not seen;
+    * from the same cross-fitted residuals, the mean and spread of honest
+      single-game scores by game length (`scan`), which the per-game scan
+      of `Alnasl.FairPlay.Scan` is measured against. Optional in the file:
+      a model without it has no scan, and the score is the event score
+      alone;
     * the held-out false-positive table (`false_positives`): for each
       threshold, how many normal player-events scored that high, with a
       95% interval. Written by the fit (`Alnasl.FairPlay.Calibration`),
@@ -65,7 +70,7 @@ defmodule Alnasl.FairPlay.Model do
   the file says so.
   """
 
-  alias Alnasl.FairPlay.{Cluster, Selection, Stats}
+  alias Alnasl.FairPlay.{Cluster, Scan, Selection, Stats}
 
   @type t :: %__MODULE__{}
 
@@ -76,6 +81,7 @@ defmodule Alnasl.FairPlay.Model do
             ev: nil,
             loss: %{cells: %{}, bands: %{}, global: {0.0, 0.0, 0}},
             dispersion: nil,
+            scan: nil,
             weights: [1.0, 1.0, 1.0],
             false_positives: nil,
             meta: %{}
@@ -237,6 +243,11 @@ defmodule Alnasl.FairPlay.Model do
   it, which is the side to err on. With fewer than two events per half
   there is nothing to measure and the model has none (`dispersion/1`
   falls back to independent plies).
+
+  The honest single-game scores the scan is judged against
+  (`Alnasl.FairPlay.Scan`) come from the same cross-fitted residuals, with
+  the correlations just measured: the scan's null is one the model never
+  saw the answers to either. No cross-fit, no scan.
   """
   @spec fit([[map()] | {term(), [map()]}], keyword()) :: t()
   def fit(events, opts \\ []) do
@@ -251,7 +262,7 @@ defmodule Alnasl.FairPlay.Model do
     all = Enum.map(keyed, &elem(&1, 1))
     regression = Task.async(fn -> regression(all, opts) end)
     halves = Enum.split_with(keyed, &(fold(elem(&1, 0)) == 0))
-    dispersion = cross_fitted(halves, opts)
+    {dispersion, scan} = cross_fitted(halves, opts)
     model = Task.await(regression, :infinity)
 
     %{
@@ -260,6 +271,7 @@ defmodule Alnasl.FairPlay.Model do
         bench: opts[:bench],
         nodes: opts[:nodes],
         dispersion: dispersion,
+        scan: scan,
         meta:
           Map.merge(
             %{
@@ -314,13 +326,13 @@ defmodule Alnasl.FairPlay.Model do
     on_b = regression(b, opts)
     on_a = Task.await(on_a, :infinity)
 
-    (Enum.map(b, &accumulate(&1, on_a)) ++ Enum.map(a, &accumulate(&1, on_b)))
-    |> Cluster.fit()
+    plies = Enum.map(b, &Stats.residuals(&1, on_a)) ++ Enum.map(a, &Stats.residuals(&1, on_b))
+    dispersion = plies |> Enum.map(&Cluster.accumulate/1) |> Cluster.fit()
+    scan = plies |> Enum.flat_map(&Scan.game_scores(&1, dispersion)) |> Scan.fit()
+    {dispersion, scan}
   end
 
-  defp cross_fitted(_halves, _opts), do: nil
-
-  defp accumulate(records, model), do: records |> Stats.residuals(model) |> Cluster.accumulate()
+  defp cross_fitted(_halves, _opts), do: {nil, nil}
 
   @doc """
   Logistic regression by Newton's method: `rows` are feature lists, `ys`
@@ -482,6 +494,7 @@ defmodule Alnasl.FairPlay.Model do
         "global" => triple.(m.loss.global)
       },
       "dispersion" => m.dispersion && Cluster.to_json(m.dispersion),
+      "scan" => Scan.to_json(m.scan),
       "weights" => m.weights,
       "false_positives" => m.false_positives,
       "meta" => m.meta
@@ -504,6 +517,7 @@ defmodule Alnasl.FairPlay.Model do
          global: triple.(j["loss"]["global"])
        },
        dispersion: Cluster.from_json(j["dispersion"]),
+       scan: Scan.from_json(j["scan"]),
        weights: j["weights"],
        false_positives: j["false_positives"],
        meta: j["meta"] || %{}

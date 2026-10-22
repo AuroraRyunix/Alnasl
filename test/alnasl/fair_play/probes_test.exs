@@ -1,7 +1,7 @@
 defmodule Alnasl.FairPlay.ProbesTest do
   use ExUnit.Case, async: true
 
-  alias Alnasl.FairPlay.{Calibration, Cluster, Model, Power, Probes, Selection, Stats}
+  alias Alnasl.FairPlay.{Calibration, Model, Power, Probes, Selection, Stats}
 
   # Label games as the power benchmark's tests make them: four MultiPV
   # lines 0, 25, 60 and 150 cp under the best, or a 300 cp blunder.
@@ -154,18 +154,6 @@ defmodule Alnasl.FairPlay.ProbesTest do
     assert Probes.score(obs, [1.0, 1.0, 1.0]) == nil
   end
 
-  test "Šidák: one game is itself, more games make the same maximum less surprising" do
-    assert_in_delta Probes.sidak(2.5, 1), 2.5, 1.0e-6
-    assert Probes.sidak(3.0, 9) < Probes.sidak(3.0, 3)
-    assert Probes.sidak(3.0, 3) < 3.0
-    # 1 − (1 − p)^g by hand: the top of nine at 4.0.
-    p = 1 - :math.pow(1 - Probes.upper(4.0), 9)
-    assert_in_delta Probes.upper(Probes.sidak(4.0, 9)), p, 1.0e-12
-    # Far in the tail the small-p branch takes over without a jump.
-    assert Probes.sidak(7.9, 9) > Probes.sidak(7.0, 9)
-    assert_in_delta Probes.inverse_upper(Probes.upper(1.7)), 1.7, 1.0e-9
-  end
-
   test "the scan finds one engine game among honest ones; the event score dilutes it",
        %{keyed: keyed, model: model, probes: probes} do
     # Every bucket a game of 30 counted plies can land in is calibrated.
@@ -180,27 +168,5 @@ defmodule Alnasl.FairPlay.ProbesTest do
     cheat = observe(cheat, model, probes)
 
     assert is_number(honest.scan) and cheat.scan > honest.scan + 2
-  end
-
-  test "games too short to scan are not scanned" do
-    assert Probes.bucket(19) == nil
-    assert Probes.bucket(20) == "20-29"
-    assert Probes.bucket(44) == "30-44"
-    assert Probes.bucket(45) == "45+"
-
-    probes = %Probes{dispersion: Cluster.default(6), scan: %{"20-29" => {0.0, 1.0, 100}}}
-
-    plies =
-      for i <- 1..19, do: %{game: "g", e: List.duplicate(0.1, 6), s: List.duplicate(0.5, 6), i: i}
-
-    assert Probes.scan(plies, probes) == nil
-  end
-
-  test "the honest single-game scores per length: mean and spread" do
-    cal = Probes.fit_scan([{25, 1.0}, {25, 3.0}, {35, 0.0}, {10, 99.0}])
-    assert {2.0, sd, 2} = cal["20-29"]
-    assert_in_delta sd, :math.sqrt(2.0), 1.0e-12
-    assert cal["30-44"] == {0.0, 0.0, 1}
-    refute Map.has_key?(cal, "45+")
   end
 end

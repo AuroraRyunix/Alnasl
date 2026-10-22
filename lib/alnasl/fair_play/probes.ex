@@ -27,24 +27,9 @@ defmodule Alnasl.FairPlay.Probes do
   before anything was measured, round numbers either side of where a club
   player calls a move a mistake.
 
-  ## The per-game scan (`scan/2`)
-
-  The event score adds up every game. One engine game among nine is a
-  ninth of the signal under all nine games' noise, and it drowns. The scan
-  scores each game of at least #{20} counted plies on its own (the shipped
-  three, weights 1, 1, 1), and asks how surprising the best of them is
-  *given how many there were*:
-
-      p_game = 1 − Φ((s_g − m_L) / sd_L)
-      p_scan = 1 − (1 − min_g p_game)^G
-      scan   = Φ⁻¹(1 − p_scan)
-
-  `m_L`, `sd_L` being the mean and spread of honest single-game scores of
-  that length (20-29, 30-44, 45 or more counted plies), and `G` the games
-  scanned. Šidák's correction treats the games as independent, which the
-  between-game correlation (a few thousandths) nearly makes them. The
-  standardised game score is capped at 8: past that the arithmetic is
-  noise about noise.
+  The benchmark also scores the per-game scan (`Alnasl.FairPlay.Scan`),
+  calibrated here on the same cross-fitted residuals, so a model file
+  without one can still be judged with it.
 
   ## Fitted without peeking (`fit/3`)
 
@@ -57,14 +42,11 @@ defmodule Alnasl.FairPlay.Probes do
   the model's own, so the first three z's are the report's to the digit.
   """
 
-  alias Alnasl.FairPlay.{Cluster, Model, Selection, Stats}
+  alias Alnasl.FairPlay.{Cluster, Model, Scan, Selection, Stats}
 
   @tests [:mm, :ev, :asd, :error, :blunder, :hard_asd]
   @error 0.5
   @blunder 1.0
-  @scan_min 20
-  @scan_weights [1.0, 1.0, 1.0, 0.0, 0.0, 0.0]
-  @cap 8.0
 
   defstruct error: nil, blunder: nil, hardness: 1.0, dispersion: nil, scan: nil
 
@@ -72,12 +54,6 @@ defmodule Alnasl.FairPlay.Probes do
 
   @doc "The sums, in the order of every z and weight vector here."
   def tests, do: @tests
-
-  @doc "The fewest counted plies a game needs to be scanned."
-  def scan_min, do: @scan_min
-
-  @doc "The weights the scan scores a single game with."
-  def scan_weights, do: @scan_weights
 
   @doc "A ply is an error at a scaled loss of 0.5 or more."
   def error?(record), do: Stats.scaled_loss(record) >= @error
@@ -115,10 +91,7 @@ defmodule Alnasl.FairPlay.Probes do
 
     dispersion = with_block(cross, Model.dispersion(model))
 
-    scan =
-      games
-      |> Enum.flat_map(&game_scores(&1, dispersion, @scan_weights))
-      |> fit_scan()
+    scan = games |> Enum.flat_map(&Scan.game_scores(&1, dispersion)) |> Scan.fit()
 
     %{Task.await(whole, :infinity) | dispersion: dispersion, scan: scan}
   end
@@ -226,7 +199,14 @@ defmodule Alnasl.FairPlay.Probes do
   """
   def observe(plies, %__MODULE__{} = probes) do
     {zs, corr} = plies |> Cluster.accumulate() |> Cluster.z_scores(probes.dispersion)
-    %{zs: zs, corr: corr, scan: scan(plies, probes)}
+
+    scan =
+      case Scan.z(plies, probes.dispersion, probes.scan) do
+        {z, _game} -> z
+        nil -> nil
+      end
+
+    %{zs: zs, corr: corr, scan: scan}
   end
 
   @doc """
@@ -237,83 +217,6 @@ defmodule Alnasl.FairPlay.Probes do
     used = for {w, i} <- Enum.with_index(weights), w != 0, do: i
     pick = fn list -> Enum.map(used, &Enum.at(list, &1)) end
     Stats.combined(pick.(zs), pick.(weights), corr |> pick.() |> Enum.map(pick))
-  end
-
-  # --- the scan --------------------------------------------------------------------
-
-  @doc "Each game's counted plies and its own score: `[{plies, score}]`."
-  def game_scores(plies, dispersion, weights) do
-    plies
-    |> Enum.group_by(& &1.game)
-    |> Enum.flat_map(fn {_game, ps} ->
-      {zs, corr} = ps |> Cluster.accumulate() |> Cluster.z_scores(dispersion)
-
-      case score(%{zs: zs, corr: corr}, weights) do
-        s when is_number(s) -> [{length(ps), s}]
-        nil -> []
-      end
-    end)
-  end
-
-  @doc "The length bucket of a game of `n` counted plies, or nil when it is too short to scan."
-  def bucket(n) when n < @scan_min, do: nil
-  def bucket(n) when n < 30, do: "20-29"
-  def bucket(n) when n < 45, do: "30-44"
-  def bucket(_n), do: "45+"
-
-  @doc "Mean and spread of honest single-game scores per length bucket: `%{bucket => {mean, sd, n}}`."
-  def fit_scan(scores) do
-    scores
-    |> Enum.flat_map(fn {n, s} -> if b = bucket(n), do: [{b, s}], else: [] end)
-    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
-    |> Map.new(fn {b, xs} ->
-      n = length(xs)
-      mean = Enum.sum(xs) / n
-      var = Enum.reduce(xs, 0.0, &((&1 - mean) * (&1 - mean) + &2)) / max(n - 1, 1)
-      {b, {mean, :math.sqrt(var), n}}
-    end)
-  end
-
-  @doc """
-  The scan of a player-event's plies: how surprising its most surprising
-  game is, given how many games it had, as a z. Nil when no game is long
-  enough, or nothing is calibrated for its length.
-  """
-  def scan(plies, %__MODULE__{dispersion: dispersion, scan: cal}) do
-    standard =
-      for {n, s} <- game_scores(plies, dispersion, @scan_weights),
-          b = bucket(n),
-          {mean, sd, _} <- [cal[b]],
-          sd > 0,
-          do: (s - mean) / sd
-
-    case standard do
-      [] -> nil
-      xs -> sidak(Enum.max(xs), length(xs))
-    end
-  end
-
-  @doc "The z of the largest of `g` independent standard normals being `top` or more."
-  def sidak(top, g) do
-    p1 = upper(min(top, @cap))
-    # 1 − (1 − p1)^g, without losing a tiny p1 to 1 − p1 rounding to 1.
-    p = if p1 < 1.0e-10, do: g * p1, else: 1 - :math.pow(1 - p1, g)
-    inverse_upper(p)
-  end
-
-  @doc "`1 − Φ(x)`."
-  def upper(x), do: 0.5 * :math.erfc(x / :math.sqrt(2))
-
-  @doc "`Φ⁻¹(1 − p)`, by bisection: slow, exact enough, and no table to get wrong."
-  def inverse_upper(p) when p <= 0, do: @cap * 2
-  def inverse_upper(p) when p >= 1, do: -@cap * 2
-
-  def inverse_upper(p) do
-    Enum.reduce(1..100, {-@cap * 2, @cap * 2}, fn _, {lo, hi} ->
-      mid = (lo + hi) / 2
-      if upper(mid) > p, do: {mid, hi}, else: {lo, mid}
-    end)
-    |> then(fn {lo, hi} -> (lo + hi) / 2 end)
   end
 
   # --- small things ----------------------------------------------------------------

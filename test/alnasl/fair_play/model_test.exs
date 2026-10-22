@@ -166,7 +166,7 @@ defmodule Alnasl.FairPlay.ModelTest do
         chance = if Model.fold(key) == 0, do: 0.9, else: 0.1
 
         records =
-          for g <- 1..4, _ <- 1..15 do
+          for g <- 1..4, _ <- 1..25 do
             gap = 40
 
             base = %{
@@ -201,11 +201,34 @@ defmodule Alnasl.FairPlay.ModelTest do
     assert folds == Enum.map(events, &Model.fold(elem(&1, 0)))
     assert Enum.sort(Enum.uniq(folds)) == [0, 1]
     assert model.meta["dispersion"] =~ "cross-fitted"
+
+    # The scan's honest single games come from the same cross-fit: 80
+    # events of four games of 25 counted plies, every one of them.
+    assert {_mean, sd, 320} = model.scan["20-29"]
+    assert sd > 0
+    assert map_size(model.scan) == 1
+
+    {:ok, again} =
+      model |> Model.to_json() |> Jason.encode!() |> Jason.decode!() |> Model.from_json()
+
+    assert again.scan == model.scan
+
+    # A format-2 file from before the scan reads as a model without one.
+    {:ok, older} =
+      model
+      |> Model.to_json()
+      |> Map.delete("scan")
+      |> Jason.encode!()
+      |> Jason.decode!()
+      |> Model.from_json()
+
+    assert older.scan == nil
   end
 
   test "too few events to cross-fit: no correlations, and the independent formula" do
     model = Model.fit([synthetic(beta(%{"rating" => 0.5}), 200, {9, 9, 9})])
     assert model.dispersion == nil
+    assert model.scan == nil
     assert Model.dispersion(model) == Alnasl.FairPlay.Cluster.default()
   end
 
