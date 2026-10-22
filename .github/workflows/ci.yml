@@ -88,6 +88,78 @@ jobs:
           done
           shellcheck --shell=sh --severity=warning rel/linux/*.sh
 
+  e2e:
+    # The browser tests (test/e2e, docs/e2e.md): the real endpoint and a real
+    # headless Chromium, for what only runs in a browser - the guided tour.
+    # A job of its own, so the suite above does not wait on a browser download.
+    name: Browser tests
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
+        with:
+          elixir-version: "1.20"
+          otp-version: "29.0"
+
+      - name: Restore dependencies and build cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-mix-e2e-otp29.0-ex1.20-${{ hashFiles('mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-e2e-otp29.0-ex1.20-
+
+      # Keyed on the lockfile, which pins Playwright, which pins the browser
+      # build: a Playwright bump is a fresh download, never a driver talking
+      # to a browser it does not know.
+      - name: Restore the Playwright browser cache
+        id: browsers
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('e2e/package-lock.json') }}
+
+      # Node comes with the runner image.
+      - name: Install Playwright
+        working-directory: e2e
+        run: npm ci --no-audit --no-fund
+
+      - name: Download the browser
+        if: steps.browsers.outputs.cache-hit != 'true'
+        working-directory: e2e
+        run: npx playwright install chromium-headless-shell
+
+      # apt packages, so not in the cache above.
+      - name: Install the browser's system libraries
+        working-directory: e2e
+        run: npx playwright install-deps chromium-headless-shell
+
+      - name: Install dependencies
+        run: mix deps.get --check-locked
+
+      # A failure runs the failed tests again with a trace and a screenshot
+      # each, for the artifact below; the step stays red either way.
+      - name: Run the browser tests
+        run: |
+          mix test.e2e && exit 0
+          PW_TRACE=true PW_SCREENSHOT=true mix test.e2e --failed || true
+          exit 1
+
+      - name: Keep the traces of a failed run
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-traces
+          path: _build/e2e/
+          if-no-files-found: ignore
+          retention-days: 7
+
   dialyzer:
     name: Dialyzer
     if: github.event_name != 'schedule'

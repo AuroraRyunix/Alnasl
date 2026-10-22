@@ -36,7 +36,7 @@ defmodule Alnasl.MixProject do
 
   def cli do
     [
-      preferred_envs: [precommit: :test]
+      preferred_envs: [precommit: :test, "test.e2e": :test]
     ]
   end
 
@@ -193,6 +193,11 @@ defmodule Alnasl.MixProject do
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_live_view, "~> 1.2.0"},
       {:lazy_html, ">= 0.1.0", only: :test},
+      # Browser tests (test/e2e, tagged :e2e, not in a plain `mix test`): a
+      # real Chromium through Playwright, inside ExUnit and the SQL Sandbox.
+      # websockex for its remote mode, which Windows needs. See docs/e2e.md.
+      {:phoenix_test_playwright, "~> 0.18.0", only: :test, runtime: false},
+      {:websockex, "~> 0.5.1", only: :test},
       # The other programs' contracts (priv/contracts/vendor) are checked against
       # JSON Schema in the tests; never part of a release.
       {:ex_json_schema, "~> 0.11.5", only: :test},
@@ -237,6 +242,18 @@ defmodule Alnasl.MixProject do
   #     $ mix setup
   #
   # See the documentation for `Mix` for more info on aliases.
+  # E2E=1 is what test/test_helper.exs looks for to give the endpoint a
+  # listener and start Playwright; set here, before `test` requires it.
+  #
+  # build_structure/0 again because the assets were just built into priv/:
+  # where _build holds a COPY of priv rather than a symlink (Windows without
+  # developer mode), the server would otherwise serve the copy from before.
+  defp test_e2e(args) do
+    Mix.Project.build_structure()
+    System.put_env("E2E", "1")
+    Mix.Task.run("test", ["--only", "e2e" | args])
+  end
+
   defp aliases do
     [
       setup: ["deps.get", "ecto.setup", "assets.setup", "assets.build"],
@@ -252,6 +269,9 @@ defmodule Alnasl.MixProject do
       ],
       # No "deps.unlock --unused" here: on a machine that leaves the serial
       # library out (see uart/0) it would drop it from the lock file.
+      # The browser tests only (test/e2e): a real endpoint, a real Chromium.
+      # Never part of a plain `mix test` or `precommit`. See docs/e2e.md.
+      "test.e2e": ["assets.setup", "assets.build", &test_e2e/1],
       precommit: [
         "compile --warnings-as-errors",
         "format",
