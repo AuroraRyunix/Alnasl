@@ -19,6 +19,8 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+- [Feature] **The false positives have names now.** `mix fair_play.hits --model FILE --holdout F` (or `main(["hits" | ...])` from a release) lists the held-out player-events a model scores at 3 or more - or at `--threshold` - with the event, the player, their rating, their opponents' average, the counted moves and the three z-scores. A false-positive rate is a number; six players somebody can look up are a hypothesis. `--holdout` has to be the fit's, or the list is cheerfully made of games the model was fitted on.
+
 ## [0.6.0] - 2026-10-22
 
 - [Fix] **`mix test` no longer deletes the folder above your data.** With `ALNASL_DATA` set, a test run used that folder as its own - the real database included - and on exit removed its parent, parent's contents and all. On a build machine that took a working directory out from under a running job, twice. A test run now ignores `ALNASL_DATA` and keeps to its own throwaway directory, and the clean-up only ever removes a directory it made itself.

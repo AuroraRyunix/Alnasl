@@ -331,11 +331,18 @@ defmodule Alnasl.FairPlay.Model do
   @doc "The model of an engine, or `{:error, :missing}` until one is calibrated."
   @spec load(String.t(), String.t() | nil) :: {:ok, t()} | {:error, :missing | term()}
   def load(engine_id, dir \\ nil) do
-    case File.read(path(engine_id, dir)) do
-      {:ok, text} -> with {:ok, json} <- Jason.decode(text), do: from_json(json)
+    case read(path(engine_id, dir)) do
       {:error, :enoent} -> {:error, :missing}
-      {:error, reason} -> {:error, reason}
+      other -> other
     end
+  end
+
+  @doc "The model in the json file at `path`, wherever it is."
+  @spec read(String.t()) :: {:ok, t()} | {:error, term()}
+  def read(path) do
+    with {:ok, text} <- File.read(path),
+         {:ok, json} <- Jason.decode(text),
+         do: from_json(json)
   end
 
   @doc "Writes a model to `path` as json."

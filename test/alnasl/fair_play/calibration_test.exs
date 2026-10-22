@@ -262,6 +262,54 @@ defmodule Alnasl.FairPlay.CalibrationTest do
     assert held == Enum.filter(ids(hd(shards)), &Calibration.held_out?(&1, 0.25))
   end
 
+  test "hits lists the held-out player-events at a threshold, by name, highest first", %{
+    tmp_dir: dir
+  } do
+    labels = Path.join(dir, "labels.jsonl")
+    {:ok, _} = label([corpus(dir)], out: labels)
+    model = Path.join(dir, "model.json")
+
+    {:ok, %{report: report}} =
+      Calibration.fit([labels], holdout: 0.5, out: model, log: fn _ -> :ok end)
+
+    quiet = fn _ -> :ok end
+
+    assert {:ok, all} =
+             Calibration.hits([labels], model: model, holdout: 0.5, threshold: -100.0, log: quiet)
+
+    # Every held-out player-event with a score, and nothing else.
+    assert length(all) == report.events
+    assert all != []
+    assert Enum.map(all, & &1.score) == Enum.sort(Enum.map(all, & &1.score), :desc)
+
+    for hit <- all do
+      assert Calibration.held_out?("event:" <> hit.event, 0.5)
+      assert hit.counted >= 40
+      assert is_binary(hit.player)
+      assert is_integer(hit.rating) and is_integer(hit.opponents)
+      assert hit.games >= 1
+      assert Enum.all?([hit.mm_z, hit.ev_z, hit.asd_z], &is_float/1)
+    end
+
+    assert {:ok, []} =
+             Calibration.hits([labels], model: model, holdout: 0.5, threshold: 100.0, log: quiet)
+
+    # The command line, and what it says without a model.
+    printed =
+      ExUnit.CaptureIO.capture_io(fn ->
+        Calibration.main(
+          ["hits", "--model", model, "--holdout", "0.5", "--threshold", "-100", labels],
+          halt: false
+        )
+      end)
+
+    assert printed =~ "fair_play hits: #{length(all)} held-out player-events"
+
+    assert ExUnit.CaptureIO.capture_io(:stderr, fn ->
+             assert {:error, :no_model} = Calibration.main(["hits", labels], halt: false)
+           end) =~ "--model"
+  end
+
   test "the gate reads the table, and says when the sample is too small to show anything" do
     small = Alnasl.FairPlay.FalsePositives.table(List.duplicate(0.0, 500))
     assert Calibration.gate_verdict(small) == :passed_unproven
