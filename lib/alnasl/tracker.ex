@@ -992,7 +992,7 @@ defmodule Alnasl.Tracker do
           # A square suspected of reading empty is believed dead only on
           # the press that ends the move onto it: a piece parked beside
           # the board vanishes too, but nobody presses the clock for it.
-          (found = stuck(tr) || (force && onto_suspect(tr)) || nil) != nil ->
+          (found = stuck(tr) || (force && (onto_suspect(tr) || onto_unread(tr))) || nil) != nil ->
             {square, move} = found
 
             if force or stable >= o.unseen_hold_ms,
@@ -2047,6 +2047,39 @@ defmodule Alnasl.Tracker do
     case found do
       [one] -> one
       _none_or_several -> nil
+    end
+  end
+
+  # A square that broke while empty and is first used by a piece arriving
+  # has no suspicion to go on. What it does have, sometimes: the clock is
+  # pressed with nothing changed but one piece of the side to move gone -
+  # a move was made, and it ended where nothing is read - and that piece
+  # has exactly one empty square it may legally go to. Then that is the
+  # move, and the square is dead - if the clock's count agrees that a move
+  # is owed (a knocked piece and the late press of the move before read
+  # the same for a moment). A hand holding the piece does not press
+  # the clock; a piece parked beside the board does not either, and when
+  # the piece has two or more empty squares to go to, nothing here can say
+  # which, so it stays a piece in a hand (see docs/design.md). Nor a pawn
+  # promoting: four pieces, one square, nothing read.
+  defp onto_unread(%{opts: %{dead_squares: false}}), do: nil
+
+  defp onto_unread(tr) do
+    with true <- is_integer(tr.presses) and tr.presses > length(tr.plies),
+         [from] <- Position.diff(tr.phys, tr.raw),
+         {colour, _kind} <- elem(tr.phys, from),
+         true <- colour == tr.pos.turn and elem(tr.raw, from) == nil,
+         [to] <-
+           Chess.moves_from(tr.pos, [from])
+           |> Enum.filter(&(elem(tr.pos.board, &1.to) == nil and Chess.legal?(tr.pos, &1)))
+           |> Enum.map(& &1.to)
+           |> Enum.uniq(),
+         false <- to in tr.dead,
+         [{%{promo: nil} = move, _flags}] <-
+           one_ply(tr.pos, tr.phys, tr.raw, tr.opts.promotion_default, [], [to]) do
+      {to, move}
+    else
+      _no -> nil
     end
   end
 

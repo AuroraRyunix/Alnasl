@@ -704,6 +704,34 @@ defmodule Alnasl.TrackerTest do
     assert alarms(out) == []
   end
 
+  test "a square that broke while empty: the press, a move owed, and only one square the piece could go to" do
+    {tr, b, t} = after_moves(~w(e4 e5))
+    # The king goes to e2, whose sensor has died: only the king gone. Its
+    # one empty square, the clock pressed, and the count says a move is
+    # owed.
+    gone = lift(b, "e1")
+    owed = Tracker.presses(tr, 3)
+    {tr2, out} = feed(owed, [{t, gone}, {t + 1_000, :press}], 3_000)
+    assert Tracker.sans(tr2) == ~w(e4 e5 Ke2)
+    assert Tracker.dead(tr2) == [sq("e2")]
+    assert alarms(out) == []
+
+    # And the game goes on over it.
+    {tr2, _} = feed(tr2, [{t + 5_000, move(gone, "d7", "d6")}], 2_000)
+    assert Tracker.sans(tr2) == ~w(e4 e5 Ke2 d6)
+
+    # The clock's count owes nothing (the press of the move before, late):
+    # a piece in a hand.
+    {tr3, _} = feed(Tracker.presses(tr, 2), [{t, gone}, {t + 1_000, :press}], 3_000)
+    assert Tracker.sans(tr3) == ~w(e4 e5)
+    assert Tracker.dead(tr3) == []
+
+    # Two squares the knight could have gone to: nothing to say which.
+    {tr4, _} = feed(owed, [{t, lift(b, "b1")}, {t + 1_000, :press}], 3_000)
+    assert Tracker.sans(tr4) == ~w(e4 e5)
+    assert Tracker.dead(tr4) == []
+  end
+
   # --- results -----------------------------------------------------------------
 
   test "mate, stalemate and the kings in the centre are suggestions" do
