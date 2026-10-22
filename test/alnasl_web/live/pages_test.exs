@@ -656,7 +656,7 @@ defmodule AlnaslWeb.PagesTest do
            outbox.online outbox.blocked outbox.conflict outbox.server_ahead outbox.discarded door.unlocked door.refused door.throttled setup.saved
            destination.offline destination.online destination.blocked destination.enabled destination.disabled
            table.set table.cleared table.moved table.remapped table.swapped board.recognised
-           board.other_serial board.replaced piece.unseen piece.accounted game.new game.switched move.rewritten move.out_of_turn move.illegal
+           board.other_serial board.replaced piece.unseen piece.accounted square.dead game.new game.switched move.rewritten move.out_of_turn move.illegal
            link.added link.removed link.ok link.unreachable link.unauthorized link.unsupported link.connect_failed
            tournament.added tournament.back tournament.gone tournament.tables tournament.hall_removed table.tournament
            tournament.elsewhere tournament.code_replaced tournament.merged tournament.merge_failed
