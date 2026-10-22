@@ -214,10 +214,12 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
-        with:
-          elixir-version: "1.20"
-          otp-version: "29.0.5"
+      # Not setup-beam: see the script.
+      - name: Erlang/OTP and Elixir
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: .github/scripts/install-beam-windows.ps1 -Otp 29.0.5 -Elixir 1.20.4
 
       - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
         with:
