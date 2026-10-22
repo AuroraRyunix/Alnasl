@@ -909,4 +909,81 @@ defmodule Alnasl.TrackerTest do
     assert Tracker.sans(tr) == ~w(e4 e5 Nf3 Nc6 Bc4 Nf6)
     assert :guessed in Enum.at(tr.plies, 4).flags
   end
+
+  test "a slider resting on its way out of check is not an earlier move misread" do
+    # 3. Qa4+ and the bishop goes f5-e6-d7, resting on e6, where it does
+    # not block the check. Read as the bishop having been on e6 all along
+    # (2...Be6 misread as Bf5), the board would make sense with no move at
+    # all; a slide stops for under a second, so that waits for the press.
+    {tr, b, t} = after_moves(~w(d4 d5 c4 Bf5 Qa4+))
+    rest = move(b, "f5", "e6")
+
+    {tr, out} =
+      feed(
+        tr,
+        [
+          {t, lift(b, "f5")},
+          {t + 80, rest},
+          {t + 700, lift(rest, "e6")},
+          {t + 780, move(rest, "e6", "d7")}
+        ],
+        1_000
+      )
+
+    assert Tracker.sans(tr) == ~w(d4 d5 c4 Bf5 Qa4+ Bd7)
+    assert Enum.all?(tr.plies, &(&1.flags == []))
+    assert alarms(out) == []
+  end
+
+  test "a capture taken back and the hand straight back for another is not the recapture" do
+    # 1. Rg8, 1...Rxg8 taken back, then 1...Rxh7: the black rook in the
+    # air and the h7 pawn lifted leave the board as 2. hxg8=R would. That
+    # waits as a takeback would, and the rook lands on h7.
+    fen = "7r/6RP/8/8/8/k7/8/2K5 w - - 0 1"
+    {tr, _} = Tracker.observe(Tracker.new(start_fen: fen), 0, board(fen))
+    b = board(fen)
+    rg8 = move(b, "g7", "g8")
+    rxg8 = move(rg8, "h8", "g8")
+
+    {tr, out} =
+      feed(
+        tr,
+        [
+          {1_000, lift(b, "g7")},
+          {1_100, rg8},
+          {3_000, lift(rg8, "h8")},
+          {3_100, rg8 |> lift("h8") |> lift("g8")},
+          {3_200, rxg8},
+          {5_000, lift(rxg8, "g8")},
+          {5_100, rg8 |> lift("g8") |> put("h8", {:b, :r})},
+          {5_200, rg8},
+          {6_000, lift(rg8, "h8")},
+          {6_100, rg8 |> lift("h8") |> lift("h7")},
+          {6_600, move(rg8, "h8", "h7")}
+        ],
+        3_000
+      )
+
+    assert "Rxg8" in moves(out)
+    refute "hxg8=R" in moves(out)
+    assert Tracker.sans(tr) == ~w(Rg8 Rxh7)
+    assert alarms(out) == []
+  end
+
+  test "two pawns left standing for knights: the first one's jump is asked about too" do
+    fen = "8/P3P3/8/8/8/8/8/2K4k w - - 0 1"
+    {tr, _} = Tracker.observe(Tracker.new(start_fen: fen), 0, board(fen))
+    b1 = fen |> board() |> move("e7", "e8")
+    b2 = move(b1, "h1", "h2")
+    b3 = move(b2, "a7", "a8")
+    b4 = move(b3, "h2", "h3")
+    b5 = move(b4, "e8", "f6")
+
+    {tr, out} =
+      feed(tr, [{1_000, b1}, {6_000, b2}, {11_000, b3}, {16_000, b4}, {21_000, b5}], 6_000)
+
+    assert Enum.at(Tracker.sans(tr), 0) == "e8=N"
+    assert Enum.at(Tracker.sans(tr), 4) == "Nf6"
+    assert alarms(out) == []
+  end
 end
