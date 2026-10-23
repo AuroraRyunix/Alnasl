@@ -9,7 +9,8 @@ defmodule Mix.Tasks.Alnasl.Bench do
 
   Every bundled game (`priv/games/*.pgn`) is played once per pass under each
   fault mix of `Alnasl.Bench.suites/0`. The first columns are the verdicts
-  of `Alnasl.Bench`, a game each: `silent` is the one that must stay zero,
+  of `Alnasl.Bench`, a game each: `silent` is the one that must stay zero
+  (`warned` is the same with "Move missing?" standing on the tile),
   and `rec WRONG` / `guess WRONG` are the games that ended as a game that
   was not played, marked orange or red where they leave it. `assumed` is
   the games in which only what a pawn became differs, at a promotion the
@@ -84,7 +85,7 @@ defmodule Mix.Tasks.Alnasl.Bench do
 
       header =
         String.pad_trailing("fault mix", 46) <>
-          "  exact  rec ok  rec WRONG  guess ok  guess WRONG  assumed  flagged  alarm  misread  silent   faults    rec plies  guess plies  alarms  named  worst search  gave up"
+          "  exact  rec ok  rec WRONG  guess ok  guess WRONG  assumed  flagged  alarm  misread  warned  silent   faults    rec plies  guess plies  alarms  named  worst search  gave up"
 
       Mix.shell().info(header)
       if opts[:out], do: File.mkdir_p!(opts[:out])
@@ -139,6 +140,7 @@ defmodule Mix.Tasks.Alnasl.Bench do
       v.(:flagged, 9) <>
       v.(:alarm, 7) <>
       v.(:unnoticed, 9) <>
+      v.(:warned, 8) <>
       v.(:silent, 8) <>
       n.(m.faults, 9) <>
       String.pad_leading("#{m.recovered_wrong}/#{m.recovered}", 13) <>

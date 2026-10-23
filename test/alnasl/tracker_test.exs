@@ -986,4 +986,22 @@ defmodule Alnasl.TrackerTest do
     assert Enum.at(Tracker.sans(tr), 4) == "Nf6"
     assert alarms(out) == []
   end
+
+  test "a position come round again while the clock counted the moves is not a takeback" do
+    # 2...Nc6 3. Ng1 Nb8 go by unread, three presses with them: the board
+    # is back to how it was before 2. Nf3, which by itself is that move
+    # taken back. Nobody presses the clock for a takeback, so it is not
+    # one. Which knight went out and back nobody saw either, so the box
+    # says what it sees - a white knight moved out of turn - and leaves
+    # the game as it was.
+    {tr, b, t} = after_moves(~w(e4 e5 Nf3))
+    tr = Tracker.presses(tr, 3)
+    back = move(b, "f3", "g1")
+
+    {tr, out} = feed(tr, [{t, back}, {t + 400, {:presses, 6}}], 6_000)
+
+    refute Enum.any?(out, &match?({_, {:correction, _, _, :takeback}}, &1))
+    assert Tracker.sans(tr) == ~w(e4 e5 Nf3)
+    assert [{:out_of_turn, %{san: "Ng1"}}] = alarms(out)
+  end
 end

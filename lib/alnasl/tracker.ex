@@ -1014,7 +1014,7 @@ defmodule Alnasl.Tracker do
               do: tr |> dies(square) |> accept(t, [{move, []}], []),
               else: set_status(tr, :settling, :move)
 
-          (k = takeback(tr)) != nil and not replayable?(tr, k) ->
+          (k = takeback(tr)) != nil and not replayable?(tr, k) and not pressed_past?(tr) ->
             cond do
               stable < o.takeback_settle_ms ->
                 set_status(tr, :settling, :takeback)
@@ -1034,7 +1034,7 @@ defmodule Alnasl.Tracker do
             {keep, steps} = fix
             correct(tr, t, keep, steps, :promotion)
 
-          (step = revision(tr)) != nil ->
+          (step = not pressed_past?(tr) && revision(tr)) not in [nil, false] ->
             correct(tr, t, length(tr.plies) - 1, [step], :revised)
 
           (heard = crosstalk(tr)) != nil ->
@@ -1088,8 +1088,10 @@ defmodule Alnasl.Tracker do
       # The same hand, over the position of a move ago: a move being taken
       # back with a piece still in the air. A king that steps aside, lets a
       # queen take its place and takes her, leaves the same board - so this
-      # one is searched after all, but only once it has stood still.
-      stable < tr.opts.deep_settle_ms and tr.opts.takeback and
+      # one is searched after all, but only once it has stood still. Not
+      # when the clock was pressed for moves the game does not have: then
+      # it is a position come round again (`pressed_past?/1`).
+      stable < tr.opts.deep_settle_ms and tr.opts.takeback and not pressed_past?(tr) and
           tr.history
           |> Enum.take(tr.opts.takeback_plies)
           |> Enum.any?(&Position.in_hand?(&1.phys, tr.raw)) ->
@@ -1166,12 +1168,13 @@ defmodule Alnasl.Tracker do
         hand?(tr) ->
           []
 
-        # The side to move's own piece, lifted and set down beside where
-        # the game has it, with nothing else changed: a straightened piece
-        # if the clock says the turn is over, and a rook, bishop or queen
-        # resting on its way while it is not. A slide stops for well under
-        # a second, so the rewrite waits for the press, or for the board
-        # to have stood long enough that nobody is still moving.
+        # The side to move's own slider, in check, lifted and set down
+        # beside where the game has it, with nothing else changed: a
+        # straightened piece if the clock says the turn is over, and a
+        # rook, bishop or queen resting on its way while it is not. A slide
+        # stops for well under a second, so the rewrite waits for the
+        # press, or for the board to have stood long enough that nobody is
+        # still moving.
         not pressed_since?(tr) ->
           Enum.reject(rewrites(tr), &(&1.takes? or own_rest?(tr, &1)))
 
@@ -1242,13 +1245,18 @@ defmodule Alnasl.Tracker do
   # took her there".)
   defp pressed_since?(tr), do: tr.pressed_at != nil and tr.pressed_at >= tr.raw_since
 
-  # A rewrite that adds no move and moves a piece of the side to move.
+  # A rewrite that adds no move and moves a rook, bishop or queen of the
+  # side to move, which is in check. Out of check the square it rests on is
+  # a legal move and is taken as one (rule 2, then replaced by rule 4 when
+  # the piece goes on); in check it usually is not, and only then does the
+  # rest look like an old move misread.
   defp own_rest?(tr, line) do
     {move, _flags} = hd(line.steps)
     before = Enum.at(tr.history, line.back - 1)
     turn = tr.pos.turn
 
-    line.new == 0 and match?({^turn, _}, elem(before.pos.board, move.from))
+    line.new == 0 and Chess.in_check?(tr.pos, turn) and
+      match?({^turn, kind} when kind in [:r, :b, :q], elem(before.pos.board, move.from))
   end
 
   defp hand?(tr) do
@@ -2480,6 +2488,19 @@ defmodule Alnasl.Tracker do
       nil -> nil
       index -> index + 1
     end
+  end
+
+  # The clock has been pressed for two moves more than the game has: it
+  # knows of moves the box does not. (One more is only the press of the
+  # move on the board, come in before the move was taken.) A board that reads as it did a ply or two ago
+  # is then a position come round again by moves nobody saw - a rook giving
+  # check from f1 and going back to a1, the king walking to e2 and back -
+  # and not a move taken back, which nobody presses the clock for. The
+  # search gets the board instead (`pressed_for/3`). Not while the board is
+  # not heard, and the lever pressed twice over a board that did not change
+  # (`idle`) is no move.
+  defp pressed_past?(tr) do
+    not tr.deaf? and is_integer(tr.presses) and tr.presses - tr.idle > length(tr.plies) + 1
   end
 
   # The board reads as it did two plies ago. Taken back - or played back: a

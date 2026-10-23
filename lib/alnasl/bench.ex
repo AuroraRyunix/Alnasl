@@ -30,8 +30,13 @@ defmodule Alnasl.Bench do
   - `:unnoticed` - the moves differ at a move the simulator had the board
     misread (`:between`), nothing marks it or anything after it, and
     nothing could: see `unnoticed/3`;
+  - `:warned` - the moves differ and nothing marks the place, but the
+    clock says moves are missing, and the tile says so: "Move missing?"
+    stands at the end (more presses than moves, by two). Moves nobody saw,
+    in a position that came round again, leave nothing else behind;
   - `:silent` - the moves differ and nothing marks the place, or moves are
-    missing with no alarm. **This is the one that must never happen.**
+    missing with no alarm and no warning. **This is the one that must
+    never happen.**
   """
 
   alias Alnasl.{Pgn, Session, Tracker}
@@ -47,6 +52,7 @@ defmodule Alnasl.Bench do
           | :flagged
           | :alarm
           | :unnoticed
+          | :warned
           | :silent
 
   @doc """
@@ -76,7 +82,8 @@ defmodule Alnasl.Bench do
   # never took it back: every move after it was legal with the piece where
   # it was read. No reading tells this game from the one played, so it is
   # counted, and not as the tracker's silence.
-  defp unnoticed(%{verdict: :silent, difference: {ply, _mine, _truth}} = judged, log, later) do
+  defp unnoticed(%{verdict: verdict, difference: {ply, _mine, _truth}} = judged, log, later)
+       when verdict in [:silent, :warned] do
     cond do
       {ply, :between} not in log -> judged
       # It was found out after all, and what the box then made of it is
@@ -108,6 +115,7 @@ defmodule Alnasl.Bench do
         assumed?(tr, truth, elem(difference, 0)) -> :assumed
         true -> wrong(tr, out, elem(difference, 0))
       end
+      |> warned(session)
 
     %{
       verdict: verdict,
@@ -168,6 +176,10 @@ defmodule Alnasl.Bench do
   end
 
   defp unpromoted(san), do: String.replace(san, ~r/=[QRBN]|[+#!?]+$/, "")
+
+  # Unmarked, but with "Move missing?" on the tile when the game ended.
+  defp warned(:silent, %{missing?: true}), do: :warned
+  defp warned(verdict, _session), do: verdict
 
   defp prefix?(short, long),
     do: Pgn.first_difference(short, Enum.take(long, length(short))) == :same

@@ -90,12 +90,51 @@ not see how; that is out of sync like any other.
   `promotion_hold_ms` (4 s) as the default piece (a queen, configurable) and
   flagged `assumed`; `phys` remembers that this "queen" reads as a pawn, so
   it can move on as one. A queen put there later changes nothing; another
-  piece rewrites the promotion and replays the moves after it. See
+  piece rewrites the promotion and replays the moves after it. A "queen"
+  that then moves as only another piece can is rewritten into that piece -
+  every assumed promotion of the last 60 plies is asked, latest first, so
+  the first of two pawns left for knights is found out when it jumps. See
   "A promotion taken at once" below for the hard version.
 - **A repeated position is not a takeback** when legal moves explain it. A
   queen checking from f1 and f2 in turn returns the board to where it was
   two plies ago; rule 5 is asked before rule 3 for takebacks of more than
   one ply.
+- **The next hand before the move has landed.** Rule 6 needs the move to
+  have been on the board alone for one reading; in a hall the next player
+  sometimes has a piece up while the last one is still in the air. The
+  board is then one legal move on, but for one or two pieces of the side
+  that moves next, missing from squares the move does not touch
+  (`move_and_lift/1`). Believed after `settle_ms` or on a press, and only
+  when a reading shows the moved piece gone from its square while those
+  pieces were still on theirs - pieces that vanish in the same reading as
+  the move are moves nobody saw, not a hand. And not when the missing
+  piece stood beside where the move lands and came there in the last few
+  moves: that is as likely the move's capture, read one square off.
+- **A knocked piece put back under the next hand.** A piece knocked onto a
+  square it could legally go to stands there like a move and, without
+  takebacks (the fast-play preset), is one. When it goes back while the
+  next hand is already over the board, no position the game holds leads
+  on. On a press, or once the board has stood `deep_settle_ms`, the last
+  ply is dropped and the board searched from before it, by the squares
+  that changed, for a line of at most three moves that does not make the
+  dropped move again (`undone/2`). Marked red: a move that was seen is
+  being unsaid.
+- **A slider resting on its way out of check.** A bishop going f5-e6-d7
+  against a check from a4 rests on e6, where it blocks nothing. The board
+  then makes sense with no move at all if the bishop's earlier move went to
+  e6 and was misread as f5 - and the misread rule used to say exactly
+  that, 250 ms in. A rewrite that adds no move and moves a piece of the
+  side to move now waits for the press, or for `deep_settle_ms`: a slide
+  stops for well under a second, a straightened piece is followed by the
+  clock.
+- **A capture taken back, and the hand straight back for another.** 1...Rxg8
+  taken back, and the same rook lifted for 1...Rxh7 with the h7 pawn
+  already off: for a moment the board is 2. hxg8=R, the rook just taken
+  back on its square and the piece that took it gone. A move that puts
+  back on the last ply's square exactly the piece that ply captured, after
+  the board was seen back where it was before that ply, is held for
+  `takeback_settle_ms`, or until the press (`echo?/2`). A real recapture
+  with a piece of the same kind waits the same way.
 - **The result.** Mate, stalemate and bare kings are read from the position;
   the kings set on the four centre squares is the players' signal (ASSUMED
   convention: both on light squares 1-0, both on dark 0-1, one on each a
@@ -692,6 +731,14 @@ gains what the running side loses, is recognised at its first such reading
 and its times are not used for presses after it. In the 15,000 readings of
 the real board's clock from 2026-10-11/12 the waiting side's time never
 moved, so nothing in those games changes.
+
+A press with nothing changed on the board since the last press - the lever
+knocked back and pressed again, a hand on the wrong side - is counted but
+kept apart (`idle`): `pressed_for/3` does not look for a longer line on its
+account. Except while the board is not heard: then nothing changing says
+nothing, and every press is a move. Without this, the bench's "lever
+knocked back" fault at bullet speed turned 25 of 69 games into longer,
+wrong, red lines.
 
 Measured with `mix alnasl.bench --passes 3`, the same seeds before and
 after. Every suite not shown is identical in every column; "missed" is the

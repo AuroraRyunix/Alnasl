@@ -133,7 +133,8 @@
       "alarms": 4,
       "marks": [
         "1. e4: recovered",
-        "2. e5: recovered"
+        "2. e5: recovered",
+        "3. Nc3: guessed,alone"
       ],
       "moves": [
         "e4",
