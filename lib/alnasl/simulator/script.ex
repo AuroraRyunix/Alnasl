@@ -194,6 +194,9 @@ defmodule Alnasl.Simulator.Script do
       clock_at: 0,
       hidden: nil,
       crooked: nil,
+      # The square of a piece the next ply's hand has already lifted
+      # (`:overlap`).
+      prelifted: nil,
       # Crosstalk that lasts: `[%{square, piece, as, until}]` - the square
       # reads `as` while `piece` stands on it (see "Crosstalk").
       crosstalk: [],
@@ -322,6 +325,8 @@ defmodule Alnasl.Simulator.Script do
     {think, st} =
       cond do
         st.derailed -> {o.long_think_ms, st}
+        # The piece is already in the hand.
+        st.prelifted != nil -> between(st, {80, 400})
         # The new piece is taken before it has stood a quarter of a second.
         quick_capture?(st, number) -> between(st, {10, 60})
         true -> between(st, o.think_ms)
@@ -371,10 +376,14 @@ defmodule Alnasl.Simulator.Script do
           |> silent_press(pos)
           |> Map.put(:mute, false)
         else
-          %{st | streak: 0}
-          |> disturbances(pos, number)
-          |> maybe_takeback(pos, move, number)
-          |> played(pos, move, number)
+          if st.prelifted != nil do
+            played(%{st | streak: 0}, pos, move, number)
+          else
+            %{st | streak: 0}
+            |> disturbances(pos, number)
+            |> maybe_takeback(pos, move, number)
+            |> played(pos, move, number)
+          end
         end
     end
   end
@@ -382,6 +391,41 @@ defmodule Alnasl.Simulator.Script do
   # The move as the hands of this ply make it: slammed or not, with or
   # without a neighbour going over.
   defp played(st, pos, move, number) do
+    case overlap(st, pos, move, number) do
+      {:ok, st} -> st |> maybe_press(pos, number)
+      :no -> played_alone(st, pos, move, number)
+    end
+  end
+
+  # The `:overlap` fault: the next hand is on the board before this move
+  # has landed. The opponent lifts the piece of his next move (a quiet one,
+  # not from a square this move uses) while this piece is still in the air;
+  # it comes down on its square at the start of the next ply.
+  defp overlap(%{prelifted: nil} = st, _pos, move, number) do
+    {yes?, st} = chance(st, :overlap)
+    next = yes? && Enum.at(st.positions, number)
+
+    with {_board, nm} <- next,
+         true <- move.kind in [:normal, :double] and move.capture == nil and move.promo == nil,
+         true <- nm.kind in [:normal, :double] and nm.capture == nil and nm.promo == nil,
+         true <- nm.from not in [move.from, move.to] and nm.to not in [move.from, move.to],
+         true <- elem(st.b, nm.from) != nil and st.unplug_left == 0 do
+      piece = elem(st.b, move.from)
+
+      st =
+        st
+        |> note(number, :overlap)
+        |> steps([{:lift, move.from}, {:lift, nm.from}, {:put, move.to, piece}])
+
+      {:ok, %{st | prelifted: nm.from}}
+    else
+      _no -> :no
+    end
+  end
+
+  defp overlap(_st, _pos, _move, _number), do: :no
+
+  defp played_alone(st, pos, move, number) do
     {slam?, st} = chance(st, :slam)
     {topple?, st} = chance(st, :topple)
 
@@ -396,18 +440,58 @@ defmodule Alnasl.Simulator.Script do
 
     bystanders = for sq <- occupied(st.b), sq != move.to, do: sq
 
-    if topple? and bystanders != [] do
-      {square, st} = pick(st, bystanders)
-      piece = elem(st.b, square)
+    st =
+      if topple? and bystanders != [] do
+        {square, st} = pick(st, bystanders)
+        piece = elem(st.b, square)
 
-      st
-      |> note(number, :topple)
-      |> steps([{:lift, square}], {20, 80})
-      |> maybe_press(pos, number)
-      |> pause(st.o.fault_ms)
-      |> steps([{:put, square, piece}])
+        st
+        |> note(number, :topple)
+        |> steps([{:lift, square}], {20, 80})
+        |> maybe_press(pos, number)
+        |> pause(st.o.fault_ms)
+        |> steps([{:put, square, piece}])
+      else
+        maybe_press(st, pos, number)
+      end
+
+    adjust(st, pos.turn, number)
+  end
+
+  # The `:adjust` fault: j'adoube on the opponent's time. The player who
+  # has just moved and pressed straightens one to three of his own pieces,
+  # each lifted and set back on its square - now and then two in the air at
+  # once.
+  defp adjust(st, colour, number) do
+    {yes?, st} = chance(st, :adjust)
+    mine = occupied(st.b, colour)
+
+    if yes? and mine != [] do
+      {count, st} = between(st, {1, 3})
+
+      {squares, st} =
+        Enum.reduce(1..count, {[], st}, fn _i, {acc, st} ->
+          case mine -- acc do
+            [] -> {acc, st}
+            left -> pick(st, left) |> then(fn {sq, st} -> {[sq | acc], st} end)
+          end
+        end)
+
+      {pairs?, st} = pick(st, [false, false, true])
+      st = st |> note(number, :adjust) |> pause({100, 600})
+
+      squares
+      |> Enum.reverse()
+      |> then(fn sqs -> if pairs?, do: Enum.chunk_every(sqs, 2), else: Enum.map(sqs, &[&1]) end)
+      |> Enum.reduce(st, fn group, st ->
+        pieces = Enum.map(group, &{&1, elem(st.b, &1)})
+
+        st
+        |> steps(Enum.map(group, &{:lift, &1}), {60, 300})
+        |> steps(Enum.map(pieces, fn {sq, piece} -> {:put, sq, piece} end), {60, 300})
+      end)
     else
-      maybe_press(st, pos, number)
+      st
     end
   end
 
@@ -551,6 +635,18 @@ defmodule Alnasl.Simulator.Script do
     end
   end
 
+  defp neighbour_squares(square) do
+    {file, rank} = {rem(square, 8), div(square, 8)}
+
+    for df <- -1..1,
+        dr <- -1..1,
+        {df, dr} != {0, 0},
+        f = file + df,
+        r = rank + dr,
+        f in 0..7 and r in 0..7,
+        do: r * 8 + f
+  end
+
   defp neighbours(board, square) do
     {file, rank} = {rem(square, 8), div(square, 8)}
 
@@ -614,7 +710,15 @@ defmodule Alnasl.Simulator.Script do
 
   # --- the move itself ---------------------------------------------------------
 
-  defp play(st, pos, move, faults?, number \\ 0) do
+  defp play(st, pos, move, faults?, number \\ 0)
+
+  # The piece of this move was lifted during the last one (`:overlap`).
+  defp play(%{prelifted: from} = st, pos, %{from: from} = move, _faults?, _number)
+       when from != nil do
+    steps(%{st | prelifted: nil}, [{:put, move.to, {pos.turn, move.piece}}])
+  end
+
+  defp play(st, pos, move, faults?, number) do
     us = pos.turn
     piece = elem(st.b, move.from)
 
@@ -822,7 +926,7 @@ defmodule Alnasl.Simulator.Script do
   # --- what hands do besides moving --------------------------------------------
 
   defp disturbances(st, pos, number) do
-    Enum.reduce([:hover, :lift, :knock, :swap], st, fn fault, st ->
+    Enum.reduce([:hover, :lift, :knock, :swap, :knock_over], st, fn fault, st ->
       {yes?, st} = chance(st, fault)
       if yes?, do: st |> note(number, fault) |> disturb(fault, pos), else: st
     end)
@@ -859,6 +963,27 @@ defmodule Alnasl.Simulator.Script do
     |> pause(st.o.fault_ms)
     |> steps([{:put, square, piece}])
     |> pause()
+  end
+
+  # Knocked over onto the square beside it, where it reads, and put back.
+  defp disturb(st, :knock_over, _pos) do
+    options =
+      for sq <- occupied(st.b), to <- neighbour_squares(sq), elem(st.b, to) == nil, do: {sq, to}
+
+    case options do
+      [] ->
+        st
+
+      options ->
+        {{from, to}, st} = pick(st, options)
+        piece = elem(st.b, from)
+
+        st
+        |> steps([{:lift, from}, {:put, to, piece}], {20, 80})
+        |> pause(st.o.fault_ms)
+        |> steps([{:lift, to}, {:put, from, piece}])
+        |> pause()
+    end
   end
 
   defp disturb(st, :swap, pos) do
@@ -954,20 +1079,41 @@ defmodule Alnasl.Simulator.Script do
       else: press(st, pos, number)
   end
 
-  defp press(st, pos, _number) do
+  defp press(st, pos, number) do
     {delay, st} = between(st, st.o.press_ms)
     st = st |> wait(delay) |> silent_press(pos)
 
+    st = tell(st, other(pos.turn))
+    {back?, st} = chance(st, :press_back)
+
+    if back? do
+      # The lever knocked back - the opponent's clock stops, with its
+      # increment - and pressed again a moment later.
+      them = other(pos.turn)
+      {d1, st} = between(st, {300, 1_500})
+      st = st |> note(number, :press_back) |> wait(d1) |> paid(them) |> tell(pos.turn)
+      {d2, st} = between(st, {300, 1_200})
+      st |> wait(d2) |> paid(pos.turn) |> tell(them)
+    else
+      st
+    end
+  end
+
+  defp paid(st, :w), do: %{st | white: st.white + st.o.increment_ms, pressed_at: st.t}
+  defp paid(st, :b), do: %{st | black: st.black + st.o.increment_ms, pressed_at: st.t}
+
+  # What the clock tells the box: at once, or as late as it lags.
+  defp tell(st, running) do
     cond do
       not st.o.clock ->
         st
 
       st.o.clock_lag_ms == nil ->
-        emit(st, {:clock, reading(st, other(pos.turn))})
+        emit(st, {:clock, reading(st, running)})
 
       true ->
         {lag, st} = between(st, st.o.clock_lag_ms)
-        emit_at(st, st.t + lag, {:clock, reading(st, other(pos.turn))})
+        emit_at(st, st.t + lag, {:clock, reading(st, running)})
     end
   end
 

@@ -30,8 +30,13 @@ defmodule Alnasl.Bench do
   - `:unnoticed` - the moves differ at a move the simulator had the board
     misread (`:between`), nothing marks it or anything after it, and
     nothing could: see `unnoticed/3`;
+  - `:warned` - the moves differ and nothing marks the place, but the
+    clock says moves are missing, and the tile says so: "Move missing?"
+    stands at the end (more presses than moves, by two). Moves nobody saw,
+    in a position that came round again, leave nothing else behind;
   - `:silent` - the moves differ and nothing marks the place, or moves are
-    missing with no alarm. **This is the one that must never happen.**
+    missing with no alarm and no warning. **This is the one that must
+    never happen.**
   """
 
   alias Alnasl.{Pgn, Session, Tracker}
@@ -47,6 +52,7 @@ defmodule Alnasl.Bench do
           | :flagged
           | :alarm
           | :unnoticed
+          | :warned
           | :silent
 
   @doc """
@@ -76,7 +82,8 @@ defmodule Alnasl.Bench do
   # never took it back: every move after it was legal with the piece where
   # it was read. No reading tells this game from the one played, so it is
   # counted, and not as the tracker's silence.
-  defp unnoticed(%{verdict: :silent, difference: {ply, _mine, _truth}} = judged, log, later) do
+  defp unnoticed(%{verdict: verdict, difference: {ply, _mine, _truth}} = judged, log, later)
+       when verdict in [:silent, :warned] do
     cond do
       {ply, :between} not in log -> judged
       # It was found out after all, and what the box then made of it is
@@ -108,6 +115,7 @@ defmodule Alnasl.Bench do
         assumed?(tr, truth, elem(difference, 0)) -> :assumed
         true -> wrong(tr, out, elem(difference, 0))
       end
+      |> warned(session)
 
     %{
       verdict: verdict,
@@ -168,6 +176,10 @@ defmodule Alnasl.Bench do
   end
 
   defp unpromoted(san), do: String.replace(san, ~r/=[QRBN]|[+#!?]+$/, "")
+
+  # Unmarked, but with "Move missing?" on the tile when the game ended.
+  defp warned(:silent, %{missing?: true}), do: :warned
+  defp warned(verdict, _session), do: verdict
 
   defp prefix?(short, long),
     do: Pgn.first_difference(short, Enum.take(long, length(short))) == :same
@@ -241,6 +253,111 @@ defmodule Alnasl.Bench do
   end
 
   @doc """
+  `matrix/4` for thousands of games: the same runs and the same seeds, but
+  nothing of a run is kept beyond a few numbers - a tracker holds every
+  position of its game, and ten thousand of them do not fit in one summary.
+  The runs that did not end `:exact` are kept as `failures`, slim, with
+  what it takes to play one again (`index`, `seed`, the faults played).
+
+  `opts`: `:seed_base` (added to every seed: another sample of the same
+  games), `:concurrency` (default: the schedulers online).
+  """
+  def scale(games, sim, tracker \\ [], passes \\ 1, opts \\ []) do
+    base = opts[:seed_base] || 0
+    games = Enum.with_index(games, 1)
+
+    empty = %{
+      games: 0,
+      faulted: 0,
+      plies: 0,
+      verdicts: %{},
+      alarms: 0,
+      corrections: 0,
+      recovered: 0,
+      guessed: 0,
+      named: 0,
+      named_games: 0,
+      recovered_wrong: 0,
+      guessed_wrong: 0,
+      faults: 0,
+      searches: 0,
+      max_nodes: 0,
+      max_search_ms: 0.0,
+      budget_hits: 0,
+      failures: [],
+      bad: []
+    }
+
+    for(pass <- 1..passes, {game, index} <- games, do: {pass, game, index})
+    |> Task.async_stream(
+      fn {pass, game, index} ->
+        options = if is_function(sim), do: sim.({index, pass}), else: sim
+        seed = base + index * 1000 + pass
+        r = play(game.moves, Map.put(Map.new(options), :seed, seed), tracker)
+
+        %{
+          index: index,
+          pass: pass,
+          seed: seed,
+          verdict: r.verdict,
+          difference: r.difference,
+          alarms: r.alarms,
+          corrections: r.corrections,
+          recovered: r.recovered,
+          guessed: r.guessed,
+          named: r.named,
+          recovered_wrong: r.recovered_wrong,
+          guessed_wrong: r.guessed_wrong,
+          plies: length(r.session.tracker.plies),
+          log: r.log,
+          stats: r.stats
+        }
+      end,
+      timeout: :infinity,
+      ordered: false,
+      max_concurrency: opts[:concurrency] || System.schedulers_online()
+    )
+    |> Enum.reduce(empty, fn {:ok, r}, acc ->
+      acc =
+        Enum.reduce(
+          ~w(alarms corrections recovered guessed named recovered_wrong guessed_wrong plies)a,
+          acc,
+          fn key, acc -> %{acc | key => Map.fetch!(acc, key) + Map.fetch!(r, key)} end
+        )
+
+      %{
+        acc
+        | games: acc.games + 1,
+          faulted: acc.faulted + if(r.log == [], do: 0, else: 1),
+          verdicts: Map.update(acc.verdicts, r.verdict, 1, &(&1 + 1)),
+          named_games: acc.named_games + if(r.named > 0, do: 1, else: 0),
+          faults: acc.faults + length(r.log),
+          searches: acc.searches + r.stats.searches,
+          max_nodes: max(acc.max_nodes, r.stats.max_nodes),
+          max_search_ms: max(acc.max_search_ms, r.stats.max_us / 1000),
+          budget_hits: acc.budget_hits + r.stats.budget_hits,
+          failures:
+            if(r.verdict == :exact,
+              do: acc.failures,
+              else: [Map.delete(r, :stats) | acc.failures]
+            ),
+          bad:
+            if(r.verdict == :silent,
+              do: [{r.index, r.seed, r.difference, r.log} | acc.bad],
+              else: acc.bad
+            )
+      }
+    end)
+    |> then(fn acc ->
+      %{
+        acc
+        | failures: Enum.sort_by(acc.failures, &{&1.index, &1.pass}),
+          bad: Enum.sort(acc.bad)
+      }
+    end)
+  end
+
+  @doc """
   The fault mixes the bench reports on, as `{name, kind, simulator options,
   tracker options}`. The last three are fast play
   (`Alnasl.Simulator.Script.profile(:bullet)`): at speed alone, with the
@@ -258,7 +375,27 @@ defmodule Alnasl.Bench do
         {"bullet speed, no faults, fast-play preset", :fast_clean, Map.put(bullet, :faults, %{}),
          fast},
         {"bullet: slams, knocks, missed plies; preset", :bullet, bullet, fast}
-      ]
+      ] ++ hall(bullet, fast)
+  end
+
+  # What hands in a hall do besides the above (`Alnasl.Simulator.Script`,
+  # "Faults"): j'adoube on the opponent's time, a piece knocked onto the
+  # square beside it and put back, the next hand lifting its piece before
+  # this move has landed, the clock's lever knocked back and pressed again.
+  defp hall(bullet, fast) do
+    new = [:adjust, :knock_over, :overlap, :press_back]
+    benign = [:hover, :lift, :knock, :swap, :clock_miss, :leave_pawn, :takeback, :slide]
+
+    [
+      {"j'adoube on the opponent's time 20%", :hall, %{faults: %{adjust: 0.2}}, []},
+      {"knocked onto the next square, put back 10%", :hall, %{faults: %{knock_over: 0.1}}, []},
+      {"the next hand lifts before the move lands 20%", :hall, %{faults: %{overlap: 0.2}}, []},
+      {"the lever knocked back and pressed again 10%", :hall, %{faults: %{press_back: 0.1}}, []},
+      {"the four of them 5% + the benign faults 5%", :hall,
+       %{faults: Map.new(new ++ benign, &{&1, 0.05})}, []},
+      {"bullet + the four of them 10%; preset", :hall_bullet,
+       Map.update!(bullet, :faults, &Map.merge(&1, Map.new(new, fn f -> {f, 0.1} end))), fast}
+    ]
   end
 
   defp classical do

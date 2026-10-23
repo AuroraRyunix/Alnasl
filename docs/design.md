@@ -90,12 +90,76 @@ not see how; that is out of sync like any other.
   `promotion_hold_ms` (4 s) as the default piece (a queen, configurable) and
   flagged `assumed`; `phys` remembers that this "queen" reads as a pawn, so
   it can move on as one. A queen put there later changes nothing; another
-  piece rewrites the promotion and replays the moves after it. See
+  piece rewrites the promotion and replays the moves after it. A "queen"
+  that then moves as only another piece can is rewritten into that piece -
+  every assumed promotion of the last 60 plies is asked, latest first, so
+  the first of two pawns left for knights is found out when it jumps. See
   "A promotion taken at once" below for the hard version.
 - **A repeated position is not a takeback** when legal moves explain it. A
   queen checking from f1 and f2 in turn returns the board to where it was
   two plies ago; rule 5 is asked before rule 3 for takebacks of more than
   one ply.
+- **The next hand before the move has landed.** Rule 6 needs the move to
+  have been on the board alone for one reading; in a hall the next player
+  sometimes has a piece up while the last one is still in the air. The
+  board is then one legal move on, but for one or two pieces of the side
+  that moves next, missing from squares the move does not touch
+  (`move_and_lift/1`). Believed after `settle_ms` or on a press, and only
+  when a reading shows the moved piece gone from its square while those
+  pieces were still on theirs - pieces that vanish in the same reading as
+  the move are moves nobody saw, not a hand. And not when the missing
+  piece stood beside where the move lands and came there in the last few
+  moves: that is as likely the move's capture, read one square off.
+- **A knocked piece put back under the next hand.** A piece knocked onto a
+  square it could legally go to stands there like a move and, without
+  takebacks (the fast-play preset), is one. When it goes back while the
+  next hand is already over the board, no position the game holds leads
+  on. On a press, or once the board has stood `deep_settle_ms`, the last
+  ply is dropped and the board searched from before it, by the squares
+  that changed, for a line of at most three moves that does not make the
+  dropped move again (`undone/2`). Marked red: a move that was seen is
+  being unsaid.
+- **A slider resting on its way out of check.** A bishop going f5-e6-d7
+  against a check from a4 rests on e6, where it blocks nothing. The board
+  then makes sense with no move at all if the bishop's earlier move went to
+  e6 and was misread as f5 - and the misread rule used to say exactly
+  that, 250 ms in. A rewrite that adds no move and puts back a rook,
+  bishop or queen of the side to move, while that side is in check, now
+  waits for the press, or for `deep_settle_ms`: a slide stops for well
+  under a second, a straightened piece is followed by the clock. Waiting
+  for every piece of the side to move, check or not, was tried first; it
+  cost more misreads read wrong than it saved.
+- **A capture taken back, and the hand straight back for another.** 1...Rxg8
+  taken back, and the same rook lifted for 1...Rxh7 with the h7 pawn
+  already off: for a moment the board is 2. hxg8=R, the rook just taken
+  back on its square and the piece that took it gone. A move that puts
+  back on the last ply's square exactly the piece that ply captured, after
+  the board was seen back where it was before that ply, is held for
+  `takeback_settle_ms`, or until the press (`echo?/2`). A real recapture
+  with a piece of the same kind waits the same way.
+- **A move taken back while the game goes on.** A move stands, is taken
+  back, and before the takeback has stood its `takeback_settle_ms` the
+  player makes another move and the opponent's hand is already up - two
+  hall habits at once. The board is then explained from after the move
+  taken back by some longer line, which used to go in behind the move
+  that was taken back, that move unmarked. Now, when the board was seen
+  back where it stood before the last move, the search from before it
+  (`undone/2`) is asked as well, on the press or once the board has
+  stood `deep_settle_ms`, and wins if it needs fewer moves in all
+  (`undo_instead/3`), searching as deep as the line it has to beat; a
+  piece still in the air over a move from there is
+  waited for, as any hand is. Red: a move that was seen is being unsaid.
+  Over 10,000 games of the four hall faults with the benign ones, this
+  and the next hand together took the unmarked wrong games from 114 to 0.
+  `undone/2` also compares moves by their squares now, not their
+  notation: Black's Rf3 is not White's Rf3 made again.
+- **A guess revised is still a guess.** Rule 4 rewrites the last move
+  into the one move from the position before it that the board now
+  shows. When the last move was a red guess, the move it becomes is red
+  too: what put the guess in doubt is the board that made it a guess. The
+  case that found it: a knight lifted beside a square that kept reading
+  the knight that had left it, guessed onto that square, then "revised"
+  into the other knight - unmarked, and wrong.
 - **The result.** Mate, stalemate and bare kings are read from the position;
   the kings set on the four centre squares is the players' signal (ASSUMED
   convention: both on light squares 1-0, both on dark 0-1, one on each a
@@ -186,7 +250,10 @@ the rest of the game.
   moved off it, and it went on reading nothing - which a pocket does too.
   It is found out when, later, a piece vanishes in the one way that is a
   legal move onto the suspected square, and the clock is pressed for it.
-  On time alone it is not: a piece parked beside the board vanishes too,
+  A pawn promoting onto it goes in as a queen marked assumed, like any
+  promotion onto a square nothing is read on: the flag used to be lost
+  on this path, and an underpromotion there was a wrong move nobody
+  marked (2 games in 10,000). On time alone it is not: a piece parked beside the board vanishes too,
   and an earlier version that believed the hold declared live squares
   dead in the bench's "piece not seen" suites. A square that breaks while empty and is first used by
   a piece arriving is not caught: that piece becomes a piece out of sight
@@ -346,6 +413,26 @@ until the piece is touched.
 - **Said, not alarmed.** A piece heard as another for `unseen_hold_ms`
   goes on the `confused` list; the board's page and the Round tile say
   "White bishop on e4 reads as a knight" for as long as it lasts.
+- **A hand beside it is a hand.** A piece heard as another while the
+  rest of the board agreed with the game (`misheard`) is put back as the
+  game has it before the board is judged a hand, for as long as it reads
+  the same (`unheard/1`). Otherwise a capture half made beside it - the
+  taken piece off, the taker in the air - was three changes, not two, and
+  250 ms in the search found an exchange on the misheard square that ends
+  with exactly the kind it reads as: a white pawn read as a rook, and
+  34...Qxb3 35.Rxb3. Over 10,000 games each, that was 19 of the 21 wrong
+  games in the two "reads as another" suites (the other two are the
+  promotion below), and all 21 now come out exact. Only pieces heard wrong *while
+  everything else agreed*: a piece of another kind that turns up along
+  with moves nobody saw is more likely one of those moves.
+- **A promotion keeps the piece it was pressed with.** The revision rule
+  rewrites the last move when the board shows another legal move from the
+  same position, which is right for a piece set down and moved on before
+  the press, and was wrong for a promoted bishop heard as a knight four
+  seconds after the clock was pressed for it: `a1=B+` became `a1=N`,
+  unmarked. Once the clock has been pressed for a promotion (`reheard?/2`),
+  the same promotion to another piece is the board mishearing, like any
+  other piece. Without a clock there is nothing to tell the two apart.
 - **When it matters.** The piece doing what only the piece it is heard as
   could (a "knight" jumping from a bishop's square) is a board nothing
   explains, and the alarm as for any such board. Nothing is ever moved
@@ -692,6 +779,32 @@ gains what the running side loses, is recognised at its first such reading
 and its times are not used for presses after it. In the 15,000 readings of
 the real board's clock from 2026-10-11/12 the waiting side's time never
 moved, so nothing in those games changes.
+
+Presses found this way are presses for everything else too: the board is
+looked at again on them as on a press the lever showed (`Session`). They
+used only to be counted, so a board that needed a press to be believed -
+a knocked pawn put back while the next moves were already being made -
+waited for the next reading, which in a scramble is the next move.
+
+A press with nothing changed on the board since the last press - the lever
+knocked back and pressed again, a hand on the wrong side - is counted but
+kept apart (`idle`): `pressed_for/3` does not look for a longer line on its
+account. Except while the board is not heard: then nothing changing says
+nothing, and every press is a move. Without this, the bench's "lever
+knocked back" fault at bullet speed turned 25 of 69 games into longer,
+wrong, red lines.
+
+The other way round: once the clock has counted more moves than the game
+holds - two more, since the press for the move on the board may come in
+before that move is taken - the board is not going backwards
+(`pressed_past?/1`). A position that came round again is then not a
+takeback, the last move is not revised into another, and a board that is
+"in hand" over an earlier position is not waited on as a takeback in the
+making. All three used to turn a repetition played while the readings
+were missed into a takeback of moves that were never taken back, without
+a mark. Now such a game goes on, and the presses it is short of raise
+"Move missing?". Not while the board is not heard: a deaf board's presses
+are its moves, but its count says nothing about direction.
 
 Measured with `mix alnasl.bench --passes 3`, the same seeds before and
 after. Every suite not shown is identical in every column; "missed" is the

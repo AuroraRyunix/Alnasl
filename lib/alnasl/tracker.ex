@@ -162,6 +162,7 @@ defmodule Alnasl.Tracker do
             trail: [],
             presses: nil,
             debt: 0,
+            idle: 0,
             pressed_at: nil,
             accepted_at: nil,
             deaf?: false,
@@ -175,6 +176,7 @@ defmodule Alnasl.Tracker do
             dead: [],
             suspects: [],
             confused: [],
+            misheard: [],
             stats: %{searches: 0, max_nodes: 0, max_us: 0, budget_hits: 0}
 
   @type t :: %__MODULE__{}
@@ -422,9 +424,18 @@ defmodule Alnasl.Tracker do
   def presses(%__MODULE__{} = tr, count, t) do
     pressed? = tr.presses != nil and count > tr.presses
 
+    # Pressed again with nothing on the board changed since the last press:
+    # the lever knocked back and pressed again, or a hand on the wrong
+    # button. (Unless the board is not being heard: then nothing changing
+    # says nothing.) Counted - a clock is a clock - but not as moves made: the
+    # search for a longer line than the board shows (`pressed_for/3`)
+    # leaves these out.
+    idle? = pressed? and not tr.deaf? and tr.pressed_at != nil and tr.raw_since <= tr.pressed_at
+
     %{
       tr
       | presses: count,
+        idle: if(idle?, do: tr.idle + count - tr.presses, else: tr.idle),
         # Measured when a press arrives: between presses the game is
         # always a move ahead of the clock.
         debt: if(pressed?, do: max(tr.debt, length(tr.plies) - count), else: tr.debt),
@@ -974,6 +985,11 @@ defmodule Alnasl.Tracker do
           (step = move_under_hand(tr)) != nil ->
             accept_under_hand(tr, t, step)
 
+          (step = move_and_lift(tr)) != nil ->
+            if force or stable >= o.settle_ms,
+              do: accept_under_hand(tr, t, step),
+              else: set_status(tr, :settling, :move)
+
           # The same, with a piece that is not on the board any more.
           (found = unseen_under_hand(tr)) != nil ->
             {supposed, step} = found
@@ -993,13 +1009,13 @@ defmodule Alnasl.Tracker do
           # the press that ends the move onto it: a piece parked beside
           # the board vanishes too, but nobody presses the clock for it.
           (found = stuck(tr) || (force && (onto_suspect(tr) || onto_unread(tr))) || nil) != nil ->
-            {square, move} = found
+            {square, move, flags} = found
 
             if force or stable >= o.unseen_hold_ms,
-              do: tr |> dies(square) |> accept(t, [{move, []}], []),
+              do: tr |> dies(square) |> accept(t, [{move, flags}], []),
               else: set_status(tr, :settling, :move)
 
-          (k = takeback(tr)) != nil and not replayable?(tr, k) ->
+          (k = takeback(tr)) != nil and not replayable?(tr, k) and not pressed_past?(tr) ->
             cond do
               stable < o.takeback_settle_ms ->
                 set_status(tr, :settling, :takeback)
@@ -1019,13 +1035,15 @@ defmodule Alnasl.Tracker do
             {keep, steps} = fix
             correct(tr, t, keep, steps, :promotion)
 
-          (step = revision(tr)) != nil ->
+          (step = not pressed_past?(tr) && revision(tr)) not in [nil, false] ->
             correct(tr, t, length(tr.plies) - 1, [step], :revised)
 
           (heard = crosstalk(tr)) != nil ->
             case heard do
               {:quiet, _cleaned} ->
-                in_sync(tr)
+                # Everything else agrees with the game: these pieces are
+                # misheard, and stay so while they read the same (`unheard/1`).
+                in_sync(%{tr | misheard: retyped(tr.phys, tr.raw, tr.pos)})
 
               {:unseen, cleaned, supposed, move, flags} ->
                 if force or stable >= max(hold(tr, move, flags), o.unseen_hold_ms) do
@@ -1064,8 +1082,10 @@ defmodule Alnasl.Tracker do
   # Only when it has been so for as long as the alarm waits is it asked
   # whether moves that were SEEN explain it - and if not, the alarm.
   defp deeper(tr, t, stable) do
+    raw = unheard(tr)
+
     cond do
-      Position.in_hand?(tr.phys, tr.raw) and not exchange?(tr, stable) ->
+      Position.in_hand?(tr.phys, raw) and not exchange?(tr, stable) ->
         if stable >= tr.opts.lifted_ms,
           do: reconstruct(tr, t, stable, :guided),
           else: unexplained(tr, stable, :unexplained)
@@ -1073,16 +1093,34 @@ defmodule Alnasl.Tracker do
       # The same hand, over the position of a move ago: a move being taken
       # back with a piece still in the air. A king that steps aside, lets a
       # queen take its place and takes her, leaves the same board - so this
-      # one is searched after all, but only once it has stood still.
-      stable < tr.opts.deep_settle_ms and tr.opts.takeback and
+      # one is searched after all, but only once it has stood still. Not
+      # when the clock was pressed for moves the game does not have: then
+      # it is a position come round again (`pressed_past?/1`).
+      stable < tr.opts.deep_settle_ms and tr.opts.takeback and not pressed_past?(tr) and
           tr.history
           |> Enum.take(tr.opts.takeback_plies)
-          |> Enum.any?(&Position.in_hand?(&1.phys, tr.raw)) ->
+          |> Enum.any?(&Position.in_hand?(&1.phys, raw)) ->
         unexplained(tr, stable, :unexplained)
 
       true ->
         reconstruct(tr, t, stable, :all)
     end
+  end
+
+  # The reading with the pieces that were heard as others while the rest of
+  # the board agreed with the game put back as the game has them, for as
+  # long as they still read the same. A pawn that has read as a rook since
+  # the last move is not news when a hand comes down beside it - and
+  # without this it made every hand on that board look like more than a
+  # hand, and the search obliged with an exchange on the pawn's square that
+  # ends in a rook. Only those: a piece of another kind that turns up along
+  # with moves nobody saw is more likely one of those moves.
+  defp unheard(tr) do
+    Enum.reduce(tr.misheard, tr.raw, fn %{square: square, piece: piece, read: read}, raw ->
+      if elem(raw, square) == read and elem(tr.phys, square) == piece,
+        do: put_elem(raw, square, piece),
+        else: raw
+    end)
   end
 
   # Two pieces gone, one of each colour, and the one cannot take the other:
@@ -1142,14 +1180,31 @@ defmodule Alnasl.Tracker do
 
     misread =
       cond do
-        scope != :all -> []
-        stable >= tr.opts.deep_settle_ms -> rewrites(tr)
-        hand?(tr) -> []
+        scope != :all ->
+          []
+
+        stable >= tr.opts.deep_settle_ms ->
+          rewrites(tr)
+
+        hand?(tr) ->
+          []
+
+        # The side to move's own slider, in check, lifted and set down
+        # beside where the game has it, with nothing else changed: a
+        # straightened piece if the clock says the turn is over, and a
+        # rook, bishop or queen resting on its way while it is not. A slide
+        # stops for well under a second, so the rewrite waits for the
+        # press, or for the board to have stood long enough that nobody is
+        # still moving.
+        not pressed_since?(tr) ->
+          Enum.reject(rewrites(tr), &(&1.takes? or own_rest?(tr, &1)))
+
         # A move read since that turns out to have taken the piece, though
         # nobody saw anything taken: possible (the piece is lifted off
         # afterwards), but so is a king put on a bishop's square for a
         # second while the two are being swapped back. It waits.
-        true -> Enum.reject(rewrites(tr), & &1.takes?)
+        true ->
+          Enum.reject(rewrites(tr), & &1.takes?)
       end
 
     # And a move that is legal only if a piece stands beside where it still
@@ -1168,11 +1223,37 @@ defmodule Alnasl.Tracker do
       misread != [] and (found == [] or hd(misread).edits < length(hd(found).steps)) ->
         rewrite(tr, t, misread)
 
+      # The last move was seen taken back - the board stood where it was
+      # before it - and then the game went on before the takeback was
+      # believed. From before that move, fewer moves lead here than from
+      # after it: the move was taken back, and the shorter line is the game.
+      # Until the press, or until the board has stood long enough to be
+      # searched from before it, such a board is not explained from after
+      # the move: the next hand is usually still in the air.
+      (back = scope == :all and found != [] and undo_instead(tr, stable, found)) not in [
+        nil,
+        false
+      ] ->
+        case back do
+          :wait ->
+            set_status(tr, :settling, :takeback)
+
+          {keep, steps} ->
+            correct(tr, t, keep, steps, :revised)
+        end
+
       found != [] ->
         accept(tr, t, hd(found).steps, mark(found, sure?))
 
       (result = unseen_search(tr, t, stable)) != nil ->
         result
+
+      # The last move or two were believed on the board alone, and nothing
+      # leads on from them: a knocked piece that stood on a square it could
+      # have gone to, and was then put back under the next hand.
+      (back = scope == :all && undone(tr, stable)) not in [nil, false] ->
+        {keep, steps} = back
+        correct(tr, t, keep, steps, :revised)
 
       # Only when the alarm is next: a king on g8 with its rook still on h8
       # is half a castle for a second, and a king's walk if one insists.
@@ -1202,6 +1283,22 @@ defmodule Alnasl.Tracker do
   # piece missing: a hand. (A knocked-over queen beside a bishop that went
   # to f4 reads exactly like "the queen was on f4 all along, and the bishop
   # took her there".)
+  defp pressed_since?(tr), do: tr.pressed_at != nil and tr.pressed_at >= tr.raw_since
+
+  # A rewrite that adds no move and moves a rook, bishop or queen of the
+  # side to move, which is in check. Out of check the square it rests on is
+  # a legal move and is taken as one (rule 2, then replaced by rule 4 when
+  # the piece goes on); in check it usually is not, and only then does the
+  # rest look like an old move misread.
+  defp own_rest?(tr, line) do
+    {move, _flags} = hd(line.steps)
+    before = Enum.at(tr.history, line.back - 1)
+    turn = tr.pos.turn
+
+    line.new == 0 and Chess.in_check?(tr.pos, turn) and
+      match?({^turn, kind} when kind in [:r, :b, :q], elem(before.pos.board, move.from))
+  end
+
   defp hand?(tr) do
     gone = for sq <- Position.diff(tr.phys, tr.raw), elem(tr.raw, sq) == nil, do: sq
 
@@ -1550,12 +1647,13 @@ defmodule Alnasl.Tracker do
 
   defp in_hand?(tr, [one | _]) do
     from = here(tr)
-    gone = for sq <- Position.diff(from.phys, tr.raw), elem(tr.raw, sq) == nil, do: sq
-    takes? = Position.count(tr.raw) < Position.count(from.phys)
+    raw = unheard(tr)
+    gone = for sq <- Position.diff(from.phys, raw), elem(raw, sq) == nil, do: sq
+    takes? = Position.count(raw) < Position.count(from.phys)
 
     takes? and
       Enum.any?(gone, fn sq ->
-        board = put_elem(tr.raw, sq, elem(from.phys, sq))
+        board = put_elem(raw, sq, elem(from.phys, sq))
 
         board == from.phys or
           match?(
@@ -1603,6 +1701,90 @@ defmodule Alnasl.Tracker do
          back <= length(tr.history) do
       before = Enum.at(tr.history, back - 1)
       %{pos: before.pos, phys: before.phys, unseen: before.unseen, count: length(tr.plies) - back}
+    end
+  end
+
+  # The board is reached from nothing the game holds now - but from the
+  # position one or two plies back it is, by moves the readings saw.
+  # Those plies are then not what happened: a piece knocked onto a square
+  # it could go to stands there like a move, and when it is put back with
+  # the next hand already over the board, no takeback is ever read. The
+  # line that changes the game least is taken, the plies it drops are
+  # gone, and every move it puts in their place is a guess (red): a move
+  # that was seen is being unsaid.
+  #
+  # Only lines in which the dropped move is not made again: a line that
+  # plays it later is moves nobody saw before it, which is the search's
+  # business, not an undo. Not the moves the arbiter entered, not across a
+  # hole in contact, and only searched by the squares that were seen to
+  # change.
+  defp undo_instead(%{plies: [_ | _], history: [before | _]} = tr, stable, [best | _]) do
+    count = length(tr.plies)
+
+    pressed? = tr.pressed_at != nil and tr.pressed_at >= tr.raw_since
+
+    with true <- Enum.any?(tr.trail, fn {at, board} -> at == count and board == before.phys end),
+         false <- :arbiter in hd(Enum.take(tr.plies, -1)).flags,
+         true <- pressed? or stable >= tr.opts.deep_settle_ms or :wait,
+         {keep, steps} = back <-
+           undone(tr, stable, length(best.steps)) || hand_after(tr, before, stable),
+         true <- keep + length(steps) < count + length(best.steps) do
+      back
+    else
+      :wait -> :wait
+      _no -> nil
+    end
+  end
+
+  defp undo_instead(_tr, _stable, _found), do: nil
+
+  # Another move from before the one taken back, and a piece of the other
+  # side already in the air: the next hand. Waited on, as on any hand,
+  # until the board has stood unexplained as long as the alarm would wait.
+  defp hand_after(tr, before, stable) do
+    if stable < tr.opts.transient_ms and
+         Enum.any?(Chess.legal_moves(before.pos), fn move ->
+           Enum.any?(
+             Search.outcomes(before.phys, move, before.pos.turn, tr.opts.promotion_default),
+             fn {board, _flags} -> Position.in_hand?(board, tr.raw) end
+           )
+         end),
+       do: :wait
+  end
+
+  defp undone(tr, stable, longest \\ 3) do
+    count = length(tr.plies)
+    pressed? = tr.pressed_at != nil and tr.pressed_at >= tr.raw_since
+
+    if not (pressed? or stable >= tr.opts.deep_settle_ms) or tr.deaf? or tr.unseen != [] do
+      nil
+    else
+      1..min(1, count)//1
+      |> Enum.find_value(fn back ->
+        dropped = Enum.take(tr.plies, -back)
+
+        with false <- Enum.any?(dropped, &(:arbiter in &1.flags or :imported in &1.flags)),
+             before = Enum.at(tr.history, back - 1),
+             [] <- before.unseen,
+             from = %{pos: before.pos, phys: before.phys, unseen: [], count: count - back},
+             {found, _sure?, _hit?, _tr} <- paths(tr, from, stable, :guided, 1),
+             made = Enum.map(dropped, &{&1.from, &1.to}),
+             [_ | _] = found <-
+               found
+               |> Enum.reject(
+                 &Enum.any?(&1.steps, fn {move, _} -> {move.from, move.to} in made end)
+               )
+               |> Enum.filter(&(length(&1.steps) <= longest))
+               |> then(&usable(tr, from, &1)),
+             # Not a hand: a piece in the air beside the square the last
+             # move went to is read by these lines as a capture there.
+             false <- in_hand?(tr, found) do
+          flags = if length(found) == 1, do: [:guessed, :alone], else: [:guessed]
+          {from.count, marked(hd(found).steps, flags, false)}
+        else
+          _no -> nil
+        end
+      end)
     end
   end
 
@@ -1706,7 +1888,7 @@ defmodule Alnasl.Tracker do
     have = length(one.steps)
     # One press is allowed for: the lever that started the clock is a
     # press too on some clocks, and "Move missing?" waits for two as well.
-    want = tr.presses - 1 - from.count
+    want = tr.presses - tr.idle - 1 - from.count
 
     if want > have and have < tr.opts.search_depth do
       o = tr.opts
@@ -1832,7 +2014,7 @@ defmodule Alnasl.Tracker do
       named != nil ->
         set_status(tr, :out_of_sync, named)
 
-      Position.in_hand?(tr.phys, tr.raw) ->
+      Position.in_hand?(tr.phys, unheard(tr)) ->
         if stable >= o.lifted_ms,
           do: set_status(tr, :out_of_sync, :piece_missing),
           else: set_status(tr, :settling, :in_hand)
@@ -2018,7 +2200,7 @@ defmodule Alnasl.Tracker do
           elem(tr.raw, move.from) == elem(tr.phys, move.from),
           {board, []} <- Search.outcomes(tr.phys, move, tr.pos.turn, tr.opts.promotion_default),
           blind(board, [move.from | tr.dead]) == blind(tr.raw, [move.from | tr.dead]),
-          do: {move.from, move}
+          do: {move.from, move, []}
 
     case found do
       [one] -> one
@@ -2040,9 +2222,9 @@ defmodule Alnasl.Tracker do
     o = tr.opts
 
     found =
-      for {move, _flags} <- one_ply(tr.pos, tr.phys, tr.raw, o.promotion_default, [], suspects),
+      for {move, flags} <- one_ply(tr.pos, tr.phys, tr.raw, o.promotion_default, [], suspects),
           move.to in suspects,
-          do: {move.to, move}
+          do: {move.to, move, flags}
 
     case found do
       [one] -> one
@@ -2077,7 +2259,7 @@ defmodule Alnasl.Tracker do
          false <- to in tr.dead,
          [{%{promo: nil} = move, _flags}] <-
            one_ply(tr.pos, tr.phys, tr.raw, tr.opts.promotion_default, [], [to]) do
-      {to, move}
+      {to, move, []}
     else
       _no -> nil
     end
@@ -2264,6 +2446,59 @@ defmodule Alnasl.Tracker do
     end
   end
 
+  # The same, when the move never stood alone: the next hand lifted its
+  # piece while this one was still in the air. The board is one legal move
+  # on, but for a piece or two of the side that moves next, gone from
+  # squares the move does not touch. A capture half made reads otherwise:
+  # it is the mover's piece, or both colours, that are missing. Believed
+  # once it has stood for `settle_ms`, or on a press - the move landed
+  # and stands, and the hand belongs to the other side.
+  defp move_and_lift(tr) do
+    them = other(tr.pos.turn)
+
+    gone =
+      for sq <- Position.diff(tr.phys, tr.raw),
+          elem(tr.raw, sq) == nil,
+          match?({^them, _}, elem(tr.phys, sq)),
+          do: sq
+
+    with [_ | _] when length(gone) <= 2 <- gone,
+         filled = Enum.reduce(gone, tr.raw, &put_elem(&2, &1, elem(tr.phys, &1))),
+         [{move, []}] <- one_ply(tr.pos, tr.phys, filled, tr.opts.promotion_default, tr.unseen),
+         true <- elem(tr.raw, move.to) != nil,
+         true <- Enum.all?(gone, &(&1 not in [move.from, move.to] and not crooked?(tr, &1, move))),
+         false <- half_castle?(tr.pos, move),
+         true <- lifted_after?(tr, move.from, gone) do
+      {move, filled}
+    else
+      _no -> nil
+    end
+  end
+
+  # A piece gone from beside the square a quiet move lands on, that came
+  # to where it was read in the last few moves, is as likely that move's
+  # capture, read one square off (a knight set down between d7 and c6 and
+  # taken on d7), as a hand.
+  defp crooked?(tr, square, move) do
+    move.capture == nil and
+      abs(rem(square, 8) - rem(move.to, 8)) <= 1 and
+      abs(div(square, 8) - div(move.to, 8)) <= 1 and
+      tr.plies |> Enum.take(-@misread_back) |> Enum.any?(&(&1.to == square))
+  end
+
+  # The pieces taken to be in the next hand were read on their squares
+  # after the move's piece had left its own: they went up while it was in
+  # the air. Pieces that vanished together with it, in one reading, are
+  # moves nobody saw - a capture among them - and not a hand.
+  defp lifted_after?(tr, from, gone) do
+    count = length(tr.plies)
+
+    Enum.any?(tr.trail, fn {at, board} ->
+      at == count and elem(board, from) == nil and
+        Enum.all?(gone, &(elem(board, &1) == elem(tr.phys, &1)))
+    end)
+  end
+
   defp accept_under_hand(tr, t, {move, board}) do
     {tr, plies} = push(tr, [{move, []}], [], t, board)
     tr = %{tr | memo: nil, rejected: nil}
@@ -2280,9 +2515,34 @@ defmodule Alnasl.Tracker do
       # Onto a square that is not read: all the board shows is a piece
       # gone, and so does a hand.
       move.to in tr.dead and move.from not in tr.dead -> max(o.settle_ms, o.unseen_hold_ms)
+      echo?(tr, move) -> max(o.settle_ms, o.takeback_settle_ms)
       true -> o.settle_ms
     end
   end
+
+  # A capture taken back, and the same hand straight back over the board
+  # for the move it meant to make: its piece in the air and its real
+  # target lifted. Where the target could have recaptured, what the board
+  # shows is the recapture - the piece just taken is back on its square,
+  # the one that took it gone, a piece of the other side gone from where
+  # it could have come. A real recapture with a piece of that kind looks
+  # the same, so it waits as a takeback would, or for the press.
+  defp echo?(%{history: [before | _], plies: plies} = tr, move) when plies != [] do
+    last = List.last(plies)
+    count = length(plies)
+    taken = elem(before.pos.board, last.to)
+
+    lands =
+      case elem(tr.pos.board, move.from) do
+        {colour, kind} -> {colour, move.promo || kind}
+        nil -> nil
+      end
+
+    move.to == last.to and taken != nil and taken == lands and
+      Enum.any?(tr.trail, fn {at, board} -> at == count and board == before.phys end)
+  end
+
+  defp echo?(_tr, _move), do: false
 
   # A rook going from its corner to the square it lands on when castling,
   # while castling that side is legal: the king may be about to follow.
@@ -2310,6 +2570,19 @@ defmodule Alnasl.Tracker do
     end
   end
 
+  # The clock has been pressed for two moves more than the game has: it
+  # knows of moves the box does not. (One more is only the press of the
+  # move on the board, come in before the move was taken.) A board that reads as it did a ply or two ago
+  # is then a position come round again by moves nobody saw - a rook giving
+  # check from f1 and going back to a1, the king walking to e2 and back -
+  # and not a move taken back, which nobody presses the clock for. The
+  # search gets the board instead (`pressed_for/3`). Not while the board is
+  # not heard, and the lever pressed twice over a board that did not change
+  # (`idle`) is no move.
+  defp pressed_past?(tr) do
+    not tr.deaf? and is_integer(tr.presses) and tr.presses - tr.idle > length(tr.plies) + 1
+  end
+
   # The board reads as it did two plies ago. Taken back - or played back: a
   # queen that checked from f1 and f2 in turn does this for a living. When
   # legal moves explain the board, they are believed before a takeback of
@@ -2332,10 +2605,41 @@ defmodule Alnasl.Tracker do
 
   defp revision(%{history: [before | _]} = tr) do
     case one_ply(before.pos, before.phys, tr.raw, tr.opts.promotion_default, before.unseen) do
-      [step] -> step
+      [step] -> if reheard?(tr, step), do: nil, else: still_guessed(tr, step)
       _other -> nil
     end
   end
+
+  # A move that was a guess, revised into another by what the board shows
+  # next, is still a guess: the board that put the guess in doubt is the
+  # same board that put it there. Without this a red move came back
+  # unmarked - once in 10,000 games, a knight "moved" onto a square
+  # that went on reading the knight that had left it.
+  defp still_guessed(%{plies: [_ | _] = plies}, {move, flags} = step) do
+    last = List.last(plies)
+
+    if :guessed in last.flags and :guessed not in flags,
+      do: {move, flags ++ [:guessed]},
+      else: step
+  end
+
+  defp still_guessed(_tr, step), do: step
+
+  # The same promotion, another piece, after the clock was pressed for it:
+  # nobody changes their mind about a bishop once the lever is down, but a
+  # sensor beside a king changes its mind about a bishop all the time. The
+  # piece the board showed and the clock confirmed is the game's; what is
+  # read on the square now is a piece heard as another (`heard/2`).
+  defp reheard?(%{plies: [_ | _] = plies} = tr, {move, _flags}) do
+    last = List.last(plies)
+
+    tr.opts.crosstalk and move.promo != nil and last.promo != nil and
+      move.promo != last.promo and move.from == last.from and move.to == last.to and
+      :assumed not in last.flags and tr.pressed_at != nil and tr.accepted_at != nil and
+      tr.pressed_at >= tr.accepted_at
+  end
+
+  defp reheard?(_tr, _step), do: false
 
   # A pawn was left on its last rank and counted as the default piece; now a
   # different piece stands there. The promotion is rewritten and the moves
@@ -2375,13 +2679,20 @@ defmodule Alnasl.Tracker do
   # `:recovered`. Several (a knight, a rook and a bishop all leave a king
   # on h8 out of check): the first of knight, rook, bishop, `:guessed`
   # and still `:assumed`, so that the next move it cannot make asks again.
+  #
+  # Every assumed promotion in reach is asked, the latest first: two pawns
+  # left standing for knights, and the first of them is the one that jumps.
   defp promotion_retry(tr) do
-    with index when index != nil <-
-           tr.plies
-           |> Enum.reverse()
-           |> Enum.take(@promotion_back)
-           |> Enum.find_index(&(:assumed in &1.flags and &1.promo != nil)),
-         number = length(tr.plies) - index,
+    tr.plies
+    |> Enum.reverse()
+    |> Enum.take(@promotion_back)
+    |> Enum.with_index()
+    |> Enum.filter(fn {ply, _index} -> :assumed in ply.flags and ply.promo != nil end)
+    |> Enum.find_value(fn {_ply, index} -> promotion_retry(tr, index) end)
+  end
+
+  defp promotion_retry(tr, index) do
+    with number = length(tr.plies) - index,
          ply = Enum.at(tr.plies, number - 1),
          later = Enum.drop(tr.plies, number),
          before = Enum.at(tr.history, index),

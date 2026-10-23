@@ -30,6 +30,7 @@ defmodule Alnasl.TrackerTest do
         {tr, events} =
           case what do
             :press -> Tracker.press(tr, t)
+            {:presses, n} -> tr |> Tracker.presses(n, t) |> Tracker.press(t)
             board -> Tracker.observe(tr, t, board)
           end
 
@@ -564,6 +565,42 @@ defmodule Alnasl.TrackerTest do
     assert plies.(session) == ~w(e4 e5)
   end
 
+  test "two presses the lever did not show, but the times did, are a press" do
+    alias Alnasl.Session
+    plies = fn session -> Tracker.sans(session.tracker) end
+    b = Position.start()
+    e4 = move(b, "e2", "e4")
+    e5 = move(e4, "e7", "e5")
+
+    session =
+      Enum.reduce(
+        [
+          {0, {:position, b}},
+          {0, {:clock, %{white_ms: 60_000, black_ms: 60_000, running: :white}}},
+          {1_000, {:position, lift(b, "e2")}},
+          {1_060, {:position, e4}},
+          {1_120, {:position, lift(e4, "e7")}},
+          {1_180, {:position, e5}}
+        ],
+        Session.new([]),
+        fn {t, event}, session -> session |> Session.handle(t, event) |> elem(0) end
+      )
+
+    assert plies.(session) == ~w(e4)
+
+    # White still running, Black's time gone down: White pressed, Black ran
+    # and pressed. The board is looked at as on any press - it used to wait
+    # for the next reading, which in a scramble is the next move.
+    {session, _} =
+      Session.handle(
+        session,
+        1_200,
+        {:clock, %{white_ms: 59_000, black_ms: 59_900, running: :white}}
+      )
+
+    assert plies.(session) == ~w(e4 e5)
+  end
+
   test "the fast-play preset is what Setup's button sets, and leaves the search depth alone" do
     assert Tracker.preset(:bullet) == %{settle_ms: 150, takeback: false}
 
@@ -668,6 +705,40 @@ defmodule Alnasl.TrackerTest do
     assert tr.status == :live
   end
 
+  test "a guess onto a dead square, revised, is still a guess" do
+    # d5 goes on reading the knight that left it for f4, and is found out.
+    # Then the b4 knight is lifted and held: a knight gone, and a dead
+    # square it can go to - a guess, 2...Nbd5. It goes back, and the f4
+    # knight is lifted: 2...Nfd5 is the one move from before the guess
+    # that fits, and the guess is revised into it. Which knight is no
+    # better known than before, so the revised move is a guess too; it
+    # used to come back unmarked.
+    fen = "4k3/8/8/3n4/1n6/8/8/4K3 b - - 0 1"
+    start = board(fen)
+    {tr, _} = Tracker.observe(Tracker.new(start_fen: fen), 0, start)
+    stuck = fn board -> put(board, "d5", {:b, :n}) end
+    b1 = move(start, "d5", "f4")
+    b2 = move(b1, "e1", "d1")
+
+    {tr, _} = feed(tr, [{1_000, stuck.(b1)}, {6_000, stuck.(b2)}], 5_000)
+    assert Tracker.sans(tr) == ~w(Nf4 Kd1)
+    assert Tracker.dead(tr) == [sq("d5")]
+
+    {tr, _} =
+      feed(
+        tr,
+        [
+          {12_000, stuck.(lift(b2, "b4"))},
+          {15_000, stuck.(b2)},
+          {16_000, stuck.(lift(b2, "f4"))}
+        ],
+        30_000
+      )
+
+    assert Tracker.sans(tr) == ~w(Nf4 Kd1 Nfd5)
+    assert :guessed in List.last(tr.plies).flags
+  end
+
   test "a piece held in the air is not a dead square" do
     {tr, b, t} = after_moves(~w(e4 e5))
     {tr, out} = feed(tr, [{t, lift(b, "g1")}, {t + 6_000, move(b, "g1", "f3")}], 3_000)
@@ -701,6 +772,38 @@ defmodule Alnasl.TrackerTest do
     {tr, out} = feed(tr, [{t, off.(b0)} | timed] ++ [{t + 26_000, :press}], 5_000)
     assert Tracker.sans(tr) == ~w(e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5 d5 Nf3)
     assert Tracker.dead(tr) == [sq("f3")]
+    assert alarms(out) == []
+  end
+
+  test "a pawn promoting onto a square suspected dead is an assumed queen, not a queen" do
+    # a8 stops reading with the knight on it; the knight leaves, a8 goes on
+    # reading empty, and the pawn promotes there. Every piece it could
+    # become reads the same - nothing - so the queen is assumed and says
+    # so. It used to go in as a plain queen, and an underpromotion as a
+    # wrong move nobody marked.
+    fen = "N7/P7/8/8/2K5/8/8/7k w - - 0 1"
+    start = board(fen)
+    {tr, _} = Tracker.observe(Tracker.new(start_fen: fen), 0, start)
+    b1 = move(start, "c4", "d3")
+    b2 = move(b1, "h1", "h2")
+    b3 = move(b2, "d3", "e4")
+    b4 = move(b3, "h2", "g2")
+    b5 = move(b4, "a8", "b6")
+    b6 = move(b5, "g2", "f2")
+    b7 = lift(b6, "a7")
+    off = fn board -> lift(board, "a8") end
+
+    timed =
+      [b3, b4, b5, b6, b7]
+      |> Enum.with_index(1)
+      |> Enum.map(fn {x, i} -> {7_000 + i * 5_000, off.(x)} end)
+
+    {tr, out} =
+      feed(tr, [{1_000, b1}, {6_000, b2}, {7_000, off.(b2)} | timed] ++ [{33_000, :press}], 5_000)
+
+    assert Tracker.sans(tr) == ~w(Kd3 Kh2 Ke4 Kg2 Nb6 Kf2 a8=Q)
+    assert :assumed in List.last(tr.plies).flags
+    assert Tracker.dead(tr) == [sq("a8")]
     assert alarms(out) == []
   end
 
@@ -809,5 +912,264 @@ defmodule Alnasl.TrackerTest do
     assert restored.pos == tr.pos
     {restored, _} = feed(restored, [{t, b}, {t + 5_000, move(b, "b8", "c6")}], 1_000)
     assert Tracker.sans(restored) == ~w(e4 e5 Nf3 Nc6)
+  end
+
+  # --- hands in a hall ------------------------------------------------------------
+
+  test "the next hand lifts before the move has landed: both moves, as played" do
+    {tr, b, t} = after_moves(~w(e4 e5))
+    nf3 = move(b, "g1", "f3")
+
+    {tr, out} =
+      feed(
+        tr,
+        [
+          {t, lift(b, "g1")},
+          # Black has the knight in hand before White's has landed.
+          {t + 120, b |> lift("g1") |> lift("b8")},
+          {t + 220, lift(nf3, "b8")},
+          {t + 900, move(nf3, "b8", "c6")}
+        ],
+        1_000
+      )
+
+    assert Tracker.sans(tr) == ~w(e4 e5 Nf3 Nc6)
+    assert Enum.all?(tr.plies, &(&1.flags == []))
+    assert alarms(out) == []
+  end
+
+  test "a piece gone in the same reading as the move is not a hand" do
+    # Nf3 and Black's knight vanish together: nobody saw the knight lifted
+    # while White's was in the air, so it is not taken for the next hand.
+    {tr, b, t} = after_moves(~w(e4 e5))
+    nf3 = move(b, "g1", "f3")
+
+    {held, _} = feed(tr, [{t, lift(nf3, "b8")}], 1_000)
+    assert Tracker.sans(held) == ~w(e4 e5)
+
+    {tr, _} = feed(tr, [{t, lift(b, "g1")}, {t + 150, lift(nf3, "b8")}], 1_000)
+    assert Tracker.sans(tr) == ~w(e4 e5 Nf3)
+  end
+
+  test "presses with nothing changed on the board do not ask for a longer game" do
+    # As in "more clock presses than moves", but two of the six presses are
+    # the lever knocked back and pressed again while the board stood still.
+    {tr, _b, t} = after_moves(~w(e4 e5))
+    {:ok, plies} = Chess.replay(Chess.start_fen(), ~w(e4 e5 Bc4 a6 Bb5))
+    seen = board(List.last(plies).fen)
+
+    tr = tr |> Tracker.presses(2, t) |> Tracker.presses(3, t + 100) |> Tracker.presses(5, t + 400)
+    assert tr.idle == 2
+
+    # Then the cable is out, and what the clock counts there is moves.
+    out = fn presses ->
+      {tr, _} =
+        tr
+        |> Tracker.deaf()
+        |> Tracker.presses(presses, t + 600)
+        |> feed([{t + 1_000, seen}], 1_000)
+
+      tr
+    end
+
+    short = out.(7)
+    assert short.idle == 2
+    assert Enum.drop(Tracker.sans(short), 2) == ~w(Bb5 a6)
+
+    long = out.(8)
+    assert long.idle == 2
+    assert length(Tracker.sans(long)) == 5
+    assert Enum.all?(Enum.take(long.plies, -3), &(:guessed in &1.flags))
+  end
+
+  test "fast play: a piece knocked onto a legal square, set back as the next hand comes" do
+    # Bullet settings: no takebacks. White's queen is knocked from d1 to
+    # e2 and stands there long enough to be Qe2; it goes back, and White
+    # plays Bc4 while Black's hand already has the g8 knight. Nothing on
+    # the board is one move from Qe2: the knock is undone, and the move
+    # put in its place is marked for what it is, a guess.
+    {tr, b, t} = after_moves(~w(e4 e5 Nf3 Nc6))
+    tr = %{tr | opts: Map.merge(tr.opts, Tracker.preset(:bullet))} |> Tracker.presses(4)
+    bc4 = move(b, "f1", "c4")
+
+    {tr, out} =
+      feed(
+        tr,
+        [
+          {t, move(b, "d1", "e2")},
+          {t + 600, b},
+          {t + 800, lift(b, "f1")},
+          {t + 850, b |> lift("f1") |> lift("g8")},
+          {t + 950, lift(bc4, "g8")},
+          {t + 1_500, move(bc4, "g8", "f6")},
+          {t + 1_900, {:presses, 5}}
+        ],
+        2_000
+      )
+
+    assert "Qe2" in moves(out)
+    assert Tracker.sans(tr) == ~w(e4 e5 Nf3 Nc6 Bc4 Nf6)
+    assert :guessed in Enum.at(tr.plies, 4).flags
+  end
+
+  test "a slider resting on its way out of check is not an earlier move misread" do
+    # 3. Qa4+ and the bishop goes f5-e6-d7, resting on e6, where it does
+    # not block the check. Read as the bishop having been on e6 all along
+    # (2...Be6 misread as Bf5), the board would make sense with no move at
+    # all; a slide stops for under a second, so that waits for the press.
+    {tr, b, t} = after_moves(~w(d4 d5 c4 Bf5 Qa4+))
+    rest = move(b, "f5", "e6")
+
+    {tr, out} =
+      feed(
+        tr,
+        [
+          {t, lift(b, "f5")},
+          {t + 80, rest},
+          {t + 700, lift(rest, "e6")},
+          {t + 780, move(rest, "e6", "d7")}
+        ],
+        1_000
+      )
+
+    assert Tracker.sans(tr) == ~w(d4 d5 c4 Bf5 Qa4+ Bd7)
+    assert Enum.all?(tr.plies, &(&1.flags == []))
+    assert alarms(out) == []
+  end
+
+  test "a capture taken back and the hand straight back for another is not the recapture" do
+    # 1. Rg8, 1...Rxg8 taken back, then 1...Rxh7: the black rook in the
+    # air and the h7 pawn lifted leave the board as 2. hxg8=R would. That
+    # waits as a takeback would, and the rook lands on h7.
+    fen = "7r/6RP/8/8/8/k7/8/2K5 w - - 0 1"
+    {tr, _} = Tracker.observe(Tracker.new(start_fen: fen), 0, board(fen))
+    b = board(fen)
+    rg8 = move(b, "g7", "g8")
+    rxg8 = move(rg8, "h8", "g8")
+
+    {tr, out} =
+      feed(
+        tr,
+        [
+          {1_000, lift(b, "g7")},
+          {1_100, rg8},
+          {3_000, lift(rg8, "h8")},
+          {3_100, rg8 |> lift("h8") |> lift("g8")},
+          {3_200, rxg8},
+          {5_000, lift(rxg8, "g8")},
+          {5_100, rg8 |> lift("g8") |> put("h8", {:b, :r})},
+          {5_200, rg8},
+          {6_000, lift(rg8, "h8")},
+          {6_100, rg8 |> lift("h8") |> lift("h7")},
+          {6_600, move(rg8, "h8", "h7")}
+        ],
+        3_000
+      )
+
+    assert "Rxg8" in moves(out)
+    refute "hxg8=R" in moves(out)
+    assert Tracker.sans(tr) == ~w(Rg8 Rxh7)
+    assert alarms(out) == []
+  end
+
+  test "two pawns left standing for knights: the first one's jump is asked about too" do
+    fen = "8/P3P3/8/8/8/8/8/2K4k w - - 0 1"
+    {tr, _} = Tracker.observe(Tracker.new(start_fen: fen), 0, board(fen))
+    b1 = fen |> board() |> move("e7", "e8")
+    b2 = move(b1, "h1", "h2")
+    b3 = move(b2, "a7", "a8")
+    b4 = move(b3, "h2", "h3")
+    b5 = move(b4, "e8", "f6")
+
+    {tr, out} =
+      feed(tr, [{1_000, b1}, {6_000, b2}, {11_000, b3}, {16_000, b4}, {21_000, b5}], 6_000)
+
+    assert Enum.at(Tracker.sans(tr), 0) == "e8=N"
+    assert Enum.at(Tracker.sans(tr), 4) == "Nf6"
+    assert alarms(out) == []
+  end
+
+  test "a move taken back, and the game going on before the takeback is believed" do
+    # 28. Rf3 stands long enough to be the move, and is taken back to g3;
+    # before the takeback has stood its 1.5 s the king goes g2-g1 and
+    # Black's rook is already up for 28...Rf3. From after 28. Rf3 four
+    # moves lead there (Rf4 Rg3 Rf3 Kg1), and that is what went in, with
+    # 28. Rf3 left standing unmarked. From before it, two do.
+    fen = "5rk1/6p1/3p1q2/2pP1r1p/4p3/1P4RP/2P1QPK1/5R2 w - - 0 28"
+    start = board(fen)
+    {tr, _} = Tracker.observe(Tracker.new(start_fen: fen), 0, start)
+    tr = Tracker.presses(tr, 0, 0)
+    played = move(start, "g3", "f3")
+    king = move(start, "g2", "g1")
+
+    {tr, out} =
+      feed(
+        tr,
+        [
+          {1_000, played},
+          {2_150, start},
+          {2_700, lift(start, "g2")},
+          {2_900, start |> lift("g2") |> lift("f5")},
+          {3_100, lift(king, "f5")},
+          {3_300, {:presses, 1}},
+          {4_100, move(king, "f5", "f3")},
+          {4_600, {:presses, 2}}
+        ],
+        10_000
+      )
+
+    assert Tracker.sans(tr) == ~w(Kg1 Rf3)
+    assert Enum.all?(tr.plies, &(:guessed in &1.flags))
+    assert alarms(out) == []
+  end
+
+  test "a position come round again while the clock counted the moves is not a takeback" do
+    # 2...Nc6 3. Ng1 Nb8 go by unread, three presses with them: the board
+    # is back to how it was before 2. Nf3, which by itself is that move
+    # taken back. Nobody presses the clock for a takeback, so it is not
+    # one. Which knight went out and back nobody saw either, so the box
+    # says what it sees - a white knight moved out of turn - and leaves
+    # the game as it was.
+    {tr, b, t} = after_moves(~w(e4 e5 Nf3))
+    tr = Tracker.presses(tr, 3)
+    back = move(b, "f3", "g1")
+
+    {tr, out} = feed(tr, [{t, back}, {t + 400, {:presses, 6}}], 6_000)
+
+    refute Enum.any?(out, &match?({_, {:correction, _, _, :takeback}}, &1))
+    assert Tracker.sans(tr) == ~w(e4 e5 Nf3)
+    assert [{:out_of_turn, %{san: "Ng1"}}] = alarms(out)
+  end
+
+  test "two moves unseen that bring back the position before last, a piece short: found on the press" do
+    # 1. Kh2 Qxh4+ read, then 2. Kg2 Qg4+ unread: the board is the one
+    # before 1. Kh2 with the knight gone, which is also a takeback with
+    # the knight still in a hand. The clock counted both moves, so it is
+    # not a takeback, and the moves are found as soon as it says so.
+    fen = "7k/8/8/8/6qN/8/6K1/8 w - - 0 1"
+    b = board(fen)
+    {tr, _} = Tracker.observe(Tracker.new(start_fen: fen), 0, b)
+    kh2 = move(b, "g2", "h2")
+    qxh4 = move(kh2, "g4", "h4")
+    round = lift(b, "h4")
+
+    {tr, out} =
+      feed(
+        tr,
+        [
+          {0, {:presses, 0}},
+          {1_000, kh2},
+          {1_500, {:presses, 1}},
+          {3_000, qxh4},
+          {3_500, {:presses, 2}},
+          {6_000, round},
+          {6_400, {:presses, 4}}
+        ],
+        1_500
+      )
+
+    assert Tracker.sans(tr) == ~w(Kh2 Qxh4+ Kg2 Qg4+)
+    assert Enum.all?(Enum.drop(tr.plies, 2), &(&1.flags != []))
+    assert alarms(out) == []
   end
 end
