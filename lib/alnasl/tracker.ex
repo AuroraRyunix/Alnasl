@@ -176,6 +176,7 @@ defmodule Alnasl.Tracker do
             dead: [],
             suspects: [],
             confused: [],
+            misheard: [],
             stats: %{searches: 0, max_nodes: 0, max_us: 0, budget_hits: 0}
 
   @type t :: %__MODULE__{}
@@ -1040,7 +1041,9 @@ defmodule Alnasl.Tracker do
           (heard = crosstalk(tr)) != nil ->
             case heard do
               {:quiet, _cleaned} ->
-                in_sync(tr)
+                # Everything else agrees with the game: these pieces are
+                # misheard, and stay so while they read the same (`unheard/1`).
+                in_sync(%{tr | misheard: retyped(tr.phys, tr.raw, tr.pos)})
 
               {:unseen, cleaned, supposed, move, flags} ->
                 if force or stable >= max(hold(tr, move, flags), o.unseen_hold_ms) do
@@ -1079,8 +1082,10 @@ defmodule Alnasl.Tracker do
   # Only when it has been so for as long as the alarm waits is it asked
   # whether moves that were SEEN explain it - and if not, the alarm.
   defp deeper(tr, t, stable) do
+    raw = unheard(tr)
+
     cond do
-      Position.in_hand?(tr.phys, tr.raw) and not exchange?(tr, stable) ->
+      Position.in_hand?(tr.phys, raw) and not exchange?(tr, stable) ->
         if stable >= tr.opts.lifted_ms,
           do: reconstruct(tr, t, stable, :guided),
           else: unexplained(tr, stable, :unexplained)
@@ -1094,12 +1099,28 @@ defmodule Alnasl.Tracker do
       stable < tr.opts.deep_settle_ms and tr.opts.takeback and not pressed_past?(tr) and
           tr.history
           |> Enum.take(tr.opts.takeback_plies)
-          |> Enum.any?(&Position.in_hand?(&1.phys, tr.raw)) ->
+          |> Enum.any?(&Position.in_hand?(&1.phys, raw)) ->
         unexplained(tr, stable, :unexplained)
 
       true ->
         reconstruct(tr, t, stable, :all)
     end
+  end
+
+  # The reading with the pieces that were heard as others while the rest of
+  # the board agreed with the game put back as the game has them, for as
+  # long as they still read the same. A pawn that has read as a rook since
+  # the last move is not news when a hand comes down beside it - and
+  # without this it made every hand on that board look like more than a
+  # hand, and the search obliged with an exchange on the pawn's square that
+  # ends in a rook. Only those: a piece of another kind that turns up along
+  # with moves nobody saw is more likely one of those moves.
+  defp unheard(tr) do
+    Enum.reduce(tr.misheard, tr.raw, fn %{square: square, piece: piece, read: read}, raw ->
+      if elem(raw, square) == read and elem(tr.phys, square) == piece,
+        do: put_elem(raw, square, piece),
+        else: raw
+    end)
   end
 
   # Two pieces gone, one of each colour, and the one cannot take the other:
@@ -1607,12 +1628,13 @@ defmodule Alnasl.Tracker do
 
   defp in_hand?(tr, [one | _]) do
     from = here(tr)
-    gone = for sq <- Position.diff(from.phys, tr.raw), elem(tr.raw, sq) == nil, do: sq
-    takes? = Position.count(tr.raw) < Position.count(from.phys)
+    raw = unheard(tr)
+    gone = for sq <- Position.diff(from.phys, raw), elem(raw, sq) == nil, do: sq
+    takes? = Position.count(raw) < Position.count(from.phys)
 
     takes? and
       Enum.any?(gone, fn sq ->
-        board = put_elem(tr.raw, sq, elem(from.phys, sq))
+        board = put_elem(raw, sq, elem(from.phys, sq))
 
         board == from.phys or
           match?(
@@ -1934,7 +1956,7 @@ defmodule Alnasl.Tracker do
       named != nil ->
         set_status(tr, :out_of_sync, named)
 
-      Position.in_hand?(tr.phys, tr.raw) ->
+      Position.in_hand?(tr.phys, unheard(tr)) ->
         if stable >= o.lifted_ms,
           do: set_status(tr, :out_of_sync, :piece_missing),
           else: set_status(tr, :settling, :in_hand)
@@ -2525,10 +2547,26 @@ defmodule Alnasl.Tracker do
 
   defp revision(%{history: [before | _]} = tr) do
     case one_ply(before.pos, before.phys, tr.raw, tr.opts.promotion_default, before.unseen) do
-      [step] -> step
+      [step] -> if reheard?(tr, step), do: nil, else: step
       _other -> nil
     end
   end
+
+  # The same promotion, another piece, after the clock was pressed for it:
+  # nobody changes their mind about a bishop once the lever is down, but a
+  # sensor beside a king changes its mind about a bishop all the time. The
+  # piece the board showed and the clock confirmed is the game's; what is
+  # read on the square now is a piece heard as another (`heard/2`).
+  defp reheard?(%{plies: [_ | _] = plies} = tr, {move, _flags}) do
+    last = List.last(plies)
+
+    tr.opts.crosstalk and move.promo != nil and last.promo != nil and
+      move.promo != last.promo and move.from == last.from and move.to == last.to and
+      :assumed not in last.flags and tr.pressed_at != nil and tr.accepted_at != nil and
+      tr.pressed_at >= tr.accepted_at
+  end
+
+  defp reheard?(_tr, _step), do: false
 
   # A pawn was left on its last rank and counted as the default piece; now a
   # different piece stands there. The promotion is rewritten and the moves

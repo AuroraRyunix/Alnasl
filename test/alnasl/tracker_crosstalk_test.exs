@@ -23,6 +23,7 @@ defmodule Alnasl.TrackerCrosstalkTest do
         {tr, events} =
           case what do
             :press -> Tracker.press(tr, t)
+            {:presses, n} -> tr |> Tracker.presses(n, t) |> Tracker.press(t)
             board -> Tracker.observe(tr, t, board)
           end
 
@@ -136,6 +137,61 @@ defmodule Alnasl.TrackerCrosstalkTest do
     {tr, out} = feed(tr, [{t, put(b, "f1", {:w, :n})}, {t + 3_000, jumped}], 20_000)
     assert Tracker.sans(tr) == ~w(e4 e5 Nf3 Nc6)
     assert alarms(out) != []
+  end
+
+  test "a promotion pressed for keeps its piece when the board hears it as another" do
+    # 1. a8=B+, the clock pressed for it, and four seconds later the bishop
+    # beside nothing in particular reads as a knight. Before, the last move
+    # was revised into 1. a8=N - which gives no check - without a mark.
+    fen = "8/P7/8/8/8/8/8/K6k w - - 0 1"
+    start = board(fen)
+    {tr, _} = Tracker.observe(Tracker.new(start_fen: fen), 0, start)
+    tr = Tracker.presses(tr, 0, 0)
+    bishop = start |> lift("a7") |> put("a8", {:w, :b})
+    heard = put(bishop, "a8", {:w, :n})
+
+    {tr, out} = feed(tr, [{1_000, bishop}, {1_600, {:presses, 1}}, {5_000, heard}], 10_000)
+
+    assert Tracker.sans(tr) == ["a8=B+"]
+    refute Enum.any?(out, &match?({_, {:correction, _, _, _}}, &1))
+    assert alarms(out) == []
+
+    # Changed before the press - lifted and another piece set down - it is
+    # the player's change, and the move is that.
+    {tr, _} = Tracker.observe(Tracker.new(start_fen: fen), 0, start)
+    tr = Tracker.presses(tr, 0, 0)
+    swapped = put(bishop, "a8", {:w, :n})
+
+    {tr, _} =
+      feed(
+        tr,
+        [{1_000, bishop}, {2_000, lift(bishop, "a8")}, {2_400, swapped}, {4_000, {:presses, 1}}],
+        5_000
+      )
+
+    assert Tracker.sans(tr) == ["a8=N"]
+  end
+
+  test "a hand beside a piece heard as another is a hand, not an exchange on its square" do
+    # White's pawn on b3 has read as a rook for a while. Black takes on d3:
+    # the rook off, the queen in the air. With b3 counted as a change, that
+    # was more than a hand, and 250 ms in the search found 34...Qxb3
+    # 35. Rxb3 - which ends with a white rook on b3, as read. Then the
+    # queen landed on d3, and the alarm.
+    fen = "1r2b1k1/7N/p3p1p1/3p4/3r1Q1P/1PqRK3/2B2P2/7R b - - 3 34"
+    start = board(fen)
+    {tr, _} = Tracker.observe(Tracker.new(start_fen: fen), 0, start)
+    heard = put(start, "b3", {:w, :r})
+    taken = lift(heard, "d3")
+    lifted = lift(taken, "c3")
+    landed = put(lifted, "d3", {:b, :q})
+
+    {tr, out} =
+      feed(tr, [{1_000, heard}, {6_000, taken}, {6_200, lifted}, {6_600, landed}], 6_000)
+
+    assert Tracker.sans(tr) == ["Qxd3+"]
+    assert Enum.all?(tr.plies, &(&1.flags == []))
+    assert alarms(out) == []
   end
 
   test "the starting position with a piece heard as another is the starting position" do

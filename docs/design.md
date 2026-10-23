@@ -123,10 +123,12 @@ not see how; that is out of sync like any other.
   against a check from a4 rests on e6, where it blocks nothing. The board
   then makes sense with no move at all if the bishop's earlier move went to
   e6 and was misread as f5 - and the misread rule used to say exactly
-  that, 250 ms in. A rewrite that adds no move and moves a piece of the
-  side to move now waits for the press, or for `deep_settle_ms`: a slide
-  stops for well under a second, a straightened piece is followed by the
-  clock.
+  that, 250 ms in. A rewrite that adds no move and puts back a rook,
+  bishop or queen of the side to move, while that side is in check, now
+  waits for the press, or for `deep_settle_ms`: a slide stops for well
+  under a second, a straightened piece is followed by the clock. Waiting
+  for every piece of the side to move, check or not, was tried first; it
+  cost more misreads read wrong than it saved.
 - **A capture taken back, and the hand straight back for another.** 1...Rxg8
   taken back, and the same rook lifted for 1...Rxh7 with the h7 pawn
   already off: for a moment the board is 2. hxg8=R, the rook just taken
@@ -385,6 +387,25 @@ until the piece is touched.
 - **Said, not alarmed.** A piece heard as another for `unseen_hold_ms`
   goes on the `confused` list; the board's page and the Round tile say
   "White bishop on e4 reads as a knight" for as long as it lasts.
+- **A hand beside it is a hand.** A piece heard as another while the
+  rest of the board agreed with the game (`misheard`) is put back as the
+  game has it before the board is judged a hand, for as long as it reads
+  the same (`unheard/1`). Otherwise a capture half made beside it - the
+  taken piece off, the taker in the air - was three changes, not two, and
+  250 ms in the search found an exchange on the misheard square that ends
+  with exactly the kind it reads as: a white pawn read as a rook, and
+  34...Qxb3 35.Rxb3. Over 10,000 games that was 16 of the 18 wrong games in
+  the two "reads as another" suites. Only pieces heard wrong *while
+  everything else agreed*: a piece of another kind that turns up along
+  with moves nobody saw is more likely one of those moves.
+- **A promotion keeps the piece it was pressed with.** The revision rule
+  rewrites the last move when the board shows another legal move from the
+  same position, which is right for a piece set down and moved on before
+  the press, and was wrong for a promoted bishop heard as a knight four
+  seconds after the clock was pressed for it: `a1=B+` became `a1=N`,
+  unmarked. Once the clock has been pressed for a promotion (`reheard?/2`),
+  the same promotion to another piece is the board mishearing, like any
+  other piece. Without a clock there is nothing to tell the two apart.
 - **When it matters.** The piece doing what only the piece it is heard as
   could (a "knight" jumping from a bishop's square) is a board nothing
   explains, and the alarm as for any such board. Nothing is ever moved
@@ -739,6 +760,18 @@ account. Except while the board is not heard: then nothing changing says
 nothing, and every press is a move. Without this, the bench's "lever
 knocked back" fault at bullet speed turned 25 of 69 games into longer,
 wrong, red lines.
+
+The other way round: once the clock has counted more moves than the game
+holds - two more, since the press for the move on the board may come in
+before that move is taken - the board is not going backwards
+(`pressed_past?/1`). A position that came round again is then not a
+takeback, the last move is not revised into another, and a board that is
+"in hand" over an earlier position is not waited on as a takeback in the
+making. All three used to turn a repetition played while the readings
+were missed into a takeback of moves that were never taken back, without
+a mark. Now such a game goes on, and the presses it is short of raise
+"Move missing?". Not while the board is not heard: a deaf board's presses
+are its moves, but its count says nothing about direction.
 
 Measured with `mix alnasl.bench --passes 3`, the same seeds before and
 after. Every suite not shown is identical in every column; "missed" is the
