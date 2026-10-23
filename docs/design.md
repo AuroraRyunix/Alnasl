@@ -153,6 +153,15 @@ not see how; that is out of sync like any other.
   and the next hand together took the unmarked wrong games from 114 to 0.
   `undone/2` also compares moves by their squares now, not their
   notation: Black's Rf3 is not White's Rf3 made again.
+  And it does not undo a hand: a bishop landing on d5 while the other
+  side already holds its rook from e6 reads, to a search free to unpick
+  Re6, as Rd5 Bxd5. When putting one emptied square back gives a board
+  one move short of the line found, the board is a hand and is waited
+  for - but only while that square has been empty for less than
+  `transient_ms` (`emptied`). A knight read on f2 and taken on e3 leaves
+  f2 empty for good, and a board that looks like a hand for the rest of
+  the game is a capture. Without that limit the guard cost 47 games in
+  the "set down between squares" suite to win back 73 in "next hand".
 - **A guess revised is still a guess.** Rule 4 rewrites the last move
   into the one move from the position before it that the board now
   shows. When the last move was a red guess, the move it becomes is red
