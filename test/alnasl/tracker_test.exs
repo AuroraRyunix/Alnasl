@@ -1004,4 +1004,36 @@ defmodule Alnasl.TrackerTest do
     assert Tracker.sans(tr) == ~w(e4 e5 Nf3)
     assert [{:out_of_turn, %{san: "Ng1"}}] = alarms(out)
   end
+
+  test "two moves unseen that bring back the position before last, a piece short: found on the press" do
+    # 1. Kh2 Qxh4+ read, then 2. Kg2 Qg4+ unread: the board is the one
+    # before 1. Kh2 with the knight gone, which is also a takeback with
+    # the knight still in a hand. The clock counted both moves, so it is
+    # not a takeback, and the moves are found as soon as it says so.
+    fen = "7k/8/8/8/6qN/8/6K1/8 w - - 0 1"
+    b = board(fen)
+    {tr, _} = Tracker.observe(Tracker.new(start_fen: fen), 0, b)
+    kh2 = move(b, "g2", "h2")
+    qxh4 = move(kh2, "g4", "h4")
+    round = lift(b, "h4")
+
+    {tr, out} =
+      feed(
+        tr,
+        [
+          {0, {:presses, 0}},
+          {1_000, kh2},
+          {1_500, {:presses, 1}},
+          {3_000, qxh4},
+          {3_500, {:presses, 2}},
+          {6_000, round},
+          {6_400, {:presses, 4}}
+        ],
+        1_500
+      )
+
+    assert Tracker.sans(tr) == ~w(Kh2 Qxh4+ Kg2 Qg4+)
+    assert Enum.all?(Enum.drop(tr.plies, 2), &(&1.flags != []))
+    assert alarms(out) == []
+  end
 end
