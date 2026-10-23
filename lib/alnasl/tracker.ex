@@ -1009,10 +1009,10 @@ defmodule Alnasl.Tracker do
           # the press that ends the move onto it: a piece parked beside
           # the board vanishes too, but nobody presses the clock for it.
           (found = stuck(tr) || (force && (onto_suspect(tr) || onto_unread(tr))) || nil) != nil ->
-            {square, move} = found
+            {square, move, flags} = found
 
             if force or stable >= o.unseen_hold_ms,
-              do: tr |> dies(square) |> accept(t, [{move, []}], []),
+              do: tr |> dies(square) |> accept(t, [{move, flags}], []),
               else: set_status(tr, :settling, :move)
 
           (k = takeback(tr)) != nil and not replayable?(tr, k) and not pressed_past?(tr) ->
@@ -2142,7 +2142,7 @@ defmodule Alnasl.Tracker do
           elem(tr.raw, move.from) == elem(tr.phys, move.from),
           {board, []} <- Search.outcomes(tr.phys, move, tr.pos.turn, tr.opts.promotion_default),
           blind(board, [move.from | tr.dead]) == blind(tr.raw, [move.from | tr.dead]),
-          do: {move.from, move}
+          do: {move.from, move, []}
 
     case found do
       [one] -> one
@@ -2164,9 +2164,9 @@ defmodule Alnasl.Tracker do
     o = tr.opts
 
     found =
-      for {move, _flags} <- one_ply(tr.pos, tr.phys, tr.raw, o.promotion_default, [], suspects),
+      for {move, flags} <- one_ply(tr.pos, tr.phys, tr.raw, o.promotion_default, [], suspects),
           move.to in suspects,
-          do: {move.to, move}
+          do: {move.to, move, flags}
 
     case found do
       [one] -> one
@@ -2201,7 +2201,7 @@ defmodule Alnasl.Tracker do
          false <- to in tr.dead,
          [{%{promo: nil} = move, _flags}] <-
            one_ply(tr.pos, tr.phys, tr.raw, tr.opts.promotion_default, [], [to]) do
-      {to, move}
+      {to, move, []}
     else
       _no -> nil
     end

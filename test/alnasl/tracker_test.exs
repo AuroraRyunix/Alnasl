@@ -705,6 +705,38 @@ defmodule Alnasl.TrackerTest do
     assert alarms(out) == []
   end
 
+  test "a pawn promoting onto a square suspected dead is an assumed queen, not a queen" do
+    # a8 stops reading with the knight on it; the knight leaves, a8 goes on
+    # reading empty, and the pawn promotes there. Every piece it could
+    # become reads the same - nothing - so the queen is assumed and says
+    # so. It used to go in as a plain queen, and an underpromotion as a
+    # wrong move nobody marked.
+    fen = "N7/P7/8/8/2K5/8/8/7k w - - 0 1"
+    start = board(fen)
+    {tr, _} = Tracker.observe(Tracker.new(start_fen: fen), 0, start)
+    b1 = move(start, "c4", "d3")
+    b2 = move(b1, "h1", "h2")
+    b3 = move(b2, "d3", "e4")
+    b4 = move(b3, "h2", "g2")
+    b5 = move(b4, "a8", "b6")
+    b6 = move(b5, "g2", "f2")
+    b7 = lift(b6, "a7")
+    off = fn board -> lift(board, "a8") end
+
+    timed =
+      [b3, b4, b5, b6, b7]
+      |> Enum.with_index(1)
+      |> Enum.map(fn {x, i} -> {7_000 + i * 5_000, off.(x)} end)
+
+    {tr, out} =
+      feed(tr, [{1_000, b1}, {6_000, b2}, {7_000, off.(b2)} | timed] ++ [{33_000, :press}], 5_000)
+
+    assert Tracker.sans(tr) == ~w(Kd3 Kh2 Ke4 Kg2 Nb6 Kf2 a8=Q)
+    assert :assumed in List.last(tr.plies).flags
+    assert Tracker.dead(tr) == [sq("a8")]
+    assert alarms(out) == []
+  end
+
   test "a square that broke while empty: the press, a move owed, and only one square the piece could go to" do
     {tr, b, t} = after_moves(~w(e4 e5))
     # The king goes to e2, whose sensor has died: only the king gone. Its

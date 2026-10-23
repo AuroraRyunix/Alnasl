@@ -227,7 +227,10 @@ the rest of the game.
   moved off it, and it went on reading nothing - which a pocket does too.
   It is found out when, later, a piece vanishes in the one way that is a
   legal move onto the suspected square, and the clock is pressed for it.
-  On time alone it is not: a piece parked beside the board vanishes too,
+  A pawn promoting onto it goes in as a queen marked assumed, like any
+  promotion onto a square nothing is read on: the flag used to be lost
+  on this path, and an underpromotion there was a wrong move nobody
+  marked (2 games in 10,000). On time alone it is not: a piece parked beside the board vanishes too,
   and an earlier version that believed the hold declared live squares
   dead in the bench's "piece not seen" suites. A square that breaks while empty and is first used by
   a piece arriving is not caught: that piece becomes a piece out of sight
