@@ -157,10 +157,12 @@ not see how; that is out of sync like any other.
   side already holds its rook from e6 reads, to a search free to unpick
   Re6, as Rd5 Bxd5. When putting one emptied square back gives a board
   one move short of the line found, the board is a hand and is waited
-  for - but only while that square has been empty for less than
-  `transient_ms` (`emptied`). A knight read on f2 and taken on e3 leaves
-  f2 empty for good, and a board that looks like a hand for the rest of
-  the game is a capture. Without that limit the guard cost 47 games in
+  for - but only if that square went empty before the last change (one
+  emptied in the same reading as the landing went with it), less than
+  `transient_ms` ago, and with no more than one press since (`emptied`,
+  `held?/2`): nobody presses with a piece of their own in the air. A
+  knight read on f2 and taken on e3 leaves f2 empty for good, and a
+  board that looks like a hand for the rest of the game is a capture. Without that limit the guard cost 47 games in
   the "set down between squares" suite to win back 73 in "next hand".
 - **A guess revised is still a guess.** Rule 4 rewrites the last move
   into the one move from the position before it that the board now

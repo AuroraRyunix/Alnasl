@@ -19,7 +19,7 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
-- [Fix] **A hand comes down; a piece that stays gone was taken.** 0.8.0 stopped an undo from reading a piece in the air beside the last move as a capture there. It did not stop it from reading every capture there as a piece in the air: a knight set down between e3 and f2, read on f2 and taken on e3, left a board that looked like a hand for the rest of the game, and the wrong square stood. A square empty for longer than a hand takes now counts as a capture. At 10,000 games, the "set down between squares" suites had lost 47 games and 8 games to this; with the fix they are back, and the 73 games 0.8.0 won in the "next hand" suite stay won.
+- [Fix] **A hand comes down; a piece that stays gone was taken.** 0.8.0 stopped an undo from reading a piece in the air beside the last move as a capture there. It did not stop it from reading every capture there as a piece in the air: a knight set down between e3 and f2, read on f2 and taken on e3, left a board that looked like a hand for the rest of the game, and the wrong square stood. A hand comes down, and a hand was there first: a square emptied in the same reading the taker landed, empty for longer than a hand takes, or empty while both players have pressed, was captured - nobody presses with a piece of their own still in the air. At 10,000 games, the "set down between squares" suites had lost 47 games and 8 games to this; with the fix they are back, and the 73 games 0.8.0 won in the "next hand" suite stay won.
 
 ## [0.8.0] - 2026-10-23
 

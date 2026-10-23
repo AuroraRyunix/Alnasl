@@ -315,13 +315,14 @@ defmodule Alnasl.Tracker do
     tr |> evaluate(t, false) |> noting(was)
   end
 
-  # When each empty square went empty: a hand comes down, a capture does not.
+  # When each empty square went empty, and the clock's count then: a hand
+  # comes down, a capture does not.
   defp emptied(tr, board, t) do
     Enum.reduce(0..63, tr.emptied, fn square, acc ->
       cond do
         elem(board, square) != nil -> Map.delete(acc, square)
         Map.has_key?(acc, square) -> acc
-        true -> Map.put(acc, square, t)
+        true -> Map.put(acc, square, {t, tr.presses})
       end
     end)
   end
@@ -1656,6 +1657,26 @@ defmodule Alnasl.Tracker do
   # by way of e4, and was taken there". Hands are over the board a hundred
   # times a game and queens are lost that way never, so such paths are
   # believed only of a board that has stood for `deep_settle_ms`.
+  # A square emptied before the last change, and not long ago: a hand can
+  # be holding its piece. One emptied by the change itself went with the
+  # piece that landed - a capture, the taken piece off as the taker came
+  # down - and one empty for longer than a hand takes was taken. So was
+  # one both players have pressed since: nobody presses with a piece of
+  # their own still in the air.
+  defp held?(tr, square) do
+    case Map.fetch(tr.emptied, square) do
+      {:ok, {since, presses}} ->
+        since < tr.raw_since and tr.at - since < tr.opts.transient_ms and
+          not pressed_twice?(tr, presses)
+
+      :error ->
+        true
+    end
+  end
+
+  defp pressed_twice?(%{presses: now}, before),
+    do: is_integer(now) and is_integer(before) and now - before >= 2
+
   defp in_hand?(tr, found, lately \\ false)
   defp in_hand?(_tr, [], _lately), do: false
 
@@ -1666,7 +1687,7 @@ defmodule Alnasl.Tracker do
     gone =
       for sq <- Position.diff(from.phys, raw),
           elem(raw, sq) == nil,
-          not lately or tr.at - Map.get(tr.emptied, sq, tr.at) < tr.opts.transient_ms,
+          not lately or held?(tr, sq),
           do: sq
 
     takes? = Position.count(raw) < Position.count(from.phys)
