@@ -59,7 +59,7 @@ defmodule Alnasl.FairPlay.Power do
   "honest" events are whatever the broadcasts contained.
   """
 
-  alias Alnasl.FairPlay.{BandScale, Calibration, Cluster, FalsePositives, Model, Selection, Stats}
+  alias Alnasl.FairPlay.{BandScale, Calibration, FalsePositives, Model, Probes, Selection, Stats}
 
   @thresholds [2.0, 2.5, 3.0, 3.5]
   @rates [0.05, 0.1, 0.2, 0.3, 0.5]
@@ -160,12 +160,13 @@ defmodule Alnasl.FairPlay.Power do
            Enum.split_with(games, &Calibration.held_out?(Calibration.holdout_key(&1), holdout)),
          {:ok, model, how} <- model(opts, train, meta) do
       scenarios = scenarios(opts)
+      probes = Probes.fit(Calibration.keyed_events(train), model, opts)
 
       results =
         held
         |> Calibration.keyed_player_events()
         |> limit(opts[:limit])
-        |> Task.async_stream(&evaluate(&1, model, scenarios, opts),
+        |> Task.async_stream(&evaluate(&1, model, probes, scenarios, opts),
           max_concurrency: System.schedulers_online(),
           ordered: true,
           timeout: :infinity
@@ -180,8 +181,15 @@ defmodule Alnasl.FairPlay.Power do
       else
         summary =
           results
-          |> summarise(Keyword.merge(opts, scenarios: scenarios, weights: model.weights))
+          |> summarise(
+            Keyword.merge(opts,
+              scenarios: scenarios,
+              weights: model.weights,
+              scan: model.scan != nil
+            )
+          )
           |> Map.merge(%{
+            scan_calibration: Map.new(probes.scan, fn {b, {m, sd, n}} -> {b, [m, sd, n]} end),
             model: how,
             holdout: holdout,
             held_out_games: length(held),
@@ -341,25 +349,26 @@ defmodule Alnasl.FairPlay.Power do
   One held-out player-event, honest and under every scenario: `nil` when it
   has no score (fewer than 40 counted moves), else a map of `:event`,
   `:player`, `:half` (`:tune` or `:final`), `:band`, `:counted`, `:games`,
-  `:honest` (`{zs, correlation}`) and `:cheats` (scenario =>
-  `{zs, correlation}`, without the scenarios that do not apply).
+  `:honest` (`Alnasl.FairPlay.Probes.observe/2`: the six z's, their
+  correlation and the scan) and `:cheats` (scenario => the same, without
+  the scenarios that do not apply).
   """
-  def evaluate({{event, player}, records}, model, scenarios, opts) do
+  def evaluate({{event, player}, records}, model, probes, scenarios, opts) do
     counted = records |> Model.prepare() |> Enum.filter(&Selection.counted?/1)
     n = length(counted)
 
     with true <- n >= Stats.min_moves(),
-         expected = expectations(counted, model),
-         dispersion = Model.dispersion(model),
-         {zs, corr} = honest <- z_scores(counted, expected, dispersion),
-         score when is_number(score) <- Stats.combined(zs, model.weights, corr) do
+         expected = Probes.expectations(counted, model, probes),
+         observe = &(&1 |> Probes.plies(expected) |> Probes.observe(probes)),
+         honest = observe.(counted),
+         score when is_number(score) <- shipped(honest, model.weights, model.scan != nil) do
       seed = Keyword.get(opts, :seed, 1)
 
       cheats =
         for scenario <- scenarios,
             {:ok, injected} <- [inject(counted, scenario, {seed, event, player, scenario}, opts)],
             into: %{},
-            do: {scenario, z_scores(injected, expected, dispersion)}
+            do: {scenario, observe.(injected)}
 
       split = if event, do: "event:" <> event, else: "game:" <> to_string(hd(counted)[:game])
 
@@ -382,45 +391,23 @@ defmodule Alnasl.FairPlay.Power do
     end
   end
 
-  # What the model expects of each counted ply. None of it depends on the
-  # move played, which is what lets a cheat be scored by its residuals alone.
-  @doc false
-  def expectations(counted, model) do
-    Enum.map(counted, fn record ->
-      p = Model.p_match(model, record)
-      q = Model.p_ev(model, record)
-      {mean, var} = Model.loss_moments(model, record)
+  @doc """
+  The report's score from an observation: the event score with the
+  model's weights, or the scan when that is larger and the model has one
+  (`Alnasl.FairPlay.Stats`).
+  """
+  def shipped(obs, weights, scan?) do
+    event = Probes.score(obs, pad(weights))
 
-      %{
-        game: record[:game],
-        p: p,
-        q: q,
-        mean: mean,
-        s: [:math.sqrt(p * (1 - p)), :math.sqrt(q * (1 - q)), :math.sqrt(max(var, 0.0))]
-      }
-    end)
+    cond do
+      not is_number(event) -> nil
+      scan? and is_number(obs.scan) -> max(event, obs.scan)
+      true -> event
+    end
   end
 
-  @doc false
-  def z_scores(counted, expected, dispersion) do
-    counted
-    |> Enum.zip_with(expected, fn record, x ->
-      %{
-        game: x.game,
-        s: x.s,
-        e: [
-          indicator(Stats.engine_match?(record)) - x.p,
-          indicator(Stats.ev_match?(record)) - x.q,
-          x.mean - Stats.scaled_loss(record)
-        ]
-      }
-    end)
-    |> Cluster.accumulate()
-    |> Cluster.z_scores(dispersion)
-  end
-
-  defp indicator(true), do: 1.0
-  defp indicator(false), do: 0.0
+  @doc "A weight vector of the shipped three, as six: the probes' weights zero."
+  def pad(weights), do: weights ++ List.duplicate(0.0, length(Probes.tests()) - length(weights))
 
   # --- the summary -----------------------------------------------------------------
 
@@ -433,6 +420,23 @@ defmodule Alnasl.FairPlay.Power do
     {"ASD-heavy", [1.0, 1.0, 2.0]},
     {"MM+ASD", [1.0, 0.0, 1.0]}
   ]
+
+  # The probes (`Alnasl.FairPlay.Probes`), in its order: MM, EV, ASD,
+  # error avoidance, blunder avoidance, hard ASD.
+  @probed [
+    {"+error", [1.0, 1.0, 1.0, 1.0, 0.0, 0.0]},
+    {"+blunder", [1.0, 1.0, 1.0, 0.0, 1.0, 0.0]},
+    {"+hard ASD", [1.0, 1.0, 1.0, 0.0, 0.0, 1.0]},
+    {"hard ASD for ASD", [1.0, 1.0, 0.0, 0.0, 0.0, 1.0]},
+    {"+error+hard ASD", [1.0, 1.0, 1.0, 1.0, 0.0, 1.0]},
+    {"error only", [0.0, 0.0, 0.0, 1.0, 0.0, 0.0]},
+    {"hard ASD only", [0.0, 0.0, 0.0, 0.0, 0.0, 1.0]}
+  ]
+
+  # The scan is added to the event score as `max(score, scan − offset)`:
+  # the offset is what keeps the union from flagging more honest players
+  # than the score alone.
+  @scan_offsets [0.0, 0.5, 1.0]
 
   @grid [0.0, 0.5, 1.0, 2.0, 3.0]
 
@@ -455,7 +459,8 @@ defmodule Alnasl.FairPlay.Power do
     scenarios = Keyword.fetch!(opts, :scenarios)
     weights = Keyword.get(opts, :weights, [1.0, 1.0, 1.0])
     budget = Keyword.get(opts, :budget, 0.01)
-    score = fn {zs, corr} -> Stats.combined(zs, weights, corr) end
+    scan? = Keyword.get(opts, :scan, false)
+    score = &shipped(&1, weights, scan?)
 
     %{
       events: length(results),
@@ -476,7 +481,8 @@ defmodule Alnasl.FairPlay.Power do
           }
         end,
       breakdown: breakdown(results, scenarios, score),
-      variants: variants(results, scenarios, budget)
+      scan: scan?,
+      variants: variants(results, scenarios, budget, scan?)
     }
   end
 
@@ -490,16 +496,23 @@ defmodule Alnasl.FairPlay.Power do
     end
   end
 
-  defp delta_z([], _scenario), do: [nil, nil, nil]
-
+  # The mean change of each z, and of the scan, over the events where both
+  # sides have one.
   defp delta_z(results, scenario) do
-    n = length(results)
+    zs = fn obs -> obs.zs ++ [obs.scan] end
 
     results
-    |> Enum.map(fn r ->
-      Enum.zip_with(elem(r.cheats[scenario], 0), elem(r.honest, 0), &(&1 - &2))
+    |> Enum.map(fn r -> Enum.zip(zs.(r.cheats[scenario]), zs.(r.honest)) end)
+    |> Enum.zip_with(fn pairs ->
+      case for({a, b} <- pairs, is_number(a) and is_number(b), do: a - b) do
+        [] -> nil
+        ds -> Enum.sum(ds) / length(ds)
+      end
     end)
-    |> Enum.zip_with(&(Enum.sum(&1) / n))
+    |> case do
+      [] -> List.duplicate(nil, length(Probes.tests()) + 1)
+      means -> means
+    end
   end
 
   # --- by event length and rating ------------------------------------------------
@@ -583,16 +596,33 @@ defmodule Alnasl.FairPlay.Power do
   weight vectors, the per-band thresholds of `Alnasl.FairPlay.BandScale`
   with their scales measured on the tuning half's honest scores, and
   `fitted` - the weight vector of a coarse grid with the most realistic
-  power at the budget threshold *on the tuning half*. `verdict` says
-  whether any of them beats the default on the final half at both
-  thresholds without more false positives at 3.0.
+  power at the budget threshold *on the tuning half* - the probes of
+  `Alnasl.FairPlay.Probes` as weights over six tests, and the per-game
+  scan as `max(event, scan − offset)`. With `scan?` (the model has a scan,
+  so the shipped score uses it) the default is the event score or the
+  scan, every weighting is judged with the scan, and "no scan" is a
+  variant. `verdict` says whether any of them beats the default on the
+  final half at both thresholds without more false positives at 3.0, and
+  picks among several by the tuning half.
   """
-  def variants(results, scenarios, budget) do
+  def variants(results, scenarios, budget, scan? \\ false) do
     realistic = Enum.filter(scenarios, &realistic?/1)
     tune = Enum.filter(results, &(&1.half == :tune))
     final = Enum.filter(results, &(&1.half == :final))
 
-    by_weights = fn w -> fn {zs, corr}, _band -> Stats.combined(zs, w, corr) end end
+    event = fn w ->
+      w = pad(w)
+      fn obs, _band -> number(Probes.score(obs, w)) end
+    end
+
+    scanned = fn scorer, offset ->
+      fn obs, band -> max(scorer.(obs, band), number(obs.scan && obs.scan - offset)) end
+    end
+
+    # With a scan in the shipped score, every weighting is judged with it:
+    # the question is then what the event part adds, not whether a score
+    # without the scan misses whole games (it does).
+    by_weights = if scan?, do: &scanned.(event.(&1), 0.0), else: event
 
     fitted_weights =
       grid()
@@ -612,7 +642,10 @@ defmodule Alnasl.FairPlay.Power do
         [
           {"fitted", fitted_weights, by_weights.(fitted_weights)},
           {"per-band thresholds", [1.0, 1.0, 1.0], banded}
-        ]
+        ] ++
+        Enum.map(@probed, fn {name, w} -> {name, w, by_weights.(w)} end) ++
+        scan_rows(scan?, event.([1.0, 1.0, 1.0]), scanned) ++
+        [{"scan only", [], fn obs, _band -> number(obs.scan) end}]
 
     judged =
       Enum.map(candidates, fn {name, w, scorer} ->
@@ -627,6 +660,14 @@ defmodule Alnasl.FairPlay.Power do
     }
   end
 
+  defp scan_rows(true, event, scanned) do
+    [{"no scan", [1.0, 1.0, 1.0], event}] ++
+      for d <- tl(@scan_offsets), do: {"scan, offset #{d}", [1.0, 1.0, 1.0], scanned.(event, d)}
+  end
+
+  defp scan_rows(false, event, scanned),
+    do: for(d <- @scan_offsets, do: {"scan, offset #{d}", [1.0, 1.0, 1.0], scanned.(event, d)})
+
   defp judge(name, w, scorer, default, all, tune, final, realistic, budget) do
     t_budget = budget_threshold(tune, scorer, budget)
     t_default = budget_threshold(tune, default, budget)
@@ -636,6 +677,9 @@ defmodule Alnasl.FairPlay.Power do
       weights: w,
       tune_threshold: t_budget,
       tune_power: pooled_power(tune, realistic, scorer, t_budget),
+      tune_fp_at_3: honest_rate(tune, scorer, @nominal),
+      tune_power_at_3: pooled_power(tune, realistic, scorer, @nominal),
+      tune_diff_at_3: paired(tune, realistic, scorer, @nominal, default, @nominal),
       final_fp_at_budget: honest_rate(final, scorer, t_budget),
       final_power_at_budget: pooled_power(final, realistic, scorer, t_budget),
       final_diff_at_budget: paired(final, realistic, scorer, t_budget, default, t_default),
@@ -643,17 +687,35 @@ defmodule Alnasl.FairPlay.Power do
       all_fp_at_3: honest_rate(all, scorer, @nominal),
       final_power_at_3: pooled_power(final, realistic, scorer, @nominal),
       final_diff_at_3: paired(final, realistic, scorer, @nominal, default, @nominal),
-      final_power_by_scenario_at_3:
-        Enum.map(realistic, fn s ->
-          applicable = Enum.filter(final, &Map.has_key?(&1.cheats, s))
+      final_power_by_scenario_at_3: by_scenario(final, realistic, scorer, @nominal),
+      final_power_by_scenario_at_budget: by_scenario(final, realistic, scorer, t_budget),
+      final_one_game_by_games_at_3:
+        for bucket <- ~w(1-2 3-5 6+) do
+          s = {:whole_games, 1}
+
+          applicable =
+            Enum.filter(final, &(Map.has_key?(&1.cheats, s) and games_bucket(&1) == bucket))
 
           %{
-            scenario: label(s),
+            games: bucket,
+            events: length(applicable),
             rate: share_at(applicable, &scorer.(&1.cheats[s], &1.band), @nominal)
           }
-        end)
+        end
     }
   end
+
+  defp by_scenario(events, scenarios, scorer, t) do
+    Enum.map(scenarios, fn s ->
+      applicable = Enum.filter(events, &Map.has_key?(&1.cheats, s))
+      %{scenario: label(s), rate: share_at(applicable, &scorer.(&1.cheats[s], &1.band), t)}
+    end)
+  end
+
+  # No score is no flag: nil compares above every number in Erlang's order,
+  # which is the wrong way round for a threshold.
+  defp number(x) when is_number(x), do: x
+  defp number(_none), do: -1.0e9
 
   defp grid do
     for a <- @grid, b <- @grid, c <- @grid, a + b + c > 0 do
@@ -736,7 +798,8 @@ defmodule Alnasl.FairPlay.Power do
           "thresholds without more false positives at 3.0"
 
       _ ->
-        best = Enum.max_by(winners, & &1.final_diff_at_3.diff)
+        # Which of several winners: the tuning half says, not the final one.
+        best = Enum.max_by(winners, & &1.tune_diff_at_3.diff)
 
         "candidate: #{best.variant} #{inspect(best.weights)} catches more on the final half " <>
           "at both thresholds, with no more false positives at 3.0 on the held-out events"
@@ -766,9 +829,15 @@ defmodule Alnasl.FairPlay.Power do
     [
       "fair_play power: model #{s.model}; holdout #{s.holdout}, #{s.held_out_games} games held out, " <>
         "#{s.events} player-events with a score (tuning #{s.tune_events}, final #{s.final_events})",
+      "the score: " <>
+        if(s.scan,
+          do: "the larger of the event score and the per-game scan",
+          else: "the event score (the model has no scan calibration)"
+        ),
       "",
       "detection (share of cheating player-events at or over; 95% exact) and the mean change in each z:",
-      pad.("scenario", 18) <> pad.("events", 8) <> header <> "dMM   dEV   dASD",
+      pad.("scenario", 18) <>
+        pad.("events", 8) <> header <> "dMM   dEV   dASD  dERR  dBLN  dHASD dSCAN",
       pad.("honest (FP)", 18) <>
         pad.("#{s.events}", 8) <>
         Enum.map_join(s.false_positives, "", fn r ->
@@ -806,12 +875,12 @@ defmodule Alnasl.FairPlay.Power do
       "fitted weights (grid, tuning half): #{inspect(v.fitted_weights)}",
       "(a) at the threshold spending #{pct.(budget)} false positives on the tuning half:",
       pad.("  variant", 22) <>
-        pad.("weights", 18) <>
+        pad.("weights", 31) <>
         pad.("thr", 7) <> pad.("FP final", 13) <> pad.("power", 9) <> "vs default"
     ] ++
       Enum.map(v.rows, fn r ->
         pad.("  " <> r.variant, 22) <>
-          pad.(Enum.map_join(r.weights, ",", &two.(&1)), 18) <>
+          pad.(Enum.map_join(r.weights, ",", &two.(&1)), 31) <>
           pad.(two.(r.tune_threshold), 7) <>
           pad.(fp.(r.final_fp_at_budget), 13) <>
           pad.(pct.(r.final_power_at_budget), 9) <> diff.(r.final_diff_at_budget)
@@ -819,14 +888,49 @@ defmodule Alnasl.FairPlay.Power do
       [
         "(b) at 3.0, the report's threshold:",
         pad.("  variant", 22) <>
+          pad.("FP tune", 11) <>
+          pad.("tune", 8) <>
           pad.("FP final", 11) <> pad.("FP all", 11) <> pad.("power", 9) <> "vs default"
       ] ++
       Enum.map(v.rows, fn r ->
         pad.("  " <> r.variant, 22) <>
+          pad.(fp.(r.tune_fp_at_3), 11) <>
+          pad.(pct.(r.tune_power_at_3), 8) <>
           pad.(fp.(r.final_fp_at_3), 11) <>
           pad.(fp.(r.all_fp_at_3), 11) <>
           pad.(pct.(r.final_power_at_3), 9) <> diff.(r.final_diff_at_3)
       end) ++
+      per_scenario(v.rows, :final_power_by_scenario_at_3, "(c) at 3.0", pct, pad) ++
+      per_scenario(
+        v.rows,
+        :final_power_by_scenario_at_budget,
+        "(d) at the budget threshold",
+        pct,
+        pad
+      ) ++
+      [
+        "(e) one whole game at 3.0, final half, by games in the event:",
+        pad.("  variant", 22) <>
+          Enum.map_join(hd(v.rows).final_one_game_by_games_at_3, "", fn c ->
+            pad.("#{c.games} (#{c.events})", 14)
+          end)
+      ] ++
+      Enum.map(v.rows, fn r ->
+        pad.("  " <> r.variant, 22) <>
+          Enum.map_join(r.final_one_game_by_games_at_3, "", &pad.(pct.(&1.rate), 14))
+      end) ++
       ["verdict: " <> v.verdict]
+  end
+
+  defp per_scenario(rows, key, title, pct, pad) do
+    [
+      title <> ", final half, per realistic scenario:",
+      pad.("  variant", 22) <>
+        Enum.map_join(Map.fetch!(hd(rows), key), "", &pad.(&1.scenario, 17))
+    ] ++
+      Enum.map(rows, fn r ->
+        pad.("  " <> r.variant, 22) <>
+          Enum.map_join(Map.fetch!(r, key), "", &pad.(pct.(&1.rate), 17))
+      end)
   end
 end

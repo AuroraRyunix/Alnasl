@@ -289,6 +289,8 @@ defmodule Alnasl.FairPlay.CalibrationTest do
       assert is_integer(hit.rating) and is_integer(hit.opponents)
       assert hit.games >= 1
       assert Enum.all?([hit.mm_z, hit.ev_z, hit.asd_z], &is_float/1)
+      # The score is the event's or the scan's, whichever is larger.
+      assert hit.score == Enum.max(Enum.filter([hit.event_score, hit.scan], &is_number/1))
     end
 
     assert {:ok, []} =

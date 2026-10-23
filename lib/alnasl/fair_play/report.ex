@@ -15,7 +15,10 @@ defmodule Alnasl.FairPlay.Report do
       2, else `nil`. Words for the screen, not a finding: the manual says
       what to do with them, and the report says on every page that this is
       not the method FIDE has approved;
-    * `name`, `key`, `rating` (the player's most recent) and `games`.
+    * `name`, `key`, `rating` (the player's most recent) and `games`;
+    * `scan_round` - when one game decides the score (`decided_by:
+      :game`, see `Alnasl.FairPlay.Stats`), the round of that game, so
+      the owner knows which one to open first.
 
   Players are sorted by score, highest first; those without a score
   (uncalibrated, or too few moves) after them, by counted moves.
@@ -123,7 +126,11 @@ defmodule Alnasl.FairPlay.Report do
       # A board game and an uploaded one can share an id: they are in
       # different tables.
       games: rows |> Enum.map(&{&1.__struct__, &1.game_id}) |> Enum.uniq() |> length(),
-      verdict: verdict(numbers.score)
+      verdict: verdict(numbers.score),
+      scan_round:
+        if(numbers.decided_by == :game,
+          do: Enum.find_value(records, &(&1[:game] == numbers.scan_game && &1[:round]))
+        )
     })
   end
 

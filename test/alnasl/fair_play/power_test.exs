@@ -1,7 +1,7 @@
 defmodule Alnasl.FairPlay.PowerTest do
   use ExUnit.Case, async: true
 
-  alias Alnasl.FairPlay.{Calibration, Model, Power, Selection, Stats}
+  alias Alnasl.FairPlay.{Calibration, Model, Power, Probes, Selection, Stats}
 
   @moduletag :tmp_dir
 
@@ -187,20 +187,24 @@ defmodule Alnasl.FairPlay.PowerTest do
 
   test "the benchmark scores an honest event exactly as the report does" do
     games = corpus(4, 4, 3, 30)
-    model = Model.fit(Calibration.keyed_events(games))
+    keyed = Calibration.keyed_events(games)
+    model = Model.fit(keyed)
+    probes = Probes.fit(keyed, model)
     {{event, player}, records} = games |> Calibration.keyed_player_events() |> hd()
 
-    result = Power.evaluate({{event, player}, records}, model, [{:naive, 0.5}], [])
+    result = Power.evaluate({{event, player}, records}, model, probes, [{:naive, 0.5}], [])
     numbers = Stats.player(records, model)
-    {[mm, ev, asd], _corr} = result.honest
+    [mm, ev, asd | _] = result.honest.zs
 
     assert_in_delta mm, numbers.mm_z, 1.0e-9
     assert_in_delta ev, numbers.ev_z, 1.0e-9
     assert_in_delta asd, numbers.asd_z, 1.0e-9
+    assert_in_delta Probes.score(result.honest, Power.pad(model.weights)), numbers.score, 1.0e-9
 
-    # And a cheat moves every test the right way.
-    {cheat, _} = result.cheats[{:naive, 0.5}]
-    assert Enum.zip_with(cheat, [mm, ev, asd], &(&1 > &2)) == [true, true, true]
+    # And a cheat moves every test the right way: fewer errors, fewer
+    # blunders, less loss where it is hard.
+    assert Enum.zip_with(result.cheats[{:naive, 0.5}].zs, result.honest.zs, &(&1 > &2)) ==
+             List.duplicate(true, 6)
   end
 
   test "a run: cheats only in held-out events, tables at each threshold, variants judged on the final half",
@@ -248,7 +252,9 @@ defmodule Alnasl.FairPlay.PowerTest do
     for {a, b} <- Enum.zip(naive.rows, hd(summary.power).rows), do: assert(a.above >= b.above)
 
     v = summary.variants
-    assert length(v.rows) == 9
+    assert length(v.rows) == 9 + 7 + 3 + 1
+    assert "scan, offset 0.5" in Enum.map(v.rows, & &1.variant)
+    assert Enum.all?(v.rows, &(length(&1.final_one_game_by_games_at_3) == 3))
     assert "fitted" in Enum.map(v.rows, & &1.variant)
     assert length(v.fitted_weights) == 3
     assert is_binary(v.verdict)
