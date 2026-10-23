@@ -50,7 +50,7 @@ Onder **Rapporten** op dezelfde pagina open je het rapport van een toernooi. Het
 - **Getelde zetten**: hoeveel zetten in de getallen zitten (hieronder: wat niet meetelt).
 - **Zelfde zet als de engine**, en wat daarvan **verwacht** werd voor de rating van die speler in die stellingen.
 - **Gemiddeld verlies**, en wat verwacht werd. Het verlies is hoeveel slechter de gespeelde zet was dan de beste van de engine, geschaald zodat een pion weggooien in een gelijke stelling zwaarder weegt dan een pion weggooien als je twee pionnen voor staat.
-- **Score**, met het interval, en een van de twee formuleringen hieronder.
+- **Score**, met het interval, en een van de twee formuleringen hieronder. Als één partij de score bepaalde, zegt het rapport **beslist door één partij** en noemt het de ronde.
 - **Niet meegeteld**: hoeveel zetten niet meetelden, en waarom.
 
 Druk op de naam van een speler voor de **stellingen om te bekijken**: de zetten van die speler die de eerste keuze van de engine waren, waar die keuze het meest afstak van de tweede, elk op een bord met de gespeelde zet en de vier beste van de engine.
@@ -80,12 +80,14 @@ De **verwachte** waarden komen uit een model dat gefit is op echte partijen uit 
 
 De standaarddeviatie is die van de eigen partijen van de speler: de zetten van één partij zijn niet onafhankelijk van elkaar (een goede dag duurt langer dan één zet), en negen korte partijen spreiden anders dan vijf lange. Hoe sterk zetten samenhangen binnen een partij, en over de partijen van één speler in een toernooi, wordt gemeten op echte partijen als het model gemaakt wordt.
 
+Elke partij van minstens 20 getelde zetten wordt ook apart bekeken. Eén partij die veel beter gespeeld is dan de rest, valt weg in de score van een heel toernooi van negen partijen; apart valt ze niet weg. Alnasl neemt de meest ongewone partij van de speler en vraagt hoe ongewoon dat is, gegeven hoeveel partijen er waren om uit te kiezen (bij negen partijen is er altijd wel een die de beste van de speler is). De **score** is de hoogste van de twee: het hele toernooi, of die ene partij. Als het de partij is, zegt het rapport **beslist door één partij: ronde N**. Open die partij eerst.
+
 - **Vanaf 2: "de moeite van een nader onderzoek waard".** Zulke scores komen bij een paar van elke honderd eerlijke spelers toevallig voor. Kijk naar de partijen, niet naar het getal.
 - **Boven 5: "statistisch zeer ongewoon".** Eerlijke spelers hebben zo'n score in een model dat past vrijwel nooit. Het is nog steeds geen bewijs van iets, en het volgende onderdeel zegt wat je ermee mag doen.
 
 Die twee woorden en die twee getallen zijn van Alnasl zelf, voor zijn eigen score. Het zijn niet de drempels van FIDE (de 5,00 van FIDE voor spel aan het bord hoort bij de goedgekeurde methode, en de 2,50 steunt alleen ander bewijs), en een 5 hier is geen 5 daar.
 
-Het interval naast de score is het bereik waarin de werkelijke stand van de speler waarschijnlijk ligt: een score van 2,4 uit 40 zetten verschilt niet veel van een score van 0,5.
+Het interval naast de score is het bereik waarin de werkelijke stand van de speler waarschijnlijk ligt: een score van 2,4 uit 40 zetten verschilt niet veel van een score van 0,5. Als één partij de score bepaalde, is er geen interval: een bereik rond de beste van een paar partijen zou een ander getal zijn, en geen eerlijker.
 
 ### Hoe vaak een eerlijke speler zo hoog scoort {#false-positives}
 

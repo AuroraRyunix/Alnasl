@@ -27,6 +27,19 @@ defmodule Alnasl.FairPlay.Stats do
   formulas `binomial_z/2` and `asd_z/2` remain as the independent
   special case, and a model without those correlations gets exactly them.
 
+  ## The score: the event, or one game
+
+  `event_score` is the combined z over the whole player-event. `scan` is
+  the per-game scan of `Alnasl.FairPlay.Scan`: how unusual the most
+  unusual game is, corrected for how many games there were, as a z.
+  The **score** is the larger of the two, and `decided_by` says which
+  (`:event` or `:game`, `scan_game` being that game). One engine game in
+  a nine-game event barely moves the event score; it moves the scan a
+  great deal. A model without a scan calibration gives the event score
+  alone. The interval is the event score's, so it is only given when the
+  event decides: a range around a maximum of several games would be a
+  different and less honest number.
+
   Below 40 counted moves there is no score (`:too_few_moves`); without a
   model there is no score either (`:uncalibrated`), and the raw counts are
   still there to look at. The interval is `score ± 1.96`: the combined
@@ -41,7 +54,7 @@ defmodule Alnasl.FairPlay.Stats do
   is arithmetic over records.
   """
 
-  alias Alnasl.FairPlay.{Cluster, Model, Selection}
+  alias Alnasl.FairPlay.{Cluster, Model, Scan, Selection}
 
   @min_moves 40
   @cap 5.0
@@ -72,6 +85,10 @@ defmodule Alnasl.FairPlay.Stats do
       mm_z: nil,
       ev_z: nil,
       asd_z: nil,
+      event_score: nil,
+      scan: nil,
+      scan_game: nil,
+      decided_by: nil,
       score: nil,
       interval: nil,
       reason: nil
@@ -91,7 +108,9 @@ defmodule Alnasl.FairPlay.Stats do
     {[mm_z, ev_z, asd_z] = zs, correlation} =
       plies |> Cluster.accumulate() |> Cluster.z_scores(Model.dispersion(model))
 
-    score = combined(zs, model.weights, correlation)
+    event = combined(zs, model.weights, correlation)
+    {scan, scan_game} = Scan.z(plies, Model.dispersion(model), model.scan) || {nil, nil}
+    {score, decided_by} = decide(event, scan)
 
     numbers = %{
       raw
@@ -102,10 +121,29 @@ defmodule Alnasl.FairPlay.Stats do
         asd_z: asd_z
     }
 
-    if n < @min_moves,
-      do: %{numbers | reason: :too_few_moves},
-      else: %{numbers | score: score, interval: score && {score - 1.96, score + 1.96}}
+    if n < @min_moves do
+      %{numbers | reason: :too_few_moves}
+    else
+      %{
+        numbers
+        | event_score: event,
+          scan: scan,
+          scan_game: scan_game,
+          score: score,
+          decided_by: decided_by,
+          interval: if(decided_by == :event, do: {event - 1.96, event + 1.96})
+      }
+    end
   end
+
+  # The larger of the two; the event on a tie, and the event when the scan
+  # has nothing to say. No event score, no score: the scan is a second
+  # look at the same moves, not a way round too few of them.
+  defp decide(event, scan) when is_number(event) and is_number(scan) and scan > event,
+    do: {scan, :game}
+
+  defp decide(event, _scan) when is_number(event), do: {event, :event}
+  defp decide(_event, _scan), do: {nil, nil}
 
   @doc """
   The counted plies of `records` as `Alnasl.FairPlay.Cluster` takes them:

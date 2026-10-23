@@ -776,6 +776,9 @@ defmodule AlnaslWeb.FairPlayLive do
     do:
       "(#{:erlang.float_to_binary(low, decimals: 1)} .. #{:erlang.float_to_binary(high, decimals: 1)})"
 
+  defp one_game(nil), do: gettext("decided by one game")
+  defp one_game(round), do: gettext("decided by one game: round %{round}", round: round)
+
   defp verdict_label(:closer_look), do: gettext("worth a closer look")
   defp verdict_label(:very_unusual), do: gettext("statistically very unusual")
 
@@ -1509,6 +1512,13 @@ defmodule AlnaslWeb.FairPlayLive do
                       <br />
                       <span :if={p.verdict} class="note">{verdict_label(p.verdict)}</span>
                       <span
+                        :if={p.decided_by == :game}
+                        class="note"
+                        id={"fair-play-one-game-#{player_dom(p.key)}"}
+                      >
+                        {one_game(p.scan_round)}
+                      </span>
+                      <span
                         :if={rarity(@fp_data.model, p.score)}
                         class="note fp-rarity"
                         id={"fair-play-rarity-#{player_dom(p.key)}"}
@@ -1833,6 +1843,9 @@ defmodule AlnaslWeb.FairPlayLive do
                 <%= if line.score do %>
                   <b>{score(line.score)}</b> {interval(line.interval)}
                   <span :if={line.verdict}>{verdict_label(line.verdict)}</span>
+                  <span :if={line.decided_by == :game} class="note" id="fp-one-game">
+                    {one_game(line.scan_round)}
+                  </span>
                   <span :if={rarity(@fp_data.model, line.score)} class="note" id="fp-rarity">
                     {rarity(@fp_data.model, line.score)}
                   </span>

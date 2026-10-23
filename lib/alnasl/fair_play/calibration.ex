@@ -764,7 +764,9 @@ defmodule Alnasl.FairPlay.Calibration do
 
   # The same, keyed by the event alone: what `Model.fit/2` splits its
   # cross-fit by, so an event's players are all on one side.
-  defp keyed_events(games),
+  # `Alnasl.FairPlay.Power` fits with it too, so its model is this one.
+  @doc false
+  def keyed_events(games),
     do:
       games
       |> keyed_player_events()
@@ -976,7 +978,8 @@ defmodule Alnasl.FairPlay.Calibration do
   the split is by hash, so the same fraction picks the same events.
   Returns `{:ok, [hit]}`, each hit a map of `event`, `player`, `rating`,
   `opponents` (their average rating), `games`, `counted`, `mm_z`, `ev_z`,
-  `asd_z` and `score`.
+  `asd_z`, `event_score`, `scan` (the per-game scan, `Alnasl.FairPlay.Scan`;
+  nil without one) and `score`, the larger of the two.
   """
   def hits(paths, opts) do
     holdout = Keyword.get(opts, :holdout, 0.2)
@@ -1003,7 +1006,10 @@ defmodule Alnasl.FairPlay.Calibration do
           "(holdout #{holdout})"
       )
 
-      log.("score\tmm_z\tev_z\tasd_z\tmoves\tgames\trating\topponents\tplayer\tevent")
+      log.(
+        "score\tevent\tscan\tmm_z\tev_z\tasd_z\tmoves\tgames\trating\topponents\tplayer\tevent"
+      )
+
       Enum.each(hits, &log.(format_hit(&1)))
       {:ok, hits}
     end
@@ -1033,16 +1039,23 @@ defmodule Alnasl.FairPlay.Calibration do
       mm_z: numbers.mm_z,
       ev_z: numbers.ev_z,
       asd_z: numbers.asd_z,
+      event_score: numbers.event_score,
+      scan: numbers.scan,
       score: numbers.score
     }
   end
 
   defp format_hit(h) do
-    two = fn x -> :erlang.float_to_binary(x / 1, decimals: 2) end
+    two = fn
+      nil -> "-"
+      x -> :erlang.float_to_binary(x / 1, decimals: 2)
+    end
 
     Enum.join(
       [
         two.(h.score),
+        two.(h.event_score),
+        two.(h.scan),
         two.(h.mm_z),
         two.(h.ev_z),
         two.(h.asd_z),

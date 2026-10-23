@@ -136,4 +136,17 @@ defmodule Alnasl.FairPlay.ClusterTest do
 
     assert Cluster.from_json(nil) == nil
   end
+
+  test "any number of tests; an empty player-event does not decide how many" do
+    plies =
+      for g <- 1..3,
+          i <- 1..4,
+          do: %{game: g, e: List.duplicate(i / 10, 6), s: List.duplicate(0.5, 6)}
+
+    params = Cluster.fit([Cluster.accumulate([]), Cluster.accumulate(plies)])
+    assert length(params.r0) == 6 and Enum.all?(params.within, &(length(&1) == 6))
+
+    {zs, corr} = plies |> Cluster.accumulate() |> Cluster.z_scores(Cluster.default(6))
+    assert length(zs) == 6 and length(corr) == 6
+  end
 end
