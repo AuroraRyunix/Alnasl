@@ -19,6 +19,8 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-10-24
+
 - [Verified] **Ten thousand games a suite, before and after.** All 46 bench suites over 10,000 Lichess broadcast games each, same seeds, 0.7.0 against this: games wrong without a mark of any kind went from 357 to 36, no suite has more than it had, and the fourteen suites that were exact still are. The bill: 261 more alarms in the bullet hall suite, where 6,300 fewer games end wrong, and six more red guesses in the no-clock "set down between squares" suite. The table, and what is left and why, are in docs/design.md, "At scale".
 - [Fix] **A hand comes down; a piece that stays gone was taken.** 0.8.0 stopped an undo from reading a piece in the air beside the last move as a capture there. It did not stop it from reading every capture there as a piece in the air: a knight set down between e3 and f2, read on f2 and taken on e3, left a board that looked like a hand for the rest of the game, and the wrong square stood. A hand comes down, and a hand was there first: a square emptied in the same reading the taker landed, empty for longer than a hand takes, or empty while both players have pressed, was captured - nobody presses with a piece of their own still in the air. At 10,000 games, the "set down between squares" suites had lost 47 games and 8 games to this; with the fix they are back, and the 73 games 0.8.0 won in the "next hand" suite stay won.
 
