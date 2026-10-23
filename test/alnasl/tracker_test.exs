@@ -1053,6 +1053,40 @@ defmodule Alnasl.TrackerTest do
     assert alarms(out) == []
   end
 
+  test "a move taken back, and the game going on before the takeback is believed" do
+    # 28. Rf3 stands long enough to be the move, and is taken back to g3;
+    # before the takeback has stood its 1.5 s the king goes g2-g1 and
+    # Black's rook is already up for 28...Rf3. From after 28. Rf3 four
+    # moves lead there (Rf4 Rg3 Rf3 Kg1), and that is what went in, with
+    # 28. Rf3 left standing unmarked. From before it, two do.
+    fen = "5rk1/6p1/3p1q2/2pP1r1p/4p3/1P4RP/2P1QPK1/5R2 w - - 0 28"
+    start = board(fen)
+    {tr, _} = Tracker.observe(Tracker.new(start_fen: fen), 0, start)
+    tr = Tracker.presses(tr, 0, 0)
+    played = move(start, "g3", "f3")
+    king = move(start, "g2", "g1")
+
+    {tr, out} =
+      feed(
+        tr,
+        [
+          {1_000, played},
+          {2_150, start},
+          {2_700, lift(start, "g2")},
+          {2_900, start |> lift("g2") |> lift("f5")},
+          {3_100, lift(king, "f5")},
+          {3_300, {:presses, 1}},
+          {4_100, move(king, "f5", "f3")},
+          {4_600, {:presses, 2}}
+        ],
+        10_000
+      )
+
+    assert Tracker.sans(tr) == ~w(Kg1 Rf3)
+    assert Enum.all?(tr.plies, &(:guessed in &1.flags))
+    assert alarms(out) == []
+  end
+
   test "a position come round again while the clock counted the moves is not a takeback" do
     # 2...Nc6 3. Ng1 Nb8 go by unread, three presses with them: the board
     # is back to how it was before 2. Nf3, which by itself is that move

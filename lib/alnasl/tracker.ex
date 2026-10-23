@@ -1223,6 +1223,25 @@ defmodule Alnasl.Tracker do
       misread != [] and (found == [] or hd(misread).edits < length(hd(found).steps)) ->
         rewrite(tr, t, misread)
 
+      # The last move was seen taken back - the board stood where it was
+      # before it - and then the game went on before the takeback was
+      # believed. From before that move, fewer moves lead here than from
+      # after it: the move was taken back, and the shorter line is the game.
+      # Until the press, or until the board has stood long enough to be
+      # searched from before it, such a board is not explained from after
+      # the move: the next hand is usually still in the air.
+      (back = scope == :all and found != [] and undo_instead(tr, stable, found)) not in [
+        nil,
+        false
+      ] ->
+        case back do
+          :wait ->
+            set_status(tr, :settling, :takeback)
+
+          {keep, steps} ->
+            correct(tr, t, keep, steps, :revised)
+        end
+
       found != [] ->
         accept(tr, t, hd(found).steps, mark(found, sure?))
 
@@ -1699,6 +1718,39 @@ defmodule Alnasl.Tracker do
   # business, not an undo. Not the moves the arbiter entered, not across a
   # hole in contact, and only searched by the squares that were seen to
   # change.
+  defp undo_instead(%{plies: [_ | _], history: [before | _]} = tr, stable, [best | _]) do
+    count = length(tr.plies)
+
+    pressed? = tr.pressed_at != nil and tr.pressed_at >= tr.raw_since
+
+    with true <- Enum.any?(tr.trail, fn {at, board} -> at == count and board == before.phys end),
+         false <- :arbiter in hd(Enum.take(tr.plies, -1)).flags,
+         true <- pressed? or stable >= tr.opts.deep_settle_ms or :wait,
+         {keep, steps} = back <- undone(tr, stable) || hand_after(tr, before, stable),
+         true <- keep + length(steps) < count + length(best.steps) do
+      back
+    else
+      :wait -> :wait
+      _no -> nil
+    end
+  end
+
+  defp undo_instead(_tr, _stable, _found), do: nil
+
+  # Another move from before the one taken back, and a piece of the other
+  # side already in the air: the next hand. Waited on, as on any hand,
+  # until the board has stood unexplained as long as the alarm would wait.
+  defp hand_after(tr, before, stable) do
+    if stable < tr.opts.transient_ms and
+         Enum.any?(Chess.legal_moves(before.pos), fn move ->
+           Enum.any?(
+             Search.outcomes(before.phys, move, before.pos.turn, tr.opts.promotion_default),
+             fn {board, _flags} -> Position.in_hand?(board, tr.raw) end
+           )
+         end),
+       do: :wait
+  end
+
   defp undone(tr, stable) do
     count = length(tr.plies)
     pressed? = tr.pressed_at != nil and tr.pressed_at >= tr.raw_since
@@ -1715,10 +1767,12 @@ defmodule Alnasl.Tracker do
              [] <- before.unseen,
              from = %{pos: before.pos, phys: before.phys, unseen: [], count: count - back},
              {found, _sure?, _hit?, _tr} <- paths(tr, from, stable, :guided, 1),
-             sans = Enum.map(dropped, & &1.san),
+             made = Enum.map(dropped, &{&1.from, &1.to}),
              [_ | _] = found <-
                found
-               |> Enum.reject(&Enum.any?(sans_of(from.pos, &1.steps), fn san -> san in sans end))
+               |> Enum.reject(
+                 &Enum.any?(&1.steps, fn {move, _} -> {move.from, move.to} in made end)
+               )
                |> Enum.filter(&(length(&1.steps) <= 3))
                |> then(&usable(tr, from, &1)) do
           flags = if length(found) == 1, do: [:guessed, :alone], else: [:guessed]

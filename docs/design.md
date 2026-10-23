@@ -137,6 +137,21 @@ not see how; that is out of sync like any other.
   the board was seen back where it was before that ply, is held for
   `takeback_settle_ms`, or until the press (`echo?/2`). A real recapture
   with a piece of the same kind waits the same way.
+- **A move taken back while the game goes on.** A move stands, is taken
+  back, and before the takeback has stood its `takeback_settle_ms` the
+  player makes another move and the opponent's hand is already up - two
+  hall habits at once. The board is then explained from after the move
+  taken back by some longer line, which used to go in behind the move
+  that was taken back, that move unmarked. Now, when the board was seen
+  back where it stood before the last move, the search from before it
+  (`undone/2`) is asked as well, on the press or once the board has
+  stood `deep_settle_ms`, and wins if it needs fewer moves in all
+  (`undo_instead/3`); a piece still in the air over a move from there is
+  waited for, as any hand is. Red: a move that was seen is being unsaid.
+  Over 10,000 games of the four hall faults with the benign ones, this
+  and the next hand together took the unmarked wrong games from 114 to 0.
+  `undone/2` also compares moves by their squares now, not their
+  notation: Black's Rf3 is not White's Rf3 made again.
 - **A guess revised is still a guess.** Rule 4 rewrites the last move
   into the one move from the position before it that the board now
   shows. When the last move was a red guess, the move it becomes is red
