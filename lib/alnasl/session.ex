@@ -59,6 +59,7 @@ defmodule Alnasl.Session do
   end
 
   def handle(%__MODULE__{} = session, t, {:clock, reading}) do
+    counted = session.clock.presses
     {clock, pressed?} = Clock.update(session.clock, t, reading)
 
     # The press that puts a wrongly started clock right before the first
@@ -83,6 +84,11 @@ defmodule Alnasl.Session do
             t
           )
     }
+
+    # Presses the lever did not show but the times did (two between two
+    # readings, `Clock.hidden_presses/2`) are presses all the same: the
+    # board is looked at again as on any press.
+    pressed? = pressed? or clock.presses > counted
 
     {session, events} =
       cond do

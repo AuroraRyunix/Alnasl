@@ -565,6 +565,42 @@ defmodule Alnasl.TrackerTest do
     assert plies.(session) == ~w(e4 e5)
   end
 
+  test "two presses the lever did not show, but the times did, are a press" do
+    alias Alnasl.Session
+    plies = fn session -> Tracker.sans(session.tracker) end
+    b = Position.start()
+    e4 = move(b, "e2", "e4")
+    e5 = move(e4, "e7", "e5")
+
+    session =
+      Enum.reduce(
+        [
+          {0, {:position, b}},
+          {0, {:clock, %{white_ms: 60_000, black_ms: 60_000, running: :white}}},
+          {1_000, {:position, lift(b, "e2")}},
+          {1_060, {:position, e4}},
+          {1_120, {:position, lift(e4, "e7")}},
+          {1_180, {:position, e5}}
+        ],
+        Session.new([]),
+        fn {t, event}, session -> session |> Session.handle(t, event) |> elem(0) end
+      )
+
+    assert plies.(session) == ~w(e4)
+
+    # White still running, Black's time gone down: White pressed, Black ran
+    # and pressed. The board is looked at as on any press - it used to wait
+    # for the next reading, which in a scramble is the next move.
+    {session, _} =
+      Session.handle(
+        session,
+        1_200,
+        {:clock, %{white_ms: 59_000, black_ms: 59_900, running: :white}}
+      )
+
+    assert plies.(session) == ~w(e4 e5)
+  end
+
   test "the fast-play preset is what Setup's button sets, and leaves the search depth alone" do
     assert Tracker.preset(:bullet) == %{settle_ms: 150, takeback: false}
 

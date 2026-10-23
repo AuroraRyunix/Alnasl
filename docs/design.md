@@ -146,7 +146,8 @@ not see how; that is out of sync like any other.
   back where it stood before the last move, the search from before it
   (`undone/2`) is asked as well, on the press or once the board has
   stood `deep_settle_ms`, and wins if it needs fewer moves in all
-  (`undo_instead/3`); a piece still in the air over a move from there is
+  (`undo_instead/3`), searching as deep as the line it has to beat; a
+  piece still in the air over a move from there is
   waited for, as any hand is. Red: a move that was seen is being unsaid.
   Over 10,000 games of the four hall faults with the benign ones, this
   and the next hand together took the unmarked wrong games from 114 to 0.
@@ -778,6 +779,12 @@ gains what the running side loses, is recognised at its first such reading
 and its times are not used for presses after it. In the 15,000 readings of
 the real board's clock from 2026-10-11/12 the waiting side's time never
 moved, so nothing in those games changes.
+
+Presses found this way are presses for everything else too: the board is
+looked at again on them as on a press the lever showed (`Session`). They
+used only to be counted, so a board that needed a press to be believed -
+a knocked pawn put back while the next moves were already being made -
+waited for the next reading, which in a scramble is the next move.
 
 A press with nothing changed on the board since the last press - the lever
 knocked back and pressed again, a hand on the wrong side - is counted but

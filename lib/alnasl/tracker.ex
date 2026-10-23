@@ -1726,7 +1726,8 @@ defmodule Alnasl.Tracker do
     with true <- Enum.any?(tr.trail, fn {at, board} -> at == count and board == before.phys end),
          false <- :arbiter in hd(Enum.take(tr.plies, -1)).flags,
          true <- pressed? or stable >= tr.opts.deep_settle_ms or :wait,
-         {keep, steps} = back <- undone(tr, stable) || hand_after(tr, before, stable),
+         {keep, steps} = back <-
+           undone(tr, stable, length(best.steps)) || hand_after(tr, before, stable),
          true <- keep + length(steps) < count + length(best.steps) do
       back
     else
@@ -1751,7 +1752,7 @@ defmodule Alnasl.Tracker do
        do: :wait
   end
 
-  defp undone(tr, stable) do
+  defp undone(tr, stable, longest \\ 3) do
     count = length(tr.plies)
     pressed? = tr.pressed_at != nil and tr.pressed_at >= tr.raw_since
 
@@ -1773,7 +1774,7 @@ defmodule Alnasl.Tracker do
                |> Enum.reject(
                  &Enum.any?(&1.steps, fn {move, _} -> {move.from, move.to} in made end)
                )
-               |> Enum.filter(&(length(&1.steps) <= 3))
+               |> Enum.filter(&(length(&1.steps) <= longest))
                |> then(&usable(tr, from, &1)) do
           flags = if length(found) == 1, do: [:guessed, :alone], else: [:guessed]
           {from.count, marked(hd(found).steps, flags, false)}
