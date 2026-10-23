@@ -228,6 +228,47 @@ defmodule Alnasl.TrackerCrosstalkTest do
     assert alarms(out) == []
   end
 
+  test "a piece gone for good was taken, however much it looks like a hand" do
+    # The same board the other way round. Black's knight is set down
+    # between e3 and f2 and reads as Nf2; White takes it on e3, where it
+    # was. f2 empty and a white knight on e3 is, for a moment, Ne3 with
+    # Black's knight in the air - but the game goes on and the knight never
+    # comes down. It was taken.
+    fen = "r1b1k2r/ppb1qp2/7p/2p1P3/P1Np1Bn1/3P4/1PP3BP/R2Q1RK1 b kq - 0 16"
+    start = board(fen)
+    {tr, _} = Tracker.observe(Tracker.new(start_fen: fen), 0, start)
+    nf2 = move(start, "g4", "f2")
+    nxe3 = nf2 |> lift("f2") |> move("c4", "e3")
+    dxe3 = move(nxe3, "d4", "e3")
+    qf3 = move(dxe3, "d1", "f3")
+
+    {tr, out} =
+      feed(
+        tr,
+        [
+          {4_000, lift(start, "g4")},
+          {4_100, nf2},
+          {4_500, {:presses, 1}},
+          {7_500, lift(nf2, "c4")},
+          {7_750, nxe3},
+          {8_000, {:presses, 2}},
+          {11_000, lift(nxe3, "e3")},
+          {11_150, nxe3 |> lift("e3") |> lift("d4")},
+          {11_550, dxe3},
+          {11_750, {:presses, 3}},
+          {18_100, lift(dxe3, "d1")},
+          {18_350, qf3},
+          {18_950, {:presses, 4}},
+          {27_000, qf3}
+        ],
+        10_000
+      )
+
+    assert Tracker.sans(tr) == ~w(Ne3 Nxe3 dxe3 Qf3)
+    assert :guessed in hd(tr.plies).flags
+    assert alarms(out) == []
+  end
+
   test "the starting position with a piece heard as another is the starting position" do
     start = Position.start() |> put("c1", {:w, :n})
     {tr, out} = feed(Tracker.new(), [{0, start}], 5_000)

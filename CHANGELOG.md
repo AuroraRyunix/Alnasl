@@ -19,6 +19,8 @@ section, word for word. See [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+- [Fix] **A hand comes down; a piece that stays gone was taken.** 0.8.0 stopped an undo from reading a piece in the air beside the last move as a capture there. It did not stop it from reading every capture there as a piece in the air: a knight set down between e3 and f2, read on f2 and taken on e3, left a board that looked like a hand for the rest of the game, and the wrong square stood. A square empty for longer than a hand takes now counts as a capture. At 10,000 games, the "set down between squares" suites had lost 47 games and 8 games to this; with the fix they are back, and the 73 games 0.8.0 won in the "next hand" suite stay won.
+
 ## [0.8.0] - 2026-10-23
 
 - [Fix] **A repetition played while the board was not read is no longer a takeback nobody made.** Two moves each way that bring back an earlier position, with the readings missed, look on the board exactly like moves taken back, and the tracker used to take them back - silently, which is the one thing it is not allowed to do. The clock had counted them all along. Once the presses run two ahead of the moves the game holds, a position come round again is not a takeback, the last move is not revised into another and an "in hand" board is not waited on as one: the game goes on and "Move missing?" says what is short. Of the 88 games in 10,000 that the quarter-of-plies-unseen suite used to get wrong without a mark, 65 are now caught; the 23 left are four-ply cycles whose presses were lost with their readings, and no box can see a move that left neither.

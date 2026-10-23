@@ -177,6 +177,7 @@ defmodule Alnasl.Tracker do
             suspects: [],
             confused: [],
             misheard: [],
+            emptied: %{},
             stats: %{searches: 0, max_nodes: 0, max_us: 0, budget_hits: 0}
 
   @type t :: %__MODULE__{}
@@ -307,10 +308,22 @@ defmodule Alnasl.Tracker do
           | raw: board,
             raw_since: t,
             before: tr.raw,
+            emptied: emptied(tr, board, t),
             trail: Enum.take([{length(tr.plies), board} | tr.trail], @trail)
         }
 
     tr |> evaluate(t, false) |> noting(was)
+  end
+
+  # When each empty square went empty: a hand comes down, a capture does not.
+  defp emptied(tr, board, t) do
+    Enum.reduce(0..63, tr.emptied, fn square, acc ->
+      cond do
+        elem(board, square) != nil -> Map.delete(acc, square)
+        Map.has_key?(acc, square) -> acc
+        true -> Map.put(acc, square, t)
+      end
+    end)
   end
 
   @doc "A clock was pressed at `t`: a move that is waiting to settle is accepted now."
@@ -1643,12 +1656,19 @@ defmodule Alnasl.Tracker do
   # by way of e4, and was taken there". Hands are over the board a hundred
   # times a game and queens are lost that way never, so such paths are
   # believed only of a board that has stood for `deep_settle_ms`.
-  defp in_hand?(_tr, []), do: false
+  defp in_hand?(tr, found, lately \\ false)
+  defp in_hand?(_tr, [], _lately), do: false
 
-  defp in_hand?(tr, [one | _]) do
+  defp in_hand?(tr, [one | _], lately) do
     from = here(tr)
     raw = unheard(tr)
-    gone = for sq <- Position.diff(from.phys, raw), elem(raw, sq) == nil, do: sq
+
+    gone =
+      for sq <- Position.diff(from.phys, raw),
+          elem(raw, sq) == nil,
+          not lately or tr.at - Map.get(tr.emptied, sq, tr.at) < tr.opts.transient_ms,
+          do: sq
+
     takes? = Position.count(raw) < Position.count(from.phys)
 
     takes? and
@@ -1777,8 +1797,10 @@ defmodule Alnasl.Tracker do
                |> Enum.filter(&(length(&1.steps) <= longest))
                |> then(&usable(tr, from, &1)),
              # Not a hand: a piece in the air beside the square the last
-             # move went to is read by these lines as a capture there.
-             false <- in_hand?(tr, found) do
+             # move went to is read by these lines as a capture there. A
+             # hand comes down, though, and a piece gone for longer than
+             # that was taken.
+             false <- in_hand?(tr, found, true) do
           flags = if length(found) == 1, do: [:guessed, :alone], else: [:guessed]
           {from.count, marked(hd(found).steps, flags, false)}
         else
