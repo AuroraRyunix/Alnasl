@@ -669,6 +669,40 @@ defmodule Alnasl.TrackerTest do
     assert tr.status == :live
   end
 
+  test "a guess onto a dead square, revised, is still a guess" do
+    # d5 goes on reading the knight that left it for f4, and is found out.
+    # Then the b4 knight is lifted and held: a knight gone, and a dead
+    # square it can go to - a guess, 2...Nbd5. It goes back, and the f4
+    # knight is lifted: 2...Nfd5 is the one move from before the guess
+    # that fits, and the guess is revised into it. Which knight is no
+    # better known than before, so the revised move is a guess too; it
+    # used to come back unmarked.
+    fen = "4k3/8/8/3n4/1n6/8/8/4K3 b - - 0 1"
+    start = board(fen)
+    {tr, _} = Tracker.observe(Tracker.new(start_fen: fen), 0, start)
+    stuck = fn board -> put(board, "d5", {:b, :n}) end
+    b1 = move(start, "d5", "f4")
+    b2 = move(b1, "e1", "d1")
+
+    {tr, _} = feed(tr, [{1_000, stuck.(b1)}, {6_000, stuck.(b2)}], 5_000)
+    assert Tracker.sans(tr) == ~w(Nf4 Kd1)
+    assert Tracker.dead(tr) == [sq("d5")]
+
+    {tr, _} =
+      feed(
+        tr,
+        [
+          {12_000, stuck.(lift(b2, "b4"))},
+          {15_000, stuck.(b2)},
+          {16_000, stuck.(lift(b2, "f4"))}
+        ],
+        30_000
+      )
+
+    assert Tracker.sans(tr) == ~w(Nf4 Kd1 Nfd5)
+    assert :guessed in List.last(tr.plies).flags
+  end
+
   test "a piece held in the air is not a dead square" do
     {tr, b, t} = after_moves(~w(e4 e5))
     {tr, out} = feed(tr, [{t, lift(b, "g1")}, {t + 6_000, move(b, "g1", "f3")}], 3_000)

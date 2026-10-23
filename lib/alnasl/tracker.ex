@@ -2547,10 +2547,25 @@ defmodule Alnasl.Tracker do
 
   defp revision(%{history: [before | _]} = tr) do
     case one_ply(before.pos, before.phys, tr.raw, tr.opts.promotion_default, before.unseen) do
-      [step] -> if reheard?(tr, step), do: nil, else: step
+      [step] -> if reheard?(tr, step), do: nil, else: still_guessed(tr, step)
       _other -> nil
     end
   end
+
+  # A move that was a guess, revised into another by what the board shows
+  # next, is still a guess: the board that put the guess in doubt is the
+  # same board that put it there. Without this a red move came back
+  # unmarked - once in 10,000 games, a knight "moved" onto a square
+  # that went on reading the knight that had left it.
+  defp still_guessed(%{plies: [_ | _] = plies}, {move, flags} = step) do
+    last = List.last(plies)
+
+    if :guessed in last.flags and :guessed not in flags,
+      do: {move, flags ++ [:guessed]},
+      else: step
+  end
+
+  defp still_guessed(_tr, step), do: step
 
   # The same promotion, another piece, after the clock was pressed for it:
   # nobody changes their mind about a bishop once the lever is down, but a

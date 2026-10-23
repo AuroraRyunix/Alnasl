@@ -137,6 +137,13 @@ not see how; that is out of sync like any other.
   the board was seen back where it was before that ply, is held for
   `takeback_settle_ms`, or until the press (`echo?/2`). A real recapture
   with a piece of the same kind waits the same way.
+- **A guess revised is still a guess.** Rule 4 rewrites the last move
+  into the one move from the position before it that the board now
+  shows. When the last move was a red guess, the move it becomes is red
+  too: what put the guess in doubt is the board that made it a guess. The
+  case that found it: a knight lifted beside a square that kept reading
+  the knight that had left it, guessed onto that square, then "revised"
+  into the other knight - unmarked, and wrong.
 - **The result.** Mate, stalemate and bare kings are read from the position;
   the kings set on the four centre squares is the players' signal (ASSUMED
   convention: both on light squares 1-0, both on dark 0-1, one on each a
