@@ -973,6 +973,49 @@ and played on, 185 end in the alarm and 22 as a game that was not played,
 its moves marked from the illegal one on (21 red, 1 orange). None
 unmarked.
 
+### At scale
+
+`mix alnasl.bench --pgn games.pgn` plays every suite over a corpus
+instead of the bundled games (`--offset`/`--limit`, `--suites`,
+`--seed-base`, `--out` for the per-game verdicts). Measured over 10,000
+Lichess broadcast games a suite (945,971 plies), 46 suites, the same
+seeds, before this round of fixes (0.7.0) and after (0.8.0 plus the
+hand fix that followed it). A game is *warned* when it is wrong and
+unmarked but "Move missing?" was up when it went wrong: not silent, not
+caught either.
+
+| suite | exact | wrong, red or orange | alarm | warned | silent |
+|---|---|---|---|---|---|
+| slide 30% | 9950 → 10000 | 50 → 0 | 0 | 0 | 0 |
+| all eight benign, 8% each | 9944 → 9964 | 19 → 0 | 0 | 0 | 0 |
+| reads as another, 5% / 15% | 9987 / 9990 → 10000 / 10000 | 10 / 9 → 0 / 0 | 0 | 0 | 1 / 1 → 0 / 0 |
+| next hand before landing 20% | 18 → 5483 | 7 → 0 | 0 | 0 | 2 → 0 |
+| the four hall faults + benign | 900 → 7666 | 3379 → 23 | 145 → 3 | 1 | 114 → 0 |
+| bullet + the four hall faults | 24 → 271 | 6854 → 554 | 403 → 664 | 72 | 126 → 8 |
+| missed 25%, up to 3 in a row | 0 | 4614 → 4628 | 454 → 453 | 63 | 88 → 25 |
+| a dead square from ply 10 | 3966 | 3774 → 3784 | 1794 | 6 | 12 → 0 |
+| set down between squares, no clock | 1871 | 1245 → 1251 | 90 → 86 | 0 | 2 |
+
+Fourteen suites were exact before and stay exact. Elsewhere the silent
+column went from 357 games to 36 and no suite has more. What it cost: a
+few more red guesses where a silent wrong move used to be (that is the
+point), 261 more alarms in the bullet hall suite where 6,300 fewer games
+end wrong, and six more red guesses in the no-clock "between squares"
+suite - the price of a slide being believed only in check.
+
+What is left, and why it stays:
+
+- *missed 25%* (25 silent, 63 warned): two moves each way that return to
+  an earlier position while the board was not read leave no trace at all.
+  The clock's count is the only witness, and over three missed plies it
+  can say "a move is missing" but not where.
+- *bullet + the four hall faults* (8 silent, 72 warned): a knocked piece
+  and an overlapping hand in the same second, the board never once seen
+  as it stood between them.
+- *unplugged for 8 plies* (1) and *between squares, no clock* (2): the
+  shortest explanation is not the true one, with nothing read that could
+  say so.
+
 ## 3a. Fast play
 
 Blitz, bullet, and the last minute of any game. What changes is not the
