@@ -394,8 +394,9 @@ until the piece is touched.
   taken piece off, the taker in the air - was three changes, not two, and
   250 ms in the search found an exchange on the misheard square that ends
   with exactly the kind it reads as: a white pawn read as a rook, and
-  34...Qxb3 35.Rxb3. Over 10,000 games that was 16 of the 18 wrong games in
-  the two "reads as another" suites. Only pieces heard wrong *while
+  34...Qxb3 35.Rxb3. Over 10,000 games each, that was 19 of the 21 wrong
+  games in the two "reads as another" suites (the other two are the
+  promotion below), and all 21 now come out exact. Only pieces heard wrong *while
   everything else agreed*: a piece of another kind that turns up along
   with moves nobody saw is more likely one of those moves.
 - **A promotion keeps the piece it was pressed with.** The revision rule
