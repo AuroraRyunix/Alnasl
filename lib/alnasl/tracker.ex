@@ -1775,7 +1775,10 @@ defmodule Alnasl.Tracker do
                  &Enum.any?(&1.steps, fn {move, _} -> {move.from, move.to} in made end)
                )
                |> Enum.filter(&(length(&1.steps) <= longest))
-               |> then(&usable(tr, from, &1)) do
+               |> then(&usable(tr, from, &1)),
+             # Not a hand: a piece in the air beside the square the last
+             # move went to is read by these lines as a capture there.
+             false <- in_hand?(tr, found) do
           flags = if length(found) == 1, do: [:guessed, :alone], else: [:guessed]
           {from.count, marked(hd(found).steps, flags, false)}
         else

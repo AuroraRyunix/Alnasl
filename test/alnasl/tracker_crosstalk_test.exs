@@ -194,6 +194,40 @@ defmodule Alnasl.TrackerCrosstalkTest do
     assert alarms(out) == []
   end
 
+  test "a rook in the air beside the bishop that just landed is a hand, not a move undone" do
+    # No crosstalk this time, just impatience. Black plays Re6; White
+    # takes the a8 bishop to d5, and Black's hand already has the rook
+    # before the bishop lands. e5 and e6 empty with a bishop on d5 reads,
+    # to a search willing to undo Re6, as Rd5 Bxd5. It is a hand.
+    fen = "B7/8/1k6/4rp2/7p/7P/6PK/8 b - - 19 80"
+    start = board(fen)
+    {tr, _} = Tracker.observe(Tracker.new(start_fen: fen), 0, start)
+    re6 = move(start, "e5", "e6")
+    bd5 = move(re6, "a8", "d5")
+    re8 = move(bd5, "e6", "e8")
+
+    {tr, out} =
+      feed(
+        tr,
+        [
+          {4_000, lift(start, "e5")},
+          {4_400, re6},
+          {4_800, {:presses, 1}},
+          {11_800, lift(re6, "a8")},
+          {11_900, re6 |> lift("a8") |> lift("e6")},
+          {12_300, lift(bd5, "e6")},
+          {12_700, {:presses, 2}},
+          {13_300, re8},
+          {13_450, {:presses, 3}}
+        ],
+        6_000
+      )
+
+    assert Tracker.sans(tr) == ~w(Re6 Bd5 Re8)
+    refute Enum.any?(out, &match?({_t, {:correction, _, _, _}}, &1))
+    assert alarms(out) == []
+  end
+
   test "the starting position with a piece heard as another is the starting position" do
     start = Position.start() |> put("c1", {:w, :n})
     {tr, out} = feed(Tracker.new(), [{0, start}], 5_000)
