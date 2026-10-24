@@ -19,10 +19,14 @@ defmodule Alnasl.FairPlay.Dump do
   @columns ~w(set pe game ev fold rating opp near gap cp1 cp2 cp3 cp4 played rank material think p q lm lv loss)
 
   def main(argv, opts \\ [halt: true]) do
-    {parsed, paths, _} =
+    {parsed, paths, invalid} =
       OptionParser.parse(argv,
         strict: [holdout: :float, holdout_offset: :float, out: :string, model: :string]
       )
+
+    # ".33" is not a float to OptionParser, and a switch it cannot read used
+    # to vanish quietly: three "different" folds came out as one.
+    if invalid != [], do: raise(ArgumentError, "bad arguments: #{inspect(invalid)}")
 
     holdout = Keyword.get(parsed, :holdout, 0.2)
     out = Keyword.fetch!(parsed, :out)

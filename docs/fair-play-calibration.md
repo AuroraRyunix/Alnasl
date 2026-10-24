@@ -85,12 +85,14 @@ mix fair_play.fit --holdout 0.2 --out priv/fair_play/model-sf19.json labels-*.js
   always give the same split. `--holdout 0.2` is too little for the gate:
   see `docs/fair-play-calibration-run.md`, which uses about two thirds.
 - It prints the held-out false-positive table - for 2.0, 2.5, 3.0, 3.5,
-  4.0, 4.5 and 5.0, the share of player-events with at least 40 counted
+  3.75, 4.0, 4.5 and 5.0, the share of player-events with at least 40 counted
   moves scoring that much or more, with the exact 95% interval - and, per
   200-point rating band, the number of events, the mean score and the share
   at 2 or more. The table goes into the model file and onto the report.
-- The gate (plan §5): more than about 1 in 700 held-out player-events at 3
-  or more and the model does not ship; "passed" needs the upper end of the
+- The gate (plan §5): more than about 1 in 700 held-out player-events at
+  3.75 or more and the model does not ship (`Calibration.gate_threshold/0`;
+  it was 3 until 2026-10-24, a line a calibrated z sits on rather than
+  under); "passed" needs the upper end of the
   interval under 1 in 700. The task says which, and how many held-out
   player-events it would have needed. "Passed by default" (the point
   estimate is under the line, the interval is not) does **not** ship.
@@ -107,13 +109,27 @@ mix fair_play.fit --holdout 0.2 --out priv/fair_play/model-sf19.json labels-*.js
 ### Who scored high
 
 ```sh
-mix fair_play.hits --model model-sf19.json --holdout 0.67 [--threshold 3.0] labels-*.jsonl
+mix fair_play.hits --model model-sf19.json --holdout 0.67 [--threshold 3.75] labels-*.jsonl
 ```
 
-The held-out player-events at or over the threshold, highest first: the
-score, the three z's, the counted moves, the games, the rating, the
-opponents' average rating, the player and the event. `--holdout` must be
-the fit's, or the list is of games the model was fitted on.
+The held-out player-events at or over the threshold (the gate's, unless
+told otherwise), highest first: the score, the three z's, the counted
+moves, the games, the rating, the opponents' average rating, the player
+and the event. `--holdout` must be the fit's, or the list is of games the
+model was fitted on. `--holdout-offset O` (fit, hits, power, check) turns
+the held-out share round the hash circle, so `--holdout 0.333334` with
+offsets 0, 0.333333 and 0.666667 gives three disjoint folds.
+
+### A frozen model on new games
+
+```sh
+mix fair_play.check --model model.json [--holdout F] labels-*.jsonl
+```
+
+Scores every player-event in the files (or only the `--holdout` share)
+with the model as it is, fits nothing, and prints the same false-positive
+table, band table and gate verdict as the fit. This is the command for a
+test set that was labelled after the model was frozen.
 
 ### The per-game scan
 
@@ -125,8 +141,20 @@ how many games there were (`Alnasl.FairPlay.Scan` has the formula). One
 engine game among nine barely moves the first and moves the second a
 great deal. The fit measures the honest single games in its cross-fit,
 from the same residuals as the correlations, and writes them into the
-model as `"scan"`; a model file without them scores the event alone. The
-held-out table above is of the larger of the two, so the rarity on the
+model as `"scan"`; a model file without them scores the event alone.
+
+The larger of two honest z's is not a z: on the dev games it was over 2
+about one and a half times as often as either. So the score is the larger of the two **turned back into a z**
+(`Alnasl.FairPlay.Union`): with ρ the correlation between an honest
+player-event's event score and its scan, the score for a larger value m
+is the z whose tail is P(max(E, S) ≥ m) under a bivariate normal with
+correlation ρ. ρ is measured in the same cross-fit, on player-events with
+a score, by the number of games scanned (1 to 5, and 6 or more; a group
+of fewer than 30 uses all of them), and written into the model as
+`"union"`. It runs from about 0.75 for one game to 0.6 for six or more.
+The correction only lowers scores, and lowers them least where the two
+move together most. A model without `"union"` scores the plain larger of
+the two. The held-out table above is of this score, so the rarity on the
 report is that score's. The report says "decided by one game: round N"
 when the scan is the larger, and gives no interval then.
 

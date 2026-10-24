@@ -45,6 +45,10 @@ defmodule Alnasl.FairPlay.Model do
       of `Alnasl.FairPlay.Scan` is measured against. Optional in the file:
       a model without it has no scan, and the score is the event score
       alone;
+    * from the same cross-fit, the correlation between the event score and
+      the scan, by the number of games scanned (`union`, see
+      `Alnasl.FairPlay.Union`). Optional too: without it the score is the
+      plain larger of the two, as in format 2 files fitted before it;
     * the held-out false-positive table (`false_positives`): for each
       threshold, how many normal player-events scored that high, with a
       95% interval. Written by the fit (`Alnasl.FairPlay.Calibration`),
@@ -249,6 +253,11 @@ defmodule Alnasl.FairPlay.Model do
   (`Alnasl.FairPlay.Scan`) come from the same cross-fitted residuals, with
   the correlations just measured: the scan's null is one the model never
   saw the answers to either. No cross-fit, no scan.
+
+  The same cross-fit then pairs each player-event's event score with its
+  scan and measures how far the two move together, by the number of games
+  scanned (`Alnasl.FairPlay.Union`): what turns "the larger of two" back
+  into a z.
   """
   @spec fit([[map()] | {term(), [map()]}], keyword()) :: t()
   def fit(events, opts \\ []) do

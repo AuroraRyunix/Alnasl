@@ -157,7 +157,7 @@ centipawn loss / (1 + |eval|/100), capped at 5.00.
   inflation of the average one. Both are gone; a model file of format 1
   is refused rather than read.
 - **False-positive rates.** On the held-out player-events, the share
-  scoring at or above 2.0, 2.5, 3.0, 3.5, 4.0, 4.5 and 5.0, with the
+  scoring at or above 2.0, 2.5, 3.0, 3.5, 3.75, 4.0, 4.5 and 5.0, with the
   exact (Clopper-Pearson) 95% interval and the sample size, stored in the
   model json (`false_positives`) and shown on the report next to each
   score as "about 1 in N" (`Alnasl.FairPlay.FalsePositives`). No model, no
@@ -183,9 +183,13 @@ centipawn loss / (1 + |eval|/100), capped at 5.00.
   - We keep only derived parameters, in `priv/fair_play/model-sf19.json`,
     attributed and under CC BY-SA 4.0.
   - Gate: on the held-out player-events, more than about 1 in 700 scoring
-    3 or more means the model does not ship; "passed" needs the upper
+    3.75 or more means the model does not ship; "passed" needs the upper
     end of the interval under 1/700, not just the point estimate
-    (`Alnasl.FairPlay.Calibration.gate_verdict/1`).
+    (`Alnasl.FairPlay.Calibration.gate_verdict/1`). The line was 3 until
+    2026-10-24, and 3 could never be shown to pass: an honest z is over 3
+    for 1 player-event in 741, which is the gate itself, and no amount of
+    labelling proves a rate of 1 in 741 is under 1 in 700. See
+    `docs/fair-play-calibration-run.md` §10.
   - Run sheet for the 80-core VM: `docs/fair-play-calibration-run.md`.
 
 ## 6. Data

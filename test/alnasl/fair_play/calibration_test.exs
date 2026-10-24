@@ -227,7 +227,7 @@ defmodule Alnasl.FairPlay.CalibrationTest do
     assert model.meta["held_out_by"] == "event"
 
     assert Enum.map(report.table["rows"], & &1["threshold"]) ==
-             [2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]
+             [2.0, 2.5, 3.0, 3.5, 3.75, 4.0, 4.5, 5.0]
 
     # The table travels with the model, for the report to read.
     assert loaded.false_positives == report.table
@@ -400,16 +400,16 @@ defmodule Alnasl.FairPlay.CalibrationTest do
     assert Calibration.gate_verdict(big) == :passed
 
     bad =
-      Alnasl.FairPlay.FalsePositives.table(List.duplicate(0.0, 990) ++ List.duplicate(3.5, 10))
+      Alnasl.FairPlay.FalsePositives.table(List.duplicate(0.0, 990) ++ List.duplicate(3.75, 10))
 
     assert Calibration.gate_verdict(bad) == :failed
 
-    # Read at the alarm threshold, 3.5: a calibrated z is over 3.0 one time
+    # Read at the alarm threshold, 3.75: a calibrated z is over 3.0 one time
     # in 741, which is the limit itself, so 3.0 can never be shown to pass.
-    assert Calibration.gate_threshold() == 3.5
+    assert Calibration.gate_threshold() == 3.75
 
     under =
-      Alnasl.FairPlay.FalsePositives.table(List.duplicate(0.0, 2990) ++ List.duplicate(3.2, 10))
+      Alnasl.FairPlay.FalsePositives.table(List.duplicate(0.0, 2990) ++ List.duplicate(3.7, 10))
 
     assert Calibration.gate_verdict(under) == :passed
 

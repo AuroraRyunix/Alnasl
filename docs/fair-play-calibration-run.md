@@ -198,7 +198,7 @@ mix fair_play.fit --holdout 0.67 \
 
 - `--holdout 0.67`: two thirds of the **events** are held out, about
   10,000 games, about 2,500 to 3,000 player-events with 40 counted moves.
-  That is the size the gate needs: showing "under 1 in 700 at 3 or more"
+  That is the size the gate needs: showing "under 1 in 700 at 3.75 or more" (3 before §10)
   takes at least 2,583 held-out player-events with none that high. The fit
   keeps about 5,000 games, the same as phase 1 planned.
 - The log ends with the false-positive table and the gate's verdict:

@@ -34,7 +34,8 @@ defmodule Alnasl.FairPlay.FalsePositives do
                                     "rate": r, "low": l, "high": h}, ...]}
   """
 
-  @thresholds [2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]
+  # 3.75 is the gate's (`Calibration.gate_threshold/0`), which must be a row.
+  @thresholds [2.0, 2.5, 3.0, 3.5, 3.75, 4.0, 4.5, 5.0]
   @confidence 0.95
 
   @doc "The thresholds of the table."

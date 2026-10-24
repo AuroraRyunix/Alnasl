@@ -86,10 +86,15 @@ defmodule Alnasl.FairPlay.Calibration do
   # The plan's gate: more than about 1 in 700 normal player-events at the
   # alarm threshold. It was 3.0 until the score became a calibrated z
   # (`Alnasl.FairPlay.Union`), and a standard normal is over 3.0 one time
-  # in 741: a rate no sample can show to be under one in 700. At 3.5 the
-  # normal's tail is one in 4,300, and the held-out games' is lighter still.
+  # in 741: a rate no sample can show to be under one in 700. 3.5 (one in
+  # 4,300) would pass about nineteen test sets of 7,000 in twenty; 3.75 (one
+  # in 11,300) all but one in a few hundred, and a gate that fails one time
+  # in twenty on an honest model is a coin with a very small tail. Chosen on
+  # the development games before the final ones were scored, by a rule
+  # written down first: the smallest round threshold whose predicted chance
+  # of passing 7,000 new player-events is at least 95%.
   @gate 1 / 700
-  @gate_threshold 3.5
+  @gate_threshold 3.75
 
   # --- the command line ----------------------------------------------------------
 

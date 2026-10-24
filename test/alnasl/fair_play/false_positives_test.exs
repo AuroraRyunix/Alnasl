@@ -48,7 +48,17 @@ defmodule Alnasl.FairPlay.FalsePositivesTest do
       assert table["min_moves"] == 40
 
       above = Map.new(table["rows"], &{&1["threshold"], &1["above"]})
-      assert above == %{2.0 => 4, 2.5 => 2, 3.0 => 2, 3.5 => 1, 4.0 => 1, 4.5 => 1, 5.0 => 1}
+
+      assert above == %{
+               2.0 => 4,
+               2.5 => 2,
+               3.0 => 2,
+               3.5 => 1,
+               3.75 => 1,
+               4.0 => 1,
+               4.5 => 1,
+               5.0 => 1
+             }
 
       row = FalsePositives.row(table, 2.0)
       assert row["rate"] == 0.04
