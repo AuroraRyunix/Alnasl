@@ -79,6 +79,7 @@ defmodule Alnasl.FairPlay.Power do
 
   @switches [
     holdout: :float,
+    holdout_offset: :float,
     model: :string,
     rates: :string,
     games: :string,
@@ -157,7 +158,14 @@ defmodule Alnasl.FairPlay.Power do
 
     with {:ok, games, meta} <- Calibration.read_labels(paths),
          {held, train} =
-           Enum.split_with(games, &Calibration.held_out?(Calibration.holdout_key(&1), holdout)),
+           Enum.split_with(
+             games,
+             &Calibration.held_out?(
+               Calibration.holdout_key(&1),
+               holdout,
+               opts[:holdout_offset] || 0.0
+             )
+           ),
          {:ok, model, how} <- model(opts, train, meta) do
       scenarios = scenarios(opts)
       probes = Probes.fit(Calibration.keyed_events(train), model, opts)

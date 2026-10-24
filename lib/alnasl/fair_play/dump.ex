@@ -20,7 +20,9 @@ defmodule Alnasl.FairPlay.Dump do
 
   def main(argv, opts \\ [halt: true]) do
     {parsed, paths, _} =
-      OptionParser.parse(argv, strict: [holdout: :float, out: :string, model: :string])
+      OptionParser.parse(argv,
+        strict: [holdout: :float, holdout_offset: :float, out: :string, model: :string]
+      )
 
     holdout = Keyword.get(parsed, :holdout, 0.2)
     out = Keyword.fetch!(parsed, :out)
@@ -28,7 +30,14 @@ defmodule Alnasl.FairPlay.Dump do
     {:ok, games, _meta} = Calibration.read_labels(paths)
 
     {held, train} =
-      Enum.split_with(games, &Calibration.held_out?(Calibration.holdout_key(&1), holdout))
+      Enum.split_with(
+        games,
+        &Calibration.held_out?(
+          Calibration.holdout_key(&1),
+          holdout,
+          parsed[:holdout_offset] || 0.0
+        )
+      )
 
     keyed = Calibration.keyed_events(train)
 

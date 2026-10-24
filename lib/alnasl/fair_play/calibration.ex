@@ -101,6 +101,7 @@ defmodule Alnasl.FairPlay.Calibration do
     out: :string,
     labels: :string,
     holdout: :float,
+    holdout_offset: :float,
     bench: :integer,
     model: :string,
     threshold: :float,
@@ -641,7 +642,8 @@ defmodule Alnasl.FairPlay.Calibration do
     log = Keyword.get(opts, :log, &IO.puts/1)
 
     with {:ok, games, meta} <- read_labels(paths) do
-      {held, train} = Enum.split_with(games, &held_out?(holdout_key(&1), holdout))
+      {held, train} =
+        Enum.split_with(games, &held_out?(holdout_key(&1), holdout, opts[:holdout_offset] || 0.0))
 
       # The variant's third set: out of the training events, never out of
       # the held-out ones, by a hash of its own.
@@ -748,15 +750,23 @@ defmodule Alnasl.FairPlay.Calibration do
     Enum.find([game["broadcast"], game["event"]], &(is_binary(&1) and &1 != ""))
   end
 
-  @doc "Whether a key (`holdout_key/1`) is in the held-out share: by hash, so every run agrees."
-  def held_out?(key, fraction), do: in_share?("holdout:", key, fraction)
+  @doc """
+  Whether a key (`holdout_key/1`) is in the held-out share: by hash, so
+  every run agrees. `offset` turns the share round the circle, so three
+  runs with a third each and offsets 0, 1/3 and 2/3 hold out every event
+  exactly once (a cross-validation of the whole corpus); 0 is the share
+  every earlier run used.
+  """
+  def held_out?(key, fraction, offset \\ 0.0),
+    do: in_share?("holdout:", key, fraction, offset)
 
   @doc false
-  def in_share?(salt, key, fraction) do
+  def in_share?(salt, key, fraction, offset \\ 0.0) do
     bucket =
       :sha256 |> :crypto.hash(salt <> key) |> binary_part(0, 4) |> :binary.decode_unsigned()
 
-    bucket / 4_294_967_296 < fraction
+    turned = bucket / 4_294_967_296 - offset
+    turned - Float.floor(turned) < fraction
   end
 
   # One player in one event: all their plies there, as records.
@@ -990,7 +1000,7 @@ defmodule Alnasl.FairPlay.Calibration do
          {:ok, games, _meta} <- read_labels(paths) do
       hits =
         games
-        |> Enum.filter(&held_out?(holdout_key(&1), holdout))
+        |> Enum.filter(&held_out?(holdout_key(&1), holdout, opts[:holdout_offset] || 0.0))
         |> keyed_player_events()
         |> Enum.flat_map(fn {{event, player}, records} ->
           numbers = Stats.player(records, model)
