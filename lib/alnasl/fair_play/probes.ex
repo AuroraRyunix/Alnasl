@@ -194,19 +194,20 @@ defmodule Alnasl.FairPlay.Probes do
   end
 
   @doc """
-  A player-event's six z's, their correlation and the scan:
-  `%{zs: [...], corr: [[...]], scan: float | nil}`.
+  A player-event's six z's, their correlation, the scan and how many games
+  it looked at: `%{zs: [...], corr: [[...]], scan: float | nil, scanned:
+  integer | nil}`.
   """
   def observe(plies, %__MODULE__{} = probes) do
     {zs, corr} = plies |> Cluster.accumulate() |> Cluster.z_scores(probes.dispersion)
 
-    scan =
-      case Scan.z(plies, probes.dispersion, probes.scan) do
-        {z, _game} -> z
-        nil -> nil
+    {scan, scanned} =
+      case Scan.result(plies, probes.dispersion, probes.scan) do
+        {z, _game, scanned} -> {z, scanned}
+        nil -> {nil, nil}
       end
 
-    %{zs: zs, corr: corr, scan: scan}
+    %{zs: zs, corr: corr, scan: scan, scanned: scanned}
   end
 
   @doc """

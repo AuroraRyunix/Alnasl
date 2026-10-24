@@ -83,9 +83,13 @@ defmodule Alnasl.FairPlay.Calibration do
     Uci
   }
 
-  # The plan's gate: more than about 1 in 700 normal player-events over 3.
+  # The plan's gate: more than about 1 in 700 normal player-events at the
+  # alarm threshold. It was 3.0 until the score became a calibrated z
+  # (`Alnasl.FairPlay.Union`), and a standard normal is over 3.0 one time
+  # in 741: a rate no sample can show to be under one in 700. At 3.5 the
+  # normal's tail is one in 4,300, and the held-out games' is lighter still.
   @gate 1 / 700
-  @gate_threshold 3.0
+  @gate_threshold 3.5
 
   # --- the command line ----------------------------------------------------------
 
@@ -116,7 +120,7 @@ defmodule Alnasl.FairPlay.Calibration do
   def main(argv \\ System.argv(), opts \\ [halt: true]) do
     result =
       case argv do
-        [command | args] when command in ~w(label fit calibrate hits) ->
+        [command | args] when command in ~w(label fit calibrate hits check) ->
           {parsed, paths, invalid} = OptionParser.parse(args, strict: @switches)
 
           if invalid != [] do
@@ -143,6 +147,7 @@ defmodule Alnasl.FairPlay.Calibration do
   defp run("fit", paths, opts), do: fit(paths, opts)
   defp run("calibrate", paths, opts), do: calibrate(paths, opts)
   defp run("hits", paths, opts), do: hits(paths, opts)
+  defp run("check", paths, opts), do: check(paths, opts)
 
   defp options(parsed) do
     Enum.flat_map(parsed, fn
@@ -160,7 +165,7 @@ defmodule Alnasl.FairPlay.Calibration do
 
   defp describe(:usage),
     do:
-      "usage: main([\"label\" | \"fit\" | \"calibrate\" | \"hits\", options..., files...]); " <>
+      "usage: main([\"label\" | \"fit\" | \"calibrate\" | \"hits\" | \"check\", options..., files...]); " <>
         "see Alnasl.FairPlay.Calibration"
 
   defp describe({:mixed_engines, seen}),
@@ -174,7 +179,7 @@ defmodule Alnasl.FairPlay.Calibration do
   defp describe({:bench_mismatch, want, got}),
     do: "the engine's bench is #{got}, not #{want}: not the build this model is for"
 
-  defp describe(:no_model), do: "hits needs --model FILE, the model to score with"
+  defp describe(:no_model), do: "hits and check need --model FILE, the model to score with"
   defp describe({:model, path, why}), do: "cannot read the model #{path}: #{inspect(why)}"
   defp describe(other), do: inspect(other)
 
@@ -933,12 +938,13 @@ defmodule Alnasl.FairPlay.Calibration do
   end
 
   @doc """
-  The plan's gate, read off the table: the share at 3 or more must not be
-  above about 1 in 700 (`:failed`). And whether the sample can tell: the
-  gate is only *shown* to hold (`:passed`) when the upper end of the 95%
-  interval is below 1 in 700 too, which takes about 2,600 held-out
-  player-events even when none of them scores 3. With fewer it is
-  `:passed_unproven`: a pass by default, and the fit says so.
+  The plan's gate, read off the table: the share at the alarm threshold
+  (`gate_threshold/0`, 3.5) or more must not be above about 1 in 700
+  (`:failed`). And whether the sample can tell: the gate is only *shown*
+  to hold (`:passed`) when the upper end of the 95% interval is below 1 in
+  700 too, which takes about 2,600 held-out player-events even when none
+  of them reaches the threshold. With fewer it is `:passed_unproven`: a
+  pass by default, and the fit says so.
   """
   def gate_verdict(table) do
     case FalsePositives.row(table, @gate_threshold) do
@@ -950,7 +956,10 @@ defmodule Alnasl.FairPlay.Calibration do
     end
   end
 
-  @doc "Held-out player-events needed to show the gate holds when none scores 3 or more."
+  @doc "The alarm threshold the gate is read at."
+  def gate_threshold, do: @gate_threshold
+
+  @doc "Held-out player-events needed to show the gate holds when none reaches the threshold."
   def gate_events_needed, do: ceil(-:math.log(0.025) / @gate)
 
   defp gate(report, pct) do
@@ -962,19 +971,23 @@ defmodule Alnasl.FairPlay.Calibration do
 
       :failed ->
         [
-          "GATE FAILED: #{pct.(row["rate"])} at 3 or more (limit about 1 in 700). " <>
+          "GATE FAILED: #{pct.(row["rate"])} at #{@gate_threshold} or more (limit about 1 in 700). " <>
             "The model does not ship."
         ]
 
       :passed ->
-        ["gate passed: #{pct.(row["rate"])} at 3 or more, 95% upper bound #{pct.(row["high"])}"]
+        [
+          "gate passed: #{pct.(row["rate"])} at #{@gate_threshold} or more, " <>
+            "95% upper bound #{pct.(row["high"])}"
+        ]
 
       :passed_unproven ->
         [
-          "gate passed by default: #{pct.(row["rate"])} at 3 or more, but the 95% upper bound " <>
+          "gate passed by default: #{pct.(row["rate"])} at #{@gate_threshold} or more, " <>
+            "but the 95% upper bound " <>
             "is #{pct.(row["high"])}, above 1 in 700. #{row["events"]} held-out player-events " <>
             "cannot show a rate that small; about #{gate_events_needed()} can, if none of them " <>
-            "scores 3."
+            "reaches it."
         ]
     end
   end
@@ -993,7 +1006,7 @@ defmodule Alnasl.FairPlay.Calibration do
   """
   def hits(paths, opts) do
     holdout = Keyword.get(opts, :holdout, 0.2)
-    threshold = Keyword.get(opts, :threshold, 3.0)
+    threshold = Keyword.get(opts, :threshold, @gate_threshold)
     log = Keyword.get(opts, :log, &IO.puts/1)
 
     with {:ok, model} <- hits_model(opts[:model]),
@@ -1078,6 +1091,45 @@ defmodule Alnasl.FairPlay.Calibration do
       ],
       "\t"
     )
+  end
+
+  # --- check -----------------------------------------------------------------------
+
+  @doc """
+  Every player-event of label files scored by the model in `opts[:model]`,
+  none held out and nothing fitted: the false-positive table, the per-band
+  check and the gate, exactly as `fit/2` prints them for its held-out
+  events. For a set of games kept apart from the whole development of a
+  model, judged once with the model frozen. `--holdout F` (with
+  `--holdout-offset`) restricts it to that share of the events instead,
+  which is how a model fitted with that split is checked again.
+  Returns `{:ok, report}`.
+  """
+  def check(paths, opts) do
+    log = Keyword.get(opts, :log, &IO.puts/1)
+
+    with {:ok, model} <- hits_model(opts[:model]),
+         {:ok, games, _meta} <- read_labels(paths) do
+      games =
+        case opts[:holdout] do
+          nil ->
+            games
+
+          share ->
+            Enum.filter(
+              games,
+              &held_out?(holdout_key(&1), share, opts[:holdout_offset] || 0.0)
+            )
+        end
+
+      report = report(player_events(games), model)
+
+      ["fair_play check: #{length(games)} games scored with #{opts[:model]}, none fitted on"]
+      |> Kernel.++(tl(format_report(report, 0, length(games), nil)))
+      |> Enum.each(log)
+
+      {:ok, report}
+    end
   end
 
   # --- both ------------------------------------------------------------------------

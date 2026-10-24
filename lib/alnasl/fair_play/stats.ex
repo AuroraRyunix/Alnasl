@@ -54,7 +54,7 @@ defmodule Alnasl.FairPlay.Stats do
   is arithmetic over records.
   """
 
-  alias Alnasl.FairPlay.{Cluster, Model, Scan, Selection}
+  alias Alnasl.FairPlay.{Cluster, Model, Scan, Selection, Union}
 
   @min_moves 40
   @cap 5.0
@@ -109,8 +109,11 @@ defmodule Alnasl.FairPlay.Stats do
       plies |> Cluster.accumulate() |> Cluster.z_scores(Model.dispersion(model))
 
     event = combined(zs, model.weights, correlation)
-    {scan, scan_game} = Scan.z(plies, Model.dispersion(model), model.scan) || {nil, nil}
-    {score, decided_by} = decide(event, scan)
+
+    {scan, scan_game, scanned} =
+      Scan.result(plies, Model.dispersion(model), model.scan) || {nil, nil, nil}
+
+    {score, decided_by} = decide(event, scan, scanned, model.union)
 
     numbers = %{
       raw
@@ -131,19 +134,20 @@ defmodule Alnasl.FairPlay.Stats do
           scan_game: scan_game,
           score: score,
           decided_by: decided_by,
-          interval: if(decided_by == :event, do: {event - 1.96, event + 1.96})
+          interval: if(decided_by == :event, do: {score - 1.96, score + 1.96})
       }
     end
   end
 
-  # The larger of the two; the event on a tie, and the event when the scan
-  # has nothing to say. No event score, no score: the scan is a second
+  # The larger of the two, corrected for there having been two
+  # (`Alnasl.FairPlay.Union`); decided by the event on a tie and when the
+  # scan has nothing to say. No event score, no score: the scan is a second
   # look at the same moves, not a way round too few of them.
-  defp decide(event, scan) when is_number(event) and is_number(scan) and scan > event,
-    do: {scan, :game}
+  defp decide(event, scan, games, union) when is_number(event) and is_number(scan),
+    do: {Union.score(event, scan, games, union), if(scan > event, do: :game, else: :event)}
 
-  defp decide(event, _scan) when is_number(event), do: {event, :event}
-  defp decide(_event, _scan), do: {nil, nil}
+  defp decide(event, _scan, _games, _union) when is_number(event), do: {event, :event}
+  defp decide(_event, _scan, _games, _union), do: {nil, nil}
 
   @doc """
   The counted plies of `records` as `Alnasl.FairPlay.Cluster` takes them:

@@ -105,7 +105,17 @@ defmodule Alnasl.FairPlay.ProbesTest do
     assert_in_delta mm, numbers.mm_z, 1.0e-9
     assert_in_delta ev, numbers.ev_z, 1.0e-9
     assert_in_delta asd, numbers.asd_z, 1.0e-9
-    assert_in_delta Probes.score(obs, [1.0, 1.0, 1.0, 0.0, 0.0, 0.0]), numbers.score, 1.0e-9
+    assert_in_delta Probes.score(obs, [1.0, 1.0, 1.0, 0.0, 0.0, 0.0]), numbers.event_score, 1.0e-9
+
+    # And the benchmark's score is the report's, union correction and all.
+    assert_in_delta Alnasl.FairPlay.Power.shipped(
+                      obs,
+                      model.weights,
+                      model.scan != nil,
+                      model.union
+                    ),
+                    numbers.score,
+                    1.0e-9
 
     # The model's 3×3 block, the probes' own for the rest.
     for level <- [:r0, :within, :between], i <- 0..2, j <- 0..2 do

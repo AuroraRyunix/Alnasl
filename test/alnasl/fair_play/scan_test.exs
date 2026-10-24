@@ -102,6 +102,26 @@ defmodule Alnasl.FairPlay.ScanTest do
     assert numbers.score == numbers.event_score and numbers.decided_by == :event
   end
 
+  test "with the model's correlations the larger of the two is corrected for being the larger" do
+    records = game(1, 12) ++ game(2, 12) ++ game(3, 12) ++ game(4, 25)
+    union = %{groups: %{4 => {0.6, 500}}, all: {0.7, 2000}}
+    model = %{coin_model(standard()) | union: union}
+
+    numbers = Stats.player(records, model)
+
+    assert {_z, 4, 4} =
+             Scan.result(Stats.residuals(records, model), Cluster.default(), standard())
+
+    assert numbers.decided_by == :game and numbers.scan_game == 4
+    assert_in_delta numbers.score, Alnasl.FairPlay.Union.z(numbers.scan, 0.6), 1.0e-12
+    assert numbers.score < numbers.scan
+
+    # An even event: the event decides, corrected all the same, with its interval.
+    even = Stats.player(Enum.flat_map(1..4, &game(&1, 12)), model)
+    assert even.decided_by == :event and even.score < even.event_score
+    assert even.interval == {even.score - 1.96, even.score + 1.96}
+  end
+
   test "too few moves: neither the event nor a game gets a score" do
     numbers = Stats.player(game(1, 25), coin_model(standard()))
     assert numbers.reason == :too_few_moves

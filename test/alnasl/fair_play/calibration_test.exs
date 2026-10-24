@@ -289,8 +289,10 @@ defmodule Alnasl.FairPlay.CalibrationTest do
       assert is_integer(hit.rating) and is_integer(hit.opponents)
       assert hit.games >= 1
       assert Enum.all?([hit.mm_z, hit.ev_z, hit.asd_z], &is_float/1)
-      # The score is the event's or the scan's, whichever is larger.
-      assert hit.score == Enum.max(Enum.filter([hit.event_score, hit.scan], &is_number/1))
+      # The score is the larger of the event's and the scan's, corrected for
+      # being the larger of two when the model knows how they hang together.
+      assert hit.score <=
+               Enum.max(Enum.filter([hit.event_score, hit.scan], &is_number/1)) + 1.0e-12
     end
 
     assert {:ok, []} =
@@ -310,6 +312,46 @@ defmodule Alnasl.FairPlay.CalibrationTest do
     assert ExUnit.CaptureIO.capture_io(:stderr, fn ->
              assert {:error, :no_model} = Calibration.main(["hits", labels], halt: false)
            end) =~ "--model"
+  end
+
+  test "check scores every player-event of a file with a frozen model, and fits nothing", %{
+    tmp_dir: dir
+  } do
+    labels = Path.join(dir, "labels.jsonl")
+    {:ok, _} = label([corpus(dir)], out: labels)
+    model = Path.join(dir, "model.json")
+    quiet = fn _ -> :ok end
+
+    {:ok, %{report: fitted}} = Calibration.fit([labels], holdout: 0.5, out: model, log: quiet)
+    before = File.read!(model)
+
+    # The fit's own held-out half, judged again: the same table.
+    assert {:ok, again} = Calibration.check([labels], model: model, holdout: 0.5, log: quiet)
+    assert again.table == fitted.table
+
+    # Everything: more events than the half, and the model file untouched.
+    assert {:ok, all} = Calibration.check([labels], model: model, log: quiet)
+    assert all.events > fitted.events
+    assert File.read!(model) == before
+
+    printed =
+      ExUnit.CaptureIO.capture_io(fn ->
+        Calibration.main(["check", "--model", model, labels], halt: false)
+      end)
+
+    assert printed =~ "fair_play check: "
+    assert printed =~ "held-out player-events with a score: #{all.events}"
+
+    # The other side of the split, by turning it round.
+    assert {:ok, other} =
+             Calibration.check([labels],
+               model: model,
+               holdout: 0.5,
+               holdout_offset: 0.5,
+               log: quiet
+             )
+
+    assert other.events + fitted.events == all.events
   end
 
   test "the per-band variant takes its thresholds from training events, never from the test", %{
@@ -361,6 +403,15 @@ defmodule Alnasl.FairPlay.CalibrationTest do
       Alnasl.FairPlay.FalsePositives.table(List.duplicate(0.0, 990) ++ List.duplicate(3.5, 10))
 
     assert Calibration.gate_verdict(bad) == :failed
+
+    # Read at the alarm threshold, 3.5: a calibrated z is over 3.0 one time
+    # in 741, which is the limit itself, so 3.0 can never be shown to pass.
+    assert Calibration.gate_threshold() == 3.5
+
+    under =
+      Alnasl.FairPlay.FalsePositives.table(List.duplicate(0.0, 2990) ++ List.duplicate(3.2, 10))
+
+    assert Calibration.gate_verdict(under) == :passed
 
     assert Calibration.gate_verdict(Alnasl.FairPlay.FalsePositives.table([])) == :no_data
     # -ln(0.025) × 700, rounded up: the rule of three, at 97.5% one-sided.

@@ -97,9 +97,20 @@ defmodule Alnasl.FairPlay.Scan do
   that stands out most - or nil when no game is long enough or nothing is
   calibrated for its length.
   """
-  def z(_plies, _dispersion, nil), do: nil
-
   def z(plies, dispersion, calibration) do
+    case result(plies, dispersion, calibration) do
+      {z, game, _scanned} -> {z, game}
+      nil -> nil
+    end
+  end
+
+  @doc """
+  The scan as `z/3` gives it, and how many games it looked at:
+  `{z, game, scanned}`, or nil. `Alnasl.FairPlay.Union` wants the count.
+  """
+  def result(_plies, _dispersion, nil), do: nil
+
+  def result(plies, dispersion, calibration) do
     standard =
       for {game, n, s} <- game_scores(plies, dispersion),
           b = bucket(n),
@@ -113,7 +124,7 @@ defmodule Alnasl.FairPlay.Scan do
 
       xs ->
         {top, game} = Enum.max_by(xs, &elem(&1, 0))
-        {sidak(top, length(xs)), game}
+        {sidak(top, length(xs)), game, length(xs)}
     end
   end
 
